@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">{-
+A simple homogeneous pair type with useful Functor, Applicative, and
+Traversable instances.
+-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">GHC.Data.Pair</span><span>
+</span><span id="line-10"></span><span>   </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier">Pair</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#unPair"><span class="hs-identifier">unPair</span></a></span><span>
+</span><span id="line-12"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#toPair"><span class="hs-identifier">toPair</span></a></span><span>
+</span><span id="line-13"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#swap"><span class="hs-identifier">swap</span></a></span><span>
+</span><span id="line-14"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#pLiftFst"><span class="hs-identifier">pLiftFst</span></a></span><span>
+</span><span id="line-15"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#pLiftSnd"><span class="hs-identifier">pLiftSnd</span></a></span><span>
+</span><span id="line-16"></span><span>   </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/Data.Semigroup.html#/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Semi</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="Pair"><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span></span><span> </span><span id="local-6989586621681540424"><span class="annot"><a href="#local-6989586621681540424"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Pair"><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="pFst"><span class="annot"><span class="annottext">forall a. Pair a -&gt; a
+</span><a href="GHC.Data.Pair.html#pFst"><span class="hs-identifier hs-var hs-var">pFst</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681540424"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span id="pSnd"><span class="annot"><span class="annottext">forall a. Pair a -&gt; a
+</span><a href="GHC.Data.Pair.html#pSnd"><span class="hs-identifier hs-var hs-var">pSnd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621681540424"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681540518"><span id="local-6989586621681540524"><span id="local-6989586621681540528"><span id="local-6989586621681540533"><span id="local-6989586621681540535"><span id="local-6989586621681540538"><span id="local-6989586621681540541"><span id="local-6989586621681540544"><span id="local-6989586621681540547"><span id="local-6989586621681540550"><span id="local-6989586621681540553"><span id="local-6989586621681540555"><span id="local-6989586621681540558"><span id="local-6989586621681540563"><span id="local-6989586621681540568"><span id="local-6989586621681540573"><span id="local-6989586621681540578"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Pair m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a)
+-&gt; (forall a. Pair a -&gt; [a])
+-&gt; (forall a. Pair a -&gt; Bool)
+-&gt; (forall a. Pair a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Pair a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Pair a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Pair a -&gt; a)
+-&gt; (forall a. Num a =&gt; Pair a -&gt; a)
+-&gt; (forall a. Num a =&gt; Pair a -&gt; a)
+-&gt; Foldable Pair
+forall a. Eq a =&gt; a -&gt; Pair a -&gt; Bool
+forall a. Num a =&gt; Pair a -&gt; a
+forall a. Ord a =&gt; Pair a -&gt; a
+forall m. Monoid m =&gt; Pair m -&gt; m
+forall a. Pair a -&gt; Bool
+forall a. Pair a -&gt; Int
+forall a. Pair a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; Pair m -&gt; m
+fold :: forall m. Monoid m =&gt; Pair m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Pair a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Pair a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Pair a -&gt; a
+$ctoList :: forall a. Pair a -&gt; [a]
+toList :: forall a. Pair a -&gt; [a]
+$cnull :: forall a. Pair a -&gt; Bool
+null :: forall a. Pair a -&gt; Bool
+$clength :: forall a. Pair a -&gt; Int
+length :: forall a. Pair a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; Pair a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Pair a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; Pair a -&gt; a
+maximum :: forall a. Ord a =&gt; Pair a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Pair a -&gt; a
+minimum :: forall a. Ord a =&gt; Pair a -&gt; a
+$csum :: forall a. Num a =&gt; Pair a -&gt; a
+sum :: forall a. Num a =&gt; Pair a -&gt; a
+$cproduct :: forall a. Num a =&gt; Pair a -&gt; a
+product :: forall a. Num a =&gt; Pair a -&gt; a
+</span><a href="../../base-4.18.3.0/src/Data.Foldable.html#Foldable/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681540584"><span id="local-6989586621681540586"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Pair a -&gt; Pair b)
+-&gt; (forall a b. a -&gt; Pair b -&gt; Pair a) -&gt; Functor Pair
+forall a b. a -&gt; Pair b -&gt; Pair a
+forall a b. (a -&gt; b) -&gt; Pair a -&gt; Pair b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Pair a -&gt; Pair b
+fmap :: forall a b. (a -&gt; b) -&gt; Pair a -&gt; Pair b
+$c&lt;$ :: forall a b. a -&gt; Pair b -&gt; Pair a
+&lt;$ :: forall a b. a -&gt; Pair b -&gt; Pair a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#Functor/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681540594"><span id="local-6989586621681540598"><span id="local-6989586621681540604"><span id="local-6989586621681540609"><span class="annot"><span class="annottext">Functor Pair
+Foldable Pair
+(Functor Pair, Foldable Pair) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Pair a -&gt; f (Pair b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Pair (f a) -&gt; f (Pair a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Pair a -&gt; m (Pair b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; Pair (m a) -&gt; m (Pair a))
+-&gt; Traversable Pair
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a. Monad m =&gt; Pair (m a) -&gt; m (Pair a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; Pair (f a) -&gt; f (Pair a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Pair a -&gt; m (Pair b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Pair a -&gt; f (Pair b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Pair a -&gt; f (Pair b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Pair a -&gt; f (Pair b)
+$csequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Pair (f a) -&gt; f (Pair a)
+sequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Pair (f a) -&gt; f (Pair a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Pair a -&gt; m (Pair b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Pair a -&gt; m (Pair b)
+$csequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Pair (m a) -&gt; m (Pair a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Pair (m a) -&gt; m (Pair a)
+</span><a href="../../base-4.18.3.0/src/Data.Traversable.html#Traversable/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- Note that Pair is a *unary* type constructor</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- whereas (,) is binary</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- The important thing about Pair is that it has a *homogeneous*</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- Functor instance, so you can easily apply the same function</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- to both components</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681540619"><span id="local-6989586621681540623"><span id="local-6989586621681540626"><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Applicative/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621681540629"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Pair a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#pure/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621681540630"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540630"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540630"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540630"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540631"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681540631"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621681540632"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681540632"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681540633"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Pair (a -&gt; b) -&gt; Pair a -&gt; Pair b
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540634"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540634"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621681540635"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540635"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; b -&gt; Pair b
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681540631"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540634"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621681540632"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540635"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681540489"><span id="local-6989586621681540639"><span id="local-6989586621681540643"><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semi.Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540489"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semi.Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540489"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540650"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540650"><span class="hs-identifier hs-var">a1</span></a></span></span><span> </span><span id="local-6989586621681540651"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540651"><span class="hs-identifier hs-var">b1</span></a></span></span><span> </span><span id="local-6989586621681540652"><span class="annot"><span class="annottext">&lt;&gt; :: Pair a -&gt; Pair a -&gt; Pair a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540653"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540653"><span class="hs-identifier hs-var">a2</span></a></span></span><span> </span><span id="local-6989586621681540654"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540654"><span class="hs-identifier hs-var">b2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540650"><span class="hs-identifier hs-var">a1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">Semi.&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540653"><span class="hs-identifier hs-var">a2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540651"><span class="hs-identifier hs-var">b1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">Semi.&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540654"><span class="hs-identifier hs-var">b2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681540492"><span id="local-6989586621681540662"><span class="hs-special">(</span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Semigroup/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semi.Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540492"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540492"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.18.3.0/src/GHC.Base.html#Monoid/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540492"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621681540668"><span class="annot"><span class="annottext">mempty :: Pair a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#mempty/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621681540670"><span class="annot"><span class="annottext">mappend :: Pair a -&gt; Pair a -&gt; Pair a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#mappend/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Pair a -&gt; Pair a -&gt; Pair a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../../base-4.18.3.0/src/GHC.Base.html#%3C%3E/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(Semi.&lt;&gt;)</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681540497"><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540497"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540497"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621681540681"><span class="annot"><span class="annottext">ppr :: Pair a -&gt; SDoc
+</span><a href="#local-6989586621681540681"><span class="hs-identifier hs-var hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540683"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540683"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621681540684"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540684"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540683"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; SDoc
+forall doc. IsLine doc =&gt; Char -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#char"><span class="hs-identifier hs-var">char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'~'</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540684"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span id="local-6989586621681540500"><span class="annot"><a href="GHC.Data.Pair.html#unPair"><span class="hs-identifier hs-type">unPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540500"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681540500"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621681540500"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-48"></span><span id="unPair"><span class="annot"><span class="annottext">unPair :: forall a. Pair a -&gt; (a, a)
+</span><a href="GHC.Data.Pair.html#unPair"><span class="hs-identifier hs-var hs-var">unPair</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540687"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540687"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621681540688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540688"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540687"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540688"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="local-6989586621681540502"><span class="annot"><a href="GHC.Data.Pair.html#toPair"><span class="hs-identifier hs-type">toPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681540502"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621681540502"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540502"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-51"></span><span id="toPair"><span class="annot"><span class="annottext">toPair :: forall a. (a, a) -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#toPair"><span class="hs-identifier hs-var hs-var">toPair</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681540689"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540689"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621681540690"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540690"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540689"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540690"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621681540504"><span class="annot"><a href="GHC.Data.Pair.html#swap"><span class="hs-identifier hs-type">swap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540504"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540504"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-54"></span><span id="swap"><span class="annot"><span class="annottext">swap :: forall a. Pair a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#swap"><span class="hs-identifier hs-var hs-var">swap</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540691"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540691"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621681540692"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540692"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540692"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540691"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span id="local-6989586621681540506"><span class="annot"><a href="GHC.Data.Pair.html#pLiftFst"><span class="hs-identifier hs-type">pLiftFst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681540506"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681540506"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540506"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540506"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-57"></span><span id="pLiftFst"><span class="annot"><span class="annottext">pLiftFst :: forall a. (a -&gt; a) -&gt; Pair a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#pLiftFst"><span class="hs-identifier hs-var hs-var">pLiftFst</span></a></span></span><span> </span><span id="local-6989586621681540693"><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681540693"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540694"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540694"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621681540695"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540695"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681540693"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540694"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540695"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span id="local-6989586621681540696"><span class="annot"><a href="GHC.Data.Pair.html#pLiftSnd"><span class="hs-identifier hs-type">pLiftSnd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621681540696"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681540696"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540696"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681540696"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-60"></span><span id="pLiftSnd"><span class="annot"><span class="annottext">pLiftSnd :: forall a. (a -&gt; a) -&gt; Pair a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#pLiftSnd"><span class="hs-identifier hs-var hs-var">pLiftSnd</span></a></span></span><span> </span><span id="local-6989586621681540697"><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681540697"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-type">Pair</span></a></span><span> </span><span id="local-6989586621681540698"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540698"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621681540699"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540699"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Pair a
+forall a. a -&gt; a -&gt; Pair a
+</span><a href="GHC.Data.Pair.html#Pair"><span class="hs-identifier hs-var">Pair</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540698"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621681540697"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681540699"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span></pre></body></html>

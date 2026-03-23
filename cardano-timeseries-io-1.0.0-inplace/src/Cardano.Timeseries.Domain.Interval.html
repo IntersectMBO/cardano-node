@@ -1,0 +1,48 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Domain.Interval</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#Interval"><span class="hs-identifier">Interval</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#duration"><span class="hs-identifier">duration</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier">Timestamp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">-- | A time interval. Assumption: `start` &#8804; `end`</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">data</span><span> </span><span id="Interval"><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Interval"><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-7"></span><span>  </span><span id="start"><span class="annot"><span class="annottext">Interval -&gt; Timestamp
+</span><a href="Cardano.Timeseries.Domain.Interval.html#start"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span id="end"><span class="annot"><span class="annottext">Interval -&gt; Timestamp
+</span><a href="Cardano.Timeseries.Domain.Interval.html#end"><span class="hs-identifier hs-var hs-var">end</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131850"><span id="local-6989586621679131857"><span id="local-6989586621679131861"><span class="annot"><span class="annottext">Int -&gt; Interval -&gt; ShowS
+[Interval] -&gt; ShowS
+Interval -&gt; String
+(Int -&gt; Interval -&gt; ShowS)
+-&gt; (Interval -&gt; String) -&gt; ([Interval] -&gt; ShowS) -&gt; Show Interval
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Interval -&gt; ShowS
+showsPrec :: Int -&gt; Interval -&gt; ShowS
+$cshow :: Interval -&gt; String
+show :: Interval -&gt; String
+$cshowList :: [Interval] -&gt; ShowS
+showList :: [Interval] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679131865"><span id="local-6989586621679131870"><span class="annot"><span class="annottext">Interval -&gt; Interval -&gt; Bool
+(Interval -&gt; Interval -&gt; Bool)
+-&gt; (Interval -&gt; Interval -&gt; Bool) -&gt; Eq Interval
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Interval -&gt; Interval -&gt; Bool
+== :: Interval -&gt; Interval -&gt; Bool
+$c/= :: Interval -&gt; Interval -&gt; Bool
+/= :: Interval -&gt; Interval -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#duration"><span class="hs-identifier hs-type">duration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-12"></span><span id="duration"><span class="annot"><span class="annottext">duration :: Interval -&gt; Double
+</span><a href="Cardano.Timeseries.Domain.Interval.html#duration"><span class="hs-identifier hs-var hs-var">duration</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Interval.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span id="local-6989586621679131874"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679131874"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679131875"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679131875"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679131875"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Timestamp
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679131874"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-13"></span></pre></body></html>

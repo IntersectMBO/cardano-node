@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula.Prec</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">-- | Finite type of precedences used for formula pretty-printing.</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">data</span><span> </span><span id="Prec"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier hs-var">Prec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Universe"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Universe</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Implies"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Implies"><span class="hs-identifier hs-var">Implies</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Or"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Or"><span class="hs-identifier hs-var">Or</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="And"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#And"><span class="hs-identifier hs-var">And</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Prefix"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prefix</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Eq"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Eq"><span class="hs-identifier hs-var">Eq</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Atom"><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Atom</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679110961"><span id="local-6989586621679110963"><span id="local-6989586621679110967"><span class="annot"><span class="annottext">Int -&gt; Prec -&gt; ShowS
+[Prec] -&gt; ShowS
+Prec -&gt; String
+(Int -&gt; Prec -&gt; ShowS)
+-&gt; (Prec -&gt; String) -&gt; ([Prec] -&gt; ShowS) -&gt; Show Prec
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Prec -&gt; ShowS
+showsPrec :: Int -&gt; Prec -&gt; ShowS
+$cshow :: Prec -&gt; String
+show :: Prec -&gt; String
+$cshowList :: [Prec] -&gt; ShowS
+showList :: [Prec] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679110971"><span id="local-6989586621679110973"><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Bool
+(Prec -&gt; Prec -&gt; Bool) -&gt; (Prec -&gt; Prec -&gt; Bool) -&gt; Eq Prec
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Prec -&gt; Prec -&gt; Bool
+== :: Prec -&gt; Prec -&gt; Bool
+$c/= :: Prec -&gt; Prec -&gt; Bool
+/= :: Prec -&gt; Prec -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679110980"><span id="local-6989586621679110982"><span id="local-6989586621679110984"><span id="local-6989586621679110988"><span id="local-6989586621679110991"><span id="local-6989586621679110994"><span id="local-6989586621679110997"><span class="annot"><span class="annottext">Eq Prec
+Eq Prec =&gt;
+(Prec -&gt; Prec -&gt; Ordering)
+-&gt; (Prec -&gt; Prec -&gt; Bool)
+-&gt; (Prec -&gt; Prec -&gt; Bool)
+-&gt; (Prec -&gt; Prec -&gt; Bool)
+-&gt; (Prec -&gt; Prec -&gt; Bool)
+-&gt; (Prec -&gt; Prec -&gt; Prec)
+-&gt; (Prec -&gt; Prec -&gt; Prec)
+-&gt; Ord Prec
+Prec -&gt; Prec -&gt; Bool
+Prec -&gt; Prec -&gt; Ordering
+Prec -&gt; Prec -&gt; Prec
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Prec -&gt; Prec -&gt; Ordering
+compare :: Prec -&gt; Prec -&gt; Ordering
+$c&lt; :: Prec -&gt; Prec -&gt; Bool
+&lt; :: Prec -&gt; Prec -&gt; Bool
+$c&lt;= :: Prec -&gt; Prec -&gt; Bool
+&lt;= :: Prec -&gt; Prec -&gt; Bool
+$c&gt; :: Prec -&gt; Prec -&gt; Bool
+&gt; :: Prec -&gt; Prec -&gt; Bool
+$c&gt;= :: Prec -&gt; Prec -&gt; Bool
+&gt;= :: Prec -&gt; Prec -&gt; Bool
+$cmax :: Prec -&gt; Prec -&gt; Prec
+max :: Prec -&gt; Prec -&gt; Prec
+$cmin :: Prec -&gt; Prec -&gt; Prec
+min :: Prec -&gt; Prec -&gt; Prec
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span></pre></body></html>

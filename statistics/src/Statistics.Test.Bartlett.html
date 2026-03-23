@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP              #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Statistics.Test.Bartlett
+Description : Bartlett's test for homogeneity of variances.
+Copyright   : (c) Praneya Kumar, Alexey Khudyakov, 2025
+License     : BSD-3-Clause
+
+Bartlett's test is used to check that multiple groups of observations
+come from distributions with equal variances. This test assumes that
+samples come from normal distribution. If this is not the case it may
+simple test for non-normality and Levene's (&quot;Statistics.Test.Levene&quot;)
+is preferred
+
+&gt;&gt;&gt; import qualified Data.Vector.Unboxed as VU
+&gt;&gt;&gt; import Statistics.Test.Bartlett
+&gt;&gt;&gt; :{
+let a = VU.fromList [8.88, 9.12, 9.04, 8.98, 9.00, 9.08, 9.01, 8.85, 9.06, 8.99]
+    b = VU.fromList [8.88, 8.95, 9.29, 9.44, 9.15, 9.58, 8.36, 9.18, 8.67, 9.05]
+    c = VU.fromList [8.95, 9.12, 8.95, 8.85, 9.03, 8.84, 9.07, 8.98, 8.86, 8.98]
+in bartlettTest [a,b,c]
+:}
+Right (Test {testSignificance = mkPValue 1.1254782518843598e-5, testStatistics = 22.789434813726768, testDistribution = chiSquared 2})
+
+-}</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Statistics.Test.Bartlett</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-identifier">bartlettTest</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html"><span class="hs-identifier">Statistics.Distribution.ChiSquared</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector</span></span><span>           </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VU</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Generic</span></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VG</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Storable</span></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VS</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Primitive</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VP</span></span><span class="hs-cpp">
+#if MIN_VERSION_vector(0,13,2)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Strict</span></span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VV</span></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Distribution.html"><span class="hs-identifier">Statistics.Distribution</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Distribution.html#complCumulative"><span class="hs-identifier">complCumulative</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html"><span class="hs-identifier">Statistics.Distribution.ChiSquared</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#chiSquared"><span class="hs-identifier">chiSquared</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-identifier">ChiSquared</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Sample.html"><span class="hs-identifier">Statistics.Sample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.html#varianceUnbiased"><span class="hs-identifier">varianceUnbiased</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Types.html"><span class="hs-identifier">Statistics.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Types.html#mkPValue"><span class="hs-identifier">mkPValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Test.Types.html"><span class="hs-identifier">Statistics.Test.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-identifier">Test</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Perform Bartlett's test for equal variances. The input is a list</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   of vectors, where each vector represents a group of observations.</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679229412"><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-identifier hs-type">bartlettTest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">VG.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679229412"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679229412"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-identifier hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-identifier hs-type">ChiSquared</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-49"></span><span id="bartlettTest"><span class="annot"><span class="annottext">bartlettTest :: forall (v :: * -&gt; *).
+Vector v Double =&gt;
+[v Double] -&gt; Either String (Test ChiSquared)
+</span><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-identifier hs-var hs-var">bartlettTest</span></a></span></span><span> </span><span id="local-6989586621679229491"><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[v Double] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (Test ChiSquared)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;At least two groups are required for Bartlett's test.&quot;</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(v Double -&gt; Bool) -&gt; [v Double] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; (v Double -&gt; Int) -&gt; v Double -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">VG.length</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (Test ChiSquared)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Each group must have at least two observations.&quot;</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Var -&gt; Bool) -&gt; [Var] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Bool) -&gt; (Var -&gt; Double) -&gt; Var -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#var"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Var]
+</span><a href="#local-6989586621679229499"><span class="hs-identifier hs-var">groupVariances</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (Test ChiSquared)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;All groups must have positive variance.&quot;</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Test ChiSquared -&gt; Either String (Test ChiSquared)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-identifier hs-type">Test</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">testSignificance :: PValue Double
+</span><a href="Statistics.Test.Types.html#testSignificance"><span class="hs-identifier hs-var">testSignificance</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PValue Double
+</span><a href="#local-6989586621679229502"><span class="hs-identifier hs-var">pValue</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">testStatistics :: Double
+</span><a href="Statistics.Test.Types.html#testStatistics"><span class="hs-identifier hs-var">testStatistics</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229504"><span class="hs-identifier hs-var">tStatistic</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">testDistribution :: ChiSquared
+</span><a href="Statistics.Test.Types.html#testDistribution"><span class="hs-identifier hs-var">testDistribution</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChiSquared
+</span><a href="#local-6989586621679229506"><span class="hs-identifier hs-var">chiDist</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- Number of groups</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679229508"><span class="annot"><span class="annottext">k :: Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[v Double] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- Sample sizes for each group</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679229514"><span class="annot"><span class="annottext">ni :: [Double]
+</span><a href="#local-6989586621679229514"><span class="hs-identifier hs-var hs-var">ni</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(v Double -&gt; Double) -&gt; [v Double] -&gt; [Double]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Double) -&gt; (v Double -&gt; Int) -&gt; v Double -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">VG.length</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- Total number of observations across all groups</span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679229523"><span class="annot"><span class="annottext">n_tot :: Int
+</span><a href="#local-6989586621679229523"><span class="hs-identifier hs-var hs-var">n_tot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; (v Double -&gt; Int) -&gt; v Double -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">VG.length</span></span><span> </span><span class="annot"><span class="annottext">(v Double -&gt; Int) -&gt; [v Double] -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- Variance estimates</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679229499"><span class="annot"><span class="annottext">groupVariances :: [Var]
+</span><a href="#local-6989586621679229499"><span class="hs-identifier hs-var hs-var">groupVariances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Var
+forall (v :: * -&gt; *). Vector v Double =&gt; v Double -&gt; Var
+</span><a href="Statistics.Test.Bartlett.html#toVar"><span class="hs-identifier hs-var">toVar</span></a></span><span> </span><span class="annot"><span class="annottext">(v Double -&gt; Var) -&gt; [v Double] -&gt; [Var]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[v Double]
+</span><a href="#local-6989586621679229491"><span class="hs-identifier hs-var">groups</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679229535"><span class="annot"><span class="annottext">sumWeightedVars :: Double
+</span><a href="#local-6989586621679229535"><span class="hs-identifier hs-var hs-var">sumWeightedVars</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Double
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229536"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229538"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">sampleN :: Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#sampleN"><span class="hs-identifier hs-var">sampleN</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621679229536"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229536"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">var :: Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#var"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621679229538"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229538"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Var]
+</span><a href="#local-6989586621679229499"><span class="hs-identifier hs-var">groupVariances</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679229546"><span class="annot"><span class="annottext">pooledVariance :: Double
+</span><a href="#local-6989586621679229546"><span class="hs-identifier hs-var hs-var">pooledVariance</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229535"><span class="hs-identifier hs-var">sumWeightedVars</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229523"><span class="hs-identifier hs-var">n_tot</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- Numerator of Bartlett's statistic</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679229561"><span class="annot"><span class="annottext">numerator :: Double
+</span><a href="#local-6989586621679229561"><span class="hs-identifier hs-var hs-var">numerator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229523"><span class="hs-identifier hs-var">n_tot</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double
+forall a. Floating a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#log"><span class="hs-identifier hs-var">log</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229546"><span class="hs-identifier hs-var">pooledVariance</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">[Double] -&gt; Double
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229563"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double
+forall a. Floating a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#log"><span class="hs-identifier hs-var">log</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229564"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">sampleN :: Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#sampleN"><span class="hs-identifier hs-var">sampleN</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621679229563"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229563"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">var :: Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#var"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621679229564"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229564"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Var]
+</span><a href="#local-6989586621679229499"><span class="hs-identifier hs-var">groupVariances</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- Denominator correction term</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679229572"><span class="annot"><span class="annottext">sumReciprocals :: Double
+</span><a href="#local-6989586621679229572"><span class="hs-identifier hs-var hs-var">sumReciprocals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Double
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229573"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679229573"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229573"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Double]
+</span><a href="#local-6989586621679229514"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679229590"><span class="annot"><span class="annottext">denomCorrection :: Double
+</span><a href="#local-6989586621679229590"><span class="hs-identifier hs-var hs-var">denomCorrection</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229572"><span class="hs-identifier hs-var">sumReciprocals</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229523"><span class="hs-identifier hs-var">n_tot</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- Test statistic and test distrubution</span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679229504"><span class="annot"><span class="annottext">tStatistic :: Double
+</span><a href="#local-6989586621679229504"><span class="hs-identifier hs-var hs-var">tStatistic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Double) -&gt; Double -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229561"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229590"><span class="hs-identifier hs-var">denomCorrection</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span id="local-6989586621679229506"><span class="annot"><span class="annottext">chiDist :: ChiSquared
+</span><a href="#local-6989586621679229506"><span class="hs-identifier hs-var hs-var">chiDist</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ChiSquared
+</span><a href="Statistics.Distribution.ChiSquared.html#chiSquared"><span class="hs-identifier hs-var">chiSquared</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679229508"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679229502"><span class="annot"><span class="annottext">pValue :: PValue Double
+</span><a href="#local-6989586621679229502"><span class="hs-identifier hs-var hs-var">pValue</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; PValue Double
+forall a. (Ord a, Num a) =&gt; a -&gt; PValue a
+</span><a href="Statistics.Types.html#mkPValue"><span class="hs-identifier hs-var">mkPValue</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; PValue Double) -&gt; Double -&gt; PValue Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChiSquared -&gt; Double -&gt; Double
+forall d. Distribution d =&gt; d -&gt; Double -&gt; Double
+</span><a href="Statistics.Distribution.html#complCumulative"><span class="hs-identifier hs-var">complCumulative</span></a></span><span> </span><span class="annot"><span class="annottext">ChiSquared
+</span><a href="#local-6989586621679229506"><span class="hs-identifier hs-var">chiDist</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679229504"><span class="hs-identifier hs-var">tStatistic</span></a></span><span>
+</span><span id="line-82"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-pragma hs-type">bartlettTest</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="hs-pragma">[</span><span class="annot"><span class="hs-pragma hs-type">V.Vector</span></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-pragma hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-pragma hs-type">String</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-pragma hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-pragma hs-type">ChiSquared</span></a></span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-83"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-pragma hs-type">bartlettTest</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="hs-pragma">[</span><span class="annot"><span class="hs-pragma hs-type">VU.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-pragma hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-pragma hs-type">String</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-pragma hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-pragma hs-type">ChiSquared</span></a></span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-84"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-pragma hs-type">bartlettTest</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="hs-pragma">[</span><span class="annot"><span class="hs-pragma hs-type">VS.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-pragma hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-pragma hs-type">String</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-pragma hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-pragma hs-type">ChiSquared</span></a></span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-85"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-pragma hs-type">bartlettTest</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="hs-pragma">[</span><span class="annot"><span class="hs-pragma hs-type">VP.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-pragma hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-pragma hs-type">String</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-pragma hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-pragma hs-type">ChiSquared</span></a></span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if MIN_VERSION_vector(0,13,2)
+</span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#bartlettTest"><span class="hs-pragma hs-type">bartlettTest</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="hs-pragma">[</span><span class="annot"><span class="hs-pragma hs-type">VV.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-pragma hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-pragma hs-type">String</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="Statistics.Test.Types.html#Test"><span class="hs-pragma hs-type">Test</span></a></span><span> </span><span class="annot"><a href="Statistics.Distribution.ChiSquared.html#ChiSquared"><span class="hs-pragma hs-type">ChiSquared</span></a></span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- Estimate of variance</span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="Var"><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-var">Var</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Var"><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-var">Var</span></a></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="sampleN"><span class="annot"><span class="annottext">Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#sampleN"><span class="hs-identifier hs-var hs-var">sampleN</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ N of elements</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="var"><span class="annot"><span class="annottext">Var -&gt; Double
+</span><a href="Statistics.Test.Bartlett.html#var"><span class="hs-identifier hs-var hs-var">var</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Sample variance</span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679229445"><span class="annot"><a href="Statistics.Test.Bartlett.html#toVar"><span class="hs-identifier hs-type">toVar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">VG.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679229445"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679229445"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-type">Var</span></a></span></span><span>
+</span><span id="line-97"></span><span id="toVar"><span class="annot"><span class="annottext">toVar :: forall (v :: * -&gt; *). Vector v Double =&gt; v Double -&gt; Var
+</span><a href="Statistics.Test.Bartlett.html#toVar"><span class="hs-identifier hs-var hs-var">toVar</span></a></span></span><span> </span><span id="local-6989586621679229607"><span class="annot"><span class="annottext">v Double
+</span><a href="#local-6989586621679229607"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Statistics.Test.Bartlett.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">sampleN :: Double
+</span><a href="Statistics.Test.Bartlett.html#sampleN"><span class="hs-identifier hs-var">sampleN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Double) -&gt; Int -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Int
+forall (v :: * -&gt; *) a. Vector v a =&gt; v a -&gt; Int
+</span><span class="hs-identifier hs-var">VG.length</span></span><span> </span><span class="annot"><span class="annottext">v Double
+</span><a href="#local-6989586621679229607"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-98"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">var :: Double
+</span><a href="Statistics.Test.Bartlett.html#var"><span class="hs-identifier hs-var">var</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v Double -&gt; Double
+forall (v :: * -&gt; *). Vector v Double =&gt; v Double -&gt; Double
+</span><a href="Statistics.Sample.html#varianceUnbiased"><span class="hs-identifier hs-var">varianceUnbiased</span></a></span><span> </span><span class="annot"><span class="annottext">v Double
+</span><a href="#local-6989586621679229607"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-99"></span><span>               </span><span class="hs-special">}</span><span>
+</span><span id="line-100"></span></pre></body></html>

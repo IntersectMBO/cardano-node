@@ -1,0 +1,643 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Rewrite</span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteHomogeneous"><span class="hs-identifier">rewriteHomogeneous</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteFragment"><span class="hs-identifier">rewriteFragment</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier">rewriteIdentity</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Fragment.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Fragment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Fragment.html#findAtoms"><span class="hs-identifier">findAtoms</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Fragment.html#normaliseFragment"><span class="hs-identifier">normaliseFragment</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.HomogeneousFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#normaliseHomogeneous"><span class="hs-identifier">normaliseHomogeneous</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- This file concerns applying rewrite rules to a formula.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- The rewrite rules must be logical identities, hence all rewrites here produce logically equivalent formulas.</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | Call the given function on all sub-expressions of the formula recursively</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--   up to any temporal operator (= heterogeneous fragment), exclusively.</span><span>
+</span><span id="line-19"></span><span id="local-6989586621679112619"><span id="local-6989586621679112620"><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-type">recurseHomogeneous</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112619"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112620"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112619"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112620"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112619"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112620"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112619"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112620"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-20"></span><span id="recurseHomogeneous"><span class="annot"><span class="annottext">recurseHomogeneous :: forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var hs-var">recurseHomogeneous</span></a></span></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112664"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112664"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112664"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112666"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112666"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112666"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112668"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112668"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112668"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112670"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112670"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112670"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112672"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112672"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112672"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112674"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112674"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112674"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112676"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112676"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112676"><span class="hs-identifier hs-var">self</span></a></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112678"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112678"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112679"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112679"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112681"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112681"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112682"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112682"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-var">And</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112678"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112681"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112678"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112682"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112678"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112679"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112683"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112683"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112684"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112684"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112686"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112686"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112687"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112687"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112683"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112686"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112683"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112687"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112683"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112684"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112688"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112688"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112689"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112689"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112691"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112691"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112692"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112692"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-var">Implies</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112688"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112691"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112688"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112692"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112688"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112689"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112693"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112693"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112694"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112694"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112696"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112696"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112693"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112696"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112693"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112694"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112697"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112697"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112698"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112698"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112698"><span class="hs-identifier hs-var">self</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112697"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112698"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112700"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112700"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112701"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112701"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>                     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112701"><span class="hs-identifier hs-var">self</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112700"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112701"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112703"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112703"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112704"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112704"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112704"><span class="hs-identifier hs-var">self</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112703"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112704"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112706"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112706"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112707"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112707"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112709"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112709"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112710"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112710"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-var">PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112709"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112706"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112710"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112706"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112707"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span id="local-6989586621679112711"><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112711"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112712"><span class="annot"><span class="annottext">self :: Formula event ty
+</span><a href="#local-6989586621679112712"><span class="hs-identifier hs-var">self</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112714"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112714"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112715"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112715"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112716"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112716"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty) -&gt; Formula event ty
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-var">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112714"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112715"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112711"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112716"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="#local-6989586621679112711"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112712"><span class="hs-identifier hs-var">self</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- | Rewrite the formula by applying the fragment retraction &amp; normalisation recursively.</span></span><span>
+</span><span id="line-42"></span><span id="local-6989586621679112630"><span id="local-6989586621679112631"><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteFragment"><span class="hs-identifier hs-type">rewriteFragment</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112630"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112631"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112630"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112631"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112630"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112631"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-43"></span><span id="rewriteFragment"><span class="annot"><span class="annottext">rewriteFragment :: forall event ty.
+(Ord event, Ord ty) =&gt;
+Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteFragment"><span class="hs-identifier hs-var hs-var">rewriteFragment</span></a></span></span><span> </span><span id="local-6989586621679112729"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112729"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set (PropVarIdentifier, PropValue)
+-&gt; Formula event ty -&gt; Maybe (Formula event ty)
+forall event ty.
+(Ord event, Ord ty) =&gt;
+Set (PropVarIdentifier, PropValue)
+-&gt; Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="Cardano.ReCon.LTL.Lang.Fragment.html#normaliseFragment"><span class="hs-identifier hs-var">normaliseFragment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+-&gt; Set (PropVarIdentifier, PropValue)
+-&gt; Set (PropVarIdentifier, PropValue)
+forall event ty.
+Formula event ty
+-&gt; Set (PropVarIdentifier, PropValue)
+-&gt; Set (PropVarIdentifier, PropValue)
+</span><a href="Cardano.ReCon.LTL.Lang.Fragment.html#findAtoms"><span class="hs-identifier hs-var">findAtoms</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112729"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Set (PropVarIdentifier, PropValue)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112729"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | Rewrite the formula by applying the homogeneous fragment retraction &amp; normalisation recursively.</span></span><span>
+</span><span id="line-46"></span><span id="local-6989586621679112730"><span id="local-6989586621679112731"><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteHomogeneous"><span class="hs-identifier hs-type">rewriteHomogeneous</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112730"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112731"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112730"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112731"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-47"></span><span id="rewriteHomogeneous"><span class="annot"><span class="annottext">rewriteHomogeneous :: forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteHomogeneous"><span class="hs-identifier hs-var hs-var">rewriteHomogeneous</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+(Formula event ty -&gt; Maybe (Formula event ty))
+-&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#recurseHomogeneous"><span class="hs-identifier hs-var">recurseHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Maybe (Formula event ty)
+forall event ty. Formula event ty -&gt; Maybe (Formula event ty)
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#normaliseHomogeneous"><span class="hs-identifier hs-var">normaliseHomogeneous</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Rewrites the formula by the following logical identities recursively:</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--   &#9744; &#6834;&#8342; &#8868; = &#8868;</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   &#9744;&#7503; &#8868; = &#8868;</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--   &#9826;&#7503; &#8869; = &#8869;</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--   &#966; |&#7503; &#8868; = &#8868;</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--   &#966; &#8743; &#8868; = &#966;</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--   &#8868; &#8743; &#966; = &#966;</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   &#966; &#8743; &#8869; = &#8869;</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   &#8869; &#8743; &#966; = &#8869;</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   &#8868; &#8744; &#966; = &#8868;</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   &#966; &#8744; &#8868; = &#8868;</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   &#8869; &#8744; &#966; = &#966;</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   &#966; &#8744; &#8869; = &#966;</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   &#8868; &#8658; &#966; = &#966;</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--   &#8869; &#8658; &#966; = &#8868;</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--   &#966; &#8658; &#8868; = &#8868;</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--   &#966; &#8658; &#8869; = &#172; &#966;</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--   &#172; (&#172; &#966;) = &#966;</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--   &#172; &#8869; = &#8868;</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--   &#172; &#8868; = &#8869;</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--   (v = v') = &#8868; where v = v'</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--   (v = v') = &#8869; where v &#8800; v'</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--   &#8704;x. &#8868; = &#8868;</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--   &#8704;x. &#8869; = &#8869;</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--   &#8704;(x &#8712; &#8709;). &#966;       = &#8868;</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--   &#8704;(x &#8712; {v} &#8852; v&#772;). &#8869; = &#8869;</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   &#8704;(x &#8712; {v} &#8852; v&#772;). &#8868; = &#8868;</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   Additionally, unfolds base-cases of finite temporal operators.</span><span>
+</span><span id="line-77"></span><span id="local-6989586621679112646"><span id="local-6989586621679112647"><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-type">rewriteIdentity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112646"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112647"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112646"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112647"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112646"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-78"></span><span id="rewriteIdentity"><span class="annot"><span class="annottext">rewriteIdentity :: forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var hs-var">rewriteIdentity</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span id="local-6989586621679112766"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112766"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112767"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112767"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112767"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679112768"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112768"><span class="hs-identifier hs-var">phi'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-var">Forall</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112766"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112768"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679112769"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112769"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForallN"><span class="hs-identifier hs-var">unfoldForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112769"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679112771"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112771"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112772"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112772"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112772"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679112773"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112773"><span class="hs-identifier hs-var">phi'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-var">ForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112771"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112773"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679112774"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112774"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldExistsN"><span class="hs-identifier hs-var">unfoldExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112774"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679112776"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112776"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112777"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112777"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112777"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679112778"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112778"><span class="hs-identifier hs-var">phi'</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-var">ExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112776"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112778"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679112779"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112779"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-var">Next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112779"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679112780"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112780"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldNextN"><span class="hs-identifier hs-var">unfoldNextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112780"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span id="local-6989586621679112782"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112782"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112783"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112783"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-var">NextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112782"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112783"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679112784"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112784"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112785"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112785"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldUntilN"><span class="hs-identifier hs-var">unfoldUntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112784"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112785"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679112787"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112787"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112788"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112788"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112789"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112789"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112789"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679112790"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112790"><span class="hs-identifier hs-var">psi'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-var">UntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112787"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112788"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112790"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112791"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112791"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112792"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112792"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112791"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112792"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112793"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112793"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112793"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112794"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112794"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112794"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112795"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112795"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112796"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112796"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-var">And</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112795"><span class="hs-identifier hs-var">phi'</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112796"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112797"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112797"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112798"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112798"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112797"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112798"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112799"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112799"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112799"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112800"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112800"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112800"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112801"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112801"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112802"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112802"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112801"><span class="hs-identifier hs-var">phi'</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112802"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112803"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112803"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112804"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112804"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112803"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112804"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112805"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112805"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112805"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112806"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112806"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112806"><span class="hs-identifier hs-var">phi'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679112807"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112807"><span class="hs-identifier hs-var">phi'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112808"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112808"><span class="hs-identifier hs-var">psi'</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-var">Implies</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112807"><span class="hs-identifier hs-var">phi'</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112808"><span class="hs-identifier hs-var">psi'</span></a></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112809"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112809"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112809"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112810"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112810"><span class="hs-identifier hs-var">phi'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112810"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679112811"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112811"><span class="hs-identifier hs-var">phi'</span></a></span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112811"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-129"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event ty
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Const"><span class="hs-identifier hs-type">Const</span></a></span><span> </span><span id="local-6989586621679112813"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112813"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112814"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112814"><span class="hs-identifier hs-var">v'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112813"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; PropValue -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112814"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event ty
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Const"><span class="hs-identifier hs-type">Const</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span id="local-6989586621679112815"><span class="annot"><span class="annottext">p :: Formula event ty
+</span><a href="#local-6989586621679112815"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112815"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span id="local-6989586621679112816"><span class="annot"><span class="annottext">p :: Formula event ty
+</span><a href="#local-6989586621679112816"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112816"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112817"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112817"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112818"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112818"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112818"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679112819"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112819"><span class="hs-identifier hs-var">phi'</span></a></span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-var">PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112817"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112819"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112820"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112820"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set PropValue -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#null"><span class="hs-identifier hs-var">Set.null</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112820"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112822"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112822"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112823"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112823"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112824"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112824"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112824"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679112825"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112825"><span class="hs-identifier hs-var">phi'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-var">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679112822"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112823"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112825"><span class="hs-identifier hs-var">phi'</span></a></span><span>
+</span><span id="line-144"></span></pre></body></html>

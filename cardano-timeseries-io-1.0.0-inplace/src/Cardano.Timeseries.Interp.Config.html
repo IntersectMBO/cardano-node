@@ -1,0 +1,73 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">{- HLINT ignore &quot;Use newtype instead of data&quot; -}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Interp.Config</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">data</span><span> </span><span id="Config"><span class="annot"><a href="Cardano.Timeseries.Interp.Config.html#Config"><span class="hs-identifier hs-var">Config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Config"><span class="annot"><a href="Cardano.Timeseries.Interp.Config.html#Config"><span class="hs-identifier hs-var">Config</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-11"></span><span>  </span><span id="defaultRangeSamplingRateMillis"><span class="annot"><span class="annottext">Config -&gt; Word64
+</span><a href="Cardano.Timeseries.Interp.Config.html#defaultRangeSamplingRateMillis"><span class="hs-identifier hs-var hs-var">defaultRangeSamplingRateMillis</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679132842"><span id="local-6989586621679132848"><span id="local-6989586621679132852"><span class="annot"><span class="annottext">Int -&gt; Config -&gt; ShowS
+[Config] -&gt; ShowS
+Config -&gt; String
+(Int -&gt; Config -&gt; ShowS)
+-&gt; (Config -&gt; String) -&gt; ([Config] -&gt; ShowS) -&gt; Show Config
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Config -&gt; ShowS
+showsPrec :: Int -&gt; Config -&gt; ShowS
+$cshow :: Config -&gt; String
+show :: Config -&gt; String
+$cshowList :: [Config] -&gt; ShowS
+showList :: [Config] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132856"><span id="local-6989586621679132860"><span class="annot"><span class="annottext">Config -&gt; Config -&gt; Bool
+(Config -&gt; Config -&gt; Bool)
+-&gt; (Config -&gt; Config -&gt; Bool) -&gt; Eq Config
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Config -&gt; Config -&gt; Bool
+== :: Config -&gt; Config -&gt; Bool
+$c/= :: Config -&gt; Config -&gt; Bool
+/= :: Config -&gt; Config -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132865"><span id="local-6989586621679132867"><span class="annot"><span class="annottext">(forall x. Config -&gt; Rep Config x)
+-&gt; (forall x. Rep Config x -&gt; Config) -&gt; Generic Config
+forall x. Rep Config x -&gt; Config
+forall x. Config -&gt; Rep Config x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Config -&gt; Rep Config x
+from :: forall x. Config -&gt; Rep Config x
+$cto :: forall x. Rep Config x -&gt; Config
+to :: forall x. Rep Config x -&gt; Config
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132871"><span id="local-6989586621679132878"><span id="local-6989586621679132881"><span id="local-6989586621679132884"><span id="local-6989586621679132887"><span class="annot"><span class="annottext">[Config] -&gt; Value
+[Config] -&gt; Encoding
+Config -&gt; Bool
+Config -&gt; Value
+Config -&gt; Encoding
+(Config -&gt; Value)
+-&gt; (Config -&gt; Encoding)
+-&gt; ([Config] -&gt; Value)
+-&gt; ([Config] -&gt; Encoding)
+-&gt; (Config -&gt; Bool)
+-&gt; ToJSON Config
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: Config -&gt; Value
+toJSON :: Config -&gt; Value
+$ctoEncoding :: Config -&gt; Encoding
+toEncoding :: Config -&gt; Encoding
+$ctoJSONList :: [Config] -&gt; Value
+toJSONList :: [Config] -&gt; Value
+$ctoEncodingList :: [Config] -&gt; Encoding
+toEncodingList :: [Config] -&gt; Encoding
+$comitField :: Config -&gt; Bool
+omitField :: Config -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span></pre></body></html>

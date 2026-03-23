@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Attributes.Colors.Brewer
+   Description : Specification of Brewer colors.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   You almost definitely do /not/ want to use this module.  It is only
+   defined for completeness when parsing existing Dot code.
+
+   Graphviz contains a list of colors known as the /Brewer color
+   schemes/.
+
+   These colors are available under an Apache-style license:
+   &lt;http://www.graphviz.org/doc/info/colors.html#brewer_license&gt;.  As
+   such, they are not recommended for general use, and have only been
+   included in this package for completeness.
+
+   The complete list of Brewer colors can be found at
+   &lt;http://www.graphviz.org/doc/info/colors.html#brewer&gt;.
+
+ -}</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Attributes.Colors.Brewer</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerScheme"><span class="hs-identifier">BrewerScheme</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerName"><span class="hs-identifier">BrewerName</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Colors.Brewer.html#BrewerColor"><span class="hs-identifier">BrewerColor</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">{-
+
+ This is a virtual module designed just to re-export the Brewer colors.
+
+ -}</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html"><span class="hs-identifier">Data.GraphViz.Attributes.ColorScheme</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerScheme"><span class="hs-identifier">BrewerScheme</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerName"><span class="hs-identifier">BrewerName</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- To get the instances</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html"><span class="hs-identifier">Data.GraphViz.Parsing</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Printing.html"><span class="hs-identifier">Data.GraphViz.Printing</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Note: we do /not/ have {Print,Parse}Dot instances for this; it's covered in Color.</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | This value should be between @1@ and the level of the</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--   'BrewerScheme' being used.</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">data</span><span> </span><span id="BrewerColor"><span class="annot"><a href="Data.GraphViz.Attributes.Colors.Brewer.html#BrewerColor"><span class="hs-identifier hs-var">BrewerColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BC"><span class="annot"><a href="Data.GraphViz.Attributes.Colors.Brewer.html#BC"><span class="hs-identifier hs-var">BC</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerScheme"><span class="hs-identifier hs-type">BrewerScheme</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>
+</span><span id="line-52"></span><span>                   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679205953"><span id="local-6989586621679205959"><span class="annot"><span class="annottext">BrewerColor -&gt; BrewerColor -&gt; Bool
+(BrewerColor -&gt; BrewerColor -&gt; Bool)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; Bool) -&gt; Eq BrewerColor
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BrewerColor -&gt; BrewerColor -&gt; Bool
+== :: BrewerColor -&gt; BrewerColor -&gt; Bool
+$c/= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+/= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679205966"><span id="local-6989586621679205972"><span id="local-6989586621679205976"><span id="local-6989586621679205980"><span id="local-6989586621679205983"><span id="local-6989586621679205986"><span id="local-6989586621679205989"><span class="annot"><span class="annottext">Eq BrewerColor
+Eq BrewerColor =&gt;
+(BrewerColor -&gt; BrewerColor -&gt; Ordering)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; Bool)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; Bool)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; Bool)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; Bool)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; BrewerColor)
+-&gt; (BrewerColor -&gt; BrewerColor -&gt; BrewerColor)
+-&gt; Ord BrewerColor
+BrewerColor -&gt; BrewerColor -&gt; Bool
+BrewerColor -&gt; BrewerColor -&gt; Ordering
+BrewerColor -&gt; BrewerColor -&gt; BrewerColor
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BrewerColor -&gt; BrewerColor -&gt; Ordering
+compare :: BrewerColor -&gt; BrewerColor -&gt; Ordering
+$c&lt; :: BrewerColor -&gt; BrewerColor -&gt; Bool
+&lt; :: BrewerColor -&gt; BrewerColor -&gt; Bool
+$c&lt;= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+&lt;= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+$c&gt; :: BrewerColor -&gt; BrewerColor -&gt; Bool
+&gt; :: BrewerColor -&gt; BrewerColor -&gt; Bool
+$c&gt;= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+&gt;= :: BrewerColor -&gt; BrewerColor -&gt; Bool
+$cmax :: BrewerColor -&gt; BrewerColor -&gt; BrewerColor
+max :: BrewerColor -&gt; BrewerColor -&gt; BrewerColor
+$cmin :: BrewerColor -&gt; BrewerColor -&gt; BrewerColor
+min :: BrewerColor -&gt; BrewerColor -&gt; BrewerColor
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679205993"><span id="local-6989586621679206001"><span id="local-6989586621679206005"><span class="annot"><span class="annottext">Int -&gt; BrewerColor -&gt; ShowS
+[BrewerColor] -&gt; ShowS
+BrewerColor -&gt; String
+(Int -&gt; BrewerColor -&gt; ShowS)
+-&gt; (BrewerColor -&gt; String)
+-&gt; ([BrewerColor] -&gt; ShowS)
+-&gt; Show BrewerColor
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BrewerColor -&gt; ShowS
+showsPrec :: Int -&gt; BrewerColor -&gt; ShowS
+$cshow :: BrewerColor -&gt; String
+show :: BrewerColor -&gt; String
+$cshowList :: [BrewerColor] -&gt; ShowS
+showList :: [BrewerColor] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679206009"><span id="local-6989586621679206013"><span id="local-6989586621679206016"><span id="local-6989586621679206027"><span class="annot"><span class="annottext">ReadPrec [BrewerColor]
+ReadPrec BrewerColor
+Int -&gt; ReadS BrewerColor
+ReadS [BrewerColor]
+(Int -&gt; ReadS BrewerColor)
+-&gt; ReadS [BrewerColor]
+-&gt; ReadPrec BrewerColor
+-&gt; ReadPrec [BrewerColor]
+-&gt; Read BrewerColor
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BrewerColor
+readsPrec :: Int -&gt; ReadS BrewerColor
+$creadList :: ReadS [BrewerColor]
+readList :: ReadS [BrewerColor]
+$creadPrec :: ReadPrec BrewerColor
+readPrec :: ReadPrec BrewerColor
+$creadListPrec :: ReadPrec [BrewerColor]
+readListPrec :: ReadPrec [BrewerColor]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span></pre></body></html>

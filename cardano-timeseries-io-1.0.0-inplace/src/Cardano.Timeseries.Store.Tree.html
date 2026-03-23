@@ -1,0 +1,552 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveFoldable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DuplicateRecordFields #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedRecordDot #-}</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Store.Tree</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier">Point</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier">Tree</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#fromFlat"><span class="hs-identifier">fromFlat</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Instant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier">Instant</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier">InstantVector</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier">MetricIdentifier</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier">SeriesIdentifier</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier">Timestamp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Store.html"><span class="hs-identifier">Cardano.Timeseries.Store</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Store.Flat.html"><span class="hs-identifier">Cardano.Timeseries.Store.Flat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Flat.html#Flat"><span class="hs-identifier">Flat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Flat.html"><span class="hs-identifier">Cardano.Timeseries.Store.Flat</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Flat</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Util.html"><span class="hs-identifier">Cardano.Timeseries.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Util.html#range"><span class="hs-identifier">range</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#lookup"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="Point"><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-var">Point</span></a></span></span><span> </span><span id="local-6989586621679138629"><span class="annot"><a href="#local-6989586621679138629"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Point"><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-var">Point</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-30"></span><span>  </span><span id="%24sel%3Alabels%3APoint"><span class="annot"><span class="annottext">forall a. Point a -&gt; SeriesIdentifier
+</span><a href="Cardano.Timeseries.Store.Tree.html#%24sel%3Alabels%3APoint"><span class="hs-identifier hs-var hs-var">labels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span id="%24sel%3Avalue%3APoint"><span class="annot"><span class="annottext">forall a. Point a -&gt; a
+</span><a href="Cardano.Timeseries.Store.Tree.html#%24sel%3Avalue%3APoint"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679138629"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679138792"><span id="local-6989586621679138800"><span id="local-6989586621679138804"><span class="annot"><span class="annottext">Int -&gt; Point a -&gt; ShowS
+[Point a] -&gt; ShowS
+Point a -&gt; String
+(Int -&gt; Point a -&gt; ShowS)
+-&gt; (Point a -&gt; String) -&gt; ([Point a] -&gt; ShowS) -&gt; Show (Point a)
+forall a. Show a =&gt; Int -&gt; Point a -&gt; ShowS
+forall a. Show a =&gt; [Point a] -&gt; ShowS
+forall a. Show a =&gt; Point a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Point a -&gt; ShowS
+showsPrec :: Int -&gt; Point a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Point a -&gt; String
+show :: Point a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Point a] -&gt; ShowS
+showList :: [Point a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138817"><span id="local-6989586621679138823"><span id="local-6989586621679138828"><span id="local-6989586621679138832"><span id="local-6989586621679138835"><span id="local-6989586621679138838"><span id="local-6989586621679138841"><span class="annot"><span class="annottext">Eq (Point a)
+Eq (Point a) =&gt;
+(Point a -&gt; Point a -&gt; Ordering)
+-&gt; (Point a -&gt; Point a -&gt; Bool)
+-&gt; (Point a -&gt; Point a -&gt; Bool)
+-&gt; (Point a -&gt; Point a -&gt; Bool)
+-&gt; (Point a -&gt; Point a -&gt; Bool)
+-&gt; (Point a -&gt; Point a -&gt; Point a)
+-&gt; (Point a -&gt; Point a -&gt; Point a)
+-&gt; Ord (Point a)
+Point a -&gt; Point a -&gt; Bool
+Point a -&gt; Point a -&gt; Ordering
+Point a -&gt; Point a -&gt; Point a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Point a)
+forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Bool
+forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Ordering
+forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Point a
+$ccompare :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Ordering
+compare :: Point a -&gt; Point a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Bool
+&lt; :: Point a -&gt; Point a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Bool
+&lt;= :: Point a -&gt; Point a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Bool
+&gt; :: Point a -&gt; Point a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Bool
+&gt;= :: Point a -&gt; Point a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Point a
+max :: Point a -&gt; Point a -&gt; Point a
+$cmin :: forall a. Ord a =&gt; Point a -&gt; Point a -&gt; Point a
+min :: Point a -&gt; Point a -&gt; Point a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138853"><span id="local-6989586621679138859"><span class="annot"><span class="annottext">Point a -&gt; Point a -&gt; Bool
+(Point a -&gt; Point a -&gt; Bool)
+-&gt; (Point a -&gt; Point a -&gt; Bool) -&gt; Eq (Point a)
+forall a. Eq a =&gt; Point a -&gt; Point a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Point a -&gt; Point a -&gt; Bool
+== :: Point a -&gt; Point a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Point a -&gt; Point a -&gt; Bool
+/= :: Point a -&gt; Point a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138867"><span id="local-6989586621679138873"><span id="local-6989586621679138876"><span id="local-6989586621679138881"><span id="local-6989586621679138883"><span id="local-6989586621679138886"><span id="local-6989586621679138889"><span id="local-6989586621679138892"><span id="local-6989586621679138895"><span id="local-6989586621679138898"><span id="local-6989586621679138901"><span id="local-6989586621679138903"><span id="local-6989586621679138906"><span id="local-6989586621679138911"><span id="local-6989586621679138916"><span id="local-6989586621679138921"><span id="local-6989586621679138926"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Point m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a)
+-&gt; (forall a. Point a -&gt; [a])
+-&gt; (forall a. Point a -&gt; Bool)
+-&gt; (forall a. Point a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Point a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Point a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Point a -&gt; a)
+-&gt; (forall a. Num a =&gt; Point a -&gt; a)
+-&gt; (forall a. Num a =&gt; Point a -&gt; a)
+-&gt; Foldable Point
+forall a. Eq a =&gt; a -&gt; Point a -&gt; Bool
+forall a. Num a =&gt; Point a -&gt; a
+forall a. Ord a =&gt; Point a -&gt; a
+forall m. Monoid m =&gt; Point m -&gt; m
+forall a. Point a -&gt; Bool
+forall a. Point a -&gt; Int
+forall a. Point a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; Point m -&gt; m
+fold :: forall m. Monoid m =&gt; Point m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Point a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Point a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Point a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Point a -&gt; a
+$ctoList :: forall a. Point a -&gt; [a]
+toList :: forall a. Point a -&gt; [a]
+$cnull :: forall a. Point a -&gt; Bool
+null :: forall a. Point a -&gt; Bool
+$clength :: forall a. Point a -&gt; Int
+length :: forall a. Point a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; Point a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Point a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; Point a -&gt; a
+maximum :: forall a. Ord a =&gt; Point a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Point a -&gt; a
+minimum :: forall a. Ord a =&gt; Point a -&gt; a
+$csum :: forall a. Num a =&gt; Point a -&gt; a
+sum :: forall a. Num a =&gt; Point a -&gt; a
+$cproduct :: forall a. Num a =&gt; Point a -&gt; a
+product :: forall a. Num a =&gt; Point a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138932"><span id="local-6989586621679138934"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Point a -&gt; Point b)
+-&gt; (forall a b. a -&gt; Point b -&gt; Point a) -&gt; Functor Point
+forall a b. a -&gt; Point b -&gt; Point a
+forall a b. (a -&gt; b) -&gt; Point a -&gt; Point b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Point a -&gt; Point b
+fmap :: forall a b. (a -&gt; b) -&gt; Point a -&gt; Point b
+$c&lt;$ :: forall a b. a -&gt; Point b -&gt; Point a
+&lt;$ :: forall a b. a -&gt; Point b -&gt; Point a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138938"><span id="local-6989586621679138940"><span class="annot"><span class="annottext">(forall x. Point a -&gt; Rep (Point a) x)
+-&gt; (forall x. Rep (Point a) x -&gt; Point a) -&gt; Generic (Point a)
+forall x. Rep (Point a) x -&gt; Point a
+forall x. Point a -&gt; Rep (Point a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Point a) x -&gt; Point a
+forall a x. Point a -&gt; Rep (Point a) x
+$cfrom :: forall a x. Point a -&gt; Rep (Point a) x
+from :: forall x. Point a -&gt; Rep (Point a) x
+$cto :: forall a x. Rep (Point a) x -&gt; Point a
+to :: forall x. Rep (Point a) x -&gt; Point a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679138707"><span id="local-6989586621679138945"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138707"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138707"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">type</span><span> </span><span id="Tree"><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-var">Tree</span></a></span></span><span> </span><span id="local-6989586621679138968"><span class="annot"><a href="#local-6989586621679138968"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier hs-type">MetricIdentifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138968"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679138716"><span class="annot"><a href="Cardano.Timeseries.Store.html#Store"><span class="hs-identifier hs-type">Store</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Cardano.Timeseries.Store.html#insert"><span class="hs-identifier hs-type">insert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier hs-type">MetricIdentifier</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679138985"><span class="annot"><span class="annottext">insert :: Tree a -&gt; Label -&gt; Instant a -&gt; Tree a
+</span><a href="Cardano.Timeseries.Store.html#insert"><span class="hs-identifier hs-var hs-var hs-var hs-var">insert</span></a></span></span><span> </span><span id="local-6989586621679138986"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679138986"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679138987"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679138987"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span id="local-6989586621679138989"><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679138989"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679138990"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679138990"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679138991"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679138991"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Timestamp [Point a] -&gt; Tree a -&gt; Tree a)
+-&gt; Tree a -&gt; Map Timestamp [Point a] -&gt; Tree a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Label -&gt; Map Timestamp [Point a] -&gt; Tree a -&gt; Tree a
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679138987"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679138986"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Timestamp [Point a] -&gt; Tree a)
+-&gt; Map Timestamp [Point a] -&gt; Tree a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">([Point a] -&gt; Map Timestamp [Point a] -&gt; Map Timestamp [Point a])
+-&gt; ([Point a], Map Timestamp [Point a]) -&gt; Map Timestamp [Point a]
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp
+-&gt; [Point a] -&gt; Map Timestamp [Point a] -&gt; Map Timestamp [Point a]
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679138990"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(([Point a], Map Timestamp [Point a]) -&gt; Map Timestamp [Point a])
+-&gt; ([Point a], Map Timestamp [Point a]) -&gt; Map Timestamp [Point a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Tree a -&gt; Maybe (Map Timestamp [Point a])
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679138987"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679138986"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">Maybe (Map Timestamp [Point a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; a -&gt; Point a
+forall a. SeriesIdentifier -&gt; a -&gt; Point a
+</span><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-var">Point</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679138989"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679138991"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map Timestamp [Point a]
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679138997"><span class="annot"><span class="annottext">Map Timestamp [Point a]
+</span><a href="#local-6989586621679138997"><span class="hs-identifier hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; a -&gt; Point a
+forall a. SeriesIdentifier -&gt; a -&gt; Point a
+</span><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-var">Point</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679138989"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679138991"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Point a -&gt; [Point a] -&gt; [Point a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Point a] -&gt; Maybe [Point a] -&gt; [Point a]
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp -&gt; Map Timestamp [Point a] -&gt; Maybe [Point a]
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679138990"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Map Timestamp [Point a]
+</span><a href="#local-6989586621679138997"><span class="hs-identifier hs-var">inner</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map Timestamp [Point a]
+</span><a href="#local-6989586621679138997"><span class="hs-identifier hs-var">inner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679139001"><span class="annot"><span class="annottext">truncate :: Tree a -&gt; Timestamp -&gt; Tree a
+</span><a href="#local-6989586621679139001"><span class="hs-identifier hs-var hs-var hs-var hs-var">truncate</span></a></span></span><span> </span><span id="local-6989586621679139003"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139003"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679139004"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139004"><span class="hs-identifier hs-var">cutoff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Timestamp [Point a] -&gt; Map Timestamp [Point a])
+-&gt; Tree a -&gt; Tree a
+forall a b. (a -&gt; b) -&gt; Map Label a -&gt; Map Label b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Timestamp -&gt; Bool)
+-&gt; Map Timestamp [Point a] -&gt; Map Timestamp [Point a]
+forall k a. (k -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#dropWhileAntitone"><span class="hs-identifier hs-var">Map.dropWhileAntitone</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139004"><span class="hs-identifier hs-var">cutoff</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139003"><span class="hs-identifier hs-var">store</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Cardano.Timeseries.Store.html#evaluate"><span class="hs-identifier hs-type">evaluate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier hs-type">MetricIdentifier</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679139010"><span class="annot"><span class="annottext">evaluate :: Tree a -&gt; Label -&gt; Timestamp -&gt; InstantVector a
+</span><a href="Cardano.Timeseries.Store.html#evaluate"><span class="hs-identifier hs-var hs-var hs-var hs-var">evaluate</span></a></span></span><span> </span><span id="local-6989586621679139011"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139011"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679139012"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139012"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679139013"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139013"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Tree a -&gt; Maybe (Map Timestamp [Point a])
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139012"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139011"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679139014"><span class="annot"><span class="annottext">Map Timestamp [Point a]
+</span><a href="#local-6989586621679139014"><span class="hs-identifier hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">InstantVector a -&gt; InstantVector a
+forall a. InstantVector a -&gt; InstantVector a
+</span><a href="#local-6989586621679139015"><span class="hs-identifier hs-var">updateTime</span></a></span><span> </span><span class="annot"><span class="annottext">(InstantVector a -&gt; InstantVector a)
+-&gt; InstantVector a -&gt; InstantVector a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a) -&gt; InstantVector a
+forall a. Map SeriesIdentifier (Timestamp, a) -&gt; InstantVector a
+</span><a href="#local-6989586621679139016"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">(Map SeriesIdentifier (Timestamp, a) -&gt; InstantVector a)
+-&gt; Map SeriesIdentifier (Timestamp, a) -&gt; InstantVector a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Map SeriesIdentifier (Timestamp, a)
+ -&gt; Timestamp -&gt; [Point a] -&gt; Map SeriesIdentifier (Timestamp, a))
+-&gt; Map SeriesIdentifier (Timestamp, a)
+-&gt; Map Timestamp [Point a]
+-&gt; Map SeriesIdentifier (Timestamp, a)
+forall a k b. (a -&gt; k -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#foldlWithKey"><span class="hs-identifier hs-var">Map.foldlWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+-&gt; Timestamp -&gt; [Point a] -&gt; Map SeriesIdentifier (Timestamp, a)
+forall a.
+Map SeriesIdentifier (Timestamp, a)
+-&gt; Timestamp -&gt; [Point a] -&gt; Map SeriesIdentifier (Timestamp, a)
+</span><a href="#local-6989586621679139018"><span class="hs-identifier hs-var">accumulate</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Timestamp [Point a] -&gt; Map SeriesIdentifier (Timestamp, a))
+-&gt; Map Timestamp [Point a] -&gt; Map SeriesIdentifier (Timestamp, a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">Timestamp
+-&gt; Timestamp -&gt; Map Timestamp [Point a] -&gt; Map Timestamp [Point a]
+forall k v. Ord k =&gt; k -&gt; k -&gt; Map k v -&gt; Map k v
+</span><a href="Cardano.Timeseries.Util.html#range"><span class="hs-identifier hs-var">range</span></a></span><span>
+</span><span id="line-52"></span><span>          </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139019"><span class="hs-identifier hs-var">rangeStartExc</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139020"><span class="hs-identifier hs-var">rangeEndExc</span></a></span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><span class="annottext">Map Timestamp [Point a]
+</span><a href="#local-6989586621679139014"><span class="hs-identifier hs-var">inner</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-comment">-- | (-) wraps around, so make sure we do not in case `t` is too small</span><span>
+</span><span id="line-58"></span><span>        </span><span id="local-6989586621679139019"><span class="annot"><span class="annottext">rangeStartExc :: Timestamp
+</span><a href="#local-6989586621679139019"><span class="hs-identifier hs-var hs-var">rangeStartExc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Timestamp
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139013"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Timestamp
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="Cardano.Timeseries.Store.html#stalenessConstant"><span class="hs-identifier hs-var">stalenessConstant</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>        </span><span id="local-6989586621679139020"><span class="annot"><span class="annottext">rangeEndExc :: Timestamp
+</span><a href="#local-6989586621679139020"><span class="hs-identifier hs-var hs-var">rangeEndExc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139013"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Timestamp
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>        </span><span id="local-6989586621679138738"><span class="annot"><a href="#local-6989586621679139015"><span class="hs-identifier hs-type">updateTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138738"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138738"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-63"></span><span>        </span><span id="local-6989586621679139015"><span class="annot"><span class="annottext">updateTime :: forall a. InstantVector a -&gt; InstantVector a
+</span><a href="#local-6989586621679139015"><span class="hs-identifier hs-var hs-var">updateTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Instant a -&gt; Instant a) -&gt; [Instant a] -&gt; [Instant a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679139034"><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679139034"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; Timestamp -&gt; a -&gt; Instant a
+forall a. SeriesIdentifier -&gt; Timestamp -&gt; a -&gt; Instant a
+</span><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-var">Instant</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679139034"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">labels</span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139013"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679139034"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">value</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>        </span><span id="local-6989586621679138743"><span class="annot"><a href="#local-6989586621679139018"><span class="hs-identifier hs-type">accumulate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679138743"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138743"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679138743"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-66"></span><span>        </span><span id="local-6989586621679139018"><span class="annot"><span class="annottext">accumulate :: forall a.
+Map SeriesIdentifier (Timestamp, a)
+-&gt; Timestamp -&gt; [Point a] -&gt; Map SeriesIdentifier (Timestamp, a)
+</span><a href="#local-6989586621679139018"><span class="hs-identifier hs-var hs-var">accumulate</span></a></span></span><span> </span><span id="local-6989586621679139037"><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+</span><a href="#local-6989586621679139037"><span class="hs-identifier hs-var">closest</span></a></span></span><span> </span><span id="local-6989586621679139038"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139038"><span class="hs-identifier hs-var">tAcc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map SeriesIdentifier (Timestamp, a)
+ -&gt; Point a -&gt; Map SeriesIdentifier (Timestamp, a))
+-&gt; Map SeriesIdentifier (Timestamp, a)
+-&gt; [Point a]
+-&gt; Map SeriesIdentifier (Timestamp, a)
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">List.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+-&gt; Point a -&gt; Map SeriesIdentifier (Timestamp, a)
+forall {b}.
+Map SeriesIdentifier (Timestamp, b)
+-&gt; Point b -&gt; Map SeriesIdentifier (Timestamp, b)
+</span><a href="#local-6989586621679139040"><span class="hs-identifier hs-var">accumulateInt</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+</span><a href="#local-6989586621679139037"><span class="hs-identifier hs-var">closest</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>          </span><span id="local-6989586621679139040"><span class="annot"><span class="annottext">accumulateInt :: Map SeriesIdentifier (Timestamp, b)
+-&gt; Point b -&gt; Map SeriesIdentifier (Timestamp, b)
+</span><a href="#local-6989586621679139040"><span class="hs-identifier hs-var hs-var">accumulateInt</span></a></span></span><span> </span><span id="local-6989586621679139047"><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, b)
+</span><a href="#local-6989586621679139047"><span class="hs-identifier hs-var">closest'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Point"><span class="hs-identifier hs-type">Point</span></a></span><span> </span><span id="local-6989586621679139048"><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679139048"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679139049"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679139049"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Timestamp, b)
+ -&gt; Map SeriesIdentifier (Timestamp, b)
+ -&gt; Map SeriesIdentifier (Timestamp, b))
+-&gt; Map SeriesIdentifier (Timestamp, b)
+-&gt; (Timestamp, b)
+-&gt; Map SeriesIdentifier (Timestamp, b)
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeriesIdentifier
+-&gt; (Timestamp, b)
+-&gt; Map SeriesIdentifier (Timestamp, b)
+-&gt; Map SeriesIdentifier (Timestamp, b)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679139048"><span class="hs-identifier hs-var">ls</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, b)
+</span><a href="#local-6989586621679139047"><span class="hs-identifier hs-var">closest'</span></a></span><span> </span><span class="annot"><span class="annottext">((Timestamp, b) -&gt; Map SeriesIdentifier (Timestamp, b))
+-&gt; (Timestamp, b) -&gt; Map SeriesIdentifier (Timestamp, b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+-&gt; Map SeriesIdentifier (Timestamp, b) -&gt; Maybe (Timestamp, b)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679139048"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, b)
+</span><a href="#local-6989586621679139047"><span class="hs-identifier hs-var">closest'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>              </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679139050"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139050"><span class="hs-identifier hs-var">t'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679139051"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679139051"><span class="hs-identifier hs-var">v'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139050"><span class="hs-identifier hs-var">t'</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139038"><span class="hs-identifier hs-var">tAcc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139050"><span class="hs-identifier hs-var">t'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679139051"><span class="hs-identifier hs-var">v'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>              </span><span class="annot"><span class="annottext">Maybe (Timestamp, b)
+</span><span class="hs-identifier">_</span></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139038"><span class="hs-identifier hs-var">tAcc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679139049"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>        </span><span id="local-6989586621679138739"><span class="annot"><a href="#local-6989586621679139016"><span class="hs-identifier hs-type">convert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679138739"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138739"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-73"></span><span>        </span><span id="local-6989586621679139016"><span class="annot"><span class="annottext">convert :: forall a. Map SeriesIdentifier (Timestamp, a) -&gt; InstantVector a
+</span><a href="#local-6989586621679139016"><span class="hs-identifier hs-var hs-var">convert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((SeriesIdentifier, (Timestamp, a)) -&gt; Instant a)
+-&gt; [(SeriesIdentifier, (Timestamp, a))] -&gt; [Instant a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679139053"><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679139053"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679139054"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139054"><span class="hs-identifier hs-var">tConv</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679139055"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679139055"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; Timestamp -&gt; a -&gt; Instant a
+forall a. SeriesIdentifier -&gt; Timestamp -&gt; a -&gt; Instant a
+</span><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-var">Instant</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679139053"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139054"><span class="hs-identifier hs-var">tConv</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679139055"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(SeriesIdentifier, (Timestamp, a))] -&gt; [Instant a])
+-&gt; (Map SeriesIdentifier (Timestamp, a)
+    -&gt; [(SeriesIdentifier, (Timestamp, a))])
+-&gt; Map SeriesIdentifier (Timestamp, a)
+-&gt; [Instant a]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map SeriesIdentifier (Timestamp, a)
+-&gt; [(SeriesIdentifier, (Timestamp, a))]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Map Timestamp [Point a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Cardano.Timeseries.Store.html#new"><span class="hs-identifier hs-type">new</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679139059"><span class="annot"><span class="annottext">new :: Tree a
+</span><a href="Cardano.Timeseries.Store.html#new"><span class="hs-identifier hs-var hs-var hs-var hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tree a
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="Cardano.Timeseries.Store.html#metrics"><span class="hs-identifier hs-type">metrics</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138716"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier hs-type">MetricIdentifier</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679139061"><span class="annot"><span class="annottext">metrics :: Tree a -&gt; Set Label
+</span><a href="Cardano.Timeseries.Store.html#metrics"><span class="hs-identifier hs-var hs-var hs-var hs-var">metrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; Set Label
+forall k a. Map k a -&gt; Set k
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#keysSet"><span class="hs-identifier hs-var">Map.keysSet</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679139071"><span class="annot"><span class="annottext">count :: Tree a -&gt; Int
+</span><a href="#local-6989586621679139071"><span class="hs-identifier hs-var hs-var hs-var hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Label Int -&gt; Int
+forall a. Num a =&gt; Map Label a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Label Int -&gt; Int)
+-&gt; (Tree a -&gt; Map Label Int) -&gt; Tree a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Timestamp Int -&gt; Int
+forall a. Num a =&gt; Map Timestamp a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Timestamp Int -&gt; Int)
+-&gt; (Map Timestamp [Point a] -&gt; Map Timestamp Int)
+-&gt; Map Timestamp [Point a]
+-&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([Point a] -&gt; Int) -&gt; Map Timestamp [Point a] -&gt; Map Timestamp Int
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#map"><span class="hs-identifier hs-var">Map.map</span></a></span><span> </span><span class="annot"><span class="annottext">[Point a] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Timestamp [Point a] -&gt; Int) -&gt; Tree a -&gt; Map Label Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679139082"><span class="annot"><span class="annottext">earliest :: Tree a -&gt; Label -&gt; Maybe Timestamp
+</span><a href="#local-6989586621679139082"><span class="hs-identifier hs-var hs-var hs-var hs-var">earliest</span></a></span></span><span> </span><span id="local-6989586621679139084"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139084"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679139085"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139085"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Tree a -&gt; Maybe (Map Timestamp [Point a])
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139085"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139084"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Map Timestamp [Point a])
+-&gt; (Map Timestamp [Point a] -&gt; Maybe (Timestamp, [Point a]))
+-&gt; Maybe (Timestamp, [Point a])
+forall a b. Maybe a -&gt; (a -&gt; Maybe b) -&gt; Maybe b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Map Timestamp [Point a] -&gt; Maybe (Timestamp, [Point a])
+forall k a. Map k a -&gt; Maybe (k, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookupMin"><span class="hs-identifier hs-var">Map.lookupMin</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Timestamp, [Point a])
+-&gt; ((Timestamp, [Point a]) -&gt; Timestamp) -&gt; Maybe Timestamp
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Timestamp, [Point a]) -&gt; Timestamp
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679139092"><span class="annot"><span class="annottext">latest :: Tree a -&gt; Label -&gt; Maybe Timestamp
+</span><a href="#local-6989586621679139092"><span class="hs-identifier hs-var hs-var hs-var hs-var">latest</span></a></span></span><span>   </span><span id="local-6989586621679139094"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139094"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679139095"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139095"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Tree a -&gt; Maybe (Map Timestamp [Point a])
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139095"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679139094"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Map Timestamp [Point a])
+-&gt; (Map Timestamp [Point a] -&gt; Maybe (Timestamp, [Point a]))
+-&gt; Maybe (Timestamp, [Point a])
+forall a b. Maybe a -&gt; (a -&gt; Maybe b) -&gt; Maybe b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Map Timestamp [Point a] -&gt; Maybe (Timestamp, [Point a])
+forall k a. Map k a -&gt; Maybe (k, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookupMax"><span class="hs-identifier hs-var">Map.lookupMax</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Timestamp, [Point a])
+-&gt; ((Timestamp, [Point a]) -&gt; Timestamp) -&gt; Maybe Timestamp
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Timestamp, [Point a]) -&gt; Timestamp
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679138778"><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#fromFlat"><span class="hs-identifier hs-type">fromFlat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Flat.html#Flat"><span class="hs-identifier hs-type">Flat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679138778"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-89"></span><span id="fromFlat"><span class="annot"><span class="annottext">fromFlat :: forall a. Flat a -&gt; Tree a
+</span><a href="Cardano.Timeseries.Store.Tree.html#fromFlat"><span class="hs-identifier hs-var hs-var">fromFlat</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>                          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tree a
+forall s a. Store s a =&gt; s
+</span><a href="Cardano.Timeseries.Store.html#new"><span class="hs-identifier hs-var">new</span></a></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Cardano.Timeseries.Store.Tree.html#fromFlat"><span class="hs-identifier hs-var">fromFlat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Store.Flat.html#Point"><span class="hs-identifier hs-type">Flat.Point</span></a></span><span> </span><span id="local-6989586621679139100"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139100"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679139101"><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679139101"><span class="hs-identifier hs-var">instant</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679139102"><span class="annot"><span class="annottext">[Point a]
+</span><a href="#local-6989586621679139102"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; Label -&gt; Instant a -&gt; Tree a
+forall s a. Store s a =&gt; s -&gt; Label -&gt; Instant a -&gt; s
+</span><a href="Cardano.Timeseries.Store.html#insert"><span class="hs-identifier hs-var">insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Point a] -&gt; Tree a
+forall a. Flat a -&gt; Tree a
+</span><a href="Cardano.Timeseries.Store.Tree.html#fromFlat"><span class="hs-identifier hs-var">fromFlat</span></a></span><span> </span><span class="annot"><span class="annottext">[Point a]
+</span><a href="#local-6989586621679139102"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679139100"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679139101"><span class="hs-identifier hs-var">instant</span></a></span><span>
+</span><span id="line-91"></span></pre></body></html>

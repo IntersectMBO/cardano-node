@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Component.Types</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#QueryId"><span class="hs-identifier">QueryId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#TimeseriesConfig"><span class="hs-identifier">TimeseriesConfig</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Config.html"><span class="hs-identifier">Cardano.Timeseries.Interp.Config</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Interp</span></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">type</span><span> </span><span id="QueryId"><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#QueryId"><span class="hs-identifier hs-var">QueryId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">data</span><span> </span><span id="TimeseriesConfig"><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#TimeseriesConfig"><span class="hs-identifier hs-var">TimeseriesConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeseriesConfig"><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#TimeseriesConfig"><span class="hs-identifier hs-var">TimeseriesConfig</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- | How long the store entries are retained for (ms).</span></span><span>
+</span><span id="line-15"></span><span>    </span><span id="retentionMillis"><span class="annot"><span class="annottext">TimeseriesConfig -&gt; Word64
+</span><a href="Cardano.Timeseries.Component.Types.html#retentionMillis"><span class="hs-identifier hs-var hs-var">retentionMillis</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- | How often the pruner thread shall prune the store (sec), if enabled.</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="pruningPeriodSec"><span class="annot"><span class="annottext">TimeseriesConfig -&gt; Maybe Word64
+</span><a href="Cardano.Timeseries.Component.Types.html#pruningPeriodSec"><span class="hs-identifier hs-var hs-var">pruningPeriodSec</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Parameters of timeseries query interpretation.</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="interpCfg"><span class="annot"><span class="annottext">TimeseriesConfig -&gt; Config
+</span><a href="Cardano.Timeseries.Component.Types.html#interpCfg"><span class="hs-identifier hs-var hs-var">interpCfg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Config.html#Config"><span class="hs-identifier hs-type">Interp.Config</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679133107"><span id="local-6989586621679133117"><span id="local-6989586621679133121"><span class="annot"><span class="annottext">Int -&gt; TimeseriesConfig -&gt; ShowS
+[TimeseriesConfig] -&gt; ShowS
+TimeseriesConfig -&gt; String
+(Int -&gt; TimeseriesConfig -&gt; ShowS)
+-&gt; (TimeseriesConfig -&gt; String)
+-&gt; ([TimeseriesConfig] -&gt; ShowS)
+-&gt; Show TimeseriesConfig
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TimeseriesConfig -&gt; ShowS
+showsPrec :: Int -&gt; TimeseriesConfig -&gt; ShowS
+$cshow :: TimeseriesConfig -&gt; String
+show :: TimeseriesConfig -&gt; String
+$cshowList :: [TimeseriesConfig] -&gt; ShowS
+showList :: [TimeseriesConfig] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679133125"><span id="local-6989586621679133127"><span class="annot"><span class="annottext">(forall x. TimeseriesConfig -&gt; Rep TimeseriesConfig x)
+-&gt; (forall x. Rep TimeseriesConfig x -&gt; TimeseriesConfig)
+-&gt; Generic TimeseriesConfig
+forall x. Rep TimeseriesConfig x -&gt; TimeseriesConfig
+forall x. TimeseriesConfig -&gt; Rep TimeseriesConfig x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TimeseriesConfig -&gt; Rep TimeseriesConfig x
+from :: forall x. TimeseriesConfig -&gt; Rep TimeseriesConfig x
+$cto :: forall x. Rep TimeseriesConfig x -&gt; TimeseriesConfig
+to :: forall x. Rep TimeseriesConfig x -&gt; TimeseriesConfig
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679133131"><span id="local-6989586621679133138"><span id="local-6989586621679133141"><span id="local-6989586621679133144"><span id="local-6989586621679133147"><span class="annot"><span class="annottext">[TimeseriesConfig] -&gt; Value
+[TimeseriesConfig] -&gt; Encoding
+TimeseriesConfig -&gt; Bool
+TimeseriesConfig -&gt; Value
+TimeseriesConfig -&gt; Encoding
+(TimeseriesConfig -&gt; Value)
+-&gt; (TimeseriesConfig -&gt; Encoding)
+-&gt; ([TimeseriesConfig] -&gt; Value)
+-&gt; ([TimeseriesConfig] -&gt; Encoding)
+-&gt; (TimeseriesConfig -&gt; Bool)
+-&gt; ToJSON TimeseriesConfig
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: TimeseriesConfig -&gt; Value
+toJSON :: TimeseriesConfig -&gt; Value
+$ctoEncoding :: TimeseriesConfig -&gt; Encoding
+toEncoding :: TimeseriesConfig -&gt; Encoding
+$ctoJSONList :: [TimeseriesConfig] -&gt; Value
+toJSONList :: [TimeseriesConfig] -&gt; Value
+$ctoEncodingList :: [TimeseriesConfig] -&gt; Encoding
+toEncodingList :: [TimeseriesConfig] -&gt; Encoding
+$comitField :: TimeseriesConfig -&gt; Bool
+omitField :: TimeseriesConfig -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span></pre></body></html>

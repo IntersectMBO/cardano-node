@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Interp.Expect</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.AsText.html"><span class="hs-identifier">Cardano.Timeseries.AsText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier">showT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Instant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier">Instant</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier">InstantVector</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Timeseries</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#Timeseries"><span class="hs-identifier">Timeseries</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#TimeseriesVector"><span class="hs-identifier">TimeseriesVector</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html"><span class="hs-identifier">Cardano.Timeseries.Interp.Types</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html"><span class="hs-identifier">Cardano.Timeseries.Interp.Value</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVector"><span class="hs-identifier hs-type">expectInstantVector</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span id="expectInstantVector"><span class="annot"><span class="annottext">expectInstantVector :: Value -&gt; InterpM (InstantVector Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVector"><span class="hs-identifier hs-var hs-var">expectInstantVector</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#InstantVector"><span class="hs-identifier hs-type">Value.InstantVector</span></a></span><span> </span><span id="local-6989586621679138221"><span class="annot"><span class="annottext">InstantVector Value
+</span><a href="#local-6989586621679138221"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InstantVector Value -&gt; InterpM (InstantVector Value)
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">InstantVector Value
+</span><a href="#local-6989586621679138221"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-13"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVector"><span class="hs-identifier hs-var">expectInstantVector</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM (InstantVector Value)
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected an instant vector&quot;</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVector"><span class="hs-identifier hs-type">expectRangeVector</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#TimeseriesVector"><span class="hs-identifier hs-type">TimeseriesVector</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span id="expectRangeVector"><span class="annot"><span class="annottext">expectRangeVector :: Value -&gt; InterpM (TimeseriesVector Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVector"><span class="hs-identifier hs-var hs-var">expectRangeVector</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#RangeVector"><span class="hs-identifier hs-type">Value.RangeVector</span></a></span><span> </span><span id="local-6989586621679138225"><span class="annot"><span class="annottext">TimeseriesVector Value
+</span><a href="#local-6989586621679138225"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeseriesVector Value -&gt; InterpM (TimeseriesVector Value)
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">TimeseriesVector Value
+</span><a href="#local-6989586621679138225"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-17"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVector"><span class="hs-identifier hs-var">expectRangeVector</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM (TimeseriesVector Value)
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a range vector&quot;</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectTimeseriesScalar"><span class="hs-identifier hs-type">expectTimeseriesScalar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#Timeseries"><span class="hs-identifier hs-type">Timeseries</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#Timeseries"><span class="hs-identifier hs-type">Timeseries</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span id="expectTimeseriesScalar"><span class="annot"><span class="annottext">expectTimeseriesScalar :: Timeseries Value -&gt; InterpM (Timeseries Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectTimeseriesScalar"><span class="hs-identifier hs-var hs-var">expectTimeseriesScalar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Value -&gt; ExceptT InterpError (State Int) Double)
+-&gt; Timeseries Value -&gt; InterpM (Timeseries Double)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Timeseries a -&gt; f (Timeseries b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ExceptT InterpError (State Int) Double
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectScalar"><span class="hs-identifier hs-var">expectScalar</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVectorScalar"><span class="hs-identifier hs-type">expectRangeVectorScalar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Timeseries.html#TimeseriesVector"><span class="hs-identifier hs-type">TimeseriesVector</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span id="expectRangeVectorScalar"><span class="annot"><span class="annottext">expectRangeVectorScalar :: Value -&gt; InterpM (TimeseriesVector Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVectorScalar"><span class="hs-identifier hs-var hs-var">expectRangeVectorScalar</span></a></span></span><span> </span><span id="local-6989586621679138230"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138230"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; InterpM (TimeseriesVector Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectRangeVector"><span class="hs-identifier hs-var">expectRangeVector</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138230"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">InterpM (TimeseriesVector Value)
+-&gt; (TimeseriesVector Value -&gt; InterpM (TimeseriesVector Double))
+-&gt; InterpM (TimeseriesVector Double)
+forall a b.
+ExceptT InterpError (State Int) a
+-&gt; (a -&gt; ExceptT InterpError (State Int) b)
+-&gt; ExceptT InterpError (State Int) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Timeseries Value -&gt; InterpM (Timeseries Double))
+-&gt; TimeseriesVector Value -&gt; InterpM (TimeseriesVector Double)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Timeseries Value -&gt; InterpM (Timeseries Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectTimeseriesScalar"><span class="hs-identifier hs-var">expectTimeseriesScalar</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantScalar"><span class="hs-identifier hs-type">expectInstantScalar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span id="expectInstantScalar"><span class="annot"><span class="annottext">expectInstantScalar :: Instant Value -&gt; InterpM (Instant Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantScalar"><span class="hs-identifier hs-var hs-var">expectInstantScalar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Value -&gt; ExceptT InterpError (State Int) Double)
+-&gt; Instant Value -&gt; InterpM (Instant Double)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Instant a -&gt; f (Instant b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ExceptT InterpError (State Int) Double
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectScalar"><span class="hs-identifier hs-var">expectScalar</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantBool"><span class="hs-identifier hs-type">expectInstantBool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span id="expectInstantBool"><span class="annot"><span class="annottext">expectInstantBool :: Instant Value -&gt; InterpM (Instant Bool)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantBool"><span class="hs-identifier hs-var hs-var">expectInstantBool</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Value -&gt; ExceptT InterpError (State Int) Bool)
+-&gt; Instant Value -&gt; InterpM (Instant Bool)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Instant a -&gt; f (Instant b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ExceptT InterpError (State Int) Bool
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectBool"><span class="hs-identifier hs-var">expectBool</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVectorScalar"><span class="hs-identifier hs-type">expectInstantVectorScalar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span id="expectInstantVectorScalar"><span class="annot"><span class="annottext">expectInstantVectorScalar :: Value -&gt; InterpM (InstantVector Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVectorScalar"><span class="hs-identifier hs-var hs-var">expectInstantVectorScalar</span></a></span></span><span> </span><span id="local-6989586621679138235"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138235"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; InterpM (InstantVector Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVector"><span class="hs-identifier hs-var">expectInstantVector</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138235"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">InterpM (InstantVector Value)
+-&gt; (InstantVector Value -&gt; InterpM (InstantVector Double))
+-&gt; InterpM (InstantVector Double)
+forall a b.
+ExceptT InterpError (State Int) a
+-&gt; (a -&gt; ExceptT InterpError (State Int) b)
+-&gt; ExceptT InterpError (State Int) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Instant Value -&gt; InterpM (Instant Double))
+-&gt; InstantVector Value -&gt; InterpM (InstantVector Double)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Instant Value -&gt; InterpM (Instant Double)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantScalar"><span class="hs-identifier hs-var">expectInstantScalar</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVectorBool"><span class="hs-identifier hs-type">expectInstantVectorBool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="expectInstantVectorBool"><span class="annot"><span class="annottext">expectInstantVectorBool :: Value -&gt; InterpM (InstantVector Bool)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVectorBool"><span class="hs-identifier hs-var hs-var">expectInstantVectorBool</span></a></span></span><span> </span><span id="local-6989586621679138237"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138237"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; InterpM (InstantVector Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantVector"><span class="hs-identifier hs-var">expectInstantVector</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138237"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">InterpM (InstantVector Value)
+-&gt; (InstantVector Value -&gt; InterpM (InstantVector Bool))
+-&gt; InterpM (InstantVector Bool)
+forall a b.
+ExceptT InterpError (State Int) a
+-&gt; (a -&gt; ExceptT InterpError (State Int) b)
+-&gt; ExceptT InterpError (State Int) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Instant Value -&gt; InterpM (Instant Bool))
+-&gt; InstantVector Value -&gt; InterpM (InstantVector Bool)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Instant Value -&gt; InterpM (Instant Bool)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectInstantBool"><span class="hs-identifier hs-var">expectInstantBool</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectPair"><span class="hs-identifier hs-type">expectPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span id="expectPair"><span class="annot"><span class="annottext">expectPair :: Value -&gt; InterpM (Value, Value)
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectPair"><span class="hs-identifier hs-var hs-var">expectPair</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Pair"><span class="hs-identifier hs-type">Value.Pair</span></a></span><span> </span><span id="local-6989586621679138240"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138240"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679138241"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138241"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Value, Value) -&gt; InterpM (Value, Value)
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138240"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679138241"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectPair"><span class="hs-identifier hs-var">expectPair</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM (Value, Value)
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a pair&quot;</span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectScalar"><span class="hs-identifier hs-type">expectScalar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-42"></span><span id="expectScalar"><span class="annot"><span class="annottext">expectScalar :: Value -&gt; ExceptT InterpError (State Int) Double
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectScalar"><span class="hs-identifier hs-var hs-var">expectScalar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Scalar"><span class="hs-identifier hs-type">Value.Scalar</span></a></span><span> </span><span id="local-6989586621679138243"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679138243"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; ExceptT InterpError (State Int) Double
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679138243"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectScalar"><span class="hs-identifier hs-var">expectScalar</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ExceptT InterpError (State Int) Double
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a scalar&quot;</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBool"><span class="hs-identifier hs-type">expectBool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-46"></span><span id="expectBool"><span class="annot"><span class="annottext">expectBool :: Value -&gt; ExceptT InterpError (State Int) Bool
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectBool"><span class="hs-identifier hs-var hs-var">expectBool</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="Cardano.Timeseries.Interp.Value.html#Truth"><span class="hs-identifier hs-var">Value.Truth</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ExceptT InterpError (State Int) Bool
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">Prelude.True</span></a></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBool"><span class="hs-identifier hs-var">expectBool</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="Cardano.Timeseries.Interp.Value.html#Falsity"><span class="hs-identifier hs-var">Value.Falsity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ExceptT InterpError (State Int) Bool
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">Prelude.False</span></a></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBool"><span class="hs-identifier hs-var">expectBool</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ExceptT InterpError (State Int) Bool
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a bool&quot;</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBoolean"><span class="hs-identifier hs-type">expectBoolean</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-51"></span><span id="expectBoolean"><span class="annot"><span class="annottext">expectBoolean :: Value -&gt; ExceptT InterpError (State Int) Bool
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectBoolean"><span class="hs-identifier hs-var hs-var">expectBoolean</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="Cardano.Timeseries.Interp.Value.html#Truth"><span class="hs-identifier hs-var">Truth</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ExceptT InterpError (State Int) Bool
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">Prelude.True</span></a></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBoolean"><span class="hs-identifier hs-var">expectBoolean</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="Cardano.Timeseries.Interp.Value.html#Falsity"><span class="hs-identifier hs-var">Falsity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ExceptT InterpError (State Int) Bool
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">Prelude.False</span></a></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectBoolean"><span class="hs-identifier hs-var">expectBoolean</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ExceptT InterpError (State Int) Bool
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a boolean&quot;</span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectDuration"><span class="hs-identifier hs-type">expectDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-56"></span><span id="expectDuration"><span class="annot"><span class="annottext">expectDuration :: Value -&gt; InterpM Word64
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectDuration"><span class="hs-identifier hs-var hs-var">expectDuration</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Duration"><span class="hs-identifier hs-type">Value.Duration</span></a></span><span> </span><span id="local-6989586621679138249"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679138249"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; InterpM Word64
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679138249"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectDuration"><span class="hs-identifier hs-var">expectDuration</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM Word64
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a duration&quot;</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectTimestamp"><span class="hs-identifier hs-type">expectTimestamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-60"></span><span id="expectTimestamp"><span class="annot"><span class="annottext">expectTimestamp :: Value -&gt; InterpM Word64
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectTimestamp"><span class="hs-identifier hs-var hs-var">expectTimestamp</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Timestamp"><span class="hs-identifier hs-type">Value.Timestamp</span></a></span><span> </span><span id="local-6989586621679138252"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679138252"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; InterpM Word64
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679138252"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectTimestamp"><span class="hs-identifier hs-var">expectTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM Word64
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a timestamp&quot;</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectFunction"><span class="hs-identifier hs-type">expectFunction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#FunctionValue"><span class="hs-identifier hs-type">FunctionValue</span></a></span><span>
+</span><span id="line-64"></span><span id="expectFunction"><span class="annot"><span class="annottext">expectFunction :: Value -&gt; InterpM FunctionValue
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectFunction"><span class="hs-identifier hs-var hs-var">expectFunction</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Function"><span class="hs-identifier hs-type">Value.Function</span></a></span><span> </span><span id="local-6989586621679138255"><span class="annot"><span class="annottext">FunctionValue
+</span><a href="#local-6989586621679138255"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunctionValue -&gt; InterpM FunctionValue
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FunctionValue
+</span><a href="#local-6989586621679138255"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectFunction"><span class="hs-identifier hs-var">expectFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM FunctionValue
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected expression type: expected a function&quot;</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Cardano.Timeseries.Interp.Expect.html#expectWord64"><span class="hs-identifier hs-type">expectWord64</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Types.html#InterpM"><span class="hs-identifier hs-type">InterpM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-68"></span><span id="expectWord64"><span class="annot"><span class="annottext">expectWord64 :: Double -&gt; InterpM Word64
+</span><a href="Cardano.Timeseries.Interp.Expect.html#expectWord64"><span class="hs-identifier hs-var hs-var">expectWord64</span></a></span></span><span> </span><span id="local-6989586621679138257"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679138257"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Word64, Double) -&gt; Double
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64, Double)
+</span><a href="#local-6989586621679138259"><span class="hs-identifier hs-var">pf</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; InterpM Word64
+forall a. a -&gt; ExceptT InterpError (State Int) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; InterpM Word64) -&gt; Word64 -&gt; InterpM Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64, Double) -&gt; Word64
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64, Double)
+</span><a href="#local-6989586621679138259"><span class="hs-identifier hs-var">pf</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; InterpM Word64
+forall a. Text -&gt; InterpM a
+</span><a href="Cardano.Timeseries.Interp.Types.html#throwInterpError"><span class="hs-identifier hs-var">throwInterpError</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; InterpM Word64) -&gt; Text -&gt; InterpM Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Expected a whole number, got: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679138257"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679138259"><span class="annot"><span class="annottext">pf :: (Word64, Double)
+</span><a href="#local-6989586621679138259"><span class="hs-identifier hs-var hs-var">pf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; (Word64, Double)
+forall b. Integral b =&gt; Double -&gt; (b, Double)
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; (b, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#properFraction"><span class="hs-identifier hs-var">properFraction</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679138257"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-73"></span></pre></body></html>

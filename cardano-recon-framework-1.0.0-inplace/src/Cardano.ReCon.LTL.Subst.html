@@ -1,0 +1,354 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Subst</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier">substPropTerm</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substPropConstraint"><span class="hs-identifier">substPropConstraint</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier">substFormula</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- The file concerns capture-avoiding substitution of `PropValue` for `PropVarIdentifier` in formulas and their constituents.</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><span class="hs-comment">-- | t[v / x]</span></span><span>
+</span><span id="line-14"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier hs-type">substPropTerm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropValue"><span class="hs-identifier hs-type">PropValue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropVarIdentifier"><span class="hs-identifier hs-type">PropVarIdentifier</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropTerm"><span class="hs-identifier hs-type">PropTerm</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropTerm"><span class="hs-identifier hs-type">PropTerm</span></a></span><span>
+</span><span id="line-15"></span><span id="substPropTerm"><span class="annot"><span class="annottext">substPropTerm :: PropValue -&gt; PropVarIdentifier -&gt; PropTerm -&gt; PropTerm
+</span><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier hs-var hs-var">substPropTerm</span></a></span></span><span> </span><span id="local-6989586621679113184"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113184"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113185"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113185"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679113187"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113187"><span class="hs-identifier hs-var">x'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113185"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; PropVarIdentifier -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113187"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; PropTerm
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Const"><span class="hs-identifier hs-var">Const</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113184"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-16"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier hs-var">substPropTerm</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679113189"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113189"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113189"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- | c[v / x]</span></span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substPropConstraint"><span class="hs-identifier hs-type">substPropConstraint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropValue"><span class="hs-identifier hs-type">PropValue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropVarIdentifier"><span class="hs-identifier hs-type">PropVarIdentifier</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span>
+</span><span id="line-20"></span><span id="substPropConstraint"><span class="annot"><span class="annottext">substPropConstraint :: PropValue -&gt; PropVarIdentifier -&gt; PropConstraint -&gt; PropConstraint
+</span><a href="Cardano.ReCon.LTL.Subst.html#substPropConstraint"><span class="hs-identifier hs-var hs-var">substPropConstraint</span></a></span></span><span> </span><span id="local-6989586621679113190"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113190"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113191"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113191"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span> </span><span id="local-6989586621679113193"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113193"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113194"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113194"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; PropTerm -&gt; PropConstraint
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-var">PropConstraint</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113193"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue -&gt; PropVarIdentifier -&gt; PropTerm -&gt; PropTerm
+</span><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier hs-var">substPropTerm</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113190"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113191"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113194"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="annot"><span class="hs-comment">-- | &#966;[v / x]</span></span><span>
+</span><span id="line-23"></span><span id="local-6989586621679113168"><span id="local-6989586621679113169"><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-type">substFormula</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropValue"><span class="hs-identifier hs-type">PropValue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropVarIdentifier"><span class="hs-identifier hs-type">PropVarIdentifier</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113168"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113169"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113168"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113169"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-24"></span><span id="substFormula"><span class="annot"><span class="annottext">substFormula :: forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var hs-var">substFormula</span></a></span></span><span> </span><span id="local-6989586621679113199"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113199"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113200"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113200"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span id="local-6989586621679113202"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113202"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113203"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113203"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-var">Forall</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113202"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113199"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113200"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113203"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113204"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113204"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113205"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113205"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679113207"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113207"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113208"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113208"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-var">ForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113207"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113204"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113205"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113208"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113209"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113209"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113210"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113210"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679113212"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113212"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113213"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113213"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-var">ExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113212"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113209"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113210"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113213"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113214"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113214"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113215"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113215"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679113217"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113217"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Formula event a
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-var">Next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113214"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113215"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113217"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113218"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113218"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113219"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113219"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span id="local-6989586621679113221"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113221"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113222"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113222"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-var">NextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113221"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113218"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113219"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113222"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113223"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113223"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113224"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113224"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679113226"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113226"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679113227"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113227"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679113228"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113228"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-var">UntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679113226"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113223"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113224"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113227"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113223"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113224"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113228"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113229"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113229"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113230"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113230"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span id="local-6989586621679113232"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113232"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679113233"><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679113233"><span class="hs-identifier hs-var">is</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Set PropConstraint -&gt; Formula event a
+forall event ty. ty -&gt; Set PropConstraint -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-var">Atom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113232"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(PropConstraint -&gt; PropConstraint)
+-&gt; Set PropConstraint -&gt; Set PropConstraint
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; Set a -&gt; Set b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#map"><span class="hs-identifier hs-var">Set.map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue -&gt; PropVarIdentifier -&gt; PropConstraint -&gt; PropConstraint
+</span><a href="Cardano.ReCon.LTL.Subst.html#substPropConstraint"><span class="hs-identifier hs-var">substPropConstraint</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113229"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113230"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679113233"><span class="hs-identifier hs-var">is</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113235"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113235"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113236"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113236"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679113238"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113238"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679113239"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-var">And</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113235"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113236"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113238"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113235"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113236"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113240"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113240"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113241"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113241"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679113243"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113243"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679113244"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113244"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113240"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113241"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113243"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113240"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113241"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113244"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113245"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113245"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113246"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113246"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679113248"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113248"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679113249"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113249"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-var">Implies</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113245"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113246"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113248"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113245"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113246"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113249"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113250"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113250"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113251"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113251"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679113253"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113253"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Formula event a
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113250"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113251"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113253"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679113256"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113256"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679113258"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113258"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span id="local-6989586621679113259"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113259"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113256"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; PropVarIdentifier -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113258"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-var">PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113258"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113259"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113260"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113260"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113261"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113261"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679113262"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113262"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span id="local-6989586621679113263"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113263"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+PropVarIdentifier -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-var">PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113262"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113260"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113261"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113263"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679113264"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113264"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679113266"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113266"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span id="local-6989586621679113267"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679113267"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679113268"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113268"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113264"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier -&gt; PropVarIdentifier -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113266"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-var">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113266"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679113267"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113268"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113269"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113269"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113270"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113270"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679113271"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113271"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span id="local-6989586621679113272"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679113272"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679113273"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113273"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+PropVarIdentifier
+-&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-var">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113271"><span class="hs-identifier hs-var">x'</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679113272"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+forall event a.
+PropValue
+-&gt; PropVarIdentifier -&gt; Formula event a -&gt; Formula event a
+</span><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113269"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113270"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679113273"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.ReCon.LTL.Subst.html#substFormula"><span class="hs-identifier hs-var">substFormula</span></a></span><span> </span><span id="local-6989586621679113274"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113274"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679113275"><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113275"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span id="local-6989586621679113277"><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679113277"><span class="hs-identifier hs-var">rel</span></a></span></span><span> </span><span id="local-6989586621679113278"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113278"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679113279"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113279"><span class="hs-identifier hs-var">rhs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Relevance event a -&gt; PropTerm -&gt; PropValue -&gt; Formula event a
+forall event ty.
+Relevance event ty -&gt; PropTerm -&gt; PropValue -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-var">PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679113277"><span class="hs-identifier hs-var">rel</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropValue -&gt; PropVarIdentifier -&gt; PropTerm -&gt; PropTerm
+</span><a href="Cardano.ReCon.LTL.Subst.html#substPropTerm"><span class="hs-identifier hs-var">substPropTerm</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113274"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">PropVarIdentifier
+</span><a href="#local-6989586621679113275"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679113278"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679113279"><span class="hs-identifier hs-var">rhs</span></a></span><span>
+</span><span id="line-42"></span></pre></body></html>

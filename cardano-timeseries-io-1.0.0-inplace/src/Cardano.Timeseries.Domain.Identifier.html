@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Domain.Identifier</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#Identifier"><span class="hs-identifier">Identifier</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.AsText.html"><span class="hs-identifier">Cardano.Timeseries.AsText</span></a></span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#cons"><span class="hs-identifier">cons</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Identifiers come in two sorts: Userspace and Machine-generated.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | The first kind comes from user-typed expressions.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- | The second kind is used for automatic code-generation for hygienic scoping (i.e. to avoid unintentional variable capture)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">data</span><span> </span><span id="Identifier"><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#Identifier"><span class="hs-identifier hs-var">Identifier</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="User"><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#User"><span class="hs-identifier hs-var">User</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Machine"><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#Machine"><span class="hs-identifier hs-var">Machine</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131754"><span id="local-6989586621679131763"><span id="local-6989586621679131767"><span class="annot"><span class="annottext">Int -&gt; Identifier -&gt; ShowS
+[Identifier] -&gt; ShowS
+Identifier -&gt; String
+(Int -&gt; Identifier -&gt; ShowS)
+-&gt; (Identifier -&gt; String)
+-&gt; ([Identifier] -&gt; ShowS)
+-&gt; Show Identifier
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Identifier -&gt; ShowS
+showsPrec :: Int -&gt; Identifier -&gt; ShowS
+$cshow :: Identifier -&gt; String
+show :: Identifier -&gt; String
+$cshowList :: [Identifier] -&gt; ShowS
+showList :: [Identifier] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679131774"><span id="local-6989586621679131779"><span id="local-6989586621679131783"><span id="local-6989586621679131787"><span id="local-6989586621679131790"><span id="local-6989586621679131793"><span id="local-6989586621679131796"><span class="annot"><span class="annottext">Eq Identifier
+Eq Identifier =&gt;
+(Identifier -&gt; Identifier -&gt; Ordering)
+-&gt; (Identifier -&gt; Identifier -&gt; Bool)
+-&gt; (Identifier -&gt; Identifier -&gt; Bool)
+-&gt; (Identifier -&gt; Identifier -&gt; Bool)
+-&gt; (Identifier -&gt; Identifier -&gt; Bool)
+-&gt; (Identifier -&gt; Identifier -&gt; Identifier)
+-&gt; (Identifier -&gt; Identifier -&gt; Identifier)
+-&gt; Ord Identifier
+Identifier -&gt; Identifier -&gt; Bool
+Identifier -&gt; Identifier -&gt; Ordering
+Identifier -&gt; Identifier -&gt; Identifier
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Identifier -&gt; Identifier -&gt; Ordering
+compare :: Identifier -&gt; Identifier -&gt; Ordering
+$c&lt; :: Identifier -&gt; Identifier -&gt; Bool
+&lt; :: Identifier -&gt; Identifier -&gt; Bool
+$c&lt;= :: Identifier -&gt; Identifier -&gt; Bool
+&lt;= :: Identifier -&gt; Identifier -&gt; Bool
+$c&gt; :: Identifier -&gt; Identifier -&gt; Bool
+&gt; :: Identifier -&gt; Identifier -&gt; Bool
+$c&gt;= :: Identifier -&gt; Identifier -&gt; Bool
+&gt;= :: Identifier -&gt; Identifier -&gt; Bool
+$cmax :: Identifier -&gt; Identifier -&gt; Identifier
+max :: Identifier -&gt; Identifier -&gt; Identifier
+$cmin :: Identifier -&gt; Identifier -&gt; Identifier
+min :: Identifier -&gt; Identifier -&gt; Identifier
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679131800"><span id="local-6989586621679131806"><span class="annot"><span class="annottext">Identifier -&gt; Identifier -&gt; Bool
+(Identifier -&gt; Identifier -&gt; Bool)
+-&gt; (Identifier -&gt; Identifier -&gt; Bool) -&gt; Eq Identifier
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Identifier -&gt; Identifier -&gt; Bool
+== :: Identifier -&gt; Identifier -&gt; Bool
+$c/= :: Identifier -&gt; Identifier -&gt; Bool
+/= :: Identifier -&gt; Identifier -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Timeseries.AsText.html#AsText"><span class="hs-identifier hs-type">AsText</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#Identifier"><span class="hs-identifier hs-type">Identifier</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>  </span><span id="local-6989586621679131813"><span class="annot"><span class="annottext">asText :: Identifier -&gt; Text
+</span><a href="#local-6989586621679131813"><span class="hs-identifier hs-var hs-var hs-var hs-var">asText</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679131815"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679131815"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679131815"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Timeseries.AsText.html#asText"><span class="hs-identifier hs-var">asText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Identifier.html#Machine"><span class="hs-identifier hs-type">Machine</span></a></span><span> </span><span id="local-6989586621679131816"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679131816"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'$'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#cons"><span class="hs-operator hs-var">`cons`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679131816"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-15"></span></pre></body></html>

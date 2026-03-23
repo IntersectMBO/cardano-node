@@ -1,0 +1,312 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Timeseries.Domain.Instant</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier">Instant</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier">InstantVector</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#mostRecent"><span class="hs-identifier">mostRecent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#share"><span class="hs-identifier">share</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#toVector"><span class="hs-identifier">toVector</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.AsText.html"><span class="hs-identifier">Cardano.Timeseries.AsText</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier">SeriesIdentifier</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier">Timestamp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#unlines"><span class="hs-identifier">unlines</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/s4bz3qvk1dl8qlx04y9hnzzgwwv6zssw-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html"><span class="hs-identifier">Data.Vector</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | One datapoint in a series.</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="Instant"><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-var">Instant</span></a></span></span><span> </span><span id="local-6989586621679131877"><span class="annot"><a href="#local-6989586621679131877"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Instant"><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-var">Instant</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-18"></span><span>  </span><span id="labels"><span class="annot"><span class="annottext">forall a. Instant a -&gt; SeriesIdentifier
+</span><a href="Cardano.Timeseries.Domain.Instant.html#labels"><span class="hs-identifier hs-var hs-var">labels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span id="timestamp"><span class="annot"><span class="annottext">forall a. Instant a -&gt; Timestamp
+</span><a href="Cardano.Timeseries.Domain.Instant.html#timestamp"><span class="hs-identifier hs-var hs-var">timestamp</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span id="value"><span class="annot"><span class="annottext">forall a. Instant a -&gt; a
+</span><a href="Cardano.Timeseries.Domain.Instant.html#value"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679131877"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679132003"><span id="local-6989586621679132013"><span id="local-6989586621679132017"><span class="annot"><span class="annottext">Int -&gt; Instant a -&gt; ShowS
+[Instant a] -&gt; ShowS
+Instant a -&gt; String
+(Int -&gt; Instant a -&gt; ShowS)
+-&gt; (Instant a -&gt; String)
+-&gt; ([Instant a] -&gt; ShowS)
+-&gt; Show (Instant a)
+forall a. Show a =&gt; Int -&gt; Instant a -&gt; ShowS
+forall a. Show a =&gt; [Instant a] -&gt; ShowS
+forall a. Show a =&gt; Instant a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Instant a -&gt; ShowS
+showsPrec :: Int -&gt; Instant a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Instant a -&gt; String
+show :: Instant a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Instant a] -&gt; ShowS
+showList :: [Instant a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132026"><span id="local-6989586621679132034"><span class="annot"><span class="annottext">Instant a -&gt; Instant a -&gt; Bool
+(Instant a -&gt; Instant a -&gt; Bool)
+-&gt; (Instant a -&gt; Instant a -&gt; Bool) -&gt; Eq (Instant a)
+forall a. Eq a =&gt; Instant a -&gt; Instant a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Instant a -&gt; Instant a -&gt; Bool
+== :: Instant a -&gt; Instant a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Instant a -&gt; Instant a -&gt; Bool
+/= :: Instant a -&gt; Instant a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132043"><span id="local-6989586621679132045"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Instant a -&gt; Instant b)
+-&gt; (forall a b. a -&gt; Instant b -&gt; Instant a) -&gt; Functor Instant
+forall a b. a -&gt; Instant b -&gt; Instant a
+forall a b. (a -&gt; b) -&gt; Instant a -&gt; Instant b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Instant a -&gt; Instant b
+fmap :: forall a b. (a -&gt; b) -&gt; Instant a -&gt; Instant b
+$c&lt;$ :: forall a b. a -&gt; Instant b -&gt; Instant a
+&lt;$ :: forall a b. a -&gt; Instant b -&gt; Instant a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132049"><span id="local-6989586621679132055"><span id="local-6989586621679132058"><span id="local-6989586621679132063"><span id="local-6989586621679132065"><span id="local-6989586621679132068"><span id="local-6989586621679132071"><span id="local-6989586621679132074"><span id="local-6989586621679132077"><span id="local-6989586621679132080"><span id="local-6989586621679132083"><span id="local-6989586621679132085"><span id="local-6989586621679132088"><span id="local-6989586621679132093"><span id="local-6989586621679132098"><span id="local-6989586621679132103"><span id="local-6989586621679132108"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Instant m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a)
+-&gt; (forall a. Instant a -&gt; [a])
+-&gt; (forall a. Instant a -&gt; Bool)
+-&gt; (forall a. Instant a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Instant a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Instant a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Instant a -&gt; a)
+-&gt; (forall a. Num a =&gt; Instant a -&gt; a)
+-&gt; (forall a. Num a =&gt; Instant a -&gt; a)
+-&gt; Foldable Instant
+forall a. Eq a =&gt; a -&gt; Instant a -&gt; Bool
+forall a. Num a =&gt; Instant a -&gt; a
+forall a. Ord a =&gt; Instant a -&gt; a
+forall m. Monoid m =&gt; Instant m -&gt; m
+forall a. Instant a -&gt; Bool
+forall a. Instant a -&gt; Int
+forall a. Instant a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; Instant m -&gt; m
+fold :: forall m. Monoid m =&gt; Instant m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Instant a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Instant a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Instant a -&gt; a
+$ctoList :: forall a. Instant a -&gt; [a]
+toList :: forall a. Instant a -&gt; [a]
+$cnull :: forall a. Instant a -&gt; Bool
+null :: forall a. Instant a -&gt; Bool
+$clength :: forall a. Instant a -&gt; Int
+length :: forall a. Instant a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; Instant a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Instant a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; Instant a -&gt; a
+maximum :: forall a. Ord a =&gt; Instant a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Instant a -&gt; a
+minimum :: forall a. Ord a =&gt; Instant a -&gt; a
+$csum :: forall a. Num a =&gt; Instant a -&gt; a
+sum :: forall a. Num a =&gt; Instant a -&gt; a
+$cproduct :: forall a. Num a =&gt; Instant a -&gt; a
+product :: forall a. Num a =&gt; Instant a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132118"><span id="local-6989586621679132123"><span id="local-6989586621679132129"><span id="local-6989586621679132134"><span class="annot"><span class="annottext">Functor Instant
+Foldable Instant
+(Functor Instant, Foldable Instant) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Instant a -&gt; f (Instant b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Instant (f a) -&gt; f (Instant a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Instant a -&gt; m (Instant b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    Instant (m a) -&gt; m (Instant a))
+-&gt; Traversable Instant
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a. Monad m =&gt; Instant (m a) -&gt; m (Instant a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Instant (f a) -&gt; f (Instant a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Instant a -&gt; m (Instant b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Instant a -&gt; f (Instant b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Instant a -&gt; f (Instant b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Instant a -&gt; f (Instant b)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Instant (f a) -&gt; f (Instant a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Instant (f a) -&gt; f (Instant a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Instant a -&gt; m (Instant b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Instant a -&gt; m (Instant b)
+$csequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Instant (m a) -&gt; m (Instant a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Instant (m a) -&gt; m (Instant a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679132141"><span id="local-6989586621679132143"><span class="annot"><span class="annottext">(forall x. Instant a -&gt; Rep (Instant a) x)
+-&gt; (forall x. Rep (Instant a) x -&gt; Instant a)
+-&gt; Generic (Instant a)
+forall x. Rep (Instant a) x -&gt; Instant a
+forall x. Instant a -&gt; Rep (Instant a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (Instant a) x -&gt; Instant a
+forall a x. Instant a -&gt; Rep (Instant a) x
+$cfrom :: forall a x. Instant a -&gt; Rep (Instant a) x
+from :: forall x. Instant a -&gt; Rep (Instant a) x
+$cto :: forall a x. Rep (Instant a) x -&gt; Instant a
+to :: forall x. Rep (Instant a) x -&gt; Instant a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679131967"><span id="local-6989586621679132148"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131967"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131967"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><span class="hs-comment">-- | Do the instant vectors share a series?</span></span><span>
+</span><span id="line-26"></span><span id="local-6989586621679131968"><span id="local-6989586621679131969"><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#share"><span class="hs-identifier hs-type">share</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131968"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131969"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span></span><span>
+</span><span id="line-27"></span><span id="share"><span class="annot"><span class="annottext">share :: forall a b. Instant a -&gt; Instant b -&gt; Bool
+</span><a href="Cardano.Timeseries.Domain.Instant.html#share"><span class="hs-identifier hs-var hs-var">share</span></a></span></span><span> </span><span id="local-6989586621679132180"><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132180"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679132181"><span class="annot"><span class="annottext">Instant b
+</span><a href="#local-6989586621679132181"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Instant a -&gt; SeriesIdentifier
+forall a. Instant a -&gt; SeriesIdentifier
+</span><a href="Cardano.Timeseries.Domain.Instant.html#labels"><span class="hs-identifier hs-var">labels</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132180"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; SeriesIdentifier -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Instant b -&gt; SeriesIdentifier
+forall a. Instant a -&gt; SeriesIdentifier
+</span><a href="Cardano.Timeseries.Domain.Instant.html#labels"><span class="hs-identifier hs-var">labels</span></a></span><span> </span><span class="annot"><span class="annottext">Instant b
+</span><a href="#local-6989586621679132181"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | Datapoints from different series. The vector must not contain datapoints sharing a series.</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">type</span><span> </span><span id="InstantVector"><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-var">InstantVector</span></a></span></span><span> </span><span id="local-6989586621679132182"><span class="annot"><a href="#local-6989586621679132182"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679132182"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span id="local-6989586621679131972"><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#mostRecent"><span class="hs-identifier hs-type">mostRecent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131972"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131972"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131972"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-33"></span><span id="mostRecent"><span class="annot"><span class="annottext">mostRecent :: forall a. Instant a -&gt; Instant a -&gt; Instant a
+</span><a href="Cardano.Timeseries.Domain.Instant.html#mostRecent"><span class="hs-identifier hs-var hs-var">mostRecent</span></a></span></span><span> </span><span id="local-6989586621679132185"><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132185"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span id="local-6989586621679132186"><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132186"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Instant a -&gt; Timestamp
+forall a. Instant a -&gt; Timestamp
+</span><a href="Cardano.Timeseries.Domain.Instant.html#timestamp"><span class="hs-identifier hs-var">timestamp</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132185"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Timestamp -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a -&gt; Timestamp
+forall a. Instant a -&gt; Timestamp
+</span><a href="Cardano.Timeseries.Domain.Instant.html#timestamp"><span class="hs-identifier hs-var">timestamp</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132186"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132186"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Instant a
+</span><a href="#local-6989586621679132185"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#toVector"><span class="hs-identifier hs-type">toVector</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/s4bz3qvk1dl8qlx04y9hnzzgwwv6zssw-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-36"></span><span id="toVector"><span class="annot"><span class="annottext">toVector :: InstantVector Double -&gt; Vector Double
+</span><a href="Cardano.Timeseries.Domain.Instant.html#toVector"><span class="hs-identifier hs-var hs-var">toVector</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Vector Double
+forall a. [a] -&gt; Vector a
+</span><a href="file:///nix/store/s4bz3qvk1dl8qlx04y9hnzzgwwv6zssw-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Double] -&gt; Vector Double)
+-&gt; (InstantVector Double -&gt; [Double])
+-&gt; InstantVector Double
+-&gt; Vector Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Instant Double -&gt; Double) -&gt; InstantVector Double -&gt; [Double]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Instant Double -&gt; Double
+forall a. Instant a -&gt; a
+</span><a href="Cardano.Timeseries.Domain.Instant.html#value"><span class="hs-identifier hs-var">value</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679131984"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131984"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.AsText.html#AsText"><span class="hs-identifier hs-type">AsText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131984"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679132209"><span class="annot"><span class="annottext">asText :: Instant a -&gt; Label
+</span><a href="#local-6989586621679132209"><span class="hs-identifier hs-var hs-var hs-var hs-var">asText</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#Instant"><span class="hs-identifier hs-type">Instant</span></a></span><span> </span><span id="local-6989586621679132211"><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679132211"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679132212"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679132212"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679132213"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679132213"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Label
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Label, Label)] -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeriesIdentifier -&gt; [(Label, Label)]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679132211"><span class="hs-identifier hs-var">ls</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Label -&gt; Label
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Label -&gt; Label -&gt; Label
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Label
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679132212"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Label -&gt; Label -&gt; Label
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Label -&gt; Label -&gt; Label
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Label
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679132213"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679131989"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131989"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Timeseries.AsText.html#AsText"><span class="hs-identifier hs-type">AsText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Instant.html#InstantVector"><span class="hs-identifier hs-type">InstantVector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131989"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679132221"><span class="annot"><span class="annottext">asText :: InstantVector a -&gt; Label
+</span><a href="Cardano.Timeseries.AsText.html#asText"><span class="hs-identifier hs-var hs-var hs-var hs-var">asText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Label] -&gt; Label
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#unlines"><span class="hs-identifier hs-var">Text.unlines</span></a></span><span> </span><span class="annot"><span class="annottext">([Label] -&gt; Label)
+-&gt; (InstantVector a -&gt; [Label]) -&gt; InstantVector a -&gt; Label
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Instant a -&gt; Label) -&gt; InstantVector a -&gt; [Label]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Instant a -&gt; Label
+forall a. AsText a =&gt; a -&gt; Label
+</span><a href="Cardano.Timeseries.AsText.html#asText"><span class="hs-identifier hs-var">asText</span></a></span><span>
+</span><span id="line-44"></span></pre></body></html>

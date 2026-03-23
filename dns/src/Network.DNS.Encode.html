@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | DNS message encoder.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- Note: 'Nework.DNS' is a client library, and its focus is on /sending/</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- /queries/, and /receiving/ /replies/.  Thefore, while this module is</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- reasonably adept at query generation, building a DNS server with this</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- module requires additional work to handle message size limits, correct UDP</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- truncation, proper EDNS negotiation, and so on.  Support for server-side DNS</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- is at best rudimentary.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- For sending queries, in most cases you should be using one of the functions</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- from 'Network.DNS.Lookup' and 'Network.DNS.LookupRaw', or lastly, if you</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- want to handle the network reads and writes for yourself (with your own code</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- for UDP retries, TCP fallback, EDNS fallback, ...), then perhaps</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- 'Network.DNS.IO.encodeQuestion' (letting 'Network.DNS' do the lookups for</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- you in an @async@ thread is likely much simpler).</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.DNS.Encode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Encode a DNS query (or response).</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Network.DNS.Encode.html#encode"><span class="hs-identifier">encode</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Imports</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.StateBinary</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Types.Internal</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Encode.Builders</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | Encode a 'DNSMessage' for transmission over UDP.  For transmission over</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- TCP encapsulate the result via 'Network.DNS.IO.encodeVC', or use</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- 'Network.DNS.IO.sendVC', which handles this internally.  If any</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- 'ResourceRecord' in the message contains incorrectly encoded 'Domain' name</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- ByteStrings, this function may raise a 'DecodeError'.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Network.DNS.Encode.html#encode"><span class="hs-identifier hs-type">encode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-34"></span><span id="encode"><span class="annot"><span class="annottext">encode :: DNSMessage -&gt; ByteString
+</span><a href="Network.DNS.Encode.html#encode"><span class="hs-identifier hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SPut -&gt; ByteString
+</span><span class="hs-identifier hs-var">runSPut</span></span><span> </span><span class="annot"><span class="annottext">(SPut -&gt; ByteString)
+-&gt; (DNSMessage -&gt; SPut) -&gt; DNSMessage -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DNSMessage -&gt; SPut
+</span><span class="hs-identifier hs-var">putDNSMessage</span></span><span>
+</span><span id="line-35"></span></pre></body></html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Pretty</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier">Prec</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier">prettyPropValue</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropKeyValueList"><span class="hs-identifier">prettyPropKeyValueList</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier">prettyPropTerm</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraint"><span class="hs-identifier">prettyPropConstraint</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraints"><span class="hs-identifier">prettyPropConstraints</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier">prettyFormula</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier">showT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula.Prec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier">Prec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula.Prec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Prec</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><span class="hs-comment">-- | Add parentheses when an inner precedence exceeds the outer one.</span></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-type">surround</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier hs-type">Prec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier hs-type">Prec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-21"></span><span id="surround"><span class="annot"><span class="annottext">surround :: Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var hs-var">surround</span></a></span></span><span> </span><span id="local-6989586621679112178"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112178"><span class="hs-identifier hs-var">outer</span></a></span></span><span> </span><span id="local-6989586621679112179"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112179"><span class="hs-identifier hs-var">inner</span></a></span></span><span> </span><span id="local-6989586621679112180"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112180"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112178"><span class="hs-identifier hs-var">outer</span></a></span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112179"><span class="hs-identifier hs-var">inner</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112180"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112182"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112182"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112182"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><span class="hs-comment">-- | Render a property value.</span></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-type">prettyPropValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropValue"><span class="hs-identifier hs-type">PropValue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-26"></span><span id="prettyPropValue"><span class="annot"><span class="annottext">prettyPropValue :: PropValue -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var hs-var">prettyPropValue</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#IntValue"><span class="hs-identifier hs-type">IntValue</span></a></span><span> </span><span id="local-6989586621679112184"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679112184"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679112184"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var">prettyPropValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#TextValue"><span class="hs-identifier hs-type">TextValue</span></a></span><span> </span><span id="local-6989586621679112186"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112186"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112186"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropKeyValueList"><span class="hs-identifier hs-type">prettyPropKeyValueList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropName"><span class="hs-identifier hs-type">PropName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropValue"><span class="hs-identifier hs-type">PropValue</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-30"></span><span id="prettyPropKeyValueList"><span class="annot"><span class="annottext">prettyPropKeyValueList :: [(Text, PropValue)] -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropKeyValueList"><span class="hs-identifier hs-var hs-var">prettyPropKeyValueList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#unlines"><span class="hs-identifier hs-var">Text.unlines</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text)
+-&gt; ([(Text, PropValue)] -&gt; [Text]) -&gt; [(Text, PropValue)] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Text, PropValue) -&gt; Text) -&gt; [(Text, PropValue)] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Text, PropValue) -&gt; Text
+forall {a}. Show a =&gt; (a, PropValue) -&gt; Text
+</span><a href="#local-6989586621679112190"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679112190"><span class="annot"><span class="annottext">go :: (a, PropValue) -&gt; Text
+</span><a href="#local-6989586621679112190"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679112196"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112196"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112197"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112197"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">a -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112196"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; = &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var">prettyPropValue</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112197"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | Render a property term.</span></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier hs-type">prettyPropTerm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropTerm"><span class="hs-identifier hs-type">PropTerm</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-35"></span><span id="prettyPropTerm"><span class="annot"><span class="annottext">prettyPropTerm :: PropTerm -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier hs-var hs-var">prettyPropTerm</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Var"><span class="hs-identifier hs-type">Var</span></a></span><span> </span><span id="local-6989586621679112199"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112199"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112199"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier hs-var">prettyPropTerm</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Const"><span class="hs-identifier hs-type">Const</span></a></span><span> </span><span id="local-6989586621679112201"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112201"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var">prettyPropValue</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112201"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | Render a single property constraint.</span></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraint"><span class="hs-identifier hs-type">prettyPropConstraint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-40"></span><span id="prettyPropConstraint"><span class="annot"><span class="annottext">prettyPropConstraint :: PropConstraint -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraint"><span class="hs-identifier hs-var hs-var">prettyPropConstraint</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span> </span><span id="local-6989586621679112203"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112203"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112204"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112204"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112203"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; = &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier hs-var">prettyPropTerm</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112204"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">-- | Render a list of property constraints.</span></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraints"><span class="hs-identifier hs-type">prettyPropConstraints</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-44"></span><span id="prettyPropConstraints"><span class="annot"><span class="annottext">prettyPropConstraints :: [PropConstraint] -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraints"><span class="hs-identifier hs-var hs-var">prettyPropConstraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text)
+-&gt; ([PropConstraint] -&gt; [Text]) -&gt; [PropConstraint] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(PropConstraint -&gt; Text) -&gt; [PropConstraint] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">PropConstraint -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraint"><span class="hs-identifier hs-var">prettyPropConstraint</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#wordToXscript"><span class="hs-identifier hs-type">wordToXscript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-47"></span><span id="wordToXscript"><span class="annot"><span class="annottext">wordToXscript :: (Word -&gt; Text) -&gt; Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToXscript"><span class="hs-identifier hs-var hs-var">wordToXscript</span></a></span></span><span> </span><span id="local-6989586621679112206"><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="#local-6989586621679112206"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679112207"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112207"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679112211"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112211"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112212"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112212"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112207"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; (Word, Word)
+forall a. Integral a =&gt; a -&gt; a -&gt; (a, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#divMod"><span class="hs-operator hs-var">`divMod`</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-49"></span><span>      </span><span id="local-6989586621679112214"><span class="annot"><span class="annottext">ch :: Text
+</span><a href="#local-6989586621679112214"><span class="hs-identifier hs-var hs-var">ch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="#local-6989586621679112206"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112212"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112211"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">then</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112214"><span class="hs-identifier hs-var">ch</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">else</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">(Word -&gt; Text) -&gt; Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToXscript"><span class="hs-identifier hs-var">wordToXscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="#local-6989586621679112206"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112211"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112214"><span class="hs-identifier hs-var">ch</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-type">wordToSuperscript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-57"></span><span id="wordToSuperscript"><span class="annot"><span class="annottext">wordToSuperscript :: Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-var hs-var">wordToSuperscript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word -&gt; Text) -&gt; Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToXscript"><span class="hs-identifier hs-var">wordToXscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-type">superscript0to9</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679112216"><span class="annot"><span class="annottext">superscript0to9 :: Word -&gt; Text
+</span><a href="#local-6989586621679112216"><span class="hs-identifier hs-var hs-var">superscript0to9</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8304;&quot;</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#185;&quot;</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#178;&quot;</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#179;&quot;</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8308;&quot;</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">5</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8309;&quot;</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">6</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8310;&quot;</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">7</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8311;&quot;</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8312;&quot;</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">9</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8313;&quot;</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="#local-6989586621679112216"><span class="hs-identifier hs-var">superscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-comment">-- Unexpected input</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#wordToSubscript"><span class="hs-identifier hs-type">wordToSubscript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-72"></span><span id="wordToSubscript"><span class="annot"><span class="annottext">wordToSubscript :: Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSubscript"><span class="hs-identifier hs-var hs-var">wordToSubscript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word -&gt; Text) -&gt; Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToXscript"><span class="hs-identifier hs-var">wordToXscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-type">subscript0to9</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679112218"><span class="annot"><span class="annottext">subscript0to9 :: Word -&gt; Text
+</span><a href="#local-6989586621679112218"><span class="hs-identifier hs-var hs-var">subscript0to9</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8320;&quot;</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8321;&quot;</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8322;&quot;</span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8323;&quot;</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8324;&quot;</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">5</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8325;&quot;</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">6</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8326;&quot;</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">7</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8327;&quot;</span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8328;&quot;</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">9</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8329;&quot;</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="#local-6989586621679112218"><span class="hs-identifier hs-var">subscript0to9</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-comment">-- Unexpected input</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><span class="hs-comment">-- | Pretty-print a `Formula` using unicode operators.</span></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679112070"><span id="local-6989586621679112071"><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-type">prettyFormula</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112070"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112071"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112070"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prec"><span class="hs-identifier hs-type">Prec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span></span></span><span>
+</span><span id="line-89"></span><span id="prettyFormula"><span class="annot"><span class="annottext">prettyFormula :: forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var hs-var">prettyFormula</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span id="local-6989586621679112329"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112329"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112330"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112330"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112331"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112331"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112331"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#9744; &#6834;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112329"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSubscript"><span class="hs-identifier hs-var">wordToSubscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112329"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112330"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679112335"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112335"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112336"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112336"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112337"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112337"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112337"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#9744;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-var">wordToSuperscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112335"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112336"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679112339"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112339"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112340"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112340"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112341"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112341"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112341"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#9826;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-var">wordToSuperscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112339"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112340"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679112343"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112343"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112344"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112344"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112344"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#9711;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112343"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span id="local-6989586621679112346"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112346"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112347"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112347"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112348"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112348"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112348"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#9711;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-var">wordToSuperscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112346"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112347"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679112350"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112350"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112351"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112351"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112352"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112352"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112353"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112353"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112353"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Prec.Universe</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112351"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Implies"><span class="hs-identifier hs-var">Prec.Implies</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;|&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#wordToSuperscript"><span class="hs-identifier hs-var">wordToSuperscript</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112350"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112352"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Implies"><span class="hs-identifier hs-var">Prec.Implies</span></a></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112357"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112357"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112358"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112358"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112359"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112359"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112359"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Implies"><span class="hs-identifier hs-var">Prec.Implies</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112357"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Or"><span class="hs-identifier hs-var">Prec.Or</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8658;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112358"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Implies"><span class="hs-identifier hs-var">Prec.Implies</span></a></span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112362"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112362"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112363"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112363"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112364"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112364"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112364"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Or"><span class="hs-identifier hs-var">Prec.Or</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112362"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Or"><span class="hs-identifier hs-var">Prec.Or</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8744;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112363"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Or"><span class="hs-identifier hs-var">Prec.Or</span></a></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112366"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112366"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112367"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112367"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112368"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112368"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112368"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#And"><span class="hs-identifier hs-var">Prec.And</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112366"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#And"><span class="hs-identifier hs-var">Prec.And</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8743;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112367"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#And"><span class="hs-identifier hs-var">Prec.And</span></a></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112371"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112371"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112372"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112372"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112372"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Prefix"><span class="hs-identifier hs-var">Prec.Prefix</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#172; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112371"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span id="local-6989586621679112374"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112374"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112374"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8868;&quot;</span></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span id="local-6989586621679112376"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112376"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112376"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8869;&quot;</span></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112378"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112378"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112379"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112379"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112380"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112380"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112380"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Prec.Universe</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8704;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112378"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112379"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Prec.Universe</span></a></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112382"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112382"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112383"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112383"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112384"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112384"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112385"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112385"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112385"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Prec.Universe</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8704;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679112382"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &#8712; &quot;</span></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;{&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(PropValue -&gt; Text) -&gt; [PropValue] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var">prettyPropValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set PropValue -&gt; [PropValue]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112383"><span class="hs-identifier hs-var">dom</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;}&quot;</span></span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;)&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; Prec -&gt; Text
+forall a event. Show a =&gt; Formula event a -&gt; Prec -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112384"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Universe"><span class="hs-identifier hs-var">Prec.Universe</span></a></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span id="local-6989586621679112388"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112388"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679112389"><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112389"><span class="hs-identifier hs-var">is</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112390"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112390"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112390"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Atom"><span class="hs-identifier hs-var">Prec.Atom</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112388"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[PropConstraint] -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropConstraints"><span class="hs-identifier hs-var">prettyPropConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set PropConstraint -&gt; [PropConstraint]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112389"><span class="hs-identifier hs-var">is</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Cardano.ReCon.LTL.Pretty.html#prettyFormula"><span class="hs-identifier hs-var">prettyFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112392"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112392"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679112393"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112393"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112394"><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112394"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prec -&gt; Prec -&gt; Text -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#surround"><span class="hs-identifier hs-var">surround</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="#local-6989586621679112394"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">Prec
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.Prec.html#Eq"><span class="hs-identifier hs-var">Prec.Eq</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">PropTerm -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropTerm"><span class="hs-identifier hs-var">prettyPropTerm</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112392"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; = &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue -&gt; Text
+</span><a href="Cardano.ReCon.LTL.Pretty.html#prettyPropValue"><span class="hs-identifier hs-var">prettyPropValue</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112393"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-121"></span></pre></body></html>

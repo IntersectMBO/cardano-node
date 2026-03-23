@@ -1,0 +1,569 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.Trace.Ingest</span><span>
+</span><span id="line-4"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier">Ingestor</span></a></span><span>
+</span><span id="line-5"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestMode"><span class="hs-identifier">IngestMode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#FailureMode"><span class="hs-identifier">FailureMode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier">IngestorReader</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#readLineIngestor"><span class="hs-identifier">readLineIngestor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestor"><span class="hs-identifier">mkIngestor</span></a></span><span>
+</span><span id="line-9"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestorReader"><span class="hs-identifier">mkIngestorReader</span></a></span><span>
+</span><span id="line-10"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#ingestFileThreaded"><span class="hs-identifier">ingestFileThreaded</span></a></span><span>
+</span><span id="line-11"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.html"><span class="hs-identifier">Control.Concurrent.Chan.Unagi</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Unagi</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#forM_"><span class="hs-identifier">forM_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier">forever</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier">unless</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Monad.STM.html"><span class="hs-identifier">Control.Monad.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">decodeStrict'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withObject</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#shiftL"><span class="hs-identifier">shiftL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#xor"><span class="hs-identifier">xor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#hGetLine"><span class="hs-identifier">hGetLine</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#ord"><span class="hs-identifier">ord</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier">foldl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier">isJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier">NominalDiffTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html"><span class="hs-identifier">Data.Time.Clock.POSIX</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#doesFileExist"><span class="hs-identifier">doesFileExist</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html"><span class="hs-identifier">System.IO.Error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html#isEOFError"><span class="hs-identifier">isEOFError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- NOTES:</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- 1. The ingested files need to be produced using line buffering.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--    The ingestor logic currently does not support reading / incrementally parsing</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--    partial trace messages.</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">data</span><span> </span><span id="Ingestor"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-var">Ingestor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ingestor"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-var">Ingestor</span></a></span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ingRetentionMs"><span class="annot"><span class="annottext">Ingestor -&gt; Int
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingRetentionMs"><span class="hs-identifier hs-var hs-var">ingRetentionMs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ingChanRef"><span class="annot"><span class="annottext">Ingestor -&gt; InChan ByteString
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingChanRef"><span class="hs-identifier hs-var hs-var">ingChanRef</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ingInBuffer"><span class="annot"><span class="annottext">Ingestor -&gt; TVar (Map LineKey ByteString)
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingInBuffer"><span class="hs-identifier hs-var hs-var">ingInBuffer</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#LineKey"><span class="hs-identifier hs-type">LineKey</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- In the unlikely case there's a collision of timestamps coming from</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- different ingested files, we tag it with some hash of its file path</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">type</span><span> </span><span id="LineKey"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#LineKey"><span class="hs-identifier hs-var">LineKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">data</span><span> </span><span id="IngestMode"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestMode"><span class="hs-identifier hs-var">IngestMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>    </span><span id="FromFileStart"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#FromFileStart"><span class="hs-identifier hs-var">FromFileStart</span></a></span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="FromFileEnd"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#FromFileEnd"><span class="hs-identifier hs-var">FromFileEnd</span></a></span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113481"><span id="local-6989586621679113483"><span id="local-6989586621679113487"><span class="annot"><span class="annottext">Int -&gt; IngestMode -&gt; ShowS
+[IngestMode] -&gt; ShowS
+IngestMode -&gt; [Char]
+(Int -&gt; IngestMode -&gt; ShowS)
+-&gt; (IngestMode -&gt; [Char])
+-&gt; ([IngestMode] -&gt; ShowS)
+-&gt; Show IngestMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; IngestMode -&gt; ShowS
+showsPrec :: Int -&gt; IngestMode -&gt; ShowS
+$cshow :: IngestMode -&gt; [Char]
+show :: IngestMode -&gt; [Char]
+$cshowList :: [IngestMode] -&gt; ShowS
+showList :: [IngestMode] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113491"><span id="local-6989586621679113493"><span class="annot"><span class="annottext">IngestMode -&gt; IngestMode -&gt; Bool
+(IngestMode -&gt; IngestMode -&gt; Bool)
+-&gt; (IngestMode -&gt; IngestMode -&gt; Bool) -&gt; Eq IngestMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: IngestMode -&gt; IngestMode -&gt; Bool
+== :: IngestMode -&gt; IngestMode -&gt; Bool
+$c/= :: IngestMode -&gt; IngestMode -&gt; Bool
+/= :: IngestMode -&gt; IngestMode -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="FailureMode"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#FailureMode"><span class="hs-identifier hs-var">FailureMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>    </span><span id="DieSilently"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#DieSilently"><span class="hs-identifier hs-var">DieSilently</span></a></span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RethrowExceptions"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#RethrowExceptions"><span class="hs-identifier hs-var">RethrowExceptions</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113500"><span id="local-6989586621679113502"><span id="local-6989586621679113506"><span class="annot"><span class="annottext">Int -&gt; FailureMode -&gt; ShowS
+[FailureMode] -&gt; ShowS
+FailureMode -&gt; [Char]
+(Int -&gt; FailureMode -&gt; ShowS)
+-&gt; (FailureMode -&gt; [Char])
+-&gt; ([FailureMode] -&gt; ShowS)
+-&gt; Show FailureMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FailureMode -&gt; ShowS
+showsPrec :: Int -&gt; FailureMode -&gt; ShowS
+$cshow :: FailureMode -&gt; [Char]
+show :: FailureMode -&gt; [Char]
+$cshowList :: [FailureMode] -&gt; ShowS
+showList :: [FailureMode] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113509"><span id="local-6989586621679113511"><span class="annot"><span class="annottext">FailureMode -&gt; FailureMode -&gt; Bool
+(FailureMode -&gt; FailureMode -&gt; Bool)
+-&gt; (FailureMode -&gt; FailureMode -&gt; Bool) -&gt; Eq FailureMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FailureMode -&gt; FailureMode -&gt; Bool
+== :: FailureMode -&gt; FailureMode -&gt; Bool
+$c/= :: FailureMode -&gt; FailureMode -&gt; Bool
+/= :: FailureMode -&gt; FailureMode -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- a blocking reader</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">newtype</span><span> </span><span id="IngestorReader"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier hs-var">IngestorReader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="IngestorReader"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier hs-var">IngestorReader</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="readLineIngestor"><span class="annot"><span class="annottext">IngestorReader -&gt; IO ByteString
+</span><a href="Cardano.ReCon.Trace.Ingest.html#readLineIngestor"><span class="hs-identifier hs-var hs-var">readLineIngestor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">newtype</span><span> </span><span id="Timestamp"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Timestamp"><span class="hs-identifier hs-var">Timestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Timestamp"><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Timestamp"><span class="hs-identifier hs-var">Timestamp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679113517"><span id="local-6989586621679113520"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679113529"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser Timestamp
+</span><a href="#local-6989586621679113529"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; (Object -&gt; Parser Timestamp) -&gt; Value -&gt; Parser Timestamp
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Timestamp&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser Timestamp) -&gt; Value -&gt; Parser Timestamp)
+-&gt; (Object -&gt; Parser Timestamp) -&gt; Value -&gt; Parser Timestamp
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679113531"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679113531"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">UTCTime -&gt; Timestamp
+</span><a href="Cardano.ReCon.Trace.Ingest.html#Timestamp"><span class="hs-identifier hs-var">Timestamp</span></a></span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; Timestamp) -&gt; Parser UTCTime -&gt; Parser Timestamp
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679113531"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser UTCTime
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;at&quot;</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- The interval in ms for which ingested lines will remain</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- buffered, before being piped to the queue for consumption.</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- Any consumer will have that as &quot;lag behind&quot; to real-time.</span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestor"><span class="hs-identifier hs-type">mkIngestor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span>
+</span><span id="line-76"></span><span id="mkIngestor"><span class="annot"><span class="annottext">mkIngestor :: Int -&gt; IO Ingestor
+</span><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestor"><span class="hs-identifier hs-var hs-var">mkIngestor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">100</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span id="local-6989586621679113534"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113534"><span class="hs-identifier hs-var">millisecs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679113535"><span class="annot"><span class="annottext">InChan ByteString
+</span><a href="#local-6989586621679113535"><span class="hs-identifier hs-var">inChan</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113536"><span class="annot"><span class="annottext">OutChan ByteString
+</span><a href="#local-6989586621679113536"><span class="hs-identifier hs-var">outChan</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (InChan ByteString, OutChan ByteString)
+forall a. IO (InChan a, OutChan a)
+</span><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.html#newChan"><span class="hs-identifier hs-var">Unagi.newChan</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679113538"><span class="annot"><span class="annottext">Ingestor
+</span><a href="#local-6989586621679113538"><span class="hs-identifier hs-var">ingestor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; InChan ByteString -&gt; TVar (Map LineKey ByteString) -&gt; Ingestor
+</span><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-var">Ingestor</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113534"><span class="hs-identifier hs-var">millisecs</span></a></span><span> </span><span class="annot"><span class="annottext">InChan ByteString
+</span><a href="#local-6989586621679113535"><span class="hs-identifier hs-var">inChan</span></a></span><span> </span><span class="annot"><span class="annottext">(TVar (Map LineKey ByteString) -&gt; Ingestor)
+-&gt; IO (TVar (Map LineKey ByteString)) -&gt; IO Ingestor
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map LineKey ByteString -&gt; IO (TVar (Map LineKey ByteString))
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Map LineKey ByteString
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">IO ThreadId -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ThreadId -&gt; IO ()) -&gt; (IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#forkIO"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">OutChan ByteString -&gt; Ingestor -&gt; IO ()
+forall {a} {b}. OutChan a -&gt; Ingestor -&gt; IO b
+</span><a href="#local-6989586621679113543"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan ByteString
+</span><a href="#local-6989586621679113536"><span class="hs-identifier hs-var">outChan</span></a></span><span> </span><span class="annot"><span class="annottext">Ingestor
+</span><a href="#local-6989586621679113538"><span class="hs-identifier hs-var">ingestor</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">Ingestor -&gt; IO Ingestor
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Ingestor
+</span><a href="#local-6989586621679113538"><span class="hs-identifier hs-var">ingestor</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><a href="#local-6989586621679113544"><span class="hs-identifier hs-type">deltaT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679113544"><span class="annot"><span class="annottext">deltaT :: NominalDiffTime
+</span><a href="#local-6989586621679113544"><span class="hs-identifier hs-var hs-var">deltaT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; NominalDiffTime
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113534"><span class="hs-identifier hs-var">millisecs</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; NominalDiffTime -&gt; NominalDiffTime
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679113549"><span class="annot"><span class="annottext">flushChan :: OutChan a -&gt; IO ()
+</span><a href="#local-6989586621679113549"><span class="hs-identifier hs-var hs-var">flushChan</span></a></span></span><span> </span><span id="local-6989586621679113550"><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679113550"><span class="hs-identifier hs-var">outChan</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span id="local-6989586621679113552"><span class="annot"><span class="annottext">IO (Maybe a)
+</span><a href="#local-6989586621679113552"><span class="hs-identifier hs-var">hasNext</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OutChan a -&gt; IO (Element a, IO a)
+forall a. OutChan a -&gt; IO (Element a, IO a)
+</span><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-identifier hs-var">Unagi.tryReadChan</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679113550"><span class="hs-identifier hs-var">outChan</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span id="local-6989586621679113554"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679113554"><span class="hs-identifier hs-var">maybeNext</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a)
+</span><a href="#local-6989586621679113552"><span class="hs-identifier hs-var">hasNext</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679113554"><span class="hs-identifier hs-var">maybeNext</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">OutChan a -&gt; IO ()
+</span><a href="#local-6989586621679113549"><span class="hs-identifier hs-var">flushChan</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679113550"><span class="hs-identifier hs-var">outChan</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- Process the in-buffer by removing everything older than the cutoff</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- deltaT and writing it, sorted by timestamp, into the out-queue.</span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621679113543"><span class="annot"><span class="annottext">go :: OutChan a -&gt; Ingestor -&gt; IO b
+</span><a href="#local-6989586621679113543"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679113565"><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679113565"><span class="hs-identifier hs-var">outChan</span></a></span></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113566"><span id="local-6989586621679113567"><span id="local-6989586621679113568"><span class="annot"><span class="annottext">Int
+TVar (Map LineKey ByteString)
+InChan ByteString
+ingRetentionMs :: Ingestor -&gt; Int
+ingChanRef :: Ingestor -&gt; InChan ByteString
+ingInBuffer :: Ingestor -&gt; TVar (Map LineKey ByteString)
+ingRetentionMs :: Int
+ingChanRef :: InChan ByteString
+ingInBuffer :: TVar (Map LineKey ByteString)
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingRetentionMs"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO b) -&gt; IO () -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; IO ()) -&gt; Int -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113534"><span class="hs-identifier hs-var">millisecs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-96"></span><span>      </span><span id="local-6989586621679113571"><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679113571"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO NominalDiffTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#getPOSIXTime"><span class="hs-identifier hs-var">getPOSIXTime</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113574"><span class="annot"><span class="annottext">cutoff :: UTCTime
+</span><a href="#local-6989586621679113574"><span class="hs-identifier hs-var hs-var">cutoff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; UTCTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#posixSecondsToUTCTime"><span class="hs-identifier hs-var">posixSecondsToUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; UTCTime) -&gt; NominalDiffTime -&gt; UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679113571"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; NominalDiffTime -&gt; NominalDiffTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679113544"><span class="hs-identifier hs-var">deltaT</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679113576"><span class="annot"><span class="annottext">Map LineKey ByteString
+</span><a href="#local-6989586621679113576"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Map LineKey ByteString) -&gt; IO (Map LineKey ByteString)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Map LineKey ByteString) -&gt; IO (Map LineKey ByteString))
+-&gt; STM (Map LineKey ByteString) -&gt; IO (Map LineKey ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">TVar (Map LineKey ByteString)
+-&gt; (Map LineKey ByteString
+    -&gt; (Map LineKey ByteString, Map LineKey ByteString))
+-&gt; STM (Map LineKey ByteString)
+forall s a. TVar s -&gt; (s -&gt; (a, s)) -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#stateTVar"><span class="hs-identifier hs-var">stateTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map LineKey ByteString)
+</span><a href="#local-6989586621679113568"><span class="hs-identifier hs-var">ingInBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">((Map LineKey ByteString
+  -&gt; (Map LineKey ByteString, Map LineKey ByteString))
+ -&gt; STM (Map LineKey ByteString))
+-&gt; (Map LineKey ByteString
+    -&gt; (Map LineKey ByteString, Map LineKey ByteString))
+-&gt; STM (Map LineKey ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="annot"><span class="annottext">(LineKey -&gt; Bool)
+-&gt; Map LineKey ByteString
+-&gt; (Map LineKey ByteString, Map LineKey ByteString)
+forall k a. (k -&gt; Bool) -&gt; Map k a -&gt; (Map k a, Map k a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#spanAntitone"><span class="hs-identifier hs-var">Map.spanAntitone</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679113574"><span class="hs-identifier hs-var">cutoff</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; Bool) -&gt; (LineKey -&gt; UTCTime) -&gt; LineKey -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LineKey -&gt; UTCTime
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">InChan ByteString -&gt; [ByteString] -&gt; IO ()
+forall a. InChan a -&gt; [a] -&gt; IO ()
+</span><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.html#writeList2Chan"><span class="hs-identifier hs-var">Unagi.writeList2Chan</span></a></span><span> </span><span class="annot"><span class="annottext">InChan ByteString
+</span><a href="#local-6989586621679113567"><span class="hs-identifier hs-var">ingChanRef</span></a></span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; IO ()) -&gt; [ByteString] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">(LineKey, ByteString) -&gt; ByteString
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((LineKey, ByteString) -&gt; ByteString)
+-&gt; [(LineKey, ByteString)] -&gt; [ByteString]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map LineKey ByteString -&gt; [(LineKey, ByteString)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toAscList"><span class="hs-identifier hs-var">Map.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">Map LineKey ByteString
+</span><a href="#local-6989586621679113576"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-comment">-- We flush our own broadcast end of the channel immediately to not leak space</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">OutChan a -&gt; IO ()
+forall {a}. OutChan a -&gt; IO ()
+</span><a href="#local-6989586621679113549"><span class="hs-identifier hs-var">flushChan</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan a
+</span><a href="#local-6989586621679113565"><span class="hs-identifier hs-var">outChan</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- For multiple / parallel consumers, each one requires its own IngestorReader</span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestorReader"><span class="hs-identifier hs-type">mkIngestorReader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier hs-type">IngestorReader</span></a></span><span>
+</span><span id="line-108"></span><span id="mkIngestorReader"><span class="annot"><span class="annottext">mkIngestorReader :: Ingestor -&gt; IO IngestorReader
+</span><a href="Cardano.ReCon.Trace.Ingest.html#mkIngestorReader"><span class="hs-identifier hs-var hs-var">mkIngestorReader</span></a></span></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113584"><span class="annot"><span class="annottext">InChan ByteString
+ingChanRef :: Ingestor -&gt; InChan ByteString
+ingChanRef :: InChan ByteString
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingChanRef"><span class="hs-identifier hs-var hs-var">ingChanRef</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-glyph">!</span><span id="local-6989586621679113585"><span class="annot"><span class="annottext">OutChan ByteString
+</span><a href="#local-6989586621679113585"><span class="hs-identifier hs-var">newOutChan</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">InChan ByteString -&gt; IO (OutChan ByteString)
+forall a. InChan a -&gt; IO (OutChan a)
+</span><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-identifier hs-var">Unagi.dupChan</span></a></span><span> </span><span class="annot"><span class="annottext">InChan ByteString
+</span><a href="#local-6989586621679113584"><span class="hs-identifier hs-var">ingChanRef</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">IngestorReader -&gt; IO IngestorReader
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(IngestorReader -&gt; IO IngestorReader)
+-&gt; IngestorReader -&gt; IO IngestorReader
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; IngestorReader
+</span><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier hs-var">IngestorReader</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ByteString -&gt; IngestorReader)
+-&gt; IO ByteString -&gt; IngestorReader
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan ByteString -&gt; IO ByteString
+forall a. OutChan a -&gt; IO a
+</span><a href="file:///nix/store/17px07l2apa7zz3n7cg64f145dz8zvna-unagi-chan-lib-unagi-chan-0.4.1.4-haddock-doc/share/doc/unagi-chan/html/src/Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier hs-var">Unagi.readChan</span></a></span><span> </span><span class="annot"><span class="annottext">OutChan ByteString
+</span><a href="#local-6989586621679113585"><span class="hs-identifier hs-var">newOutChan</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- If the thread couldn't be started, there'll be a Just errormessage</span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#ingestFileThreaded"><span class="hs-identifier hs-type">ingestFileThreaded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#FailureMode"><span class="hs-identifier hs-type">FailureMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestMode"><span class="hs-identifier hs-type">IngestMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span id="ingestFileThreaded"><span class="annot"><span class="annottext">ingestFileThreaded :: Ingestor
+-&gt; FailureMode -&gt; IngestMode -&gt; [Char] -&gt; IO (Maybe [Char])
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingestFileThreaded"><span class="hs-identifier hs-var hs-var">ingestFileThreaded</span></a></span></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Ingestor"><span class="hs-identifier hs-type">Ingestor</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113589"><span class="annot"><span class="annottext">TVar (Map LineKey ByteString)
+ingInBuffer :: Ingestor -&gt; TVar (Map LineKey ByteString)
+ingInBuffer :: TVar (Map LineKey ByteString)
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingInBuffer"><span class="hs-identifier hs-var hs-var">ingInBuffer</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113590"><span class="annot"><span class="annottext">Int
+ingRetentionMs :: Ingestor -&gt; Int
+ingRetentionMs :: Int
+</span><a href="Cardano.ReCon.Trace.Ingest.html#ingRetentionMs"><span class="hs-identifier hs-var hs-var">ingRetentionMs</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679113591"><span class="annot"><span class="annottext">FailureMode
+</span><a href="#local-6989586621679113591"><span class="hs-identifier hs-var">failMode</span></a></span></span><span> </span><span id="local-6989586621679113592"><span class="annot"><span class="annottext">IngestMode
+</span><a href="#local-6989586621679113592"><span class="hs-identifier hs-var">ingestMode</span></a></span></span><span> </span><span id="local-6989586621679113593"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113593"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="annottext">[Char] -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#doesFileExist"><span class="hs-identifier hs-var">doesFileExist</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113593"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; (Bool -&gt; IO (Maybe [Char])) -&gt; IO (Maybe [Char])
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe [Char] -&gt; IO (Maybe [Char])
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe [Char] -&gt; IO (Maybe [Char]))
+-&gt; Maybe [Char] -&gt; IO (Maybe [Char])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Maybe [Char]
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Maybe [Char]) -&gt; [Char] -&gt; Maybe [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;ingestFileThreaded: file not found: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113593"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">IO ThreadId -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ThreadId -&gt; IO ()) -&gt; (IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#forkIO"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-119"></span><span>        </span><span class="annot"><span class="annottext">(SomeException -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall e a. Exception e =&gt; (e -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679113595"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679113595"><span class="hs-identifier hs-var">ex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FailureMode
+</span><a href="#local-6989586621679113591"><span class="hs-identifier hs-var">failMode</span></a></span><span> </span><span class="annot"><span class="annottext">FailureMode -&gt; FailureMode -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">FailureMode
+</span><a href="Cardano.ReCon.Trace.Ingest.html#DieSilently"><span class="hs-identifier hs-var">DieSilently</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SomeException -&gt; IO ()
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679113595"><span class="hs-identifier hs-var">ex</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>          </span><span class="annot"><span class="annottext">IO ()
+forall {r}. IO r
+</span><a href="#local-6989586621679113597"><span class="hs-identifier hs-var">thread</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">Maybe [Char] -&gt; IO (Maybe [Char])
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679113604"><span class="annot"><span class="annottext">pollingDelay :: Int
+</span><a href="#local-6989586621679113604"><span class="hs-identifier hs-var hs-var">pollingDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113590"><span class="hs-identifier hs-var">ingRetentionMs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">40</span></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679113606"><span class="annot"><span class="annottext">filePathHash :: Word64
+</span><a href="#local-6989586621679113606"><span class="hs-identifier hs-var hs-var">filePathHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Ingest.html#djb2"><span class="hs-identifier hs-var">djb2</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113593"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679113597"><span class="annot"><span class="annottext">thread :: IO r
+</span><a href="#local-6989586621679113597"><span class="hs-identifier hs-var hs-var">thread</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall r. [Char] -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#withFile"><span class="hs-identifier hs-var">withFile</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113593"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">IOMode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.IOMode.html#ReadMode"><span class="hs-identifier hs-var">ReadMode</span></a></span><span> </span><span class="annot"><span class="annottext">((Handle -&gt; IO r) -&gt; IO r) -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679113615"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113615"><span class="hs-identifier hs-var">hdl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IngestMode
+</span><a href="#local-6989586621679113592"><span class="hs-identifier hs-var">ingestMode</span></a></span><span> </span><span class="annot"><span class="annottext">IngestMode -&gt; IngestMode -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">IngestMode
+</span><a href="Cardano.ReCon.Trace.Ingest.html#FromFileEnd"><span class="hs-identifier hs-var">FromFileEnd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">Handle -&gt; SeekMode -&gt; Integer -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.html#hSeek"><span class="hs-identifier hs-var">hSeek</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113615"><span class="hs-identifier hs-var">hdl</span></a></span><span> </span><span class="annot"><span class="annottext">SeekMode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Device.html#SeekFromEnd"><span class="hs-identifier hs-var">SeekFromEnd</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; IO r
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO r) -&gt; IO () -&gt; IO r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-130"></span><span>        </span><span class="hs-comment">-- This whole polling logic exists to avoid lazy I/O</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113604"><span class="hs-identifier hs-var">pollingDelay</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="#local-6989586621679113618"><span class="hs-identifier hs-var">ingestLines</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113615"><span class="hs-identifier hs-var">hdl</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="#local-6989586621679113618"><span class="hs-identifier hs-type">ingestLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679113618"><span class="annot"><span class="annottext">ingestLines :: Handle -&gt; IO ()
+</span><a href="#local-6989586621679113618"><span class="hs-identifier hs-var hs-var">ingestLines</span></a></span></span><span> </span><span id="local-6989586621679113619"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113619"><span class="hs-identifier hs-var">hdl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; IO (Either IOException ByteString)
+forall e a. Exception e =&gt; IO a -&gt; IO (Either e a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#try"><span class="hs-identifier hs-var">try</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Handle -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#hGetLine"><span class="hs-identifier hs-var">ByteString.hGetLine</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113619"><span class="hs-identifier hs-var">hdl</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Either IOException ByteString)
+-&gt; (Either IOException ByteString -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>      </span><span class="hs-comment">-- There's no requirement for each and every line to be a trace event.</span><span>
+</span><span id="line-138"></span><span>      </span><span class="hs-comment">-- While with the Haskell node this is almost always the case, it can't be</span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-comment">-- a general assumption.</span><span>
+</span><span id="line-140"></span><span>      </span><span class="hs-comment">-- If the line doesn't look like a timestamped JSON object, we skip it.</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679113621"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113621"><span class="hs-identifier hs-var">line</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">Maybe Timestamp -&gt; (Timestamp -&gt; IO ()) -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe Timestamp
+forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">decodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113621"><span class="hs-identifier hs-var">line</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Timestamp -&gt; IO ()) -&gt; IO ()) -&gt; (Timestamp -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span> </span><span id="local-6989586621679113622"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679113622"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>          </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map LineKey ByteString)
+-&gt; (Map LineKey ByteString -&gt; Map LineKey ByteString) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map LineKey ByteString)
+</span><a href="#local-6989586621679113589"><span class="hs-identifier hs-var">ingInBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">((Map LineKey ByteString -&gt; Map LineKey ByteString) -&gt; STM ())
+-&gt; (Map LineKey ByteString -&gt; Map LineKey ByteString) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-144"></span><span>            </span><span class="annot"><span class="annottext">LineKey
+-&gt; ByteString -&gt; Map LineKey ByteString -&gt; Map LineKey ByteString
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679113622"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113606"><span class="hs-identifier hs-var">filePathHash</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113621"><span class="hs-identifier hs-var">line</span></a></span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="#local-6989586621679113618"><span class="hs-identifier hs-var">ingestLines</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679113619"><span class="hs-identifier hs-var">hdl</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-comment">-- Swallow EOF while polling for new input, rethrow anything else</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113625"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679113625"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">IOException -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html#isEOFError"><span class="hs-identifier hs-var">isEOFError</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679113625"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>                                </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IOException -&gt; IO ()
+forall a. IOException -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ioError"><span class="hs-identifier hs-var">ioError</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679113625"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#djb2"><span class="hs-identifier hs-type">djb2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-152"></span><span id="djb2"><span class="annot"><span class="annottext">djb2 :: [Char] -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Ingest.html#djb2"><span class="hs-identifier hs-var hs-var">djb2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Char -&gt; Word64) -&gt; Word64 -&gt; [Char] -&gt; Word64
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113627"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113627"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word64) -&gt; (Char -&gt; Int) -&gt; Char -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#ord"><span class="hs-identifier hs-var">ord</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span id="local-6989586621679113628"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113628"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113627"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#shiftL"><span class="hs-operator hs-var">`shiftL`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113627"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#xor"><span class="hs-operator hs-var">`xor`</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113628"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">5381</span></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">{-
+-- example usage:
+_testRunConsumer :: IO ()
+_testRunConsumer = do
+  ing &lt;- mkIngestor 1000
+  onErrorPrint =&lt;&lt; ingestFileThreaded ing DieSilently FromFileStart &quot;log-small.txt&quot;
+  onErrorPrint =&lt;&lt; ingestFileThreaded ing DieSilently FromFileStart &quot;something-else.txt&quot;
+
+  ingReader &lt;- mkIngestorReader ing
+  forever $
+    readLineIngestor ingReader &gt;&gt;= print
+  where
+    onErrorPrint :: Maybe String -&gt; IO ()
+    onErrorPrint = mapM_ putStrLn
+-}</span><span>
+</span><span id="line-170"></span></pre></body></html>

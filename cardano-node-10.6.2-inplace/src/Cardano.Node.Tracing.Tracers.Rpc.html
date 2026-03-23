@@ -1,0 +1,430 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Tracing.Tracers.Rpc</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.24.1.0-7aa6ee6a4db0d969bcf74a687f78a6e033e6664c500ec459906b082ca582a47e/share/doc/html/src/Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#nsInner"><span class="hs-identifier">nsInner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.html"><span class="hs-identifier">Cardano.Rpc.Server</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpc"><span class="hs-identifier">TraceRpc</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier">TraceRpcQuery</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmit"><span class="hs-identifier">TraceRpcSubmit</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceSpanEvent"><span class="hs-identifier">TraceSpanEvent</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Object</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LogFormatting"><span class="hs-identifier hs-type">LogFormatting</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpc"><span class="hs-identifier hs-type">TraceRpc</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621681718105"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; TraceRpc -&gt; Object
+</span><a href="#local-6989586621681718105"><span class="hs-identifier hs-var hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span id="local-6989586621681718107"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621681718107"><span class="hs-identifier hs-var">_dtal</span></a></span></span><span> </span><span id="local-6989586621681718108"><span class="annot"><span class="annottext">TraceRpc
+</span><a href="#local-6989586621681718108"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Object] -&gt; Object) -&gt; [Object] -&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-23"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;reason&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; String -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">TraceRpc -&gt; String
+forall a. Pretty a =&gt; a -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.24.1.0-7aa6ee6a4db0d969bcf74a687f78a6e033e6664c500ec459906b082ca582a47e/share/doc/html/src/Cardano.Api.Pretty.html#prettyShow"><span class="hs-identifier hs-var">prettyShow</span></a></span><span> </span><span class="annot"><span class="annottext">TraceRpc
+</span><a href="#local-6989586621681718108"><span class="hs-identifier hs-var">tr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>        </span><span class="annot"><span class="annottext">Object -&gt; [Object] -&gt; [Object]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraceRpc
+</span><a href="#local-6989586621681718108"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-25"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcFatalError"><span class="hs-identifier hs-type">TraceRpcFatalError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;FatalError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcError"><span class="hs-identifier hs-type">TraceRpcError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Error&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier hs-type">TraceRpcQuery</span></a></span><span> </span><span id="local-6989586621681718114"><span class="annot"><span class="annottext">TraceRpcQuery
+</span><a href="#local-6989586621681718114"><span class="hs-identifier hs-var">queryTrace</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-28"></span><span>            </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span>              </span><span class="annot"><span class="annottext">[Object] -&gt; [Object] -&gt; [Object]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraceRpcQuery
+</span><a href="#local-6989586621681718114"><span class="hs-identifier hs-var">queryTrace</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-30"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryParamsSpan"><span class="hs-identifier hs-type">TraceRpcQueryParamsSpan</span></a></span><span> </span><span id="local-6989586621681718116"><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718116"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-31"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;queryName&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span>
+</span><span id="line-32"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; Object
+</span><a href="Cardano.Node.Tracing.Tracers.Rpc.html#spanToObject"><span class="hs-identifier hs-var">spanToObject</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718116"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-33"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryReadUtxosSpan"><span class="hs-identifier hs-type">TraceRpcQueryReadUtxosSpan</span></a></span><span> </span><span id="local-6989586621681718119"><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718119"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-35"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;queryName&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span>
+</span><span id="line-36"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; Object
+</span><a href="Cardano.Node.Tracing.Tracers.Rpc.html#spanToObject"><span class="hs-identifier hs-var">spanToObject</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718119"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-37"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-38"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmit"><span class="hs-identifier hs-type">TraceRpcSubmit</span></a></span><span> </span><span id="local-6989586621681718121"><span class="annot"><span class="annottext">TraceRpcSubmit
+</span><a href="#local-6989586621681718121"><span class="hs-identifier hs-var">submitTrace</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-40"></span><span>              </span><span class="annot"><span class="annottext">[Object] -&gt; [Object] -&gt; [Object]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraceRpcSubmit
+</span><a href="#local-6989586621681718121"><span class="hs-identifier hs-var">submitTrace</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitN2cConnectionError"><span class="hs-identifier hs-type">TraceRpcSubmitN2cConnectionError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitTxDecodingError"><span class="hs-identifier hs-type">TraceRpcSubmitTxDecodingError</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitTxValidationError"><span class="hs-identifier hs-type">TraceRpcSubmitTxValidationError</span></a></span><span> </span><span class="annot"><span class="annottext">TxValidationErrorInCardanoMode
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitSpan"><span class="hs-identifier hs-type">TraceRpcSubmitSpan</span></a></span><span> </span><span id="local-6989586621681718126"><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718126"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; Object
+</span><a href="Cardano.Node.Tracing.Tracers.Rpc.html#spanToObject"><span class="hs-identifier hs-var">spanToObject</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><a href="#local-6989586621681718126"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621681718128"><span class="annot"><span class="annottext">forHuman :: TraceRpc -&gt; Text
+</span><a href="#local-6989586621681718128"><span class="hs-identifier hs-var hs-var hs-var hs-var">forHuman</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.24.1.0-7aa6ee6a4db0d969bcf74a687f78a6e033e6664c500ec459906b082ca582a47e/share/doc/html/src/Cardano.Api.Pretty.html#docToText"><span class="hs-identifier hs-var">docToText</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Text)
+-&gt; (TraceRpc -&gt; Doc AnsiStyle) -&gt; TraceRpc -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TraceRpc -&gt; Doc AnsiStyle
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. TraceRpc -&gt; Doc ann
+</span><a href="file:///nix/store/c3hpg8m73vvvl0dia8r0v4xgyq5jkmj8-prettyprinter-lib-prettyprinter-1.7.1-haddock-doc/share/doc/prettyprinter/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621681718136"><span class="annot"><span class="annottext">asMetrics :: TraceRpc -&gt; [Metric]
+</span><a href="#local-6989586621681718136"><span class="hs-identifier hs-var hs-var hs-var hs-var">asMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">-- metrics for each rpc request</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- query names here are taken from UTXORPC spec: https://utxorpc.org/query/intro/#operations</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier hs-type">TraceRpcQuery</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryParamsSpan"><span class="hs-identifier hs-type">TraceRpcQueryParamsSpan</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#SpanBegin"><span class="hs-identifier hs-type">SpanBegin</span></a></span><span> </span><span class="annot"><span class="annottext">SpanId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Maybe Int -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#CounterM"><span class="hs-identifier hs-var">CounterM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.QueryService.ReadParams&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier hs-type">TraceRpcQuery</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryReadUtxosSpan"><span class="hs-identifier hs-type">TraceRpcQueryReadUtxosSpan</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#SpanBegin"><span class="hs-identifier hs-type">SpanBegin</span></a></span><span> </span><span class="annot"><span class="annottext">SpanId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Maybe Int -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#CounterM"><span class="hs-identifier hs-var">CounterM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.QueryService.ReadUtxos&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmit"><span class="hs-identifier hs-type">TraceRpcSubmit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitSpan"><span class="hs-identifier hs-type">TraceRpcSubmitSpan</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#SpanBegin"><span class="hs-identifier hs-type">SpanBegin</span></a></span><span> </span><span class="annot"><span class="annottext">SpanId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Maybe Int -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#CounterM"><span class="hs-identifier hs-var">CounterM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.SubmitService.SubmitTx&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">TraceRpc
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681718143"><span id="local-6989586621681718147"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpc"><span class="hs-identifier hs-type">TraceRpc</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621681718166"><span class="annot"><span class="annottext">namespaceFor :: TraceRpc -&gt; Namespace TraceRpc
+</span><a href="#local-6989586621681718166"><span class="hs-identifier hs-var hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceRpc
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Namespace TraceRpc)
+-&gt; (TraceRpc -&gt; [Text]) -&gt; TraceRpc -&gt; Namespace TraceRpc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcFatalError"><span class="hs-identifier hs-type">TraceRpcFatalError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;FatalError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcError"><span class="hs-identifier hs-type">TraceRpcError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Error&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier hs-type">TraceRpcQuery</span></a></span><span> </span><span id="local-6989586621681718169"><span class="annot"><span class="annottext">TraceRpcQuery
+</span><a href="#local-6989586621681718169"><span class="hs-identifier hs-var">queryTrace</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraceRpcQuery
+</span><a href="#local-6989586621681718169"><span class="hs-identifier hs-var">queryTrace</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryParamsSpan"><span class="hs-identifier hs-type">TraceRpcQueryParamsSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryReadUtxosSpan"><span class="hs-identifier hs-type">TraceRpcQueryReadUtxosSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmit"><span class="hs-identifier hs-type">TraceRpcSubmit</span></a></span><span> </span><span id="local-6989586621681718170"><span class="annot"><span class="annottext">TraceRpcSubmit
+</span><a href="#local-6989586621681718170"><span class="hs-identifier hs-var">submitTrace</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span>
+</span><span id="line-68"></span><span>          </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraceRpcSubmit
+</span><a href="#local-6989586621681718170"><span class="hs-identifier hs-var">submitTrace</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitN2cConnectionError"><span class="hs-identifier hs-type">TraceRpcSubmitN2cConnectionError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;N2cConnectionError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitTxDecodingError"><span class="hs-identifier hs-type">TraceRpcSubmitTxDecodingError</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxDecodingError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitTxValidationError"><span class="hs-identifier hs-type">TraceRpcSubmitTxValidationError</span></a></span><span> </span><span class="annot"><span class="annottext">TxValidationErrorInCardanoMode
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxValidationError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitSpan"><span class="hs-identifier hs-type">TraceRpcSubmitSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621681718206"><span class="annot"><span class="annottext">severityFor :: Namespace TraceRpc -&gt; Maybe TraceRpc -&gt; Maybe SeverityS
+</span><a href="#local-6989586621681718206"><span class="hs-identifier hs-var hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681718208"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718208"><span class="hs-identifier hs-var">nsInner</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceRpc
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718208"><span class="hs-identifier hs-var">nsInner</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;FatalError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Error"><span class="hs-identifier hs-var">Error</span></a></span><span> </span><span class="hs-comment">-- RPC server startup errors</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Error&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="hs-comment">-- those are normal operation errors, like request errors, hide them by default</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;N2cConnectionError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Warning"><span class="hs-identifier hs-var">Warning</span></a></span><span> </span><span class="hs-comment">-- this is a more serious error, this shouldn't happen</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxDecodingError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="hs-comment">-- request error</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxValidationError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="hs-comment">-- request error</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621681718254"><span class="annot"><span class="annottext">documentFor :: Namespace TraceRpc -&gt; Maybe Text
+</span><a href="#local-6989586621681718254"><span class="hs-identifier hs-var hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681718256"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718256"><span class="hs-identifier hs-var">nsInner</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718256"><span class="hs-identifier hs-var">nsInner</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;FatalError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RPC startup critical error.&quot;</span></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Error&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Normal operation errors such as request errors. Those are not harmful to the RPC server itself.&quot;</span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the ReadParams UTXORPC method.&quot;</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the ReadUtxos UTXORPC method.&quot;</span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the SubmitTx UTXORPC method.&quot;</span></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;N2cConnectionError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Node connection error. This should not happen, as this means that there is an issue in cardano-rpc configuration.&quot;</span></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxDecodingError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;A regular request error, when submitted transaction decoding fails.&quot;</span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxValidationError&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;A regular request error, when submitted transaction is invalid.&quot;</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621681718281"><span class="annot"><span class="annottext">metricsDocFor :: Namespace TraceRpc -&gt; [(Text, Text)]
+</span><a href="#local-6989586621681718281"><span class="hs-identifier hs-var hs-var hs-var hs-var">metricsDocFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681718283"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718283"><span class="hs-identifier hs-var">nsInner</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621681718283"><span class="hs-identifier hs-var">nsInner</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.QueryService.ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the ReadParams UTXORPC method.&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.QueryService.ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the ReadUtxos UTXORPC method.&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rpc.request.SubmitService.SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span for the SubmitTx UTXORPC method.&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621681718303"><span class="annot"><span class="annottext">allNamespaces :: [Namespace TraceRpc]
+</span><a href="#local-6989586621681718303"><span class="hs-identifier hs-var hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceRpc
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="annottext">([Text] -&gt; Namespace TraceRpc) -&gt; [[Text]] -&gt; [Namespace TraceRpc]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;FatalError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Error&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadParams&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-112"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;QueryService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ReadUtxos&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitTx&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Span&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-114"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;N2cConnectionError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxDecodingError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SubmitService&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxValidationError&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- helper functions</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.Rpc.html#spanToObject"><span class="hs-identifier hs-type">spanToObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#TraceSpanEvent"><span class="hs-identifier hs-type">TraceSpanEvent</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span>
+</span><span id="line-122"></span><span id="spanToObject"><span class="annot"><span class="annottext">spanToObject :: TraceSpanEvent -&gt; Object
+</span><a href="Cardano.Node.Tracing.Tracers.Rpc.html#spanToObject"><span class="hs-identifier hs-var hs-var">spanToObject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Object] -&gt; Object)
+-&gt; (TraceSpanEvent -&gt; [Object]) -&gt; TraceSpanEvent -&gt; Object
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#SpanBegin"><span class="hs-identifier hs-type">SpanBegin</span></a></span><span> </span><span id="local-6989586621681718306"><span class="annot"><span class="annottext">SpanId
+</span><a href="#local-6989586621681718306"><span class="hs-identifier hs-var">spanId</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;span&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;begin&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;spanId&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; SpanId -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">SpanId
+</span><a href="#local-6989586621681718306"><span class="hs-identifier hs-var">spanId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-rpc-10.1.0.0-66e86ac8109e5b093bc7141f0d3678af1534ee1a91add48ed21df9c9f26d025e/share/doc/html/src/Cardano.Rpc.Server.Internal.Tracing.html#SpanEnd"><span class="hs-identifier hs-type">SpanEnd</span></a></span><span> </span><span id="local-6989586621681718308"><span class="annot"><span class="annottext">SpanId
+</span><a href="#local-6989586621681718308"><span class="hs-identifier hs-var">spanId</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;span&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;end&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;spanId&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; SpanId -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">SpanId
+</span><a href="#local-6989586621681718308"><span class="hs-identifier hs-var">spanId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span></pre></body></html>
