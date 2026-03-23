@@ -80,19 +80,14 @@
     # on darwin which calls this binary to find certificates
       pkgs.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
 
+    windowsCompilerNixName = "ghc9122";
+
     supportedSystems = import ./nix/supported-systems.nix;
     defaultSystem = head supportedSystems;
     customConfig =
       recursiveUpdate
       (import ./nix/custom-config.nix customConfig)
       input.customConfig;
-
-    abseilOverlay = final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isWindows {
-        abseil-cpp = prev.abseil-cpp.overrideAttrs (finalAttrs: previousAttrs: {
-          buildInputs = previousAttrs.buildInputs ++ [prev.pkgs.windows.pthreads];
-        });
-      };
 
     overlays = [
       # Crypto needs to come before haskell.nix.
@@ -114,7 +109,6 @@
           // import ./nix/svclib.nix {inherit (final) pkgs;};
       })
       (import ./nix/pkgs.nix)
-      abseilOverlay
       self.overlay
     ];
 
@@ -365,7 +359,7 @@
           # Once building, windowsProject candidate for win-arm64 is project.projectCross.ucrtAarch64.
           // optionalAttrs (elem system ["x86_64-linux"]) {
             windows = let
-              windowsProject = project.projectCross.mingwW64;
+              windowsProject = (project.appendModule { compiler-nix-name = windowsCompilerNixName; }).projectCross.mingwW64;
               projectExes = collectExes windowsProject;
             in
               projectExes
@@ -491,7 +485,7 @@
         cardanoNodeProject =
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
-            inherit CHaP incl;
+            inherit CHaP incl windowsCompilerNixName;
             macOS-security = macOS-security (final.pkgs);
           })
           .appendModule [

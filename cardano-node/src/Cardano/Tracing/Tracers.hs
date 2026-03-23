@@ -35,6 +35,9 @@ import           Cardano.BM.Data.Transformers
 import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
+import           Cardano.Network.Diffusion (CardanoPeerSelectionCounters)
+import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
+import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -46,7 +49,7 @@ import           Cardano.Node.Tracing
 import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
 import qualified Cardano.Node.Tracing.Tracers.Diffusion as DiffusionTracers
 import           Cardano.Node.Tracing.Tracers.NodeVersion
-import           Cardano.Network.Diffusion (CardanoPeerSelectionCounters)
+import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.Config
@@ -66,8 +69,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxs, LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -83,9 +86,6 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Network.Mux as Mux
-
-import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
@@ -104,8 +104,7 @@ import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
-import           Ouroboros.Network.PeerSelection.Governor (
-                   PeerSelectionView (..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
@@ -364,6 +363,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect = do
     , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
     , ledgerMetricsTracer = nullTracer
+    , rpcTracer = nullTracer
     }
  where
    traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk -> IO ()
@@ -537,6 +537,7 @@ mkTracers _ _ _ _ _ =
     , nodeVersionTracer = nullTracer
     , resourcesTracer = nullTracer
     , ledgerMetricsTracer = nullTracer
+    , rpcTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------

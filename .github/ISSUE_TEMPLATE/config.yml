@@ -6,3 +6,6 @@ contact_links:
   - name: Cardano API Issues
     url: https://github.com/IntersectMBO/cardano-api/issues
     about: Report API related issues here
+  - name: Cardano gRPC Issues
+    url: https://github.com/IntersectMBO/cardano-api/issues
+    about: Report gRPC endpoint related issues here

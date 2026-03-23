@@ -11,6 +11,7 @@ module Cardano.Testnet (
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
+  RpcSupport(..),
   NodeOption(..),
   cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
@@ -46,6 +47,7 @@ module Cardano.Testnet (
   TestnetNode(..),
   isTestnetNodeSpo,
   nodeSocketPath,
+  nodeRpcSocketPath,
   ) where
 
 import           Testnet.Components.Query

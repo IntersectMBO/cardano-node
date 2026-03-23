@@ -188,7 +188,7 @@ defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
     <> tracers
-    <> [("TraceOptions", Aeson.Object mempty)]
+    <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -301,6 +301,32 @@ defaultYamlHardforkViaConfig sbe =
     , (proxyName (Proxy @TraceTxOutbound), False)
     , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
     ]
+
+  traceOptions = Aeson.Object mempty
+  -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
+  -- N.B. Every testnet node will start trying to listen on PrometheusSimple endpoint
+  -- meaning you can only run a one-node testnet, otherwise there will be a port collision.
+  -- This is because all testnet nodes share config with each other.
+  -- For a proper solution, use cardano-tracer to consume all the logs and just expose a single
+  -- stream of traces from all testnet nodes.
+  -- See also:
+  -- * https://developers.cardano.org/docs/get-started/infrastructure/node/new-tracing-system/cardano-tracer/
+  -- * ./cardano-tracer/docs/cardano-tracer.md
+  --
+  -- traceOptions = do
+  --   Aeson.object
+  --     [ "" .= Aeson.object
+  --       [ "backends" .= Aeson.Array
+  --         [ "EKGBackend"
+  --         , "PrometheusSimple suffix 0.0.0.0 12798"
+  --         -- , "Stdout MachineFormat"
+  --         , "Stdout HumanFormatColoured"
+  --         ]
+  --       , "detail" .= ("DNormal" :: Aeson.Value)
+  --       -- , "severity" .= ("Notice" :: Aeson.Value)
+  --       , "severity" .= ("Debug" :: Aeson.Value)
+  --       ]
+  --     ]
 
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =

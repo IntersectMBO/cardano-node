@@ -4,7 +4,7 @@ final: prev:
 let
   inherit (builtins) foldl' fromJSON listToAttrs map readFile;
   inherit (final) pkgs;
-  inherit (prev.pkgs) lib;
+  inherit (prev) lib;
   inherit (prev) customConfig;
   # Parametrized helper entrypoint for the workbench development environment.
   workbench = import ./workbench
@@ -214,4 +214,14 @@ in with final;
       });
     };
   };
+}
+// lib.optionalAttrs prev.stdenv.hostPlatform.isWindows {
+  abseil-cpp = prev.abseil-cpp.overrideAttrs (finalAttrs: previousAttrs: {
+    buildInputs = previousAttrs.buildInputs ++ [prev.windows.pthreads];
+  });
+}
+// lib.optionalAttrs prev.stdenv.hostPlatform.isMusl {
+  snappy = prev.snappy.overrideAttrs (old: {
+    cmakeFlags = map (f: if f == "-DBUILD_SHARED_LIBS=ON" then "-DBUILD_SHARED_LIBS=OFF" else f) (old.cmakeFlags or []);
+  });
 }
