@@ -29,9 +29,9 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
-import           Cardano.Network.ConsensusMode (ConsensusMode(..), defaultConsensusMode)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -54,8 +54,8 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
-import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
-                     (TxSubmissionInitDelay(..), TxSubmissionLogicVersion(..), defaultTxSubmissionInitDelay)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionInitDelay (..),
+                   TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -313,6 +313,9 @@ data PartialNodeConfiguration
 
        , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
        , pncTxSubmissionInitDelay :: !(Last TxSubmissionInitDelay)
+
+         -- gRPC
+       , pncRpcConfig :: !PartialRpcConfig
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where

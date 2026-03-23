@@ -566,56 +566,14 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               (readTVar ledgerPeerSnapshotVar)
               nc
       in
-      Node.run
-        nodeArgs {
-            rnNodeKernelHook = \registry nodeKernel -> do
-              -- reinstall `SIGHUP` handler
-              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
-                                   blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
-                                   useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-              rnNodeKernelHook nodeArgs registry nodeKernel
-        }
-        StdRunNodeArgs
-          { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-          , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-          , srnChainDbValidateOverride      = ncValidateDB nc
-          , srnDatabasePath                 = dbPath
-          , srnDiffusionConfiguration       = diffusionConfiguration
-          , srnDiffusionArguments           = diffusionNodeArguments
-          , srnDiffusionTracers             = diffusionTracers tracers
-          , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
-          , srnTraceChainDB                 = chainDBTracer tracers
-          , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-          , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
-          , srnSnapshotPolicyArgs           = snapshotPolicyArgs
-          , srnQueryBatchSize               = queryBatchSize
-          , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
-          }
-
-        diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
-        diffusionConfiguration =
-          mkDiffusionConfiguration
-            publicIPv4SocketOrAddr
-            publicIPv6SocketOrAddr
-            localSocketOrPath
-            publicPeerSelectionVar
-            nForkPolicy cForkPolicy
-            (readTVar localRootsVar)
-            (readTVar publicRootsVar)
-            (readTVar useLedgerVar)
-            (readTVar ledgerPeerSnapshotVar)
-            nc
-
-        ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
-        networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
-    withAsync (runRpcServer (rpcTracer tracers) (ncRpcConfig nc, networkMagic))  $ \_ ->
+      withAsync (runRpcServer (rpcTracer tracers) (ncRpcConfig nc, networkMagic))  $ \_ ->
         Node.run
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
-                installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
-                                     localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-                                     ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+                installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
+                                     blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                     useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
           }
           StdRunNodeArgs
@@ -632,7 +590,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
             , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
             , srnSnapshotPolicyArgs           = snapshotPolicyArgs
             , srnQueryBatchSize               = queryBatchSize
-            , srnLdbFlavorArgs                = selectorToArgs ldbBackend
+            , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
             }
  where
   customizeChainSyncTimeout :: ChainSyncIdleTimeout
