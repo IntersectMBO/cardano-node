@@ -4,8 +4,16 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "slot": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"

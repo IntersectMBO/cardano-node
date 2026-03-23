@@ -12,6 +12,11 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "numberOfBigLedgerPeers",
+            "targetNumberOfBigLedgerPeers"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.BigLedgerPeersRequest"

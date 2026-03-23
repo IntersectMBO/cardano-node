@@ -4,11 +4,11 @@
         "properties": {
             "kind": {
                 "type": "string"
-            },
-            "outstanding": {
-                "type": "integer"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Client.CompletedFetchBatch"

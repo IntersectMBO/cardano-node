@@ -4,8 +4,16 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "policy": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "policy"
+        ],
         "type": "object"
     },
     "ns": "Net.Server.Local.AcceptPolicy"

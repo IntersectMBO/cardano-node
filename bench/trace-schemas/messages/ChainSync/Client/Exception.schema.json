@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "exception": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "exception",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.Exception"
 }

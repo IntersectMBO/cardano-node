@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+                "$ref": "types/ConnectionId.schema.json"
             },
             "kind": {
                 "type": "string"
             },
             "time": {
-                "type": "string"
+                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "time"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Actions.PeerHotDuration"

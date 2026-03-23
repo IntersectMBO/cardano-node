@@ -4,8 +4,16 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "tip": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "tip"
+        ],
         "type": "object"
     },
     "ns": "Mempool.SyncNotNeeded"

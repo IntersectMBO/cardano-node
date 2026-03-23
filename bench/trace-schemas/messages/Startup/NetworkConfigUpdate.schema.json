@@ -5,10 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "message": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "message"
+        ],
         "type": "object"
     },
     "ns": "Startup.NetworkConfigUpdate"

@@ -2,13 +2,13 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "info": {
-                "$ref": "types/ConnectionManager.Trace.schema.json"
-            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Remote.Shutdown"

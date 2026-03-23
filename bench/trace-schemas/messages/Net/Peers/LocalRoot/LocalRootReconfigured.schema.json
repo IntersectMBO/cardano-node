@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "domainAddress": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+            }
+        },
+        "required": [
+            "domainAddress",
+            "kind",
+            "reason"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootReconfigured"
 }

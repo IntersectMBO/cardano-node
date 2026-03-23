@@ -2,10 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "difft": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
+            },
+            "slot": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "difft",
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.GCEvent.ScheduledGC"

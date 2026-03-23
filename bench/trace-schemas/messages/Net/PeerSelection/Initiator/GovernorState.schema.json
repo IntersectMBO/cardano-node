@@ -5,16 +5,31 @@
             "blockedAt": {
                 "type": "string"
             },
+            "counters": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
             },
             "peerSelectionState": {
                 "type": "string"
             },
+            "targets": {
+                "type": "string"
+            },
             "wakeupAfter": {
                 "type": "string"
             }
         },
+        "required": [
+            "blockedAt",
+            "counters",
+            "kind",
+            "peerSelectionState",
+            "targets",
+            "wakeupAfter"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Initiator.GovernorState"

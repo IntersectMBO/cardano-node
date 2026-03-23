@@ -6,9 +6,13 @@
                 "type": "string"
             },
             "path": {
-                "$ref": "types/Diff.DiffusionTracer.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "path"
+        ],
         "type": "object"
     },
     "ns": "Startup.DiffusionInit.UnsupportedLocalSystemdSocket"

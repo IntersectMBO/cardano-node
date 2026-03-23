@@ -2,19 +2,45 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockingRead": {
+            "addBlock": {
                 "type": "string"
+            },
+            "block": {
+                "type": "string"
+            },
+            "blockNo": {
+                "type": "integer"
+            },
+            "blockingRead": {
+                "$ref": "types/BlockingType.schema.json"
             },
             "kind": {
                 "type": "string"
             },
             "risingEdge": {
+                "$ref": "types/Enclosing.schema.json"
+            },
+            "rollBackTo": {
                 "type": "string"
             },
+            "slot": {
+                "type": "integer"
+            },
             "tip": {
-                "$ref": "types/TraceChainSyncServerEvent.schema.json"
+                "$ref": "types/Tip.schema.json"
             }
         },
+        "required": [
+            "addBlock",
+            "block",
+            "blockNo",
+            "blockingRead",
+            "kind",
+            "risingEdge",
+            "rollBackTo",
+            "slot",
+            "tip"
+        ],
         "type": "object"
     },
     "ns": "ChainSync.ServerBlock.Update"

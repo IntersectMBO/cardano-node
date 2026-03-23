@@ -2,9 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "kind": {},
-            "length": {}
+            "kind": {
+                "type": "string"
+            },
+            "length": {
+                "type": "string"
+            }
         },
+        "required": [
+            "kind",
+            "length"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Decision.Accept"

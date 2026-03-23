@@ -2,13 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+            "connectionId": {
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "provenance": {
+                "type": "string"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "provenance"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Local.NewConnection"

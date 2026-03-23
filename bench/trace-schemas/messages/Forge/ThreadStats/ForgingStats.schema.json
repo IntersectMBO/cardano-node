@@ -2,10 +2,29 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "blocksForged": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "nodeCannotForge": {
+                "type": "string"
+            },
+            "nodeIsLeader": {
+                "type": "string"
+            },
+            "slotsMissed": {
                 "type": "string"
             }
         },
+        "required": [
+            "blocksForged",
+            "kind",
+            "nodeCannotForge",
+            "nodeIsLeader",
+            "slotsMissed"
+        ],
         "type": "object"
     },
     "ns": "Forge.ThreadStats.ForgingStats"

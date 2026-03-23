@@ -6,9 +6,14 @@
                 "type": "string"
             },
             "outstanding": {
-                "type": "integer"
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "outstanding"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Client.ClientTerminating"

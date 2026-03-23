@@ -15,6 +15,12 @@
                 "type": "string"
             }
         },
+        "required": [
+            "diffTime",
+            "group",
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.BigLedgerPeersFailure"

@@ -2,10 +2,18 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "fallingEdge": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "fallingEdge",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ChainSelStarvationEvent"

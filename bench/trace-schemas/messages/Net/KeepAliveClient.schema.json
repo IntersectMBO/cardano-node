@@ -4,7 +4,7 @@
         "properties": {
             "address": {},
             "inboundG": {
-                "$ref": "types/PeerGSV.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
@@ -19,6 +19,14 @@
                 "$ref": "types/PeerGSV.schema.json"
             }
         },
+        "required": [
+            "address",
+            "inboundG",
+            "kind",
+            "outboundG",
+            "rtt",
+            "sampleTime"
+        ],
         "type": "object"
     },
     "ns": "Net.KeepAliveClient"

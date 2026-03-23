@@ -2,8 +2,16 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "anchor": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "curChain": {
-                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+                "$ref": "types/AF.AnchoredFragment.schema.json"
+            },
+            "head": {
+                "additionalProperties": true,
+                "type": "object"
             },
             "kind": {
                 "type": "string"
@@ -12,6 +20,13 @@
                 "type": "string"
             }
         },
+        "required": [
+            "anchor",
+            "curChain",
+            "head",
+            "kind",
+            "loeFrag"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.ChainSelectionLoEDebug"

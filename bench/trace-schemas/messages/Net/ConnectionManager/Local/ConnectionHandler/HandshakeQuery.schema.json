@@ -2,19 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "command": {
-                "type": "string"
-            },
-            "context": {
-                "$ref": "types/ConnectionHandlerTrace.schema.json"
-            },
             "kind": {
                 "type": "string"
             },
-            "reason": {
-                "type": "string"
+            "options": {
+                "$ref": "types/Map.Map.schema.json"
+            },
+            "versions": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "options",
+            "versions"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Local.ConnectionHandler.HandshakeQuery"

@@ -2,10 +2,28 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "err": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
+            },
+            "mempoolSize": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "tx": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "err",
+            "kind",
+            "mempoolSize",
+            "tx"
+        ],
         "type": "object"
     },
     "ns": "Mempool.RemoveTxs"

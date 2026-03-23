@@ -6,15 +6,21 @@
                 "type": "string"
             },
             "length": {
-                "type": "integer"
+                "type": "string"
             },
             "miniProtocolNum": {
-                "$ref": "types/Mux.MiniProtocolNum.schema.json"
+                "type": "string"
             },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "length",
+            "miniProtocolNum",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Channel.ChannelRecvEnd"

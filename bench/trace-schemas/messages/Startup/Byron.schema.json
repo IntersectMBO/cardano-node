@@ -2,10 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "epochLength": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "slotLength": {
+                "type": "string"
+            },
+            "systemStartTime": {
                 "type": "string"
             }
         },
+        "required": [
+            "epochLength",
+            "kind",
+            "slotLength",
+            "systemStartTime"
+        ],
         "type": "object"
     },
     "ns": "Startup.Byron"

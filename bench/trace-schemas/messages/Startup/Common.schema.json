@@ -2,10 +2,33 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "commit": {
+                "type": "string"
+            },
+            "configPath": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "networkMagic": {
+                "type": "string"
+            },
+            "protocol": {
+                "type": "string"
+            },
+            "version": {
                 "type": "string"
             }
         },
+        "required": [
+            "commit",
+            "configPath",
+            "kind",
+            "networkMagic",
+            "protocol",
+            "version"
+        ],
         "type": "object"
     },
     "ns": "Startup.Common"

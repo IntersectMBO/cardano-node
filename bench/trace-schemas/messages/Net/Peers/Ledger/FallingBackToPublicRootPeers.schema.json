@@ -6,6 +6,9 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.FallingBackToPublicRootPeers"

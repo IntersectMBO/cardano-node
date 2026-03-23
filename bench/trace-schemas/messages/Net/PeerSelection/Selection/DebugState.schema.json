@@ -66,6 +66,29 @@
                 "type": "string"
             }
         },
+        "required": [
+            "activePeers",
+            "bigLedgerPeerBackoffs",
+            "bigLedgerPeerRetryTime",
+            "establishedPeers",
+            "fetchynessBlocks",
+            "inProgressBigLedgerPeersReq",
+            "inProgressDemoteHot",
+            "inProgressDemoteToCold",
+            "inProgressDemoteWarm",
+            "inProgressPeerShareReqs",
+            "inProgressPromoteCold",
+            "inProgressPromoteWarm",
+            "kind",
+            "knownPeers",
+            "localRootPeers",
+            "monotonicTime",
+            "publicRootBackoffs",
+            "publicRootPeers",
+            "publicRootRetryTime",
+            "targets",
+            "upstreamyness"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.DebugState"

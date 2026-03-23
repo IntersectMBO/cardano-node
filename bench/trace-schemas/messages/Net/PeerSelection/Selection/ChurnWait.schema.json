@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "diffTime",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.ChurnWait"

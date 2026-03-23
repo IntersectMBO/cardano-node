@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "option"
+        ],
         "type": "object"
     },
     "ns": "Startup.MovedTopLevelOption"

@@ -2,19 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "command": {
-                "type": "string"
-            },
-            "context": {
-                "$ref": "types/ConnectionHandlerTrace.schema.json"
-            },
+            "agreedOptions": {},
             "kind": {
                 "type": "string"
             },
-            "reason": {
-                "type": "string"
-            }
+            "versionNumber": {}
         },
+        "required": [
+            "agreedOptions",
+            "kind",
+            "versionNumber"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Local.ConnectionHandler.HandshakeSuccess"

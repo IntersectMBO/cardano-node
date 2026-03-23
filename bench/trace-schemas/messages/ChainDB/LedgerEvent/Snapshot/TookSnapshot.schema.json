@@ -2,10 +2,26 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "enclosedTime": {
+                "$ref": "types/EnclosingTimed.schema.json"
+            },
             "kind": {
                 "type": "string"
+            },
+            "snapshot": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "tip": {
+                "$ref": "types/RealPoint.schema.json"
             }
         },
+        "required": [
+            "enclosedTime",
+            "kind",
+            "snapshot",
+            "tip"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.LedgerEvent.Snapshot.TookSnapshot"

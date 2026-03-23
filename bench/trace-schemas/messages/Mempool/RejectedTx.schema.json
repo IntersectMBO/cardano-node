@@ -2,10 +2,32 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "err": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "errdetails": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
+            },
+            "mempoolSize": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "tx": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "err",
+            "errdetails",
+            "kind",
+            "mempoolSize",
+            "tx"
+        ],
         "type": "object"
     },
     "ns": "Mempool.RejectedTx"

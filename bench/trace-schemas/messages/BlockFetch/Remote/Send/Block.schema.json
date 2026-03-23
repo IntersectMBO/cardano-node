@@ -5,9 +5,6 @@
             "agency": {
                 "type": "string"
             },
-            "amount": {
-                "type": "string"
-            },
             "blockHash": {
                 "type": "string"
             },
@@ -20,19 +17,18 @@
             "kind": {
                 "type": "string"
             },
-            "msg": {
-                "type": "string"
-            },
-            "peers": {
-                "type": "string"
-            },
             "txIds": {
-                "type": "string"
-            },
-            "txs": {
                 "type": "string"
             }
         },
+        "required": [
+            "agency",
+            "blockHash",
+            "blockSize",
+            "bytes",
+            "kind",
+            "txIds"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Remote.Send.Block"

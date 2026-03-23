@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "shutdown": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "shutdown"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.NodeShutdown"
 }

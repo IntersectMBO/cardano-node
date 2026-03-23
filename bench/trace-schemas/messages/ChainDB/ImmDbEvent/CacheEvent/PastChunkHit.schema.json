@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "chunkNo": {
-                "$ref": "types/ImmDB.ChunkNo.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "noPastChunks": {
-                "$ref": "types/GHC.Word.Word32.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "chunkNo",
+            "kind",
+            "noPastChunks"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.CacheEvent.PastChunkHit"

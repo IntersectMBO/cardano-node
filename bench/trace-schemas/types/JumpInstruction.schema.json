@@ -1,0 +1,14 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": true,
+    "properties": {
+        "kind": {
+            "type": "string"
+        },
+        "payload": {
+            "$ref": "types/JumpInstruction.schema.json"
+        }
+    },
+    "title": "JumpInstruction",
+    "type": "object"
+}

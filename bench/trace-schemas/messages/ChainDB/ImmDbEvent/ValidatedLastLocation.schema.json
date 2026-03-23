@@ -1,4 +1,27 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockNo": {
+                "type": "string"
+            },
+            "chunkNo": {
+                "type": "string"
+            },
+            "immTip": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "blockNo",
+            "chunkNo",
+            "immTip",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "ChainDB.ImmDbEvent.ValidatedLastLocation"
 }

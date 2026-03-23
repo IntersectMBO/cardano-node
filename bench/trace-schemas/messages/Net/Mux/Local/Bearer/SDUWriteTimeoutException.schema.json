@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Bearer.SDUWriteTimeoutException"

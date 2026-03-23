@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "reason"
+        ],
+        "type": "object"
+    },
     "ns": "Shutdown.Requesting"
 }

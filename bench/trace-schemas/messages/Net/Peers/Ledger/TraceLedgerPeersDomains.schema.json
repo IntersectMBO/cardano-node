@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "domainAccessPoints",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.TraceLedgerPeersDomains"

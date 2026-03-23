@@ -2,6 +2,12 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "addresses": {
+                "type": "string"
+            },
+            "count": {
+                "type": "string"
+            },
             "desiredCount": {
                 "type": "string"
             },
@@ -9,6 +15,12 @@
                 "type": "string"
             }
         },
+        "required": [
+            "addresses",
+            "count",
+            "desiredCount",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.PickedLedgerPeers"

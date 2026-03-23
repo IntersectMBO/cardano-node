@@ -3,9 +3,12 @@
         "additionalProperties": true,
         "properties": {
             "slot": {
-                "$ref": "types/WithOrigin.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.LedgerEvent.Flavor.V1.InMemory.BackingStoreEvent.InitialisedFromValues"

@@ -6,9 +6,13 @@
                 "type": "string"
             },
             "message": {
-                "$ref": "types/Cardano.Slotting.Slot.WithOrigin.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "message"
+        ],
         "type": "object"
     },
     "ns": "Startup.LedgerPeerSnapshot"

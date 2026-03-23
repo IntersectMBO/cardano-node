@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "block": {
-                "$ref": "types/Header.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"

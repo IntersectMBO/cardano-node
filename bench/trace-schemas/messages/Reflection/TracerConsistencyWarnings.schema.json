@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "errors",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Reflection.TracerConsistencyWarnings"

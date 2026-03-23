@@ -4,8 +4,16 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "tx": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "tx"
+        ],
         "type": "object"
     },
     "ns": "Mempool.AttemptAdd"

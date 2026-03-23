@@ -6,12 +6,17 @@
                 "type": "string"
             },
             "length": {
-                "type": "integer"
+                "type": "string"
             },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "length",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Bearer.RecvEnd"

@@ -3,9 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "conf": {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "conf"
+        ],
         "type": "object"
     },
     "ns": "Reflection.TracerConfigInfo"

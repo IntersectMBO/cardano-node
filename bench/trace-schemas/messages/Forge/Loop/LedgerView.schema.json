@@ -2,7 +2,6 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
             "kind": {
                 "type": "string"
             },
@@ -10,6 +9,10 @@
                 "type": "integer"
             }
         },
+        "required": [
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.LedgerView"

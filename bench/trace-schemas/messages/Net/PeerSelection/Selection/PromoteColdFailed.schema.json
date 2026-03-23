@@ -2,70 +2,33 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "activePeers": {
+            "actualEstablished": {
                 "type": "string"
             },
-            "bigLedgerPeerBackoffs": {
-                "type": "string"
-            },
-            "bigLedgerPeerRetryTime": {
-                "type": "string"
-            },
-            "establishedPeers": {
-                "type": "string"
-            },
-            "fetchynessBlocks": {
-                "type": "string"
-            },
-            "inProgressBigLedgerPeersReq": {
-                "type": "string"
-            },
-            "inProgressDemoteHot": {
-                "type": "string"
-            },
-            "inProgressDemoteToCold": {
-                "type": "string"
-            },
-            "inProgressDemoteWarm": {
-                "type": "string"
-            },
-            "inProgressPeerShareReqs": {
-                "type": "string"
-            },
-            "inProgressPromoteCold": {
-                "type": "string"
-            },
-            "inProgressPromoteWarm": {
+            "delay": {
                 "type": "string"
             },
             "kind": {
                 "type": "string"
             },
-            "knownPeers": {
+            "peer": {
                 "type": "string"
             },
-            "localRootPeers": {
+            "reason": {
                 "type": "string"
             },
-            "monotonicTime": {
-                "type": "string"
-            },
-            "publicRootBackoffs": {
-                "type": "string"
-            },
-            "publicRootPeers": {
-                "type": "string"
-            },
-            "publicRootRetryTime": {
-                "type": "string"
-            },
-            "targets": {
-                "type": "string"
-            },
-            "upstreamyness": {
+            "targetEstablished": {
                 "type": "string"
             }
         },
+        "required": [
+            "actualEstablished",
+            "delay",
+            "kind",
+            "peer",
+            "reason",
+            "targetEstablished"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.PromoteColdFailed"

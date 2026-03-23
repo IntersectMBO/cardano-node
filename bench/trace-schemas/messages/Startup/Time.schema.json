@@ -5,10 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "startupTime": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "startupTime"
+        ],
         "type": "object"
     },
     "ns": "Startup.Time"

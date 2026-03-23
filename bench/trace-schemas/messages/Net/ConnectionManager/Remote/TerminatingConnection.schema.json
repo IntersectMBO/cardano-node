@@ -2,13 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "info": {
-                "$ref": "types/ConnectionManager.Trace.schema.json"
+            "connectionId": {
+                "$ref": "types/ConnectionId.schema.json"
             },
             "kind": {
                 "type": "string"
+            },
+            "provenance": {
+                "type": "string"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "provenance"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Remote.TerminatingConnection"

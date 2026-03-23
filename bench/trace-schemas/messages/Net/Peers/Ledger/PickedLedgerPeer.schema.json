@@ -12,6 +12,11 @@
                 "type": "string"
             }
         },
+        "required": [
+            "address",
+            "kind",
+            "relativeStake"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.PickedLedgerPeer"

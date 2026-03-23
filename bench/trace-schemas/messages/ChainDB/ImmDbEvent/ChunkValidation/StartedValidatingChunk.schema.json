@@ -2,13 +2,19 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "chunkNo": {
+            "finalChunk": {},
+            "initialChunk": {
                 "$ref": "types/ImmDB.ChunkNo.schema.json"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "finalChunk",
+            "initialChunk",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.ChunkValidation.StartedValidatingChunk"

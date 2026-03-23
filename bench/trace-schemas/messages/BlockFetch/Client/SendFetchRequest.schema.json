@@ -2,13 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "head": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
-            "outstanding": {
-                "type": "integer"
+            "length": {
+                "type": "boolean"
             }
         },
+        "required": [
+            "head",
+            "kind",
+            "length"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Client.SendFetchRequest"

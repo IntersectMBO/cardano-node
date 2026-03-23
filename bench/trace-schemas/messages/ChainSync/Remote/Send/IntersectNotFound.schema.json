@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "agency",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainSync.Remote.Send.IntersectNotFound"

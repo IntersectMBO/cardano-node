@@ -2,14 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
+            "current slot": {
+                "type": "integer"
+            },
             "kind": {
                 "type": "string"
             },
-            "slot": {
+            "tip": {
+                "type": "string"
+            },
+            "tipBlockNo": {
                 "type": "integer"
             }
         },
+        "required": [
+            "current slot",
+            "kind",
+            "tip",
+            "tipBlockNo"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.BlockContext"

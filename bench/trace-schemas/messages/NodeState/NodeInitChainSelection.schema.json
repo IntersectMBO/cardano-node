@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "chainSel": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "chainSel",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.NodeInitChainSelection"
 }

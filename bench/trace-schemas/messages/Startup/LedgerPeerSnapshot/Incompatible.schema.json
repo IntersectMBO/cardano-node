@@ -4,8 +4,15 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "message": {
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "message"
+        ],
         "type": "object"
     },
     "ns": "Startup.LedgerPeerSnapshot.Incompatible"

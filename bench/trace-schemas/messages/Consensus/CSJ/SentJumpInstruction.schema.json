@@ -2,12 +2,18 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "jumpTarget": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
-            },
-            "newTime": {},
-            "prevTime": {}
+            }
         },
+        "required": [
+            "jumpTarget",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Consensus.CSJ.SentJumpInstruction"

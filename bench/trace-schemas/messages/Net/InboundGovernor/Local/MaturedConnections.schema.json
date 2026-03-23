@@ -3,12 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "matured": {
+                "type": "string"
             }
         },
+        "required": [
+            "fresh",
+            "kind",
+            "matured"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Local.MaturedConnections"

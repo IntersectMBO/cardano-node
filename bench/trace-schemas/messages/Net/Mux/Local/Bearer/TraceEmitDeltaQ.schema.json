@@ -1,15 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "kind": {
-                "type": "string"
-            },
-            "msg": {
-                "type": "string"
-            }
-        },
-        "type": "object"
-    },
+    "data": {},
     "ns": "Net.Mux.Local.Bearer.TraceEmitDeltaQ"
 }

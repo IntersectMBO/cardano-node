@@ -2,13 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+            "connectionId": {
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "miniProtocolNum": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "miniProtocolNum",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Remote.ResponderErrored"

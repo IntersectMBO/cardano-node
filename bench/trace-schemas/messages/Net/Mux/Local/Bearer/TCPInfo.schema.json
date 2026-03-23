@@ -6,12 +6,49 @@
                 "type": "string"
             },
             "len": {
+                "type": "string"
+            },
+            "length": {
                 "$ref": "types/GHC.Word.Word16.schema.json"
+            },
+            "lost": {
+                "type": "string"
             },
             "msg": {
                 "type": "string"
+            },
+            "rcv_mss": {
+                "type": "string"
+            },
+            "retrans": {
+                "type": "string"
+            },
+            "rtt": {
+                "type": "string"
+            },
+            "rttvar": {
+                "type": "string"
+            },
+            "snd_cwnd": {
+                "type": "string"
+            },
+            "snd_mss": {
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "len",
+            "length",
+            "lost",
+            "msg",
+            "rcv_mss",
+            "retrans",
+            "rtt",
+            "rttvar",
+            "snd_cwnd",
+            "snd_mss"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Bearer.TCPInfo"

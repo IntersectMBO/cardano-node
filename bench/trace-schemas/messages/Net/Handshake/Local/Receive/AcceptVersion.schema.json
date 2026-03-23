@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "agency": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "agency",
+            "kind",
+            "msg"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Handshake.Local.Receive.AcceptVersion"
 }

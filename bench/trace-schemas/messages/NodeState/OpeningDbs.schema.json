@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "openingDb": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "openingDb"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.OpeningDbs"
 }

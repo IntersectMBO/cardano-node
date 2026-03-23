@@ -2,14 +2,29 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
             "kind": {
+                "type": "string"
+            },
+            "mempoolHash": {
+                "type": "string"
+            },
+            "mempoolSlot": {
+                "type": "integer"
+            },
+            "prev": {
                 "type": "string"
             },
             "slot": {
                 "type": "integer"
             }
         },
+        "required": [
+            "kind",
+            "mempoolHash",
+            "mempoolSlot",
+            "prev",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.ForgingMempoolSnapshot"

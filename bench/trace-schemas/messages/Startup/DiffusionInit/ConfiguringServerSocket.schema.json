@@ -5,8 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "socket": {}
+            "socket": {
+                "type": "string"
+            }
         },
+        "required": [
+            "kind",
+            "socket"
+        ],
         "type": "object"
     },
     "ns": "Startup.DiffusionInit.ConfiguringServerSocket"

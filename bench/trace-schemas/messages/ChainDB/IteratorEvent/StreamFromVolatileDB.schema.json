@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "from": {
-                "$ref": "types/ChainDB.TraceIteratorEvent.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
@@ -15,6 +15,12 @@
                 "type": "string"
             }
         },
+        "required": [
+            "from",
+            "kind",
+            "point",
+            "to"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.IteratorEvent.StreamFromVolatileDB"

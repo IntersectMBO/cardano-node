@@ -12,12 +12,19 @@
                 "type": "string"
             },
             "miniProtocolNum": {
-                "$ref": "types/Mux.Trace.schema.json"
+                "type": "string"
             },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "exception",
+            "kind",
+            "miniProtocolDir",
+            "miniProtocolNum",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.ExceptionExit"

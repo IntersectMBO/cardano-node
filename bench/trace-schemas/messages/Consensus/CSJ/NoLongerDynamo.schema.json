@@ -5,9 +5,19 @@
             "kind": {
                 "type": "string"
             },
-            "newTime": {},
-            "prevTime": {}
+            "newDynamo": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "reason": {
+                "$ref": "types/TraceCsjReason.schema.json"
+            }
         },
+        "required": [
+            "kind",
+            "newDynamo",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Consensus.CSJ.NoLongerDynamo"

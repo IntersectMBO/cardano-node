@@ -5,9 +5,18 @@
             "kind": {
                 "type": "string"
             },
-            "newTime": {},
-            "prevTime": {}
+            "newTime": {
+                "type": "string"
+            },
+            "prevTime": {
+                "type": "string"
+            }
         },
+        "required": [
+            "kind",
+            "newTime",
+            "prevTime"
+        ],
         "type": "object"
     },
     "ns": "BlockchainTime.SystemClockMovedBack"

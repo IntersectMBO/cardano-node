@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "expected": {
-                "$ref": "types/Api.SomeBlockType.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "provided": {
-                "$ref": "types/Api.SomeBlockType.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "expected",
+            "kind",
+            "provided"
+        ],
         "type": "object"
     },
     "ns": "Startup.BlockForgingBlockTypeMismatch"

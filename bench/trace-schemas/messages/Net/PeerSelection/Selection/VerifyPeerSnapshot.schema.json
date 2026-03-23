@@ -2,70 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "activePeers": {
-                "type": "string"
-            },
-            "bigLedgerPeerBackoffs": {
-                "type": "string"
-            },
-            "bigLedgerPeerRetryTime": {
-                "type": "string"
-            },
-            "establishedPeers": {
-                "type": "string"
-            },
-            "fetchynessBlocks": {
-                "type": "string"
-            },
-            "inProgressBigLedgerPeersReq": {
-                "type": "string"
-            },
-            "inProgressDemoteHot": {
-                "type": "string"
-            },
-            "inProgressDemoteToCold": {
-                "type": "string"
-            },
-            "inProgressDemoteWarm": {
-                "type": "string"
-            },
-            "inProgressPeerShareReqs": {
-                "type": "string"
-            },
-            "inProgressPromoteCold": {
-                "type": "string"
-            },
-            "inProgressPromoteWarm": {
-                "type": "string"
-            },
             "kind": {
                 "type": "string"
             },
-            "knownPeers": {
-                "type": "string"
-            },
-            "localRootPeers": {
-                "type": "string"
-            },
-            "monotonicTime": {
-                "type": "string"
-            },
-            "publicRootBackoffs": {
-                "type": "string"
-            },
-            "publicRootPeers": {
-                "type": "string"
-            },
-            "publicRootRetryTime": {
-                "type": "string"
-            },
-            "targets": {
-                "type": "string"
-            },
-            "upstreamyness": {
+            "result": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "result"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.VerifyPeerSnapshot"

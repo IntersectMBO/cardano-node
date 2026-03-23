@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "startup": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "startup"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.NodeStartup"
 }

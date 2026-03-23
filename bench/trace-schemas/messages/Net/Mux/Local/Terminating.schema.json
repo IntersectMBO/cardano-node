@@ -5,10 +5,22 @@
             "kind": {
                 "type": "string"
             },
+            "miniProtocolDir": {
+                "type": "string"
+            },
+            "miniProtocolNum": {
+                "type": "string"
+            },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "miniProtocolDir",
+            "miniProtocolNum",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Terminating"

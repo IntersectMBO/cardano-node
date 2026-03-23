@@ -2,19 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "command": {
-                "type": "string"
-            },
-            "context": {
-                "$ref": "types/ConnectionHandlerTrace.schema.json"
-            },
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "type": "string"
+                "$ref": "types/Ouroboros.Network.Protocol.Handshake.HandshakeException.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Remote.ConnectionHandler.HandshakeServerError"

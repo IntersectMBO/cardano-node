@@ -2,16 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "curChain": {
-                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+            "block": {
+                "additionalProperties": true,
+                "type": "object"
             },
             "kind": {
                 "type": "string"
             },
-            "loeFrag": {
+            "reason": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.IgnoreInvalidBlock"

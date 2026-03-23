@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "enclosingTime",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Mempool.Synced"

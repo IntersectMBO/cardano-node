@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+                "$ref": "types/ConnectionId.schema.json"
             },
             "kind": {
                 "type": "string"
             },
-            "time": {
-                "type": "string"
+            "reason": {
+                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Actions.MonitoringError"

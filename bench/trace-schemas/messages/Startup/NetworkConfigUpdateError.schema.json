@@ -2,13 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "kind": {
+            "error": {
                 "type": "string"
             },
-            "option": {
+            "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "error",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Startup.NetworkConfigUpdateError"

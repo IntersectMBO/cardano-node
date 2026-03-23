@@ -5,10 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "networkMagic": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "networkMagic"
+        ],
         "type": "object"
     },
     "ns": "Startup.NetworkMagic"

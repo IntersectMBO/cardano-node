@@ -18,6 +18,13 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "length",
+            "msg",
+            "timeLocal",
+            "timeRemote"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Remote.Bearer.RecvDeltaQObservation"

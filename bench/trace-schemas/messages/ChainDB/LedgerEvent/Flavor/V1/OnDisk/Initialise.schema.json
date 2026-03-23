@@ -1,4 +1,15 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "limits": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "limits"
+        ],
+        "type": "object"
+    },
     "ns": "ChainDB.LedgerEvent.Flavor.V1.OnDisk.Initialise"
 }

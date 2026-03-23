@@ -2,11 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "declined": {},
+            "declined": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "declined",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Decision.Decline"

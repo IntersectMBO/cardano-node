@@ -2,13 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "domainAddresses": {
-                "$ref": "types/TracePublicRootPeers.schema.json"
-            },
             "kind": {
                 "type": "string"
+            },
+            "relayAddresses": {
+                "$ref": "types/Map.Map.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "relayAddresses"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.PublicRoot.PublicRootRelayAccessPoint"

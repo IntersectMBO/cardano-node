@@ -5,8 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "localAddress": {}
+            "localAddress": {
+                "type": "string"
+            }
         },
+        "required": [
+            "kind",
+            "localAddress"
+        ],
         "type": "object"
     },
     "ns": "Startup.DiffusionInit.RunLocalServer"

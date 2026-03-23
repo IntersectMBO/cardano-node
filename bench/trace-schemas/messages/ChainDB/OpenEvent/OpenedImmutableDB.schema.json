@@ -2,10 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "epoch": {
+                "type": "string"
+            },
+            "immtip": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "epoch",
+            "immtip",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.OpenEvent.OpenedImmutableDB"

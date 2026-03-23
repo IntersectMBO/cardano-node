@@ -5,10 +5,37 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "localSocket": {
                 "type": "string"
+            },
+            "maxNodeToClientVersion": {
+                "type": "string"
+            },
+            "maxNodeToNodeVersion": {
+                "type": "string"
+            },
+            "nodeAddresses": {
+                "items": {
+                    "type": "string"
+                },
+                "type": "array"
+            },
+            "nodeToClientVersions": {
+                "type": "array"
+            },
+            "nodeToNodeVersions": {
+                "type": "array"
             }
         },
+        "required": [
+            "kind",
+            "localSocket",
+            "maxNodeToClientVersion",
+            "maxNodeToNodeVersion",
+            "nodeAddresses",
+            "nodeToClientVersions",
+            "nodeToNodeVersions"
+        ],
         "type": "object"
     },
     "ns": "Startup.Info"

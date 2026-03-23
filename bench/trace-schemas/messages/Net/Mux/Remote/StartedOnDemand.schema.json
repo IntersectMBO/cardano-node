@@ -9,12 +9,18 @@
                 "type": "string"
             },
             "miniProtocolNum": {
-                "$ref": "types/Mux.Trace.schema.json"
+                "type": "string"
             },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "miniProtocolDir",
+            "miniProtocolNum",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Remote.StartedOnDemand"

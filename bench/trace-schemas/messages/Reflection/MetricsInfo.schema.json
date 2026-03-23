@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "metrics count"
+        ],
         "type": "object"
     },
     "ns": "Reflection.MetricsInfo"

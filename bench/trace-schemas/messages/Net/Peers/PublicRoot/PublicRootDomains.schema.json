@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "domainAddresses": {
-                "$ref": "types/TracePublicRootPeers.schema.json"
+                "type": "array"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "domainAddresses",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.PublicRoot.PublicRootDomains"

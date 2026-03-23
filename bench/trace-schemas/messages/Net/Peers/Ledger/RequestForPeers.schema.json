@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "numberOfPeers"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.RequestForPeers"

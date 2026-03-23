@@ -15,7 +15,7 @@
                 "type": "string"
             },
             "duration": {
-                "$ref": "types/Mux.BearerTrace.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
@@ -33,6 +33,18 @@
                 "type": "string"
             }
         },
+        "required": [
+            "DeltaQ_S",
+            "DeltaQ_VMean",
+            "DeltaQ_VVar",
+            "DeltaQ_estR",
+            "duration",
+            "kind",
+            "msg",
+            "packets",
+            "sizeDist",
+            "sumBytes"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Bearer.RecvDeltaQSample"

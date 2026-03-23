@@ -1,4 +1,27 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "block": {
+                "type": "string"
+            },
+            "blockNo": {
+                "type": "integer"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "slot": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "block",
+            "blockNo",
+            "kind",
+            "slot"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.DownloadedHeader"
 }

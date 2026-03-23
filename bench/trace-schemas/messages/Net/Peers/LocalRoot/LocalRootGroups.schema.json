@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "localRootGroups": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+            }
+        },
+        "required": [
+            "kind",
+            "localRootGroups"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootGroups"
 }

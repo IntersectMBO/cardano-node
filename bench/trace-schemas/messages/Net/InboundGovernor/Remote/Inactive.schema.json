@@ -3,12 +3,17 @@
         "additionalProperties": true,
         "properties": {
             "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+                "additionalProperties": true,
+                "type": "object"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "fresh",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Remote.Inactive"

@@ -2,10 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "block": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Server.SendBlock"

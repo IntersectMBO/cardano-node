@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "error",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Consensus.Startup.ConsensusStartupException"

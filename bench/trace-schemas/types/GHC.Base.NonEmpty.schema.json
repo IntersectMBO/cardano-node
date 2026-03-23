@@ -1,6 +1,0 @@
-{
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "minItems": 1,
-    "title": "GHC.Base.NonEmpty",
-    "type": "array"
-}

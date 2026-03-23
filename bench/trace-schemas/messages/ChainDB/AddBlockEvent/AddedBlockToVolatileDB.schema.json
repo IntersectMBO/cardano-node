@@ -2,10 +2,26 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "block": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "blockNo": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "risingEdge": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "blockNo",
+            "kind",
+            "risingEdge"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.AddedBlockToVolatileDB"

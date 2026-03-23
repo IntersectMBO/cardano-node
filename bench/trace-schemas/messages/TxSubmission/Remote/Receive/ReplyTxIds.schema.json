@@ -5,34 +5,18 @@
             "agency": {
                 "type": "string"
             },
-            "amount": {
-                "type": "string"
-            },
-            "blockHash": {
-                "type": "string"
-            },
-            "blockSize": {
-                "type": "string"
-            },
-            "bytes": {
-                "type": "string"
-            },
             "kind": {
-                "type": "string"
-            },
-            "msg": {
-                "type": "string"
-            },
-            "peers": {
-                "type": "string"
-            },
-            "txIds": {
                 "type": "string"
             },
             "txs": {
                 "type": "string"
             }
         },
+        "required": [
+            "agency",
+            "kind",
+            "txs"
+        ],
         "type": "object"
     },
     "ns": "TxSubmission.Remote.Receive.ReplyTxIds"

@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "n": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "n"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.DrainingThePipe"
 }

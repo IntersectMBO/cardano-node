@@ -9,6 +9,10 @@
                 "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.Server.Remote.AcceptError"

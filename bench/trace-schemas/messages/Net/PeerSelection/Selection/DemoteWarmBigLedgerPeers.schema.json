@@ -2,70 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "activePeers": {
-                "type": "string"
-            },
-            "bigLedgerPeerBackoffs": {
-                "type": "string"
-            },
-            "bigLedgerPeerRetryTime": {
-                "type": "string"
-            },
-            "establishedPeers": {
-                "type": "string"
-            },
-            "fetchynessBlocks": {
-                "type": "string"
-            },
-            "inProgressBigLedgerPeersReq": {
-                "type": "string"
-            },
-            "inProgressDemoteHot": {
-                "type": "string"
-            },
-            "inProgressDemoteToCold": {
-                "type": "string"
-            },
-            "inProgressDemoteWarm": {
-                "type": "string"
-            },
-            "inProgressPeerShareReqs": {
-                "type": "string"
-            },
-            "inProgressPromoteCold": {
-                "type": "string"
-            },
-            "inProgressPromoteWarm": {
+            "actualEstablished": {
                 "type": "string"
             },
             "kind": {
                 "type": "string"
             },
-            "knownPeers": {
-                "type": "string"
+            "selectedPeers": {
+                "type": "array"
             },
-            "localRootPeers": {
-                "type": "string"
-            },
-            "monotonicTime": {
-                "type": "string"
-            },
-            "publicRootBackoffs": {
-                "type": "string"
-            },
-            "publicRootPeers": {
-                "type": "string"
-            },
-            "publicRootRetryTime": {
-                "type": "string"
-            },
-            "targets": {
-                "type": "string"
-            },
-            "upstreamyness": {
+            "targetEstablished": {
                 "type": "string"
             }
         },
+        "required": [
+            "actualEstablished",
+            "kind",
+            "selectedPeers",
+            "targetEstablished"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.DemoteWarmBigLedgerPeers"

@@ -2,13 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "block": {
+                "type": "string"
+            },
+            "delay": {
+                "type": "number"
+            },
             "kind": {
                 "type": "string"
             },
-            "outstanding": {
-                "type": "integer"
+            "size": {
+                "$ref": "types/SizeInBytes.schema.json"
             }
         },
+        "required": [
+            "block",
+            "delay",
+            "kind",
+            "size"
+        ],
         "type": "object"
     },
     "ns": "BlockFetch.Client.CompletedBlockFetch"

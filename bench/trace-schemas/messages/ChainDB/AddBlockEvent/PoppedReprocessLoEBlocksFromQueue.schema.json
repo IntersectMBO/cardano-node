@@ -2,16 +2,13 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "curChain": {
-                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
-            },
             "kind": {
-                "type": "string"
-            },
-            "loeFrag": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.PoppedReprocessLoEBlocksFromQueue"

@@ -2,13 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+            "connectionId": {
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "result": {
+                "type": "string"
             }
         },
+        "required": [
+            "connectionId",
+            "kind",
+            "result"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Remote.PromotedToWarmRemote"

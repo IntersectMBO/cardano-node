@@ -4,11 +4,11 @@
         "properties": {
             "kind": {
                 "type": "string"
-            },
-            "msg": {
-                "type": "string"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Server.Local.Stopped"

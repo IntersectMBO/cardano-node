@@ -5,9 +5,15 @@
             "kind": {
                 "type": "string"
             },
-            "newTime": {},
-            "prevTime": {}
+            "previousObjector": {
+                "additionalProperties": true,
+                "type": "object"
+            }
         },
+        "required": [
+            "kind",
+            "previousObjector"
+        ],
         "type": "object"
     },
     "ns": "Consensus.CSJ.BecomingObjector"

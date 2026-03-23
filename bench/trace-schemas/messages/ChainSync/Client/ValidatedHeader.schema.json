@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "headerHash": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "headerHash",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.ValidatedHeader"
 }

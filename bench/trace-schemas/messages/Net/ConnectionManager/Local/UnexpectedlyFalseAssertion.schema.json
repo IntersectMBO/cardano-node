@@ -3,12 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "info": {
-                "$ref": "types/ConnectionManager.Trace.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "remoteSt": {
+                "type": "string"
             }
         },
+        "required": [
+            "info",
+            "kind",
+            "remoteSt"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Local.UnexpectedlyFalseAssertion"

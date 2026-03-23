@@ -11,10 +11,24 @@
             "error": {
                 "type": "string"
             },
+            "hashPrevBlock": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "prevHashOfBlock": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "chunkNo",
+            "error",
+            "hashPrevBlock",
+            "kind",
+            "prevHashOfBlock"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.ChunkValidation.InvalidChunkFile"

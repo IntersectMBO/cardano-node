@@ -2,10 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "conf": {
+            "kind": {
+                "type": "string"
+            },
+            "legalNamespace": {
+                "type": "string"
+            },
+            "querying": {
+                "type": "string"
+            },
+            "unknownNamespace": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "legalNamespace",
+            "querying",
+            "unknownNamespace"
+        ],
         "type": "object"
     },
     "ns": "Reflection.UnknownNamespace"

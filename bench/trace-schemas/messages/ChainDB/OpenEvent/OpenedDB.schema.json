@@ -2,10 +2,23 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "immtip": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
+            },
+            "tip": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "immtip",
+            "kind",
+            "tip"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.OpenEvent.OpenedDB"

@@ -1,4 +1,24 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "slot": {
+                "$ref": "types/RealPoint.schema.json"
+            },
+            "tip": {
+                "additionalProperties": true,
+                "type": "object"
+            }
+        },
+        "required": [
+            "kind",
+            "slot",
+            "tip"
+        ],
+        "type": "object"
+    },
     "ns": "ChainDB.LedgerEvent.Replay.ReplayProgress.ReplayedBlock"
 }

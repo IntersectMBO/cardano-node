@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "enabled": {
-                "$ref": "types/EnabledBlockForging.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "enabled",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Startup.BlockForgingUpdate"

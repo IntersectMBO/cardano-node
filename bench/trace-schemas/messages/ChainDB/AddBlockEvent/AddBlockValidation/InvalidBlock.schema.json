@@ -2,10 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "block": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "error": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "block",
+            "error",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.AddBlockValidation.InvalidBlock"

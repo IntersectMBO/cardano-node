@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "port": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind",
+            "port"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.PrometheusSimple.Start"
 }

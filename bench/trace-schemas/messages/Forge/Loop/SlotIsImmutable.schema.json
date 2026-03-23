@@ -2,14 +2,25 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
             "kind": {
                 "type": "string"
             },
             "slot": {
                 "type": "integer"
+            },
+            "tip": {
+                "type": "string"
+            },
+            "tipBlockNo": {
+                "type": "integer"
             }
         },
+        "required": [
+            "kind",
+            "slot",
+            "tip",
+            "tipBlockNo"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.SlotIsImmutable"

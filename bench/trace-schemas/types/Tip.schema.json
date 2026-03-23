@@ -1,0 +1,29 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": true,
+    "properties": {
+        "block": {
+            "type": "string"
+        },
+        "blockNo": {
+            "type": "integer"
+        },
+        "kind": {
+            "type": "string"
+        },
+        "slot": {
+            "type": "integer"
+        },
+        "tipBlockNo": {
+            "type": "string"
+        },
+        "tipHash": {
+            "type": "string"
+        },
+        "tipSlotNo": {
+            "type": "integer"
+        }
+    },
+    "title": "Tip",
+    "type": "object"
+}

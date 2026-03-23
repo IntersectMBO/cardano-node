@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "domainAddress": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+            }
+        },
+        "required": [
+            "domainAddress",
+            "kind",
+            "reason"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootError"
 }

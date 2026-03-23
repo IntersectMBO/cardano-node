@@ -2,13 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "kind": {
+            "diffusionMode": {
                 "type": "string"
             },
-            "option": {
+            "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "diffusionMode",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Startup.P2PInfo"

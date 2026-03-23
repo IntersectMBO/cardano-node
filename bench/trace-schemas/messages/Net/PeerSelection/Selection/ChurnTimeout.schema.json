@@ -15,6 +15,12 @@
                 "type": "string"
             }
         },
+        "required": [
+            "action",
+            "counter",
+            "duration",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.ChurnTimeout"

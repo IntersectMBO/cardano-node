@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "immTipBlockNo": {
-                "$ref": "types/WithOrigin.schema.json"
+                "type": "string"
             },
             "immTipHash": {
-                "$ref": "types/WithOrigin.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "immTipBlockNo",
+            "immTipHash",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.DeletingAfter"

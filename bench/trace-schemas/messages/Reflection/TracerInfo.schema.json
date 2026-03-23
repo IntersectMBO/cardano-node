@@ -15,6 +15,12 @@
                 "type": "string"
             }
         },
+        "required": [
+            "allTracers",
+            "kind",
+            "noMetrics",
+            "silentTracers"
+        ],
         "type": "object"
     },
     "ns": "Reflection.TracerInfo"

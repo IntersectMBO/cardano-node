@@ -2,13 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
-            },
             "kind": {
+                "type": "string"
+            },
+            "remoteSt": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "remoteSt"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Local.InboundGovernorError"

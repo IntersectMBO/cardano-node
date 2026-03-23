@@ -5,9 +5,19 @@
             "kind": {
                 "type": "string"
             },
-            "newTime": {},
-            "prevTime": {}
+            "newObjector": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "reason": {
+                "$ref": "types/TraceCsjReason.schema.json"
+            }
         },
+        "required": [
+            "kind",
+            "newObjector",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Consensus.CSJ.NoLongerObjector"

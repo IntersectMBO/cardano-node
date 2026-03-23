@@ -2,14 +2,22 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
             "kind": {
                 "type": "string"
+            },
+            "reason": {
+                "additionalProperties": true,
+                "type": "object"
             },
             "slot": {
                 "type": "integer"
             }
         },
+        "required": [
+            "kind",
+            "reason",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.ForgeStateUpdateError"

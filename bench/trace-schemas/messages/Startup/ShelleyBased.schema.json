@@ -2,10 +2,33 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "epochLength": {
+                "type": "string"
+            },
+            "era": {
+                "type": "string"
+            },
             "kind": {
+                "type": "string"
+            },
+            "slotLength": {
+                "type": "string"
+            },
+            "slotsPerKESPeriod": {
+                "type": "string"
+            },
+            "systemStartTime": {
                 "type": "string"
             }
         },
+        "required": [
+            "epochLength",
+            "era",
+            "kind",
+            "slotLength",
+            "slotsPerKESPeriod",
+            "systemStartTime"
+        ],
         "type": "object"
     },
     "ns": "Startup.ShelleyBased"

@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "numSuppressed"
+        ],
         "type": "object"
     },
     "ns": "Reflection.StopLimiting"

@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "info",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.Migrating"

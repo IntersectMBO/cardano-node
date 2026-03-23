@@ -2,16 +2,23 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {
+            "blockHash": {
                 "type": "string"
             },
+            "blockSize": {},
             "kind": {
                 "type": "string"
             },
             "slot": {
-                "$ref": "types/TraceForgeEvent.schema.json"
+                "type": "integer"
             }
         },
+        "required": [
+            "blockHash",
+            "blockSize",
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.AdoptedBlock"

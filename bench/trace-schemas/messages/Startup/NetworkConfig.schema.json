@@ -5,10 +5,29 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "localRoots": {
+                "items": {
+                    "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.HotValency.schema.json"
+                },
+                "type": "array"
+            },
+            "peerSnapshotFile": {
                 "type": "string"
+            },
+            "publicRoots": {
+                "$ref": "types/Map.Map.schema.json"
+            },
+            "useLedgerAfter": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.LedgerPeers.Type.UseLedgerPeers.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "localRoots",
+            "peerSnapshotFile",
+            "publicRoots",
+            "useLedgerAfter"
+        ],
         "type": "object"
     },
     "ns": "Startup.NetworkConfig"

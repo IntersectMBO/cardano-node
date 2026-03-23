@@ -1,18 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "curChain": {
-                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
-            },
-            "kind": {
-                "type": "string"
-            },
-            "loeFrag": {
-                "type": "string"
-            }
-        },
-        "type": "object"
-    },
+    "data": {},
     "ns": "ChainDB.AddBlockEvent.IgnoreBlockOlderThanK"
 }

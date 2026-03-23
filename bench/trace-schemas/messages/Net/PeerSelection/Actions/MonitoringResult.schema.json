@@ -3,15 +3,26 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+                "$ref": "types/ConnectionId.schema.json"
             },
             "kind": {
                 "type": "string"
             },
-            "time": {
-                "type": "string"
+            "withProtocolTemp": {
+                "anyOf": [
+                    {
+                        "type": "null"
+                    },
+                    {
+                        "$ref": "types/Ouroboros.Network.Mux.WithSomeProtocolTemperature.schema.json"
+                    }
+                ]
             }
         },
+        "required": [
+            "connectionId",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Actions.MonitoringResult"

@@ -1,4 +1,27 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "blockNo": {
+                "type": "integer"
+            },
+            "headerHash": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "tokenAdded": {
+                "type": "boolean"
+            }
+        },
+        "required": [
+            "blockNo",
+            "headerHash",
+            "kind",
+            "tokenAdded"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.GaveLoPToken"
 }

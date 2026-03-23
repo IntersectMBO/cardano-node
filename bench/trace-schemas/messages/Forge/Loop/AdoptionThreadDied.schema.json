@@ -2,7 +2,12 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
+            "blockHash": {
+                "type": "string"
+            },
+            "blockSize": {
+                "type": "boolean"
+            },
             "kind": {
                 "type": "string"
             },
@@ -10,6 +15,12 @@
                 "type": "integer"
             }
         },
+        "required": [
+            "blockHash",
+            "blockSize",
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.AdoptionThreadDied"

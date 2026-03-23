@@ -1,14 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "kind": {
-                "type": "string"
-            },
-            "newTime": {},
-            "prevTime": {}
-        },
-        "type": "object"
-    },
+    "data": {},
     "ns": "Consensus.GSM.LeaveCaughtUp"
 }

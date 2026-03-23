@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "addBlock": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "addBlock",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.NodeAddBlock"
 }

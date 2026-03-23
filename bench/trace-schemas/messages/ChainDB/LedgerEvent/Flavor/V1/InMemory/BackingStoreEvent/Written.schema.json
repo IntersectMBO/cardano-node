@@ -1,4 +1,15 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "old": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "old"
+        ],
+        "type": "object"
+    },
     "ns": "ChainDB.LedgerEvent.Flavor.V1.InMemory.BackingStoreEvent.Written"
 }

@@ -2,14 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
             "kind": {
+                "type": "string"
+            },
+            "prev": {
                 "type": "string"
             },
             "slot": {
                 "type": "integer"
             }
         },
+        "required": [
+            "kind",
+            "prev",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.ForgeTickedLedgerState"

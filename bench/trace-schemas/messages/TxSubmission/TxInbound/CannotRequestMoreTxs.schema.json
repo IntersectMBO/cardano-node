@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "count",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "TxSubmission.TxInbound.CannotRequestMoreTxs"

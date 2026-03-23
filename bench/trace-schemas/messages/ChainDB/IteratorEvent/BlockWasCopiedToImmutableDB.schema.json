@@ -6,9 +6,13 @@
                 "type": "string"
             },
             "point": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "point"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB"

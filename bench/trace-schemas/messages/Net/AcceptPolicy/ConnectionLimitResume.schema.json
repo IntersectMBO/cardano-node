@@ -6,9 +6,14 @@
                 "type": "string"
             },
             "numberOfConnection": {
-                "type": "integer"
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "numberOfConnection"
+        ],
         "type": "object"
     },
     "ns": "Net.AcceptPolicy.ConnectionLimitResume"

@@ -3,15 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "action": {
-                "$ref": "types/ChurnCounters.schema.json"
-            },
-            "counter": {
                 "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "action",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Churn.ChurnCounters"

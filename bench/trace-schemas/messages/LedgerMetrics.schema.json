@@ -2,10 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "drepMapSize": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
+            },
+            "slot": {
+                "type": "integer"
             }
         },
+        "required": [
+            "drepMapSize",
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "LedgerMetrics"

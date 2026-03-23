@@ -2,13 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "count": {
-                "type": "integer"
+            "accepted": {
+                "$ref": "types/ProcessedTxCount.schema.json"
             },
             "kind": {
                 "type": "string"
+            },
+            "rejected": {
+                "$ref": "types/ProcessedTxCount.schema.json"
             }
         },
+        "required": [
+            "accepted",
+            "kind",
+            "rejected"
+        ],
         "type": "object"
     },
     "ns": "TxSubmission.TxInbound.Processed"

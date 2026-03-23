@@ -21,6 +21,14 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "length",
+            "miniProtocolDir",
+            "miniProtocolNum",
+            "msg",
+            "timestamp"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Remote.Bearer.RecvHeaderEnd"

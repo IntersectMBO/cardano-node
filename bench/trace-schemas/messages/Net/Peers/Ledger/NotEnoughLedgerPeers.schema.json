@@ -5,10 +5,18 @@
             "kind": {
                 "type": "string"
             },
+            "numOfLedgerPeers": {
+                "type": "string"
+            },
             "target": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "numOfLedgerPeers",
+            "target"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.NotEnoughLedgerPeers"

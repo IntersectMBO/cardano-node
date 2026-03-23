@@ -9,6 +9,10 @@
                 "$ref": "types/GHC.Word.Word32.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "softLimit"
+        ],
         "type": "object"
     },
     "ns": "Net.AcceptPolicy.ConnectionHardLimit"

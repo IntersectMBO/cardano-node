@@ -2,13 +2,18 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "addresses": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
-            },
-            "reason": {
-                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
             }
         },
+        "required": [
+            "addresses",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Server.Local.Started"

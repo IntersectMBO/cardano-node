@@ -12,6 +12,11 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "ledgerStateAge",
+            "numberOfPools"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.ReusingLedgerState"

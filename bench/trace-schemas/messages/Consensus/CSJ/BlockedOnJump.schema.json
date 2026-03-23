@@ -4,10 +4,11 @@
         "properties": {
             "kind": {
                 "type": "string"
-            },
-            "newTime": {},
-            "prevTime": {}
+            }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Consensus.CSJ.BlockedOnJump"

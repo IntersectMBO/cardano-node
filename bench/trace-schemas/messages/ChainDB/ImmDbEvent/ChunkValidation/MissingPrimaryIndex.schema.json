@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "chunkNo": {
-                "$ref": "types/ImmDB.ChunkNo.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "chunkNo",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.ImmDbEvent.ChunkValidation.MissingPrimaryIndex"

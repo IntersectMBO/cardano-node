@@ -3,15 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "delay": {
-                "$ref": "types/AcceptConnectionsPolicyTrace.schema.json"
+                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
             },
             "kind": {
                 "type": "string"
             },
             "numberOfConnection": {
-                "type": "string"
+                "type": "integer"
             }
         },
+        "required": [
+            "delay",
+            "kind",
+            "numberOfConnection"
+        ],
         "type": "object"
     },
     "ns": "Net.AcceptPolicy.ConnectionRateLimiting"

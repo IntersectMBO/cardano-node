@@ -2,13 +2,13 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "count": {
-                "type": "integer"
-            },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "TxSubmission.TxInbound.Terminated"

@@ -6,12 +6,17 @@
                 "type": "string"
             },
             "miniProtocolNum": {
-                "$ref": "types/Mux.MiniProtocolNum.schema.json"
+                "type": "string"
             },
             "msg": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "miniProtocolNum",
+            "msg"
+        ],
         "type": "object"
     },
     "ns": "Net.Mux.Local.Channel.ChannelSendEnd"

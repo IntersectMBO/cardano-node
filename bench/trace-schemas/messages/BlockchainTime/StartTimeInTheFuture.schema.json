@@ -7,8 +7,16 @@
             },
             "systemStart": {
                 "type": "string"
+            },
+            "toWait": {
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "systemStart",
+            "toWait"
+        ],
         "type": "object"
     },
     "ns": "BlockchainTime.StartTimeInTheFuture"

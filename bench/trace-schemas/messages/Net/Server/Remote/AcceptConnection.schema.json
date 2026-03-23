@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "address",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.Server.Remote.AcceptConnection"

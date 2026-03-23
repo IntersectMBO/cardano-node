@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "diffTime": {
+                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
+            },
+            "domainAddress": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.RelayAccessPoint.RelayAccessPoint.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "diffTime",
+            "domainAddress",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootWaiting"
 }

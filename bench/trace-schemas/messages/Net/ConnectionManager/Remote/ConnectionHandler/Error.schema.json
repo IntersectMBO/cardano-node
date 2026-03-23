@@ -3,18 +3,24 @@
         "additionalProperties": true,
         "properties": {
             "command": {
-                "type": "string"
+                "$ref": "types/ErrorCommand.schema.json"
             },
             "context": {
-                "$ref": "types/ConnectionHandlerTrace.schema.json"
+                "$ref": "types/Ouroboros.Network.RethrowPolicy.ErrorContext.schema.json"
             },
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "type": "string"
+                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
             }
         },
+        "required": [
+            "command",
+            "context",
+            "kind",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Remote.ConnectionHandler.Error"

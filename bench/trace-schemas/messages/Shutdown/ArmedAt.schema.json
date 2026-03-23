@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "limit": {
+                "$ref": "types/ShutdownOn.schema.json"
+            }
+        },
+        "required": [
+            "kind",
+            "limit"
+        ],
+        "type": "object"
+    },
     "ns": "Shutdown.ArmedAt"
 }

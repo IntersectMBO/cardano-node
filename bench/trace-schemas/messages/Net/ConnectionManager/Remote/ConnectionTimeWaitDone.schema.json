@@ -2,13 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "info": {
-                "$ref": "types/ConnectionManager.Trace.schema.json"
+            "connectionId": {
+                "$ref": "types/ConnectionId.schema.json"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "connectionId",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.ConnectionManager.Remote.ConnectionTimeWaitDone"

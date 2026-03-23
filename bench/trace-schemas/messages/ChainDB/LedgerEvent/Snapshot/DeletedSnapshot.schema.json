@@ -4,8 +4,16 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "snapshot": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "kind",
+            "snapshot"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.LedgerEvent.Snapshot.DeletedSnapshot"

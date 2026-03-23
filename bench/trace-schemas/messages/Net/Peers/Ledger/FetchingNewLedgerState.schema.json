@@ -12,6 +12,11 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "numberOfBigLedgerPeers",
+            "numberOfLedgerPeers"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.FetchingNewLedgerState"

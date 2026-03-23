@@ -4,8 +4,20 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "snapshot": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "tip": {
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "snapshot",
+            "tip"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.LedgerEvent.Replay.ReplayStart.ReplayFromSnapshot"

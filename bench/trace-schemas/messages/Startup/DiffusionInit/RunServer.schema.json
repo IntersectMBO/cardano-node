@@ -6,9 +6,13 @@
                 "type": "string"
             },
             "socketAddress": {
-                "$ref": "types/Diff.DiffusionTracer.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "socketAddress"
+        ],
         "type": "object"
     },
     "ns": "Startup.DiffusionInit.RunServer"

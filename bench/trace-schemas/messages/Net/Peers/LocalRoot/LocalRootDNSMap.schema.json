@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "dnsMap": {
+                "$ref": "types/Map.Map.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "dnsMap",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootDNSMap"
 }

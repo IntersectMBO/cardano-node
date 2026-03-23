@@ -9,6 +9,10 @@
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "useLedgerPeers"
+        ],
         "type": "object"
     },
     "ns": "Net.Peers.Ledger.TraceUseLedgerPeers"

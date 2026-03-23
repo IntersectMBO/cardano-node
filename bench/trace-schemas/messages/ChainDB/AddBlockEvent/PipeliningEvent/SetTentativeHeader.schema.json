@@ -3,12 +3,20 @@
         "additionalProperties": true,
         "properties": {
             "block": {
-                "$ref": "types/Header.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "risingEdge": {
+                "$ref": "types/Enclosing.schema.json"
             }
         },
+        "required": [
+            "block",
+            "kind",
+            "risingEdge"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.PipeliningEvent.SetTentativeHeader"

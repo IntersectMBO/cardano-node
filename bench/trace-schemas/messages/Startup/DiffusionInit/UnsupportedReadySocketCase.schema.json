@@ -4,11 +4,11 @@
         "properties": {
             "kind": {
                 "type": "string"
-            },
-            "path": {
-                "$ref": "types/Diff.DiffusionTracer.schema.json"
             }
         },
+        "required": [
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Startup.DiffusionInit.UnsupportedReadySocketCase"

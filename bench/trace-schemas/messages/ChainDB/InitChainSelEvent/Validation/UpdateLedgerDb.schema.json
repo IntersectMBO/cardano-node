@@ -1,4 +1,28 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "currentBlock": {
+                "$ref": "types/RealPoint.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "startingBlock": {
+                "$ref": "types/RealPoint.schema.json"
+            },
+            "targetBlock": {
+                "additionalProperties": true,
+                "type": "object"
+            }
+        },
+        "required": [
+            "currentBlock",
+            "kind",
+            "startingBlock",
+            "targetBlock"
+        ],
+        "type": "object"
+    },
     "ns": "ChainDB.InitChainSelEvent.Validation.UpdateLedgerDb"
 }

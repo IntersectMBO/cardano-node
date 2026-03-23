@@ -2,16 +2,21 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "connectionId": {
-                "$ref": "types/PeerSelectionActionsTrace.schema.json"
-            },
             "kind": {
                 "type": "string"
             },
-            "time": {
-                "type": "string"
+            "peerStatusChangeType": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.PeerStateActions.PeerStatusChangeType.schema.json"
+            },
+            "reason": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.PeerStateActions.FailureType.schema.json"
             }
         },
+        "required": [
+            "kind",
+            "peerStatusChangeType",
+            "reason"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Actions.StatusChangeFailure"

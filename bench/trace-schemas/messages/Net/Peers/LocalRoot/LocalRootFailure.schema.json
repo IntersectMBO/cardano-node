@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "domainAddress": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.RelayAccessPoint.RelayAccessPoint.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "reason": {
+                "$ref": "types/Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions.DNSorIOError.schema.json"
+            }
+        },
+        "required": [
+            "domainAddress",
+            "kind",
+            "reason"
+        ],
+        "type": "object"
+    },
     "ns": "Net.Peers.LocalRoot.LocalRootFailure"
 }

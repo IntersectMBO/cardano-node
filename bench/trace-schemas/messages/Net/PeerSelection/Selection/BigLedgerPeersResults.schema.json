@@ -12,9 +12,15 @@
                 "type": "string"
             },
             "result": {
-                "type": "string"
+                "type": "array"
             }
         },
+        "required": [
+            "diffTime",
+            "group",
+            "kind",
+            "result"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Selection.BigLedgerPeersResults"

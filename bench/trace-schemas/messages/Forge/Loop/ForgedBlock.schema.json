@@ -2,7 +2,15 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "blockSize": {},
+            "block": {
+                "type": "string"
+            },
+            "blockNo": {
+                "type": "integer"
+            },
+            "blockPrev": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
@@ -10,6 +18,13 @@
                 "type": "integer"
             }
         },
+        "required": [
+            "block",
+            "blockNo",
+            "blockPrev",
+            "kind",
+            "slot"
+        ],
         "type": "object"
     },
     "ns": "Forge.Loop.ForgedBlock"

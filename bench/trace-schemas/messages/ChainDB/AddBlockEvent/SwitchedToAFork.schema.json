@@ -2,16 +2,32 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "curChain": {
-                "$ref": "types/ChainDB.TraceAddBlockEvent.schema.json"
+            "events": {
+                "additionalProperties": true,
+                "type": "object"
             },
             "kind": {
                 "type": "string"
             },
-            "loeFrag": {
+            "newTipSelectView": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "newtip": {
                 "type": "string"
+            },
+            "oldTipSelectView": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
+        "required": [
+            "events",
+            "kind",
+            "newTipSelectView",
+            "newtip",
+            "oldTipSelectView"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.AddBlockEvent.SwitchedToAFork"

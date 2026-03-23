@@ -5,10 +5,18 @@
             "kind": {
                 "type": "string"
             },
-            "option": {
+            "message": {
+                "type": "string"
+            },
+            "versions": {
                 "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "message",
+            "versions"
+        ],
         "type": "object"
     },
     "ns": "Startup.WarningDevelopmentNodeToNodeVersions"

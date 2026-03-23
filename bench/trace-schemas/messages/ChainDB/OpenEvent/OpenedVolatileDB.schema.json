@@ -6,9 +6,13 @@
                 "type": "string"
             },
             "maxSlotNo": {
-                "$ref": "types/MaxSlotNo.schema.json"
+                "type": "string"
             }
         },
+        "required": [
+            "kind",
+            "maxSlotNo"
+        ],
         "type": "object"
     },
     "ns": "ChainDB.OpenEvent.OpenedVolatileDB"

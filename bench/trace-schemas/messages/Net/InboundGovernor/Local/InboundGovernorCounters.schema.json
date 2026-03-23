@@ -2,13 +2,29 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fresh": {
-                "$ref": "types/InboundGovernor.Trace.schema.json"
+            "coldPeers": {
+                "type": "string"
+            },
+            "hotPeers": {
+                "type": "string"
+            },
+            "idlePeers": {
+                "type": "string"
             },
             "kind": {
                 "type": "string"
+            },
+            "warmPeers": {
+                "type": "string"
             }
         },
+        "required": [
+            "coldPeers",
+            "hotPeers",
+            "idlePeers",
+            "kind",
+            "warmPeers"
+        ],
         "type": "object"
     },
     "ns": "Net.InboundGovernor.Local.InboundGovernorCounters"

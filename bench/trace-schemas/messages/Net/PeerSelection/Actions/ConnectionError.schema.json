@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "error": {
-                "$ref": "types/PeerSelectionActionsTrace.schema.json"
+                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "error",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Net.PeerSelection.Actions.ConnectionError"

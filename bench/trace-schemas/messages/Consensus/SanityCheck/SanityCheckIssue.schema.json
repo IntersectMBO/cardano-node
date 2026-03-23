@@ -3,12 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "error": {
-                "$ref": "types/GHC.Base.NonEmpty.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             }
         },
+        "required": [
+            "error",
+            "kind"
+        ],
         "type": "object"
     },
     "ns": "Consensus.SanityCheck.SanityCheckIssue"

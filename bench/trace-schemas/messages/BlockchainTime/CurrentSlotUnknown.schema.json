@@ -5,8 +5,14 @@
             "kind": {
                 "type": "string"
             },
-            "time": {}
+            "time": {
+                "type": "string"
+            }
         },
+        "required": [
+            "kind",
+            "time"
+        ],
         "type": "object"
     },
     "ns": "BlockchainTime.CurrentSlotUnknown"

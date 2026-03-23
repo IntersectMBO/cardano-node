@@ -1,4 +1,23 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "conn": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "message": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "conn",
+            "kind",
+            "message"
+        ],
+        "type": "object"
+    },
     "ns": "NodeState.NodeTracingForwardingInterrupted"
 }

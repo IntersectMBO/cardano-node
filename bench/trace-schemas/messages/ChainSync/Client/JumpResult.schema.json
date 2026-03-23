@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "result": {
+                "$ref": "types/JumpResult.schema.json"
+            }
+        },
+        "required": [
+            "kind",
+            "result"
+        ],
+        "type": "object"
+    },
     "ns": "ChainSync.Client.JumpResult"
 }
