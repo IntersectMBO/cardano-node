@@ -22,6 +22,12 @@ constraints:
   -- TODO move this to cardano-rpc.cabal (cardano-api repo)
   , any.proto-lens >= 0.7.1.6
 
+-- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
+-- which sidesteps the GHC type-checker plugin incompatibility with
+-- cross-compilation to Windows (finitary-2.2.0.0+)
+package acts
+  flags: -finitary
+
 packages:
   cardano-node
   cardano-node-capi
