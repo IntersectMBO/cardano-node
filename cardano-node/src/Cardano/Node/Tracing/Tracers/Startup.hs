@@ -22,6 +22,8 @@ import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.API as SL
 import           Cardano.Logging
+import           Cardano.Network.NodeToClient (LocalAddress (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
@@ -40,8 +42,6 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLed
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
-import           Cardano.Network.NodeToClient (LocalAddress (..))
-import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
 

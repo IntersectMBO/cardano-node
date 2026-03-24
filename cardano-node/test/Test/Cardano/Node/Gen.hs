@@ -18,25 +18,25 @@ module Test.Cardano.Node.Gen
 
 import           Cardano.Api (textShow)
 
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
+import           Cardano.Network.NodeToNode.Version
 import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
                    NodeIPv4Address, NodeIPv6Address)
-import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
-                   LocalRootPeersGroups (..), NetworkTopology (..),
-                   PublicRootPeers (..), RootConfig (..), LocalRoots (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
-import           Cardano.Network.NodeToNode.Version
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
+import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
+                   PublicRootPeers (..), RootConfig (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
-import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
-import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise (..))
-import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson.KeyMap

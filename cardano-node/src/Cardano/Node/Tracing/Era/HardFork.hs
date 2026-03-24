@@ -23,10 +23,10 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeSta
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..), OneEraTiebreakerView (..),
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraTiebreakerView (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History

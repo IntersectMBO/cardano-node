@@ -29,13 +29,14 @@ import           Ouroboros.Consensus.HardFork.Combinator.Protocol.ChainSel
 import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..), HeaderError (..),
                    OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Peras.SelectView
-import           Ouroboros.Consensus.Protocol.Praos.Common
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, SelectViewReasonForSwitch(..), Comparing(..), ReasonForSwitch, TiebreakerView)
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (Comparing (..), ReasonForSwitch,
+                   SelectViewReasonForSwitch (..), TiebreakerView, ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.Protocol.Praos.Common
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
@@ -55,10 +56,10 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
-import           Data.Aeson (Value (String), object, toJSON, (.=), Object)
+import           Data.Aeson (Object, Value (String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
-import           Data.SOP (K (..), hcmap, hcollapse, All)
+import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text

@@ -28,14 +28,13 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
-                   OneEraForgeStateUpdateError (..), OneEraLedgerError (..), OneEraTiebreakerView (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
+                   OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraTiebreakerView (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
-                   (EraNodeToClientVersion (..),
-                   HardForkNodeToNodeVersion (..), HardForkSpecificNodeToClientVersion (..),
-                   HardForkSpecificNodeToNodeVersion (..))
+                   (EraNodeToClientVersion (..), HardForkNodeToNodeVersion (..),
+                   HardForkSpecificNodeToClientVersion (..), HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
@@ -43,7 +42,9 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr, ConsensusProtocol (TiebreakerView))
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (ConsensusProtocol (TiebreakerView),
+                   ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -53,7 +54,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Proxy (Proxy (..))
 import           Data.SOP (All, Compose, K (..))
 import           Data.SOP.Strict
-import Ouroboros.Consensus.Peras.SelectView
 
 
 --

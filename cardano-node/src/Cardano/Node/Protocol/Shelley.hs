@@ -1,10 +1,10 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Node.Protocol.Shelley
   ( mkSomeConsensusProtocolShelley
@@ -31,6 +31,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Era.Shelley ()
@@ -41,11 +42,11 @@ import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..), PraosCredentialsSource (..))
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),
+                   PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
-import           Cardano.Node.Orphans ()
 
 import           Control.Exception (IOException)
 import           Control.Monad

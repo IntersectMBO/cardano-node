@@ -25,21 +25,22 @@ import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Protocol.Checkpoints
 import qualified Cardano.Node.Protocol.Conway as Conway
-import qualified Cardano.Node.Protocol.Shelley as Shelley
 import qualified Cardano.Node.Protocol.Dijkstra as Dijkstra
+import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import           Data.Function ((&))
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
 import           Prelude
+
+import           Data.Function ((&))
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol

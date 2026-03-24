@@ -26,7 +26,8 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints)
 import           Ouroboros.Consensus.Peras.SelectView
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr, SelectViewReasonForSwitch, ReasonForSwitch, TiebreakerView)
+import           Ouroboros.Consensus.Protocol.Abstract (ReasonForSwitch, SelectView,
+                   SelectViewReasonForSwitch, TiebreakerView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Network.Block (Serialised)
 

@@ -1,30 +1,30 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Orphans () where
 
-import           Cardano.Api ( HasTypeProxy (..), HasTextEnvelope (..)
-                             , ToCBOR (..), FromCBOR (..), SerialiseAsCBOR (..)
-                             , Proxy (..))
+import           Cardano.Api (FromCBOR (..), HasTextEnvelope (..), HasTypeProxy (..), Proxy (..),
+                   SerialiseAsCBOR (..), ToCBOR (..))
+
+import qualified Cardano.Crypto.KES.Class as Crypto
+import           Cardano.Protocol.Crypto (KES, StandardCrypto)
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag(..))
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCredentialsSource (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import qualified Cardano.Crypto.KES.Class as Crypto
-import           Cardano.Protocol.Crypto (StandardCrypto, KES)
 
 import           Data.Aeson.Types
+import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import           Text.Printf (PrintfArg (..))
-import           Data.String (IsString (..))
 
 deriving instance Eq NodeDatabasePaths
 deriving instance Show NodeDatabasePaths

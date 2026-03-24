@@ -1,9 +1,9 @@
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,19 +20,18 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
-import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
-import           Ouroboros.Network.Tracing.PeerSelection ()
-import           Cardano.Network.Tracing.PeerSelection ()
-import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import           Cardano.Network.NodeToNode (RemoteAddress)
+import qualified Cardano.Network.NodeToNode as NtN
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -86,8 +85,6 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Cardano.Network.NodeToNode (RemoteAddress)
-import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
@@ -107,11 +104,12 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.Tracing ()
+import           Ouroboros.Network.Tracing.PeerSelection ()
+import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
+import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
-import           Ouroboros.Network.Tracing ()
-import           Network.Mux.Tracing ()
-import qualified Network.Mux as Mux
 
 import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
@@ -120,6 +118,8 @@ import           Data.Text (pack)
 import qualified Data.Text.IO as T
 import           Data.Time (getZonedTime)
 import           Data.Version (showVersion)
+import qualified Network.Mux as Mux
+import           Network.Mux.Tracing ()
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO

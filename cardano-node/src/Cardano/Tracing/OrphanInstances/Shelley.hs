@@ -38,14 +38,14 @@ import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
-import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
-                   renderScriptIntegrityHash, renderIncompleteWithdrawals)
+import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals, renderMissingRedeemers,
+                   renderScriptHash, renderScriptIntegrityHash)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import qualified Cardano.Protocol.Crypto as Core
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
@@ -74,18 +74,18 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson.Key as Aeson (fromText)
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Map as Map
+import qualified Data.Set.NonEmpty as NonEmptySet
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Set.NonEmpty as NonEmptySet
 
 {- HLINT ignore "Use :" -}
 

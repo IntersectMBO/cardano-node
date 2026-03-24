@@ -23,6 +23,8 @@ import           Cardano.Logging
 import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
 import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
+import           Cardano.Network.NodeToClient (NodeToClientVersion)
+import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -40,8 +42,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Cardano.Network.NodeToClient (NodeToClientVersion)
-import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)

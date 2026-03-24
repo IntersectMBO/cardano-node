@@ -46,10 +46,10 @@ import           Cardano.Api
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
 import           Cardano.Rpc.Server.Config (RpcConfigF (..))
-import           Cardano.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
 import           Data.Aeson

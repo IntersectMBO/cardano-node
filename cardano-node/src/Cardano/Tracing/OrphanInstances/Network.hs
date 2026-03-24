@@ -22,13 +22,16 @@ module Cardano.Tracing.OrphanInstances.Network
   ) where
 
 
-import qualified Cardano.Network.PeerSelection as Cardano
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
-import Cardano.Network.PeerSelection.PublicRootPeers (PublicRootPeers(..))
 import           Cardano.Network.Diffusion (CardanoDebugPeerSelection, CardanoPeerSelectionCounters,
                    CardanoTraceLocalRootPeers, TraceChurnMode (..))
+import qualified Cardano.Network.NodeToClient as NtC
+import           Cardano.Network.NodeToNode (RemoteAddress, TraceSendRecv (..))
+import qualified Cardano.Network.NodeToNode as NtN
 import           Cardano.Network.OrphanInstances ()
+import qualified Cardano.Network.PeerSelection as Cardano
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
+import           Cardano.Network.PeerSelection.PublicRootPeers (PublicRootPeers (..))
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
@@ -57,10 +60,6 @@ import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import qualified Cardano.Network.NodeToClient as NtC
-import           Cardano.Network.NodeToNode (RemoteAddress,
-                   TraceSendRecv (..))
-import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
@@ -91,13 +90,13 @@ import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (ProcessedTxCount (..),
-                   TraceTxSubmissionInbound (..), TraceTxLogic(..), TxSubmissionCounters(..),
-                   TxDecision(..), TxsToMempool(..))
+                   TraceTxLogic (..), TraceTxSubmissionInbound (..), TxDecision (..),
+                   TxSubmissionCounters (..), TxsToMempool (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import           Control.Exception (Exception (..))
 import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
-import           Data.Aeson (Value (..), ToJSONKey(..))
+import           Data.Aeson (ToJSONKey (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import           Data.Bifunctor (Bifunctor (first))

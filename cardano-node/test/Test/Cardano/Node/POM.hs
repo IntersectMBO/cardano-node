@@ -9,7 +9,10 @@ module Test.Cardano.Node.POM
 
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
+import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
@@ -24,9 +27,6 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
-import           Cardano.Network.ConsensusMode (ConsensusMode (..))
-import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
-                   DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 

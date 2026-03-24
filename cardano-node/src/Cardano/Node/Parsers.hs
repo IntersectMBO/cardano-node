@@ -35,8 +35,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word16, Word32)
 import           Options.Applicative hiding (str, switch)
--- Don't use switch.  It will not allow to set an option in a configuration
--- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import qualified Prettyprinter.Internal as PP

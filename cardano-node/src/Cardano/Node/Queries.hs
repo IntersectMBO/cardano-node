@@ -47,6 +47,8 @@ import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.State as Ledger
 import qualified Cardano.Ledger.TxIn as Ledger
+import           Cardano.Network.NodeToClient (LocalConnectionId)
+import           Cardano.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -71,8 +73,6 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Cardano.Network.NodeToClient (LocalConnectionId)
-import           Cardano.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 
 import           Control.Monad.STM (atomically)
 import           Data.ByteString (ByteString)

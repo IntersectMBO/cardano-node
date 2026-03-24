@@ -19,13 +19,13 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
-import Ouroboros.Consensus.Peras.SelectView
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Prelude (Typeable, maximumDef)
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Network.OrphanInstances ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderHeaderHash,
                    renderHeaderHashForVerbosity, renderPointAsPhrase, renderPointForVerbosity,
@@ -33,8 +33,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
-                   Header, HeaderHash, RealPoint (..), blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
-                   realPointHash, realPointSlot, withOriginToMaybe)
+                   Header, HeaderHash, RealPoint (..), blockNo, blockPoint, blockPrevHash,
+                   getHeader, pointHash, realPointHash, realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
                    TraceGDDEvent (..))
@@ -61,6 +61,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
@@ -84,8 +85,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
-import           Control.Monad (guard)
 import           Control.Exception
+import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
@@ -98,7 +99,6 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
-import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 
 
 {- HLINT ignore "Use const" -}

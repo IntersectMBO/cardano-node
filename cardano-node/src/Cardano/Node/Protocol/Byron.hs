@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Node.Protocol.Byron
@@ -36,7 +36,7 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
 import           Control.Exception
 import qualified Data.ByteString.Lazy as LB

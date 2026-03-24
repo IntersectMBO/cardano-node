@@ -1,8 +1,8 @@
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
@@ -14,6 +14,8 @@ module Cardano.Node.Tracing.API
 
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer
+import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
+import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
@@ -33,8 +35,6 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
-import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
-import           Cardano.Network.NodeToNode (RemoteAddress)
 
 import           Prelude
 

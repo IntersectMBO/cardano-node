@@ -765,8 +765,9 @@ instance (HasHeader header, ConvertRawHash header) =>
       mconcat [ "kind" .= String "AddedFetchRequest" ]
     forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
       mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-    forMachine _dtal (BlockFetch.SendFetchRequest af _) =
-      mconcat [ "kind" .= String "SendFetchRequest"
+    forMachine dtal (BlockFetch.SendFetchRequest af gsv) =
+      mconcat $
+              [ "kind" .= String "SendFetchRequest"
               , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
