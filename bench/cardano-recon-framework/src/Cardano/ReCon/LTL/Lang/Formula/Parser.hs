@@ -196,6 +196,20 @@ formulaPropForall ctx ty = do
   phi <- formulaUniverse ctx ty
   pure (maybe (PropForall x phi) (\dom -> PropForallN x dom phi) optDom)
 
+formulaPropExists :: Context -> Parser ty -> Parser (Formula event ty)
+formulaPropExists ctx ty = do
+  void $ string "∃"
+  space
+  x <- variableIdentifier
+  space
+  optDom <- optional $ do
+    void $ string "∈"
+    space *> setPropValue ctx <* space
+  void $ string "."
+  space
+  phi <- formulaUniverse ctx ty
+  pure (maybe (PropExists x phi) (\dom -> PropExistsN x dom phi) optDom)
+
 formulaPropForallN :: Context -> Parser ty -> Parser (Formula event ty)
 formulaPropForallN ctx ty = do
   void $ try (string "∀" *> space *> string "(" *> space)
@@ -212,6 +226,22 @@ formulaPropForallN ctx ty = do
   phi <- formulaUniverse ctx ty
   pure (PropForallN x vs phi)
 
+formulaPropExistsN :: Context -> Parser ty -> Parser (Formula event ty)
+formulaPropExistsN ctx ty = do
+  void $ try (string "∃" *> space *> string "(" *> space)
+  x <- variableIdentifier
+  space
+  void $ string "∈"
+  space
+  vs <- setPropValue ctx
+  space
+  void $ string ")"
+  space
+  void $ string "."
+  space
+  phi <- formulaUniverse ctx ty
+  pure (PropExistsN x vs phi)
+
 formulaUntilN :: Context -> Parser ty -> Parser (Formula event ty)
 formulaUntilN ctx ty = apply <$> (formulaImplies ctx ty <* space) <*> optional (do
      void $ string "|"
@@ -224,7 +254,11 @@ formulaUntilN ctx ty = apply <$> (formulaImplies ctx ty <* space) <*> optional (
   apply phi (Just (!k, !psi)) = UntilN k phi psi
 
 formulaUniverse :: Context -> Parser ty -> Parser (Formula event ty)
-formulaUniverse ctx ty = formulaPropForallN ctx ty <|> formulaPropForall ctx ty <|> formulaUntilN ctx ty
+formulaUniverse ctx ty = formulaPropForallN ctx ty
+                     <|> formulaPropForall ctx ty
+                     <|> formulaPropExistsN ctx ty
+                     <|> formulaPropExists ctx ty
+                     <|> formulaUntilN ctx ty
 
 formula :: Context -> Parser ty -> Parser (Formula event ty)
 formula = formulaUniverse

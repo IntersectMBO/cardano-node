@@ -106,6 +106,27 @@ log11 =
   , Msg Success 2
   ]
 
+log12 :: [Msg]
+log12 =
+  [
+    Msg Start 1
+  , Placeholder
+  , Msg Success 1
+  , Msg Start 2
+  , Placeholder
+  ]
+
+log13 :: [Msg]
+log13 =
+  [
+    Msg Start 1
+  , Placeholder
+  , Msg Success 0
+  , Msg Start 2
+  , Msg Success 2
+  , Placeholder
+  ]
+
 logEmpty :: [Msg]
 logEmpty = []
 
@@ -134,19 +155,44 @@ prop2 = PropForall "i" $ UntilN
   )
   (Atom Start (fromList [PropConstraint "idx" (Var "i")]))
 
+-- ☐ (∃i. i = 1 ∧ (Start("idx" = i) ⇒ ♢³ Success("idx" = i)))
+prop3 :: Formula Msg Ty
+prop3 = Forall 0 $ PropExists "i" $ And
+  (PropEq mempty (Var "i") (IntValue 1))
+  (
+  Implies
+    (Atom Start (fromList [PropConstraint "idx" (Var "i")]))
+    (
+      ExistsN 3
+        (Atom Success (fromList [PropConstraint "idx" (Var "i")]))
+    )
+  )
+
 main :: IO ()
 main = do
   setLocaleEncoding utf8
   defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Unit tests" [syntacticTests, prop1SatisfiabilityTests, prop2SatisfiabilityTests, parserTests]
+tests = testGroup "Unit tests"
+  [ syntacticTests
+  , prop1SatisfiabilityTests
+  , prop2SatisfiabilityTests
+  , prop3SatisfiabilityTests
+  , parserTests
+  ]
 
 syn1 :: Formula event ()
 syn1 = PropForall "i" (Atom () (fromList [PropConstraint "idx" (Var "i")]))
 
 syn2 :: Formula event ()
 syn2 = PropForall "i" (Atom () (fromList [PropConstraint "idx" (Var "j")]))
+
+syn3 :: Formula event ()
+syn3 = PropExists "i" (Atom () (fromList [PropConstraint "idx" (Var "i")]))
+
+syn4 :: Formula event ()
+syn4 = PropExists "i" (Atom () (fromList [PropConstraint "idx" (Var "j")]))
 
 syntacticTests :: TestTree
 syntacticTests = testGroup "Syntanctic checks"
@@ -156,6 +202,11 @@ syntacticTests = testGroup "Syntanctic checks"
   ,
     testCase (unpack $ prettyFormula syn2 Prec.Universe <> " is syntactically invalid") $
       [UnboundPropVarIdentifier "j"] @?= checkFormula mempty syn2
+  , testCase (unpack $ prettyFormula syn3 Prec.Universe <> " is syntactically valid") $
+      [] @?= checkFormula mempty syn3
+  ,
+    testCase (unpack $ prettyFormula syn4 Prec.Universe <> " is syntactically invalid") $
+      [UnboundPropVarIdentifier "j"] @?= checkFormula mempty syn4
   ]
 
 prop1SatisfiabilityTests :: TestTree
@@ -203,6 +254,15 @@ prop2SatisfiabilityTests = testGroup ("Satisfiability of: " <> unpack (prettyFor
 
   ]
 
+prop3SatisfiabilityTests :: TestTree
+prop3SatisfiabilityTests = testGroup ("Satisfiability of: " <> unpack (prettyFormula prop3 Prec.Universe))
+  [
+    testCase (show log12 <> " satisfies the formula") $
+      satisfies prop3 log12 @?= Satisfied
+  , testCase (show log13 <> " does not satisfy the formula") $
+      satisfies prop3 log13 @?= Unsatisfied (fromList [(Msg Start 1,Start),(Msg Success 0,Success)])
+  ]
+
 formula0 :: Text
 formula0 = "☐ ᪲ (∀x. \"Forge.Loop.StartLeadershipCheck\"{\"slot\" = x} ⇒ \
   \♢³⁰⁰⁰ (\"Forge.Loop.NodeIsLeader\"{\"slot\" = x} ∨ \"Forge.Loop.NodeNotLeader\"{\"slot\" = x}))"
@@ -223,6 +283,9 @@ formula4 = "∀(x ∈ {1, 2, 3}). x = 1 ∨ x = 2 ∨ x = 3"
 
 formula5 :: Text
 formula5 = "∀x ∈ {1, 2, 3}. x = 1 ∨ x = 2 ∨ x = 3"
+
+formula6 :: Text
+formula6 = "∃x ∈ {1, 2, 3}. x = 1"
 
 emptyCtx :: Context
 emptyCtx = Context []
@@ -291,4 +354,13 @@ parserTests = testGroup "Parsing"
               (Or
                 (PropEq (fromList []) (Var "x") (IntValue 2))
                 (PropEq (fromList []) (Var "x") (IntValue 3)))))
+  ,
+    testCase (Text.unpack formula6) $
+      parse (Parser.formula @Text @() emptyCtx Parser.text) "input" formula6 @?=
+        Right
+          (PropExistsN
+            "x"
+            (fromList [IntValue 1,IntValue 2,IntValue 3])
+            (PropEq (fromList []) (Var "x") (IntValue 1))
+          )
   ]
