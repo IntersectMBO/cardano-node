@@ -182,7 +182,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
       , Consensus.cardanoProtocolVersion = if npcExperimentalHardForksEnabled
                                            then ProtVer (natVersion @11) 0
-                                           else ProtVer (natVersion @10) 7
+                                           else ProtVer (natVersion @10) 8
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
