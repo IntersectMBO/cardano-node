@@ -69,6 +69,7 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
 import           Cardano.Logging.Types (LogFormatting)
+import           Cardano.Logging.Utils (showT)
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
@@ -476,6 +477,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
                                             (startupTracer tracers)
                                             nc
                                             networkMagic
+                                            True
                                             (readTVar ledgerPeerSnapshotPathVar)
                                             (readTVar useLedgerVar)
                                             (const . pure $ ())
@@ -525,6 +527,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               (startupTracer tracers)
               nc
               networkMagic
+              True
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
@@ -691,6 +694,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic node
                startupTracer
                nc
                networkMagic
+               False
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
@@ -787,18 +791,22 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
 updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> NodeConfiguration
                          -> NetworkMagic
+                         -> Bool
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
                          -> (Maybe (LedgerPeerSnapshot BigLedgerPeers) -> STM IO ())
                          -> IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
-updateLedgerPeerSnapshot startupTracer
-                         (NodeConfiguration {ncConsensusMode})
-                         networkMagic readLedgerPeerPath readUseLedgerVar writeVar = do
+updateLedgerPeerSnapshot startupTracer NodeConfiguration { ncConsensusMode } networkMagic
+                         isStartup readLedgerPeerPath readUseLedgerVar writeVar = do
   (mPeerSnapshotFile, useLedgerPeers)
     <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
 
   let trace    = traceWith startupTracer
       traceL   = liftIO . trace
+      oops :: Text -> MaybeT IO a
+      oops | isStartup = error . Text.unpack
+           | otherwise = empty <$ traceL . NetworkConfigUpdateError
+
 
   mLedgerPeerSnapshot <- runMaybeT $ do
     case useLedgerPeers of
@@ -810,19 +818,17 @@ updateLedgerPeerSnapshot startupTracer
         lps <- case eSnapshot of
           Left e -> do
             case ncConsensusMode of
-              GenesisMode -> error $ Text.unpack e
+              GenesisMode -> oops e
               PraosMode   -> empty <$ traceL $ NetworkConfigUpdateError e
           Right lps -> pure lps
         fileSlot <- case lps of
           LedgerBigPeerSnapshotV23 pt magic _pools
             | networkMagic == magic, BlockPoint { atSlot } <- pt -> pure atSlot
-            | GenesisPoint <- pt ->
-                error "GenesisPoint is not a valid value in the peer snapshot file"
-            | otherwise -> error $
-                "NetworkMagic " <> show networkMagic <> " doesn't match "
-                <> "peer snapshot NetworkMagic " <> show magic
-          LedgerPeerSnapshotV2 {} ->
-            error "Unsupported legacy peer snapshot version."
+            | GenesisPoint <- pt -> oops "GenesisPoint is not a valid value in the peer snapshot file"
+            | otherwise -> oops $
+                "NetworkMagic " <> showT networkMagic <> " doesn't match "
+                <> "peer snapshot NetworkMagic " <> showT magic
+          LedgerPeerSnapshotV2 {} -> oops "Unsupported legacy peer snapshot version."
         case afterSlot of
           Always -> do
             traceL $ LedgerPeerSnapshotLoaded fileSlot
