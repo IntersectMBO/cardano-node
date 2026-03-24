@@ -24,7 +24,7 @@ commits () {
 }
 
 grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' cabal.project | sed 's|^source-repository-package|-|g' | \
-  yq eval -P -j \
+  yq eval -P -o=json \
   > tmp/repositories.json
 
 for row in $(cat tmp/repositories.json | jq -r '.[] | @base64'); do
