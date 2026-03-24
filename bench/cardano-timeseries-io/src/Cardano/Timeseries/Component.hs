@@ -4,7 +4,6 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -81,16 +80,16 @@ create tr mbCfg = do
     runPruner handle = threadLabelMe "timeseries-pruner-thread" >> do
       forever $ do
         cfg <- readTVarIO handle.config
-        case cfg.pruningPeriodSec of
+        case cfg.pruningPeriodMillis of
           Nothing ->
             -- If the current configuration doesn't specify a pruning period, we block
             -- the thread until a reconfiguration happens.
             takeMVar handle.reconfigured
-          Just period -> do
+          Just periodMs -> do
             prune handle
             -- Wait for the given period or wake up on a reconfiguration.
             race_
-              (threadDelay (fromIntegral period * 1_000_000))
+              (threadDelay (fromIntegral periodMs * 1000))
               (takeMVar handle.reconfigured)
 
 -- | Reconfigure the store. The new parameters are applied immediately.

@@ -39,7 +39,8 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   savedDPValues :: TVar DataPointValues <- newTVarIO []
-  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
+  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state")
+            (TraceBundle stderrShowTracer stderrShowTracer) stopProtocols dpRequestors) \_ -> do
     sleep 1.0
     withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000) \_ -> do
       sleep 1.5
@@ -88,6 +89,7 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , hasEKG          = Nothing
     , hasPrometheus   = Nothing
     , hasRTView       = Nothing
+    , hasTimeseries   = Nothing
     , tlsCertificate = Nothing
     , logging        = NE.fromList [LoggingParams rootDir FileMode ForHuman]
     , rotation       = Nothing

@@ -42,7 +42,7 @@ propNetworkForwarder ts rootDir localSock = do
   dpRequestors <- initDataPointRequestors
   propNetwork' ts rootDir
     ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000
-    , doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
+    , doRunCardanoTracer config (Just $ rootDir <> "/../state") (TraceBundle stderrShowTracer stderrShowTracer) brake dpRequestors
     )
 
 propNetwork'
@@ -94,6 +94,7 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , hasEKG           = Nothing
   , hasPrometheus    = Nothing
   , hasRTView        = Nothing
+  , hasTimeseries    = Nothing
   , tlsCertificate   = Nothing
   , logging          = NE.fromList [LoggingParams rootDir FileMode ForMachine]
   , rotation         = Nothing

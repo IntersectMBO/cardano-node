@@ -41,7 +41,7 @@ import           Data.Word (Word32)
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified System.Metrics.Configuration as EKGF
-import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
+import           System.Metrics.Network.Acceptor (acceptMetricsInit)
 
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
@@ -192,9 +192,10 @@ runEKGAcceptorInit
                      respoinderCtx
                      LBS.ByteString IO () Void
 runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
-  acceptEKGMetricsInit
+  acceptMetricsInit
     ekgConfig
     (prepareMetricsStores tracerEnv . micConnectionId)
+    (store tracerEnv . connIdToNodeId . micConnectionId)
     (errorHandler . micConnectionId)
 
 runTraceObjectsAcceptorInit
