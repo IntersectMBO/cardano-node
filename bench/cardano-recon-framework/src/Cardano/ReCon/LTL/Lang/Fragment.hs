@@ -28,7 +28,9 @@ retract abs (F.Not a)        = F0.Not <$> retract abs a
 retract _ F.Top              = Just F0.Top
 retract _ F.Bottom           = Just F0.Bottom
 retract _ (F.PropForall {})  = Nothing
+retract _ (F.PropExists {})  = Nothing
 retract _ (F.PropForallN {}) = Nothing
+retract _ (F.PropExistsN {}) = Nothing
 retract (!x, !v) (F.PropEq rel (Var x') v') | x == x' && v == v'
                              = Just (F0.Atom rel)
 retract _ (F.PropEq {})      = Nothing
@@ -77,7 +79,9 @@ findAtoms F.Top set                   = set
 findAtoms (F.PropEq _ (Var x) v) set  = Set.insert (x, v) set
 findAtoms (F.PropEq {}) set           = set
 findAtoms (F.PropForall _ phi) set    = findAtoms phi set
+findAtoms (F.PropExists _ phi) set    = findAtoms phi set
 findAtoms (F.PropForallN _ _ phi) set = findAtoms phi set
+findAtoms (F.PropExistsN _ _ phi) set = findAtoms phi set
 
 -- | Given a set of propositional equalities {xᵢ = vᵢ}ᵢ and a formula, if the formula can be retracted into
 --   `Fragment0` where the atom is taken to be one of the equalities (xᵢ = vᵢ), computes normal form in `Fragment0` and

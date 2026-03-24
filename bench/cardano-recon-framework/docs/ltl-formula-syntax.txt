@@ -33,7 +33,8 @@ ns ::= s                      // namespace, examples:
 φ{and} ::= φ{>and} ∧ φ{≥and}
 φ{or} ::= φ{>or} ∨ φ{≥or}
 φ{implies} ::= φ{>implies} ⇒ φ{≥implies}
-φ{universe} ::= ∀(x ∈ v̄). φ{≥universe}
-              | ∀x. φ{≥universe} | φ{≥implies} \|ᵏ φ{≥implies}
+φ{universe} ::= ∀(x ∈ v̄). φ{≥universe} | ∀x. φ{≥universe}
+              | ∃(x ∈ v̄). φ{≥universe} | ∃x. φ{≥universe}
+              | φ{≥implies} \|ᵏ φ{≥implies}
 
 atom < eq = prefix < and < or < implies < universe

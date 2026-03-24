@@ -111,6 +111,11 @@ data Formula event ty =
      -- | ∀(x ∈ v̄). φ
      --   `x` ranges over values in `v̄`
    | PropForallN PropVarIdentifier (Set PropValue) (Formula event ty)
+     -- | ∃x. φ
+   | PropExists PropVarIdentifier (Formula event ty)
+     -- | ∃(x ∈ v̄). φ
+     --   `x` ranges over values in `v̄`
+   | PropExistsN PropVarIdentifier (Set PropValue) (Formula event ty)
      -- | i = v
    | PropEq (Relevance event ty) PropTerm PropValue deriving (Show, Eq, Ord)
    -------------------------------------
@@ -135,6 +140,8 @@ relevance = go mempty where
   go acc (Atom {})             = acc
   go acc (PropForall _ phi)    = go acc phi
   go acc (PropForallN _ _ phi) = go acc phi
+  go acc (PropExists _ phi)    = go acc phi
+  go acc (PropExistsN _ _ phi) = go acc phi
   go acc (PropEq rel _ _)      = rel `union` acc
 
 unfoldForall :: Word -> Formula event ty -> Formula event ty
@@ -189,6 +196,8 @@ interpTimeunit _ phi@Atom{} = phi
 interpTimeunit _ phi@PropEq{} = phi
 interpTimeunit f (PropForall x phi) = PropForall x (interpTimeunit f phi)
 interpTimeunit f (PropForallN x dom phi) = PropForallN x dom (interpTimeunit f phi)
+interpTimeunit f (PropExists x phi) = PropExists x (interpTimeunit f phi)
+interpTimeunit f (PropExistsN x dom phi) = PropExistsN x dom (interpTimeunit f phi)
 
 -- | A constraint signifying that `a` is an `Event` over base `ty`:
 --    — Given an element of `ty`, `ofTy` shall name whether the event is of the given type.

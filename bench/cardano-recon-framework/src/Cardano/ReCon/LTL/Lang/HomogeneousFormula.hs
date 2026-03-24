@@ -1,4 +1,6 @@
 {- HLINT ignore "Use all" -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use any" #-}
 module Cardano.ReCon.LTL.Lang.HomogeneousFormula (
     HomogeneousFormula(..)
   , toFormula
@@ -37,6 +39,8 @@ data HomogeneousFormula event ty =
    ----------- Event property ----------
    | PropForall PropVarIdentifier (HomogeneousFormula event ty)
    | PropForallN PropVarIdentifier (Set PropValue) (HomogeneousFormula event ty)
+   | PropExists PropVarIdentifier (HomogeneousFormula event ty)
+   | PropExistsN PropVarIdentifier (Set PropValue) (HomogeneousFormula event ty)
    | PropEq (Relevance event ty) PropTerm PropValue deriving (Show, Eq, Ord)
    -------------------------------------
 
@@ -50,6 +54,8 @@ toFormula Top                     = F.Top
 toFormula (PropEq e a b)          = F.PropEq e a b
 toFormula (PropForall x phi)      = F.PropForall x (toFormula phi)
 toFormula (PropForallN x dom phi) = F.PropForallN x dom (toFormula phi)
+toFormula (PropExists x phi)      = F.PropExists x (toFormula phi)
+toFormula (PropExistsN x dom phi) = F.PropExistsN x dom (toFormula phi)
 
 valuesAccum :: Set PropValue -> PropVarIdentifier -> HomogeneousFormula event ty -> Set PropValue
 valuesAccum acc x (Or phi psi) = valuesAccum (valuesAccum acc x phi) x psi
@@ -65,6 +71,10 @@ valuesAccum acc x (PropForall x' phi) | x /= x' = valuesAccum acc x phi
 valuesAccum acc _ (PropForall _ _) = acc
 valuesAccum acc x (PropForallN x' _ phi) | x /= x' = valuesAccum acc x phi
 valuesAccum acc _ (PropForallN {}) = acc
+valuesAccum acc x (PropExists x' phi) | x /= x' = valuesAccum acc x phi
+valuesAccum acc _ (PropExists _ _) = acc
+valuesAccum acc x (PropExistsN x' _ phi) | x /= x' = valuesAccum acc x phi
+valuesAccum acc _ (PropExistsN {}) = acc
 
 -- | Set of values the given prop var can take in the formula.
 values :: PropVarIdentifier -> HomogeneousFormula event ty -> Set PropValue
@@ -88,6 +98,10 @@ substHomogeneousFormula v x (PropForall x' phi) | x /= x' = PropForall x' (subst
 substHomogeneousFormula _ _ (PropForall x' phi) = PropForall x' phi
 substHomogeneousFormula v x (PropForallN x' dom phi) | x /= x' = PropForallN x' dom (substHomogeneousFormula v x phi)
 substHomogeneousFormula _ _ (PropForallN x' dom phi) = PropForallN x' dom phi
+substHomogeneousFormula v x (PropExists x' phi) | x /= x' = PropExists x' (substHomogeneousFormula v x phi)
+substHomogeneousFormula _ _ (PropExists x' phi) = PropExists x' phi
+substHomogeneousFormula v x (PropExistsN x' dom phi) | x /= x' = PropExistsN x' dom (substHomogeneousFormula v x phi)
+substHomogeneousFormula _ _ (PropExistsN x' dom phi) = PropExistsN x' dom phi
 
 -- | Evaluate the `HomogeneousFormula` onto `Bool`.
 --   This is the "interesting" part of the iso: `HomogeneousFormula` ≅ `Bool`
@@ -109,6 +123,18 @@ eval (PropForall x phi) = eval (substHomogeneousFormula Placeholder x phi) &&
 -- ⟦∀(x ∈ v₁...vₖ). φ⟧ <=> φ[v₁ / x] ∧ ... ∧ φ[vₖ / x]
 eval (PropForallN x dom phi) =
   Prelude.and (
+    Set.toList dom <&> \v ->
+      eval (substHomogeneousFormula (Val v) x phi)
+  )
+-- ⟦∃x. φ⟧ <=> φ[☐/x] ∨ φ[v₁ / x] ∨ ... ∨ φ[vₖ / x] where v₁...vₖ is the set of values in φ which x can take.
+eval (PropExists x phi) = eval (substHomogeneousFormula Placeholder x phi) ||
+  Prelude.or (
+    Set.toList (values x phi) <&> \v ->
+      eval (substHomogeneousFormula (Val v) x phi)
+  )
+-- ⟦∃(x ∈ v₁...vₖ). φ⟧ <=> φ[v₁ / x] ∨ ... ∨ φ[vₖ / x]
+eval (PropExistsN x dom phi) =
+  Prelude.or (
     Set.toList dom <&> \v ->
       eval (substHomogeneousFormula (Val v) x phi)
   )
@@ -144,6 +170,8 @@ retract = go Set.empty where
   go _     (F.PropEq _ (Var _) _)        = Nothing
   go bound (F.PropForall x phi)          = PropForall x <$> go (Set.insert x bound) phi
   go bound (F.PropForallN x dom phi)     = PropForallN x dom <$> go (Set.insert x bound) phi
+  go bound (F.PropExists x phi)          = PropExists x <$> go (Set.insert x bound) phi
+  go bound (F.PropExistsN x dom phi)     = PropExistsN x dom <$> go (Set.insert x bound) phi
 
 normaliseHomogeneous :: Formula event ty -> Maybe (Formula event ty)
 normaliseHomogeneous phi =

@@ -114,6 +114,12 @@ prettyFormula (PropForallN x dom phi) lvl = surround lvl Prec.Universe $
   "∀" <> "(" <> x <> " ∈ "
       <> "{" <> intercalate ", " (fmap prettyPropValue (Set.toList dom)) <> "}"
       <> ")" <> ". " <> prettyFormula phi Prec.Universe
+prettyFormula (PropExistsN x dom phi) lvl = surround lvl Prec.Universe $
+  "∃" <> "(" <> x <> " ∈ "
+      <> "{" <> intercalate ", " (fmap prettyPropValue (Set.toList dom)) <> "}"
+      <> ")" <> ". " <> prettyFormula phi Prec.Universe
+prettyFormula (PropExists x phi) lvl = surround lvl Prec.Universe $
+  "∃" <> x <> ". " <> prettyFormula phi Prec.Universe
 prettyFormula (Atom c is) lvl = surround lvl Prec.Atom $
   showT c <> "(" <> prettyPropConstraints (Set.toList is) <> ")"
 prettyFormula (PropEq _ t v) lvl = surround lvl Prec.Eq $
