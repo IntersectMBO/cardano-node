@@ -19,7 +19,7 @@ index-state:
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
-  -- TODO move this to cardano-rpc.cabal (cardano-api repo)
+  -- haskell.nix tries to use 0.7.1.5 for some reason
   , any.proto-lens >= 0.7.1.6
 
 -- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
@@ -107,12 +107,3 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
-
--- TODO temporary: cardano-rpc with updated ledger API (CoinPerByte CompactForm, TxSubmitResult)
-source-repository-package
-  type: git
-  location: https://github.com/intersectmbo/cardano-api
-  tag: c57b8893544aca0855b70bc07330005b7b514054
-  --sha256: sha256-m4hhvOibk+sCsGkakeIzvzZLBSEK8k2s86C2FXLwd08=
-  subdir:
-    cardano-rpc
