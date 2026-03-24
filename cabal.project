@@ -101,8 +101,8 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 2a9b5eb559758477db5a8879621a4f31a990c74a
-  --sha256: sha256-ozcchi1NwjJSICq6Hw12kaETA80kmfqr44czH/ojOHY=
+  tag: 8d6741f374fae49d54464ab0583b22283878ed1d
+  --sha256: sha256-ob02vgpE3PnQUvtFmaiHJue3Wge6VAkj5bFfPdprjC4=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -116,8 +116,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: c3c4cfc7eb27644b7496f59bfb2e82d3449e29bd
-  --sha256: sha256-j2pQ9lmpesOnjnoAaxTuAQ9JrRJf9L6qyh4zX7x4wWk=
+  tag: fa06ccc2f7fd6f09b6008a6709b7ece02b645e18
+  --sha256: sha256-e7QxacDpjjag59DjDrLrfs9YtHRmIMlKtWlxiEu6Ko8=
   subdir:
     cardano-ping
     monoidal-synchronisation
@@ -135,5 +135,5 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward.git
-  tag: df3ece31c255206b077008333ee51469ae3827c8
-  --sha256: sha256-9p3uV8d3XRKlwgVSO45xK07og4uENGDBNKhM6vteJwI=
+  tag: 7e1c6181d8e3aa47ae9356e7c43aed19eba72fd4
+  --sha256: sha256-4BKUfbYgPO5phVsDMHg4okQGJBPKVLa21UH+gH68Yu0=

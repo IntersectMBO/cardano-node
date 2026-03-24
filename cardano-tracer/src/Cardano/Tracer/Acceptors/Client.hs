@@ -82,6 +82,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
                                                      burst = Nothing }
          , miniProtocolRun    = protocol
+         , miniProtocolWeight = 1
          }
       | (protocol, num) <- protocolsWithNums
       ]

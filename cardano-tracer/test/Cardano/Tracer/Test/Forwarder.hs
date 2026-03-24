@@ -200,6 +200,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
                                                      burst = Nothing }
          , miniProtocolRun    = prot
+         , miniProtocolWeight = 1
          }
       | (prot, num) <- protocols
       ]
@@ -263,6 +264,7 @@ doListenToAcceptor TestSetup{..}
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
                                                      burst = Nothing }
          , miniProtocolRun    = prot
+         , miniProtocolWeight = 1
          }
       | (prot, num) <- protocols
       ]

@@ -253,6 +253,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
                                                      burst = Nothing }
          , miniProtocolRun    = prot
+         , miniProtocolWeight = 1
          }
       | (prot, num) <- protocols
       ]
@@ -318,6 +319,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
                                                      burst = Nothing }
          , miniProtocolRun    = prot
+         , miniProtocolWeight = 1
          }
       | (prot, num) <- protocols
       ]
