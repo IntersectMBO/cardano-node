@@ -17,13 +17,16 @@ flowchart BT
     E[Cardano API]
     F[Cardano CLI]
     G[Cardano Node]
-    
+    H[Cardano RPC]
+
     B --> A
     D --> B
     D --> C
     E --> D
     F --> E
     G --> F
+    H --> E
+    G --> H
 ```
 - An arrow means "depends on"
 
@@ -37,6 +40,7 @@ flowchart BT
 | [Ouroboros Consensus](https://github.com/IntersectMBO/ouroboros-consensus) | @\<github-username\>| [Link](#)   |
 | [Cardano API](https://github.com/IntersectMBO/cardano-api)     | @\<github-username\>| [Link](#)   |
 | [Cardano CLI](https://github.com/IntersectMBO/cardano-cli)     | @\<github-username\>| [Link](#)   |
+| [Cardano RPC](https://github.com/IntersectMBO/cardano-api)     | @\<github-username\>| [Link](#)   |
 | [Cardano Node](https://github.com/IntersectMBO/cardano-node)   | @\<github-username\>| [Link](#)   |
 
 ## Status
@@ -46,5 +50,7 @@ flowchart BT
 - [ ] Ouroboros Network is integrated into the Ouroboros Consensus.
 - [ ] Ouroboros Consensus is integrated into the Cardano API.
 - [ ] Cardano API is integrated into the Cardano CLI.
+- [ ] Cardano API is integrated into the Cardano RPC (same repo).
 - [ ] Cardano CLI is integrated into the Cardano Node.
+- [ ] Cardano RPC is integrated into the Cardano Node - *if there are new changes*.
 
