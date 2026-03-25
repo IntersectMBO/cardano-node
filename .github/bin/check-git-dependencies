@@ -23,7 +23,7 @@ commits () {
   done
 }
 
-grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' cabal.project | sed 's|^source-repository-package|-|g' | \
+grep '\(^ *source-repository-package\|^ *location:\|^ *tag:\)' cabal.project | sed 's|^ *source-repository-package|-|g' | \
   yq eval -P -o=json \
   > tmp/repositories.json
 
