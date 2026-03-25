@@ -3,8 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "failure": {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "types/LedgerDB.SnapshotFailure.schema.json"
             },
             "kind": {
                 "type": "string"

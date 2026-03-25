@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "numberOfConnection": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "integer"
             }
         },
         "required": [

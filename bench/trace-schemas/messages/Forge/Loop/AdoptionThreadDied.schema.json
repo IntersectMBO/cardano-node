@@ -5,9 +5,7 @@
             "blockHash": {
                 "type": "string"
             },
-            "blockSize": {
-                "type": "boolean"
-            },
+            "blockSize": {},
             "kind": {
                 "type": "string"
             },

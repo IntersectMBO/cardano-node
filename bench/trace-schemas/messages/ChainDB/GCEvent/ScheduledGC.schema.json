@@ -7,16 +7,11 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "slot": {
-                "additionalProperties": true,
-                "type": "object"
             }
         },
         "required": [
             "difft",
-            "kind",
-            "slot"
+            "kind"
         ],
         "type": "object"
     },

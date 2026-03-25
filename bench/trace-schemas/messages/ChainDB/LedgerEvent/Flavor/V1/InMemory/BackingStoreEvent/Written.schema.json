@@ -2,11 +2,15 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "new": {
+                "type": "string"
+            },
             "old": {
                 "type": "string"
             }
         },
         "required": [
+            "new",
             "old"
         ],
         "type": "object"

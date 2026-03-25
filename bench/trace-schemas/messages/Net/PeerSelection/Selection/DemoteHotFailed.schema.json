@@ -1,4 +1,31 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "actualActive": {
+                "type": "integer"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "peer": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            },
+            "targetActive": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "actualActive",
+            "kind",
+            "peer",
+            "reason",
+            "targetActive"
+        ],
+        "type": "object"
+    },
     "ns": "Net.PeerSelection.Selection.DemoteHotFailed"
 }

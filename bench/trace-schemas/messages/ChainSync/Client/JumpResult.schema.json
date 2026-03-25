@@ -4,14 +4,10 @@
         "properties": {
             "kind": {
                 "type": "string"
-            },
-            "result": {
-                "$ref": "types/JumpResult.schema.json"
             }
         },
         "required": [
-            "kind",
-            "result"
+            "kind"
         ],
         "type": "object"
     },

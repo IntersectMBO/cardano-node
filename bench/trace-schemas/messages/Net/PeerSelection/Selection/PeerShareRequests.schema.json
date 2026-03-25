@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "actualKnown": {
-                "type": "string"
+                "type": "integer"
             },
             "availablePeers": {
                 "type": "array"
@@ -18,7 +18,7 @@
                 "type": "array"
             },
             "targetKnown": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

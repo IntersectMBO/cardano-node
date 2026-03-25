@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "diffTime": {
-                "type": "string"
+                "type": "number"
             },
             "group": {
                 "type": "string"

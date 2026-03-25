@@ -12,8 +12,7 @@
                 "$ref": "types/RealPoint.schema.json"
             },
             "targetBlock": {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "types/RealPoint.schema.json"
             }
         },
         "required": [

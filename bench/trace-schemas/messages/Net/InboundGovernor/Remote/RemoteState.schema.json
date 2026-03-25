@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "remoteSt": {
-                "type": "string"
+                "$ref": "types/Map.Map.schema.json"
             }
         },
         "required": [

@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "port": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

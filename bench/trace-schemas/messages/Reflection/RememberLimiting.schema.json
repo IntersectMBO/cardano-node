@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "numSuppressed": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

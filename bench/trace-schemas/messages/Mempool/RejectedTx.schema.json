@@ -11,22 +11,12 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "mempoolSize": {
-                "additionalProperties": true,
-                "type": "object"
-            },
-            "tx": {
-                "additionalProperties": true,
-                "type": "object"
             }
         },
         "required": [
             "err",
             "errdetails",
-            "kind",
-            "mempoolSize",
-            "tx"
+            "kind"
         ],
         "type": "object"
     },

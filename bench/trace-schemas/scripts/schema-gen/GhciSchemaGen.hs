@@ -12,7 +12,7 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
 import Data.Char (isAlphaNum, isLower, isUpper, isSpace, toLower)
-import Data.List (isPrefixOf, isSuffixOf, sortOn)
+import Data.List (elemIndex, isPrefixOf, isSuffixOf, sortOn)
 import Data.Maybe (catMaybes, mapMaybe)
 import System.Directory
 import System.Environment (getArgs)
@@ -48,6 +48,21 @@ type HelperFieldMap = Map.Map String (Map.Map String String)
 diffusionHandshakeCtor :: ConstructorName
 diffusionHandshakeCtor = "__DiffusionHandshakeAnyMessageAndAgency__"
 
+serialisedBlockFetchMsgBlockCtor :: ConstructorName
+serialisedBlockFetchMsgBlockCtor = "__SerialisedBlockFetchMsgBlock__"
+
+connectionManagerStateCtor :: ConstructorName
+connectionManagerStateCtor = "TrState"
+
+muxStateCtor :: ConstructorName
+muxStateCtor = "TraceState"
+
+connectionManagerUnexpectedlyFalseAssertionCtor :: ConstructorName
+connectionManagerUnexpectedlyFalseAssertionCtor = "__ConnectionManagerUnexpectedlyFalseAssertion__"
+
+inboundGovernorUnexpectedlyFalseAssertionCtor :: ConstructorName
+inboundGovernorUnexpectedlyFalseAssertionCtor = "__InboundGovernorUnexpectedlyFalseAssertion__"
+
 detailLevels :: [DetailLevel]
 detailLevels = ["Minimal", "Normal", "Detailed", "Maximum"]
 
@@ -70,7 +85,7 @@ main = do
   -- Build constructor -> namespace map from namespaceFor clauses
   putStrLn "Building namespace map..."
   let sources = map (\fp -> (fp, readFileSafe fp)) hsFiles
-  let nsMap = foldl' mergeNs Map.empty (map (parseNamespaceMap . snd) sources)
+  let nsMap = foldl' mergeNs Map.empty [ normalizeNamespaceMap fp (parseNamespaceMap src) | (fp, src) <- sources ]
   -- Parse forMachine clauses and map their field bindings to variables
   putStrLn "Parsing forMachine clauses..."
   let helperFieldMaps = map (parseObjectHelperMap . snd) sources
@@ -83,7 +98,7 @@ main = do
         foldl'
           (Map.unionWith (Map.unionWith Map.union))
           Map.empty
-          [ normalizeCtorMap fp (parseFieldVarMap helpers clauses)
+          [ normalizeFieldVarMap fp (parseFieldVarMap helpers clauses)
           | (fp, clauses, helpers) <- clausesByFile
           ]
 
@@ -93,7 +108,7 @@ main = do
     putStrLn $
       "[ghci " <> show idx <> "/" <> show (length clausesByFile) <> "] "
         <> fp
-    normalizeCtorMap fp <$> ghciTypesForFile fp clauses
+    normalizeVarTypesMap fp <$> ghciTypesForFile fp clauses
   let varTypes = foldl' (Map.unionWith Map.union) Map.empty varTypesMaps
 
   let msgOutDir = "bench/trace-schemas/messages"
@@ -184,9 +199,14 @@ parseNamespaceMap src = go (lines src) Map.empty
               (bodyLines, rest) = spanNamespaceBody afterHeader
               clauseLines = headerLines ++ bodyLines
               header = unwords headerLines
+              bodyAfterLambda = dropLeadingLambdaCase bodyLines
               acc' =
-                if "\\case" `isInfix` header
-                  then foldl' insertNamespaceClause acc (parseNamespaceLambdaClauses bodyLines)
+                if "\\case" `isInfix` header || isLambdaCaseBody bodyLines
+                  then foldl' insertNamespaceClause acc (parseNamespaceLambdaClauses bodyAfterLambda)
+                  else if hasBranchArrows bodyLines
+                    then case ctorsAfter "namespaceFor" (takeWhile (/= '=') (unwords headerLines)) of
+                      [] -> acc
+                      ctors -> foldl' insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
                   else case extractNamespaceClause (unwords clauseLines) of
                     Just clauseInfo -> insertNamespaceClause acc clauseInfo
                     Nothing -> acc
@@ -246,6 +266,18 @@ insertNamespaceClause :: Map.Map ConstructorName [NamespaceParts]
 insertNamespaceClause acc (ctors, parts) =
   foldl' (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
 
+isLambdaCaseBody :: [String] -> Bool
+isLambdaCaseBody (l:_) = trim l == "\\case"
+isLambdaCaseBody _ = False
+
+dropLeadingLambdaCase :: [String] -> [String]
+dropLeadingLambdaCase (l:ls)
+  | trim l == "\\case" = ls
+dropLeadingLambdaCase ls = ls
+
+hasBranchArrows :: [String] -> Bool
+hasBranchArrows = any ("->" `isInfix`)
+
 parseNamespaceLambdaClauses :: [String] -> [([ConstructorName], NamespaceParts)]
 parseNamespaceLambdaClauses = mapMaybe parseBranch . go
   where
@@ -273,6 +305,33 @@ parseNamespaceLambdaClauses = mapMaybe parseBranch . go
       let parts = quotedStrings body
       let ctors = ctorTokens pat
       if null parts || null ctors then Nothing else Just (ctors, parts)
+
+parseNamespaceCaseBranches :: [ConstructorName] -> [String] -> [([ConstructorName], NamespaceParts)]
+parseNamespaceCaseBranches ctors = mapMaybe parseBranch . go
+  where
+    go [] = []
+    go (l:ls)
+      | "->" `isInfix` l =
+          let (_pat0, rhs0) = case breakSub "->" l of
+                Just (a, b) -> (trim a, trim b)
+                Nothing -> ("", "")
+              (more, rest) = spanBranchLines ls
+              body = unwords ([rhs0 | not (null rhs0)] ++ more)
+          in body : go rest
+      | otherwise = go ls
+
+    spanBranchLines = step []
+      where
+        step acc [] = (reverse acc, [])
+        step acc allLines@(x:xs)
+          | isBranchStart x = (reverse acc, allLines)
+          | otherwise = step (x:acc) xs
+
+    isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+
+    parseBranch body = do
+      let parts = quotedStrings body
+      if null parts then Nothing else Just (ctors, parts)
 
 
 firstCtorAfter :: String -> String -> Maybe String
@@ -393,7 +452,7 @@ parseForMachineClauses src = go (lines src)
   where
     startsHeader line =
       let t = trim line
-      in "forMachine" `isPrefixOf` t
+      in "forMachine" `isPrefixOf` t || "forMachineGov" `isPrefixOf` t
     hasEquals line = "=" `isInfix` line
     go [] = []
     go (l:ls)
@@ -402,8 +461,9 @@ parseForMachineClauses src = go (lines src)
               header = unwords headerLines
               (lvlTok, pat) = parseHeader header
               (body, rest) = span (not . startsHeader) afterHeader
-          in if "\\case" `isInfix` header
-               then parseLambdaCaseClauses lvlTok body ++ go rest
+              bodyAfterLambda = dropLeadingLambdaCase body
+          in if "\\case" `isInfix` header || isLambdaCaseBody body
+               then parseLambdaCaseClauses lvlTok bodyAfterLambda ++ go rest
                else Clause lvlTok pat body : go rest
       | otherwise = go ls
 
@@ -438,10 +498,13 @@ parseLambdaCaseClauses lvl = go
 parseHeader :: String -> (String, String)
 parseHeader line =
   let ws = words line
-      lvl = case dropWhile (/= "forMachine") ws of
+      keyword = case () of
+        _ | "forMachineGov" `isInfix` line -> "forMachineGov"
+          | otherwise -> "forMachine"
+      lvl = case dropWhile (/= keyword) ws of
         (_:l:_) -> l
         _ -> "_"
-      pat = case breakSub "forMachine" line of
+      pat = case breakSub keyword line of
         Just (_, rest) ->
           let rhs = dropWhile isSpace rest
               afterLvl = dropWhile isSpace (drop (length lvl) rhs)
@@ -537,8 +600,9 @@ parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
                 "DDetailed" -> ["Detailed"]
                 "DMaximum" -> ["Maximum"]
                 _ -> detailLevels
-              directPairs = mapMaybe (parseFieldLine vars) (collectFieldEntries (clauseBody cl))
-              helperPairs = concatMap helperPairsForLine (clauseBody cl)
+              sanitizedBody = stripCommentBlocks (clauseBody cl)
+              directPairs = mapMaybe (parseFieldLine vars) (collectFieldEntries sanitizedBody)
+              helperPairs = concatMap helperPairsForLine sanitizedBody
               pairs = Map.toList (Map.fromListWith preferSpecific (directPairs ++ helperPairs))
               addOne m (k,v) = foldl' (\mm lvl -> Map.insertWith (Map.union) lvl (Map.singleton k v) mm) m lvls
           in Map.insertWith (Map.unionWith Map.union) ctor (foldl' addOne Map.empty pairs) acc
@@ -562,8 +626,9 @@ collectFieldEntries = finalize . foldl' step []
     | ".=" `isInfix` line = [line]
     | otherwise = []
   step acc@(cur:rest) line
+    | fieldEntryNeedsContinuation cur = (cur <> " " <> trim line) : rest
     | ".=" `isInfix` line = line : acc
-    | otherwise = (cur <> " " <> trim line) : rest
+    | otherwise = acc
 
   finalize = concatMap splitFieldFragments . reverse . filter (".=" `isInfix`)
 
@@ -573,7 +638,68 @@ collectFieldEntries = finalize . foldl' step []
 
   stripOuterList s
     | headMay s == Just '[' && lastMay s == Just ']' = init (tail s)
-    | otherwise = s
+    | otherwise =
+        case outerBracketSpan s of
+          Just (i, j)
+            | trim (take i s) /= ""
+            , j == length s - 1 ->
+                trim (take (j - i - 1) (drop (i + 1) s))
+          _ -> s
+
+  outerBracketSpan :: String -> Maybe (Int, Int)
+  outerBracketSpan s =
+    case elemIndex '[' s of
+      Nothing -> Nothing
+      Just start -> matchBracket start 0 start
+    where
+      matchBracket _ _ i | i >= length s = Nothing
+      matchBracket start depth i =
+        case s !! i of
+          '[' ->
+            let depth' = depth + 1
+            in matchBracket start depth' (i + 1)
+          ']' ->
+            let depth' = depth - 1
+            in if depth' == 0
+                 then Just (start, i)
+                 else matchBracket start depth' (i + 1)
+          _ -> matchBracket start depth (i + 1)
+
+fieldEntryNeedsContinuation :: String -> Bool
+fieldEntryNeedsContinuation = hasOpenBalance . trim
+  where
+    hasOpenBalance s =
+      case go 0 0 0 s of
+        (paren, bracket, brace) -> paren > 0 || bracket > 0 || brace > 0
+
+    go paren bracket brace [] = (paren, bracket, brace)
+    go paren bracket brace (c:cs)
+      | c == '(' = go (paren + 1) bracket brace cs
+      | c == ')' = go (paren - 1) bracket brace cs
+      | c == '[' = go paren (bracket + 1) brace cs
+      | c == ']' = go paren (bracket - 1) brace cs
+      | c == '{' = go paren bracket (brace + 1) cs
+      | c == '}' = go paren bracket (brace - 1) cs
+      | otherwise = go paren bracket brace cs
+
+stripCommentBlocks :: [String] -> [String]
+stripCommentBlocks = snd . foldl' step (0 :: Int, [])
+  where
+    step (depth, acc) line =
+      let (depth', cleaned) = stripLine depth line
+      in (depth', acc ++ [cleaned])
+
+    stripLine depth [] = (depth, [])
+    stripLine depth ('{':'-':cs) = stripLine (depth + 1) cs
+    stripLine depth ('-':'}':cs)
+      | depth > 0 = stripLine (depth - 1) cs
+    stripLine depth ('-':'-':_)
+      | depth == 0 = (depth, [])
+    stripLine depth (c:cs)
+      | depth > 0 = stripLine depth cs
+      | otherwise =
+          let (depth', rest) = stripLine depth cs
+          in (depth', c : rest)
 
 splitTopLevelCommasGeneral :: String -> [String]
 splitTopLevelCommasGeneral s = go 0 0 0 "" [] s
@@ -639,6 +765,9 @@ isStringLiteral s =
 inferRhsMarker :: String -> Maybe String
 inferRhsMarker rhs
   | isStringLiteral rhs = Just literalStringVar
+  | "Number (fromIntegral" `isInfix` rhs = Just integerExprVar
+  | "Number (fromRational" `isInfix` rhs = Just numberExprVar
+  | "Number " `isPrefixOf` trim rhs = Just numberExprVar
   | "String " `isPrefixOf` trim rhs = Just renderedStringVar
   | "forMachine " `isInfix` rhs = Just objectExprVar
   | "toObject " `isInfix` rhs = Just objectExprVar
@@ -671,7 +800,7 @@ inferRhsMarker rhs
   | "toJSON (unBlockNo" `isInfix` rhs = Just integerExprVar
   | "toJSON (unSlotNo" `isInfix` rhs = Just integerExprVar
   | "toJSON (fromIntegral" `isInfix` rhs = Just integerExprVar
-  | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) ["Word", "Int", "SlotNo", "BlockNo", "EpochNo", "length ", "length("] = Just integerExprVar
+  | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) ["Word", "Int", "SlotNo", "BlockNo", "EpochNo", "length ", "length(", "fragmentLength"] = Just integerExprVar
   | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) ["Double", "Float", "NominalDiffTime", "DiffTime"] = Just numberExprVar
   | otherwise = Nothing
 
@@ -900,9 +1029,12 @@ updateSchemaForNamespace :: Config
 updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes ns = do
   let parts = splitDot ns
   let ctor =
-        case findCtor nsMap parts of
+        case fallbackCtorForNamespace parts of
           Just c -> Just c
-          Nothing -> fallbackCtorForNamespace parts
+          Nothing ->
+            case findCtor nsMap parts of
+              Just c -> Just c
+              Nothing -> Nothing
   let out = msgOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
   let histOutDir = "bench/trace-schemas/messages-hist"
   let histOut = histOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
@@ -923,15 +1055,52 @@ updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes 
 fallbackCtorForNamespace :: [String] -> Maybe ConstructorName
 fallbackCtorForNamespace parts
   | ["Net", "Handshake"] `isListPrefixOf` parts = Just diffusionHandshakeCtor
+  | ["Net", "ConnectionManager"] `isListPrefixOf` parts
+  , lastMay parts == Just "UnexpectedlyFalseAssertion" =
+      Just connectionManagerUnexpectedlyFalseAssertionCtor
+  | ["Net", "InboundGovernor"] `isListPrefixOf` parts
+  , lastMay parts == Just "UnexpectedlyFalseAssertion" =
+      Just inboundGovernorUnexpectedlyFalseAssertionCtor
+  | ["Net", "ConnectionManager"] `isListPrefixOf` parts
+  , lastMay parts == Just "State" = Just connectionManagerStateCtor
+  | ["Net", "Mux"] `isListPrefixOf` parts
+  , lastMay parts == Just "State" = Just muxStateCtor
+  | ["BlockFetch"] `isListPrefixOf` parts
+  , "Serialised" `elem` parts
+  , lastMay parts == Just "Block" = Just serialisedBlockFetchMsgBlockCtor
   | otherwise = Nothing
 
 isListPrefixOf :: Eq a => [a] -> [a] -> Bool
 isListPrefixOf xs ys = xs == take (length xs) ys
 
-normalizeCtorMap :: FilePath -> Map.Map ConstructorName a -> Map.Map ConstructorName a
-normalizeCtorMap fp
+normalizeNamespaceMap :: FilePath -> Map.Map ConstructorName [NamespaceParts] -> Map.Map ConstructorName [NamespaceParts]
+normalizeNamespaceMap fp
   | takeFileName fp == "Diffusion.hs" =
       renameCtor "AnyMessageAndAgency" diffusionHandshakeCtor
+  | takeFileName fp == "P2P.hs" =
+      insertAliasFrom "TrUnexpectedlyFalseAssertion" connectionManagerUnexpectedlyFalseAssertionCtor
+      . insertAliasFrom "TrUnexpectedlyFalseAssertion" inboundGovernorUnexpectedlyFalseAssertionCtor
+  | otherwise = id
+
+normalizeFieldVarMap :: FilePath -> FieldVarMap -> FieldVarMap
+normalizeFieldVarMap fp
+  | takeFileName fp == "Diffusion.hs" =
+      renameCtor "AnyMessageAndAgency" diffusionHandshakeCtor
+  | takeFileName fp == "P2P.hs" =
+      splitUnexpectedlyFalseAssertion
+  | takeFileName fp == "NodeToNode.hs" =
+      splitSerialisedBlockFetchMsgBlock
+  | otherwise = id
+
+normalizeVarTypesMap :: FilePath -> VarTypes -> VarTypes
+normalizeVarTypesMap fp
+  | takeFileName fp == "Diffusion.hs" =
+      renameCtor "AnyMessageAndAgency" diffusionHandshakeCtor
+  | takeFileName fp == "P2P.hs" =
+      insertAliasFrom "TrUnexpectedlyFalseAssertion" connectionManagerUnexpectedlyFalseAssertionCtor
+      . insertAliasFrom "TrUnexpectedlyFalseAssertion" inboundGovernorUnexpectedlyFalseAssertionCtor
+  | takeFileName fp == "NodeToNode.hs" =
+      insertAliasFrom "MsgBlock" serialisedBlockFetchMsgBlockCtor
   | otherwise = id
 
 renameCtor :: ConstructorName -> ConstructorName -> Map.Map ConstructorName a -> Map.Map ConstructorName a
@@ -939,6 +1108,36 @@ renameCtor from to m =
   case Map.lookup from m of
     Just v -> Map.insert to v (Map.delete from m)
     Nothing -> m
+
+insertAliasFrom :: ConstructorName -> ConstructorName -> Map.Map ConstructorName a -> Map.Map ConstructorName a
+insertAliasFrom from to m =
+  case Map.lookup from m of
+    Just v -> Map.insert to v m
+    Nothing -> m
+
+splitSerialisedBlockFetchMsgBlock :: FieldVarMap -> FieldVarMap
+splitSerialisedBlockFetchMsgBlock m =
+  case Map.lookup "MsgBlock" m of
+    Nothing -> m
+    Just byLevel ->
+      let serialisedKeys = Set.fromList ["agency", "bytes", "kind"]
+          regular = Map.map (Map.filterWithKey (\k _ -> k /= "bytes")) byLevel
+          serialised = Map.map (Map.filterWithKey (\k _ -> Set.member k serialisedKeys)) byLevel
+      in Map.insert serialisedBlockFetchMsgBlockCtor serialised (Map.insert "MsgBlock" regular m)
+
+splitUnexpectedlyFalseAssertion :: FieldVarMap -> FieldVarMap
+splitUnexpectedlyFalseAssertion m =
+  case Map.lookup "TrUnexpectedlyFalseAssertion" m of
+    Nothing -> m
+    Just byLevel ->
+      let connectionManagerKeys = Set.fromList ["kind", "info"]
+          inboundGovernorKeys = Set.fromList ["kind", "remoteSt"]
+          connectionManager =
+            Map.map (Map.filterWithKey (\k _ -> Set.member k connectionManagerKeys)) byLevel
+          inboundGovernor =
+            Map.map (Map.filterWithKey (\k _ -> Set.member k inboundGovernorKeys)) byLevel
+      in Map.insert connectionManagerUnexpectedlyFalseAssertionCtor connectionManager
+         (Map.insert inboundGovernorUnexpectedlyFalseAssertionCtor inboundGovernor m)
 
 -- Merge "data" from messages-hist when we couldn't infer any properties.
 mergeHistDataIfEmpty :: FilePath -> A.Value -> IO A.Value
@@ -1127,7 +1326,7 @@ buildProp typeOutDir ctor fieldVarMap varTypes (k, v)
       pure (K.fromString k, A.object ["type" A..= ("array" :: String), "items" A..= A.object ["type" A..= ("string" :: String)]])
   | otherwise =
       case Map.lookup ctor varTypes >>= Map.lookup v of
-        Nothing -> pure (K.fromString k, A.object ["type" A..= ("string" :: String)])
+        Nothing -> pure (K.fromString k, fallbackSchemaForUnknownBindingForCtor ctor k v)
         Just ty -> do
           schema <- typeToSchema typeOutDir fieldVarMap varTypes Set.empty ty
           pure (K.fromString k, schema)
@@ -1330,10 +1529,10 @@ mergedPropsForType fieldVarMap varTypes seen ctor byLevel = do
   pure (KM.fromList props)
  where
   buildMergedProp (fieldName, vars) = do
-    schemas <- mapM schemaForVar vars
+    schemas <- mapM (schemaForVar fieldName) vars
     pure (K.fromString fieldName, mergeSchemas schemas)
 
-  schemaForVar var
+  schemaForVar fieldName var
     | var `elem` [literalStringVar, renderedStringVar] =
         pure (A.object ["type" A..= ("string" :: String)])
     | var == integerExprVar =
@@ -1350,8 +1549,43 @@ mergedPropsForType fieldVarMap varTypes seen ctor byLevel = do
         pure (A.object ["type" A..= ("array" :: String), "items" A..= A.object ["type" A..= ("string" :: String)]])
     | otherwise =
         case Map.lookup ctor varTypes >>= Map.lookup var of
-          Nothing -> pure (A.object [])
+          Nothing -> pure (fallbackSchemaForUnknownBindingForCtor ctor fieldName var)
           Just ty -> typeToSchema "bench/trace-schemas/types" fieldVarMap varTypes seen ty
+
+fallbackSchemaForUnknownBindingForCtor :: ConstructorName -> String -> String -> A.Value
+fallbackSchemaForUnknownBindingForCtor ctor key var
+  | ctor == "TracePickInboundPeers"
+  , lowerKey `elem` ["selected", "available"] =
+      A.object ["type" A..= ("array" :: String)]
+  | ctor == "FetchingNewLedgerState"
+  , lowerKey `elem` ["numberofledgerpeers", "numberofbigledgerpeers"] =
+      A.object ["type" A..= ("integer" :: String)]
+  | ctor `elem` ["TracePublicRootsResults", "TracePublicRootsFailure", "TraceBigLedgerPeersResults", "TraceBigLedgerPeersFailure"]
+  , lowerKey == "difftime" =
+      A.object ["type" A..= ("number" :: String)]
+  | otherwise = fallbackSchemaForUnknownBinding key var
+ where
+  lowerKey = map toLower key
+
+fallbackSchemaForUnknownBinding :: String -> String -> A.Value
+fallbackSchemaForUnknownBinding key var
+  | lowerKey == "port" || lowerVar == "port" || lowerVar == "portno" =
+      A.object ["type" A..= ("integer" :: String)]
+  | lowerKey `elem` peerSelectionCounterKeys =
+      A.object ["type" A..= ("integer" :: String)]
+  | otherwise =
+      A.object ["type" A..= ("string" :: String)]
+ where
+  lowerKey = map toLower key
+  lowerVar = map toLower var
+  peerSelectionCounterKeys =
+    [ "targetknown"
+    , "actualknown"
+    , "targetestablished"
+    , "actualestablished"
+    , "targetactive"
+    , "actualactive"
+    ]
 
 mergeSchemas :: [A.Value] -> A.Value
 mergeSchemas [] = A.object []

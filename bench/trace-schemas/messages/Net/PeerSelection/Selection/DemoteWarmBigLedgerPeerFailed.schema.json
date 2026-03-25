@@ -1,4 +1,31 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "actualEstablished": {
+                "type": "integer"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "peer": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
+            },
+            "targetEstablished": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "actualEstablished",
+            "kind",
+            "peer",
+            "reason",
+            "targetEstablished"
+        ],
+        "type": "object"
+    },
     "ns": "Net.PeerSelection.Selection.DemoteWarmBigLedgerPeerFailed"
 }

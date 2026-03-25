@@ -15,7 +15,7 @@
             "type": "integer"
         },
         "tipBlockNo": {
-            "type": "string"
+            "type": "integer"
         },
         "tipHash": {
             "type": "string"

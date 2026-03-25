@@ -3,19 +3,19 @@
         "additionalProperties": true,
         "properties": {
             "actualKnown": {
-                "type": "string"
+                "type": "integer"
             },
             "available": {
-                "type": "string"
+                "type": "array"
             },
             "kind": {
                 "type": "string"
             },
             "selected": {
-                "type": "string"
+                "type": "array"
             },
             "targetKnown": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

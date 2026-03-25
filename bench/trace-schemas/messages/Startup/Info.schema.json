@@ -8,9 +8,6 @@
             "localSocket": {
                 "type": "string"
             },
-            "maxNodeToClientVersion": {
-                "type": "string"
-            },
             "maxNodeToNodeVersion": {
                 "type": "string"
             },
@@ -30,7 +27,6 @@
         "required": [
             "kind",
             "localSocket",
-            "maxNodeToClientVersion",
             "maxNodeToNodeVersion",
             "nodeAddresses",
             "nodeToClientVersions",

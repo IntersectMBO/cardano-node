@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "outstanding": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "integer"
             }
         },
         "required": [

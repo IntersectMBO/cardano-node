@@ -1,4 +1,24 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "age": {
+                "$ref": "types/DurationFromNow.schema.json"
+            },
+            "currentSelection": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "age",
+            "currentSelection",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "Consensus.GSM.LeaveCaughtUp"
 }

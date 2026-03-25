@@ -8,12 +8,16 @@
             },
             "kind": {
                 "type": "string"
+            },
+            "to": {
+                "$ref": "types/ConnectionManager.Transition'.schema.json"
             }
         },
         "required": [
             "address",
             "from",
-            "kind"
+            "kind",
+            "to"
         ],
         "type": "object"
     },

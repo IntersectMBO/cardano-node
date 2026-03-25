@@ -9,7 +9,7 @@
                 "type": "string"
             },
             "length": {
-                "type": "boolean"
+                "type": "integer"
             }
         },
         "required": [

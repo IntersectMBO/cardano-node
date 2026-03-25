@@ -5,12 +5,16 @@
             "action": {
                 "type": "string"
             },
+            "counter": {
+                "type": "integer"
+            },
             "kind": {
                 "type": "string"
             }
         },
         "required": [
             "action",
+            "counter",
             "kind"
         ],
         "type": "object"

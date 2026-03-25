@@ -20,9 +20,6 @@
             "risingEdge": {
                 "$ref": "types/Enclosing.schema.json"
             },
-            "rollBackTo": {
-                "type": "string"
-            },
             "slot": {
                 "type": "integer"
             },
@@ -37,7 +34,6 @@
             "blockingRead",
             "kind",
             "risingEdge",
-            "rollBackTo",
             "slot",
             "tip"
         ],

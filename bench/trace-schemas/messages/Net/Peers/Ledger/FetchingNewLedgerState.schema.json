@@ -6,10 +6,10 @@
                 "type": "string"
             },
             "numberOfBigLedgerPeers": {
-                "type": "string"
+                "type": "integer"
             },
             "numberOfLedgerPeers": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

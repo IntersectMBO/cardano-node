@@ -11,9 +11,6 @@
             "blockSize": {
                 "type": "string"
             },
-            "bytes": {
-                "type": "string"
-            },
             "kind": {
                 "type": "string"
             },
@@ -25,7 +22,6 @@
             "agency",
             "blockHash",
             "blockSize",
-            "bytes",
             "kind",
             "txIds"
         ],

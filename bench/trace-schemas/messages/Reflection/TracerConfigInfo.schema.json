@@ -3,8 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "conf": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

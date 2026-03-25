@@ -5,9 +5,6 @@
             "kind": {
                 "type": "string"
             },
-            "options": {
-                "$ref": "types/Map.Map.schema.json"
-            },
             "versions": {
                 "additionalProperties": true,
                 "type": "object"
@@ -15,7 +12,6 @@
         },
         "required": [
             "kind",
-            "options",
             "versions"
         ],
         "type": "object"

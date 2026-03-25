@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "actualEstablished": {
-                "type": "string"
+                "type": "integer"
             },
             "delay": {
                 "type": "string"
@@ -18,7 +18,7 @@
                 "type": "string"
             },
             "targetEstablished": {
-                "type": "string"
+                "type": "integer"
             }
         },
         "required": [

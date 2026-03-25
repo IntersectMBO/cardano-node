@@ -1,4 +1,25 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "newPeer": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "oldPeer": {
+                "additionalProperties": true,
+                "type": "object"
+            }
+        },
+        "required": [
+            "kind",
+            "newPeer",
+            "oldPeer"
+        ],
+        "type": "object"
+    },
     "ns": "Consensus.DevotedBlockFetch.RotatedDynamo"
 }

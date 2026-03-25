@@ -2,17 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "fallingEdge": {
-                "additionalProperties": true,
-                "type": "object"
-            },
             "kind": {
                 "type": "string"
+            },
+            "risingEdge": {
+                "additionalProperties": true,
+                "type": "object"
             }
         },
         "required": [
-            "fallingEdge",
-            "kind"
+            "kind",
+            "risingEdge"
         ],
         "type": "object"
     },

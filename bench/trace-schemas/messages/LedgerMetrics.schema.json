@@ -2,20 +2,28 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "drepMapSize": {
-                "type": "string"
+            "chainDensity": {
+                "type": "number"
+            },
+            "delegMapSize": {
+                "type": "integer"
             },
             "kind": {
                 "type": "string"
             },
             "slot": {
                 "type": "integer"
+            },
+            "utxoSize": {
+                "type": "integer"
             }
         },
         "required": [
-            "drepMapSize",
+            "chainDensity",
+            "delegMapSize",
             "kind",
-            "slot"
+            "slot",
+            "utxoSize"
         ],
         "type": "object"
     },

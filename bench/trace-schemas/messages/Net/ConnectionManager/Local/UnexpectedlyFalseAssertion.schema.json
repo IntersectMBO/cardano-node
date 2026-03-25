@@ -7,15 +7,11 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "remoteSt": {
-                "type": "string"
             }
         },
         "required": [
             "info",
-            "kind",
-            "remoteSt"
+            "kind"
         ],
         "type": "object"
     },

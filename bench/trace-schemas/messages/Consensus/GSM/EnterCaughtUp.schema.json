@@ -1,4 +1,24 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "currentSelection": {
+                "additionalProperties": true,
+                "type": "object"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "peerNumber": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "currentSelection",
+            "kind",
+            "peerNumber"
+        ],
+        "type": "object"
+    },
     "ns": "Consensus.GSM.EnterCaughtUp"
 }

@@ -2,10 +2,6 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "err": {
-                "additionalProperties": true,
-                "type": "object"
-            },
             "kind": {
                 "type": "string"
             },
@@ -13,16 +9,15 @@
                 "additionalProperties": true,
                 "type": "object"
             },
-            "tx": {
+            "txs": {
                 "additionalProperties": true,
                 "type": "object"
             }
         },
         "required": [
-            "err",
             "kind",
             "mempoolSize",
-            "tx"
+            "txs"
         ],
         "type": "object"
     },

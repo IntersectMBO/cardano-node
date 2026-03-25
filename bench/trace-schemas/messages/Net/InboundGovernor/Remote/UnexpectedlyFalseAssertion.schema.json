@@ -2,9 +2,6 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "info": {
-                "type": "string"
-            },
             "kind": {
                 "type": "string"
             },
@@ -13,7 +10,6 @@
             }
         },
         "required": [
-            "info",
             "kind",
             "remoteSt"
         ],

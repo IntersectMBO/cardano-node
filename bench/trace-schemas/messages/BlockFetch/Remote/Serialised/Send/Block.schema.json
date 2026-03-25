@@ -5,29 +5,17 @@
             "agency": {
                 "type": "string"
             },
-            "blockHash": {
-                "type": "string"
-            },
-            "blockSize": {
-                "type": "string"
-            },
             "bytes": {
                 "type": "string"
             },
             "kind": {
                 "type": "string"
-            },
-            "txIds": {
-                "type": "string"
             }
         },
         "required": [
             "agency",
-            "blockHash",
-            "blockSize",
             "bytes",
-            "kind",
-            "txIds"
+            "kind"
         ],
         "type": "object"
     },

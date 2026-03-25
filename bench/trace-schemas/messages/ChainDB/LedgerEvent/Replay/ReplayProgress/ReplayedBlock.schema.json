@@ -9,8 +9,7 @@
                 "$ref": "types/RealPoint.schema.json"
             },
             "tip": {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "types/Point.schema.json"
             }
         },
         "required": [

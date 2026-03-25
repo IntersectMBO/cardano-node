@@ -1,4 +1,15 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "Consensus.GSM.InitializedInCaughtUp"
 }

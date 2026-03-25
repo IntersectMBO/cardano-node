@@ -5,16 +5,13 @@
             "kind": {
                 "type": "string"
             },
-            "msg": {
-                "type": "string"
-            },
             "state": {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
             }
         },
         "required": [
             "kind",
-            "msg",
             "state"
         ],
         "type": "object"
