@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-02-17T10:15:41Z
-  , cardano-haskell-packages 2026-03-23T18:21:55Z
+  , hackage.haskell.org 2026-03-26T20:21:33Z
+  , cardano-haskell-packages 2026-03-26T05:43:27Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -74,14 +74,11 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
 
-if impl(ghc >= 9.12)
-  allow-newer:
-    -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
-    , io-classes:time
-    , ouroboros-network:time
-    , nothunks:time
-    , network-mux:time
-    , cardano-ping:time
+-- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
+-- that can be worked around with the following allow-newer stanzas
+allow-newer:
+  , io-sim:time
+  , io-classes:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -92,8 +89,8 @@ if impl(ghc >= 9.12)
   source-repository-package
     type: git
     location: https://github.com/google/proto-lens
-    tag: 20de5227947b0c37dd6852dcc6f2db1cd5889cee
-    --sha256: sha256-sJ5nxf9SECMehN9TxT712DO9gpQLgguH1opC3zvgZyA=
+    tag: 13ce67409ad87e8c29eea58b31aa37f44e82457c
+    --sha256: sha256-8XPGLheOo5ZStL7YD5x29GechWFjubw+in5GsUrKWPc=
     subdir:
       discrimination-ieee754
       proto-lens-arbitrary
