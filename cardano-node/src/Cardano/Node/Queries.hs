@@ -253,7 +253,8 @@ instance (Ledger.EraAccounts era, Shelley.EraCertState era) => LedgerQueries (Sh
       )
     . Shelley.shelleyLedgerState
   ledgerDelegMapSize =
-      Map.foldl' (\acc -> maybe acc (const $ 1 + acc) . (^. Ledger.stakePoolDelegationAccountStateL)) 0
+      -- Map.foldl' (\acc -> maybe acc (const $ 1 + acc) . (^. Ledger.stakePoolDelegationAccountStateL)) 0
+      Map.foldl' (\acc -> const $ 1 + acc) 0
     . (^. Shelley.nesEsL
        .  Shelley.esLStateL
        .  Shelley.lsCertStateL
