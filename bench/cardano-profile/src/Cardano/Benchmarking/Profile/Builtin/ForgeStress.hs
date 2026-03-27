@@ -54,9 +54,8 @@ profilesNoEraForgeStress :: [Types.Profile]
 profilesNoEraForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
-      -- TODO: Bump all to genesisVariantVoltaire; however, except for the solo profile, forge-stress works better with a smaller block size (64k)
-      n1 = V.genesisVariantPreVoltaire  . V.hosts 1
-      n3 = V.genesisVariant300          . V.hosts 3
+      n1 = V.genesisVariantVoltaire     . V.hosts 1
+      n3 = V.genesisVariantVoltaire     . V.hosts 3 . P.blocksize64k
       v6 = V.genesisVariantVoltaire     . V.hosts 6 . P.blocksize64k
   in [
   -- 1 node versions (non-pre).
