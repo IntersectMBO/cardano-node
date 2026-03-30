@@ -240,10 +240,11 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      :: ShelleyCredentials
      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
-     mkPraosLeaderCredentials
-       <$> parseEnvelope scCert
-       <*> parseEnvelope scVrf
-       <*> parseEnvelope scKes
+     OperationalCertificate opCert vkey <- parseEnvelope scCert
+     KesSigningKey kesKey <- parseEnvelope scKes
+     let credentialsSource = PraosCredentialsUnsound opCert kesKey
+     vrfSKey <- parseEnvelope scVrf
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey
 
    readBulkFile
      :: Maybe FilePath
