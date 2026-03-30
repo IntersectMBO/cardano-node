@@ -1,12 +1,18 @@
 # GhciSchemaGen overview
 
-'nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.json --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md'
+`make trace-schemas-regenerate`
 
-'nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs''
+or the step-by-step commands:
 
-'nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"'
+`nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.yaml --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md`
 
-'nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"'
+`nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'`
+
+`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --verbose"`
+
+`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"`
+
+`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"`
 
 ## What it does
 
@@ -64,3 +70,15 @@
 - The Haskell script controls discovery and execution; the actual JSON Schema validation is delegated to `check-jsonschema` via `nix run nixpkgs#check-jsonschema`.
 - Run it with `runghc -package-env - ...` so the standalone script does not inherit the repo's package environment.
 - `ValidateTraceLog.hs` validates a real cardano-node log file: it skips the non-JSON preamble, validates the common envelope against `TraceMessage.schema.json`, validates known namespaces against the matching schema in `bench/trace-schemas/messages`, and reports namespaces that do not have a corresponding message schema.
+
+## Human changes that survive regeneration
+
+- Treat `bench/trace-schemas/messages` and `bench/trace-schemas/types` as generated outputs.
+- Put manual edits in sidecar override patches under `bench/trace-schemas/overrides`.
+- Apply overrides with `ApplySchemaOverrides.hs` after every generation.
+- Enforce in CI with:
+  - `make trace-schemas-regenerate`
+  - `make trace-schemas-overrides-check`
+  - `make trace-schemas-overrides-coverage RANGE=origin/master...HEAD`
+
+See `bench/trace-schemas/overrides/README.md` for override format and file layout.
