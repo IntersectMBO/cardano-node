@@ -32,8 +32,6 @@ defaultCardanoConfig = emptyTraceConfig {
           [ ConfSeverity (SeverityF (Just Warning))])
      ,(["Net", "ConnectionManager", "Remote"],
           [ ConfSeverity (SeverityF (Just Info))])
-     ,(["Net", "Subscription", "DNS"],
-          [ ConfSeverity (SeverityF (Just Info))])
      ,(["Startup", "DiffusionInit"],
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Net", "ErrorPolicy"],
@@ -43,10 +41,6 @@ defaultCardanoConfig = emptyTraceConfig {
      ,(["Forge", "StateInfo"],
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Net", "InboundGovernor", "Remote"],
-          [ ConfSeverity (SeverityF (Just Info))])
-     ,(["Net", "Subscription", "IP"],
-          [ ConfSeverity (SeverityF (Just Info))])
-     ,(["Net", "ErrorPolicy", "Local"],
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Mempool"],
           [ ConfSeverity (SeverityF (Just Info))])
