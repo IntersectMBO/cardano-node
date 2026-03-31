@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-03-26T20:21:33Z
-  , cardano-haskell-packages 2026-03-26T05:43:27Z
+  , cardano-haskell-packages 2026-03-31T05:31:58Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -104,3 +104,11 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus/
+  tag: 6271ae0ba88a2036231ea9c2991c2fb458bbd299
+  --sha256: sha256-FKaTzeSZcpugdBD/6wYhqKLUDv43q1bTjBETBI526zU=
+  subdir:
+    .
