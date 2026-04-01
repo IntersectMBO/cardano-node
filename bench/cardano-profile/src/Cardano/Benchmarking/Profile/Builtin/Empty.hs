@@ -48,7 +48,10 @@ baseNoDataset =
 
 -- TODO: Move to `base` when "default*" and "oldtracing" genesis are the same.
 genesis :: Types.Profile -> Types.Profile
-genesis = V.genesisVariant300
+genesis t@Types.Profile{Types.era}
+  | era >= Types.Conway   = V.genesisVariantVoltaire    . P.blocksize64k $ t
+  | era >= Types.Babbage  = V.genesisVariantPreVoltaire . P.blocksize64k $ t
+  | otherwise             = V.genesisVariant300 t
 
 --------------------------------------------------------------------------------
 
@@ -143,12 +146,12 @@ profilesNoEraEmpty = map baseNoDataset
   -- ci-test-hydra: FixedLoaded and "--shutdown-on-block-synced 3" with 2 nodes.
   ------------------------------------------------------------------------------
   let ciTestHydra =
-          P.empty & V.datasetEmpty . V.genesisVariantPreVoltaire . ciTestDuration
+          P.empty & V.datasetEmpty . genesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
         . P.analysisSizeSmall
   in [
      -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
-    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.blocksize64k
+    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing
   ]
   ++
   ------------------------------------------------------------------------------
