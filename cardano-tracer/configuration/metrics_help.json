@@ -104,5 +104,6 @@
   "systemStartTime": "The UTC time this node was started.",
   "tipBlock": "Values for hash, parent hash and issuer verification key hash",
   "txsInMempool": "Transactions in mempool",
-  "txsSyncDuration": "Time to sync the mempool in ms after block adoption"
+  "txsSyncDuration": "Latest time to sync the mempool in ms after block adoption",
+  "txsSyncDurationTotal": "Cumulative time spent syncing the mempool in ms after block adoption"
 }

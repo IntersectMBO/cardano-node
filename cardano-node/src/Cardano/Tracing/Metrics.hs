@@ -17,6 +17,7 @@ module Cardano.Tracing.Metrics
   , mapForgingCurrentThreadStats
   , mapForgingCurrentThreadStats_
   , mapForgingStatsTxsProcessed
+  , mapForgingStatsTxsSyncDuration
   , mkForgingStats
   , threadStatsProjection
   ) where
@@ -38,6 +39,8 @@ data ForgingStats
   = ForgingStats
   { fsTxsProcessedNum :: !(IORef Int)
     -- ^ Transactions removed from mempool.
+  , fsTxsSyncDuration :: !(IORef Int)
+    -- ^ Cumulative mempool sync duration in milliseconds.
   , fsState           :: !(TVar (Map ThreadId (TVar ForgeThreadStats)))
   , fsBlocksUncoupled :: !(TVar Int64)
     -- ^ Blocks forged since last restart not on the current chain
@@ -63,6 +66,7 @@ mkForgingStats :: IO ForgingStats
 mkForgingStats =
   ForgingStats
     <$> newIORef 0
+    <*> newIORef 0
     <*> newTVarIO mempty
     <*> newTVarIO 0
 
@@ -73,6 +77,14 @@ mapForgingStatsTxsProcessed ::
 mapForgingStatsTxsProcessed fs f =
   atomicModifyIORef' (fsTxsProcessedNum fs) $
     \txCount -> join (,) $ f txCount
+
+mapForgingStatsTxsSyncDuration ::
+     ForgingStats
+  -> (Int -> Int)
+  -> IO Int
+mapForgingStatsTxsSyncDuration fs f =
+  atomicModifyIORef' (fsTxsSyncDuration fs) $
+    \syncMs -> join (,) $ f syncMs
 
 mapForgingCurrentThreadStats ::
      ForgingStats
