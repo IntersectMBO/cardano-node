@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-03-26T20:21:33Z
-  , cardano-haskell-packages 2026-03-30T16:24:57Z
+  , cardano-haskell-packages 2026-04-01T21:20:01Z
 
 active-repositories:
   , :rest
@@ -50,7 +50,7 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node == 0.4.0.0
+extra-packages: alex, dmq-node >= 0.4.1.0
 
 program-options
   ghc-options: -Werror
