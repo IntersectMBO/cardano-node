@@ -106,7 +106,7 @@ import qualified Ouroboros.Network.PeerSelection.Governor.Types as Governor
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.TxSubmission.Inbound.V2
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Concurrent (MVar, modifyMVar_)
@@ -840,7 +840,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
               TraceLabelPeer _ (TraceTxInboundAddedToMempool _ _) -> return ()
               TraceLabelPeer _ (TraceTxInboundRejectedFromMempool _ _) -> return ()
               TraceLabelPeer _ (TraceTxInboundError _) -> return ()
-              TraceLabelPeer _ (TraceTxInboundDecision _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundRequestTxs _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
