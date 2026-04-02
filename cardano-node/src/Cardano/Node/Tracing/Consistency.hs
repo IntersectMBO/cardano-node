@@ -94,7 +94,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Tracing.PeerSelection ()
-import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import qualified Codec.CBOR.Term as CBOR
