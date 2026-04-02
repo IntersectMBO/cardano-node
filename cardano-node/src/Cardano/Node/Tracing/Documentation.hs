@@ -108,7 +108,7 @@ import           Ouroboros.Network.Tracing ()
 import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
 import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
-import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import           Control.Monad (forM_)

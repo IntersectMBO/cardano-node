@@ -89,9 +89,9 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.TxSubmission.Inbound.V2 (ProcessedTxCount (..),
-                   TraceTxLogic (..), TraceTxSubmissionInbound (..), TxDecision (..),
-                   TxSubmissionCounters (..), TxsToMempool (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (ProcessedTxCount (..),
+                   TraceTxLogic (..), TraceTxSubmissionInbound (..),
+                   TxSubmissionCounters (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import           Control.Exception (Exception (..))
@@ -199,7 +199,7 @@ instance HasSeverityAnnotation (TraceTxSubmissionInbound txid tx) where
   getSeverityAnnotation TraceTxInboundAddedToMempool {} = Debug
   getSeverityAnnotation TraceTxInboundRejectedFromMempool {} = Debug
   getSeverityAnnotation TraceTxInboundError {} = Debug
-  getSeverityAnnotation TraceTxInboundDecision {} = Debug
+  getSeverityAnnotation TraceTxInboundRequestTxs {} = Debug
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionOutbound txid tx)
@@ -508,7 +508,7 @@ instance (ToObject peer, ToObject (AnyMessage (TraceTxSubmissionInbound (GenTxId
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
-instance (ToObject peer, ToJSON txid, ToObject (TxDecision txid tx))
+instance (ToObject peer, ToJSON txid)
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionInbound txid tx)) where
   trTransformer = trStructured
 
@@ -555,9 +555,9 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
-instance (Show tx, Show txid, ToJSON txid, ToObject (TxDecision txid tx)) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
+instance (Show txid, ToJSON txid) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
   trTransformer = trStructuredText
-instance (Show tx, Show txid) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
+instance Show txid => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
   formatText a _ = pack (show a)
 
 
@@ -685,7 +685,7 @@ instance Show addr
 instance (Show txid, Show tx, Show addr)
       => Transformable Text IO (TraceTxLogic txid tx addr) where
   trTransformer = trStructuredText
-instance (Show txid, Show tx, Show addr)
+instance (Show txid, Show tx)
       => HasTextFormatter (TraceTxLogic txid tx addr) where
   formatText a _ = pack (show a)
 
@@ -697,7 +697,7 @@ instance HasTextFormatter TxSubmissionCounters where
 instance (Show txid, Show tx, Show addr, Show peer, ToObject peer)
       => Transformable Text IO (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
   trTransformer = trStructuredText
-instance (Show txid, Show tx, Show addr, Show peer)
+instance (Show txid, Show tx, Show peer)
       => HasTextFormatter (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
   formatText a _ = pack (show a)
 
@@ -1236,7 +1236,7 @@ instance ToObject (Stateful.AnyMessage ps f)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 
-instance (ToJSON txid, ToObject (TxDecision txid tx)) => ToObject (TraceTxSubmissionInbound txid tx) where
+instance ToJSON txid => ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected txids) =
     mconcat
       [ "kind" .= String "TxSubmissionCollected"
@@ -1278,9 +1278,10 @@ instance (ToJSON txid, ToObject (TxDecision txid tx)) => ToObject (TraceTxSubmis
       [ "kind" .= String "TraceTxInboundError"
       , "reason" .= displayException err
       ]
-  toObject verb (TraceTxInboundDecision decision) = mconcat
-      [ "kind" .= String "TraceTxInboundDecision"
-      , "reason" .= toObject verb decision
+  toObject _verb (TraceTxInboundRequestTxs txids) = mconcat
+      [ "kind" .= String "TraceTxInboundRequestTxs"
+      , "count" .= toJSON (length txids)
+      , "txIds" .= toJSON txids
       ]
 
 -- TODO: use the json encoding of transactions
@@ -2350,20 +2351,14 @@ instance HasSeverityAnnotation TxSubmissionCounters where
 instance ToObject TxSubmissionCounters where
   toObject _ TxSubmissionCounters {..} =
     mconcat [ "kind" .= String "TxSubmissionCounters"
-            , "numOfOutstandingTxIds" .= numOfOutstandingTxIds
-            , "numOfBufferedTxs" .= numOfBufferedTxs
-            , "numOfInSubmissionToMempoolTxs" .= numOfInSubmissionToMempoolTxs
-            , "numOfTxIdsInflight" .= numOfTxIdsInflight
+            , "txIdMessagesSent" .= txIdMessagesSent
+            , "txIdsRequested" .= txIdsRequested
+            , "txIdRepliesReceived" .= txIdRepliesReceived
+            , "txIdsReceived" .= txIdsReceived
+            , "txMessagesSent" .= txMessagesSent
+            , "txsRequested" .= txsRequested
+            , "txRepliesReceived" .= txRepliesReceived
+            , "txsReceived" .= txsReceived
+            , "txsOmitted" .= txsOmitted
+            , "lateBodies" .= lateBodies
             ]
-
-instance Show txid => ToObject (TxDecision txid tx) where
-  toObject verb decision =
-       ("kind" .= String "TraceTxDecisions")
-    <> case verb of
-         MaximalVerbosity -> "decision" .=
-           let g (TxsToMempool txs) = map (show . fst) txs
-               f TxDecision {..} =
-                 [( fromIntegral txdTxIdsToAcknowledge :: Int, fromIntegral txdTxIdsToRequest :: Int
-                  , map (first show) . Map.toList $ txdTxsToRequest, g txdTxsToMempool)]
-            in f decision
-         _otherwise -> mempty
