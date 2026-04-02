@@ -4,15 +4,15 @@
 
 or the step-by-step commands:
 
-`nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.yaml --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md`
+`GHC_ENVIRONMENT=- nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.yaml --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md`
 
-`nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'`
+`nix develop -c bash -lc 'GHC_ENVIRONMENT=- GHC_LIBDIR=$(ghc --print-libdir) runghc -package-env - bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'`
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --verbose"`
+`nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --verbose"`
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"`
+`nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"`
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"`
+`nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"`
 
 ## What it does
 

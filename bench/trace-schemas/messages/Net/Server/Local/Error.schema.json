@@ -1,6 +1,7 @@
 {
     "data": {
         "additionalProperties": true,
+        "description": "Local server accept loop error payload",
         "properties": {
             "kind": {
                 "type": "string"
@@ -11,7 +12,7 @@
         },
         "required": [
             "kind",
-            "reason"
+            "error"
         ],
         "type": "object"
     },

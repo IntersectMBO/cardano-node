@@ -108,3 +108,11 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: /home/yupanqui/IO/hermod-tracing
+  tag: 772f8c4d87427ac8fd4622f90126bd8d3edae87f
+  --sha256: sha256-CQF5uC0KbwSMdrQ8DSjnkkgB/rISkweiE7R9DgWAyZw=
+  subdir:
+    trace-dispatcher

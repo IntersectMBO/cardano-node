@@ -3,6 +3,10 @@
         "additionalProperties": true,
         "properties": {
             "kind": {
+                "enum": [
+                    "StartupInfo",
+                    "StartupInfoLegacy"
+                ],
                 "type": "string"
             },
             "localSocket": {
