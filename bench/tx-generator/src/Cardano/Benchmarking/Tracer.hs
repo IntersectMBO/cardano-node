@@ -182,8 +182,8 @@ configSilent :: ConfigOption
 configSilent = ConfSeverity (SeverityF Nothing)
 
 initialTraceConfig :: TraceConfig
-initialTraceConfig = TraceConfig {
-      tcOptions = Map.fromList
+initialTraceConfig = emptyTraceConfig 
+    { tcOptions = Map.fromList
           [ ([], [configSilent])
           , setMaxDetail TracerNameBench
           , ([TracerNameSubmitN2N], [configSilent])
@@ -191,10 +191,6 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail TracerNameSubmit
           ]
     , tcForwarder = Just defaultForwarder {tofQueueSize = 4096}
-    , tcNodeName = Nothing
-    , tcResourceFrequency = Nothing
-    , tcMetricsPrefix = Nothing
-    , tcLedgerMetricsFrequency = Nothing
     }
   where
     setMaxDetail :: Text -> ([Text], [ConfigOption])
