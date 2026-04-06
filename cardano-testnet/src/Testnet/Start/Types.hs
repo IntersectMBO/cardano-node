@@ -15,7 +15,6 @@ module Testnet.Start.Types
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
-  , TxGeneratorSupport(..)
   , RpcSupport(..)
   , cardanoNumPools
   , cardanoNumRelays
@@ -178,11 +177,6 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   , createEnvCreateEnvOptions :: CreateEnvOptions
   } deriving (Eq, Show)
 
-data TxGeneratorSupport
-  = NoTxGeneratorSupport
-  | GenerateTemplateConfigForTxGenerator
-  deriving (Eq, Show)
-
 data RpcSupport
   = RpcDisabled
   | RpcEnabled
@@ -199,7 +193,6 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoEnableTxGenerator :: TxGeneratorSupport -- ^ Options regarding support for the tx-generator on the testnet (config generation, execution, etc.)
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   , cardanoEnableRpc :: RpcSupport
   -- ^ Whether to enable gRPC endpoints in all testnet nodes
@@ -238,7 +231,6 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
-    , cardanoEnableTxGenerator = NoTxGeneratorSupport
     , cardanoOutputDir = def
     , cardanoEnableRpc = RpcDisabled
     , cardanoKESSource = def -- TODO(10.7): use default value
