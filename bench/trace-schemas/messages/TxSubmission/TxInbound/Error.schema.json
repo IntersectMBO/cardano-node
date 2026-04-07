@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "error": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "error",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "TxSubmission.TxInbound.Error"
 }

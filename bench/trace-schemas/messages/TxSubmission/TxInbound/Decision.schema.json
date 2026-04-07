@@ -1,4 +1,19 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "decision": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "decision",
+            "kind"
+        ],
+        "type": "object"
+    },
     "ns": "TxSubmission.TxInbound.Decision"
 }

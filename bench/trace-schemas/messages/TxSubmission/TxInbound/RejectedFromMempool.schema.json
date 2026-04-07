@@ -1,4 +1,27 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "count": {
+                "type": "string"
+            },
+            "dt": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "txIds": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "count",
+            "dt",
+            "kind",
+            "txIds"
+        ],
+        "type": "object"
+    },
     "ns": "TxSubmission.TxInbound.RejectedFromMempool"
 }

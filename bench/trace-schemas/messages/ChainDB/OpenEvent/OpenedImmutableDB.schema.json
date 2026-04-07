@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "immtip": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

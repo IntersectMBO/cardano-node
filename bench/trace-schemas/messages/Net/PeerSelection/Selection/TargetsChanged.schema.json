@@ -7,15 +7,11 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "previous": {
-                "type": "string"
             }
         },
         "required": [
             "current",
-            "kind",
-            "previous"
+            "kind"
         ],
         "type": "object"
     },

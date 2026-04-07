@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "blockNo": {
-                "type": "integer"
+                "type": "string"
             },
             "headerHash": {
                 "type": "string"
@@ -12,7 +12,7 @@
                 "type": "string"
             },
             "tokenAdded": {
-                "type": "boolean"
+                "type": "string"
             }
         },
         "required": [

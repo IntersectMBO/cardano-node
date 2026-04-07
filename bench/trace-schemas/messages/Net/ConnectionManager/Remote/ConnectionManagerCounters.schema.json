@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "state": {
-                "$ref": "types/ConnectionManagerCounters.schema.json"
+                "type": "string"
             }
         },
         "required": [

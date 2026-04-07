@@ -9,8 +9,7 @@
                 "type": "string"
             },
             "remoteAddress": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "state": {
                 "type": "string"

@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "instr": {
-                "$ref": "types/JumpInstruction.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

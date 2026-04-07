@@ -10,7 +10,7 @@
                 "type": "object"
             },
             "reason": {
-                "$ref": "types/TraceCsjReason.schema.json"
+                "type": "string"
             }
         },
         "required": [

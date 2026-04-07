@@ -12,16 +12,13 @@
                 "type": "string"
             },
             "nodeAddresses": {
-                "items": {
-                    "type": "string"
-                },
-                "type": "array"
+                "type": "string"
             },
             "nodeToClientVersions": {
-                "type": "array"
+                "type": "string"
             },
             "nodeToNodeVersions": {
-                "type": "array"
+                "type": "string"
             }
         },
         "required": [

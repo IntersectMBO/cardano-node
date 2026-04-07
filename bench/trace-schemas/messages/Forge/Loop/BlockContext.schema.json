@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "current slot": {
-                "type": "integer"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
@@ -12,7 +12,7 @@
                 "type": "string"
             },
             "tipBlockNo": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

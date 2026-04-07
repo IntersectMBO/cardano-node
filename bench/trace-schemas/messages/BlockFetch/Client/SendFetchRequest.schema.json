@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "deltaq": {
-                "$ref": "types/Ouroboros.Network.DeltaQ.PeerGSV.schema.json"
+                "type": "string"
             },
             "head": {
                 "type": "string"
@@ -12,7 +12,7 @@
                 "type": "string"
             },
             "length": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

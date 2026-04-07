@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "fresh": {
-                "$ref": "types/Set.Set.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "matured": {
-                "$ref": "types/Set.Set.schema.json"
+                "type": "string"
             }
         },
         "required": [

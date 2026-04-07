@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "dnsMap": {
-                "$ref": "types/Map.Map.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

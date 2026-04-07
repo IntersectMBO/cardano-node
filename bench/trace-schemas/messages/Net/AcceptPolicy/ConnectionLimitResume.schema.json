@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "numberOfConnection": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

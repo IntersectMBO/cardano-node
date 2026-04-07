@@ -2,11 +2,15 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "agreedOptions": {},
+            "agreedOptions": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
-            "versionNumber": {}
+            "versionNumber": {
+                "type": "string"
+            }
         },
         "required": [
             "agreedOptions",

@@ -23,7 +23,8 @@ or the step-by-step commands:
 ## High-level flow
 
 1. **Find relevant Haskell files**
-   - Scans `cardano-node/src`, `trace-dispatcher/src`, `trace-forward/src`, `trace-resources/src`.
+   - Scans `cardano-node/src`, `cardano-submit-api/src`, `cardano-tracer/src`, `trace-dispatcher/src`, `trace-forward/src`, `trace-resources/src`.
+   - Warns when any configured source directory is missing, instead of silently ignoring it.
    - Keeps only `.hs` files that contain `forMachine` or `namespaceFor`.
 
 2. **Build namespace mapping**

@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "limit": {
-                "$ref": "types/ShutdownOn.schema.json"
+                "type": "string"
             }
         },
         "required": [

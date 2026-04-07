@@ -7,9 +7,6 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "txIds": {
-                "type": "string"
             }
         },
         "required": [

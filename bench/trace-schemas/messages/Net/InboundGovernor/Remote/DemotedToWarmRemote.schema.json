@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

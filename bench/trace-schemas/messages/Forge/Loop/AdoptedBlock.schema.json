@@ -5,12 +5,14 @@
             "blockHash": {
                 "type": "string"
             },
-            "blockSize": {},
+            "blockSize": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
             "slot": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

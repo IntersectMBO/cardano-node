@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "mempoolSize": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "txs": {
                 "additionalProperties": true,

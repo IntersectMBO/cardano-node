@@ -9,7 +9,7 @@
                 "type": "string"
             },
             "remoteAddress": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             }
         },
         "required": [

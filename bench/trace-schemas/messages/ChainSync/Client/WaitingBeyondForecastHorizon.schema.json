@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "slotNo": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

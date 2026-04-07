@@ -6,11 +6,10 @@
                 "type": "string"
             },
             "reason": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "slot": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

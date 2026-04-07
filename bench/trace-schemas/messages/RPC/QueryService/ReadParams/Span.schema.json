@@ -1,4 +1,15 @@
 {
-    "data": {},
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "queryName": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "queryName"
+        ],
+        "type": "object"
+    },
     "ns": "RPC.QueryService.ReadParams.Span"
 }

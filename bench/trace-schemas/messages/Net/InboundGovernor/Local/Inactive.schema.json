@@ -3,10 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "fresh": {
-                "items": {
-                    "$ref": "types/Control.Monad.Class.MonadTime.SI.Time.schema.json"
-                },
-                "type": "array"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

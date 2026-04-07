@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "counters": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

@@ -3,7 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "count": {
-                "type": "integer"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "peerStatusChangeType": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.PeerStateActions.PeerStatusChangeType.schema.json"
+                "type": "string"
             }
         },
         "required": [

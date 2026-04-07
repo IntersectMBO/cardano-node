@@ -3,16 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "miniProtocolNum": {
-                "$ref": "types/Network.Mux.Types.MiniProtocolNum.schema.json"
+                "type": "string"
             },
             "reason": {
-                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+                "type": "string"
             }
         },
         "required": [

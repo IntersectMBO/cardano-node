@@ -6,10 +6,10 @@
                 "type": "string"
             },
             "peerStatusChangeType": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.PeerStateActions.PeerStatusChangeType.schema.json"
+                "type": "string"
             },
             "reason": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.PeerStateActions.FailureType.schema.json"
+                "type": "string"
             }
         },
         "required": [

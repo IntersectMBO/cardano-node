@@ -3,15 +3,19 @@
         "additionalProperties": true,
         "properties": {
             "count": {
-                "type": "integer"
+                "type": "string"
             },
             "kind": {
+                "type": "string"
+            },
+            "txIds": {
                 "type": "string"
             }
         },
         "required": [
             "count",
-            "kind"
+            "kind",
+            "txIds"
         ],
         "type": "object"
     },

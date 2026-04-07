@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "delay": {
-                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "numberOfConnection": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

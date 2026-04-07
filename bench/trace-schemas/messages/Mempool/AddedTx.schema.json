@@ -6,12 +6,10 @@
                 "type": "string"
             },
             "mempoolSize": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "tx": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

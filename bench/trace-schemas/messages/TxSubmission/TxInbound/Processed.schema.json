@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "accepted": {
-                "$ref": "types/ProcessedTxCount.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "rejected": {
-                "$ref": "types/ProcessedTxCount.schema.json"
+                "type": "string"
             }
         },
         "required": [

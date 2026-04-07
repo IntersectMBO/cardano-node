@@ -3,11 +3,10 @@
         "additionalProperties": true,
         "properties": {
             "age": {
-                "$ref": "types/DurationFromNow.schema.json"
+                "type": "string"
             },
             "currentSelection": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

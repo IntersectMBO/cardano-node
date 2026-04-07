@@ -9,13 +9,13 @@
                 "type": "string"
             },
             "mempoolSlot": {
-                "type": "integer"
+                "type": "string"
             },
             "prev": {
                 "type": "string"
             },
             "slot": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

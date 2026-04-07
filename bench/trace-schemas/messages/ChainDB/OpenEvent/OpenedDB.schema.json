@@ -3,15 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "immtip": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "tip": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

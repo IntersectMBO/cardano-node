@@ -3,10 +3,10 @@
         "additionalProperties": true,
         "properties": {
             "diffTime": {
-                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
+                "type": "string"
             },
             "domainAddress": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.RelayAccessPoint.RelayAccessPoint.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

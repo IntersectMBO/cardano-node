@@ -6,10 +6,10 @@
                 "type": "string"
             },
             "slot": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             },
             "tip": {
-                "$ref": "types/Point.schema.json"
+                "type": "string"
             }
         },
         "required": [

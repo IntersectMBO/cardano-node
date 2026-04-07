@@ -9,7 +9,7 @@
                 "type": "string"
             },
             "queueSize": {
-                "$ref": "types/Enclosing'.schema.json"
+                "type": "string"
             },
             "round": {
                 "type": "string"

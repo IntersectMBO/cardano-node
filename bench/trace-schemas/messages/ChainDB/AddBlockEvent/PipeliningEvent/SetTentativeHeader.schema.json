@@ -9,7 +9,7 @@
                 "type": "string"
             },
             "risingEdge": {
-                "$ref": "types/Enclosing.schema.json"
+                "type": "string"
             }
         },
         "required": [

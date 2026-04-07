@@ -6,8 +6,7 @@
                 "type": "string"
             },
             "snapshot": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

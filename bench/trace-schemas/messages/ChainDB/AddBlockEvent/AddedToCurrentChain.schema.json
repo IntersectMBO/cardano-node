@@ -3,30 +3,19 @@
         "additionalProperties": true,
         "properties": {
             "events": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "newSuffixSelectView": {
-                "additionalProperties": true,
-                "type": "object"
-            },
-            "newTipSelectView": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "newtip": {
                 "type": "string"
             },
             "oldSuffixSelectView": {
-                "additionalProperties": true,
-                "type": "object"
-            },
-            "oldTipSelectView": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

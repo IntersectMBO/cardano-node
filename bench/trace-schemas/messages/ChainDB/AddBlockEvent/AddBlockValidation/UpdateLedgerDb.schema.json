@@ -3,16 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "currentBlock": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "startingBlock": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             },
             "targetBlock": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             }
         },
         "required": [

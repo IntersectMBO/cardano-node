@@ -6,19 +6,16 @@
                 "type": "string"
             },
             "localRoots": {
-                "items": {
-                    "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.HotValency.schema.json"
-                },
-                "type": "array"
+                "type": "string"
             },
             "peerSnapshotFile": {
                 "type": "string"
             },
             "publicRoots": {
-                "$ref": "types/Map.Map.schema.json"
+                "type": "string"
             },
             "useLedgerAfter": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.LedgerPeers.Type.UseLedgerPeers.schema.json"
+                "type": "string"
             }
         },
         "required": [

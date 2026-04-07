@@ -6,13 +6,13 @@
                 "type": "string"
             },
             "slot": {
-                "type": "integer"
+                "type": "string"
             },
             "tip": {
                 "type": "string"
             },
             "tipBlockNo": {
-                "type": "integer"
+                "type": "string"
             }
         },
         "required": [

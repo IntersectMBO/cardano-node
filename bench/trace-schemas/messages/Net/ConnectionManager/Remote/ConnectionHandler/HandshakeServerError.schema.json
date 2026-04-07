@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "reason": {
-                "$ref": "types/Ouroboros.Network.Protocol.Handshake.HandshakeException.schema.json"
+                "type": "string"
             }
         },
         "required": [

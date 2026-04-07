@@ -7,7 +7,7 @@
                 "type": "object"
             },
             "curChain": {
-                "$ref": "types/AF.AnchoredFragment.schema.json"
+                "type": "string"
             },
             "head": {
                 "additionalProperties": true,

@@ -3,19 +3,19 @@
         "additionalProperties": true,
         "properties": {
             "coldPeers": {
-                "$ref": "types/Counters.schema.json"
+                "type": "string"
             },
             "hotPeers": {
-                "$ref": "types/Counters.schema.json"
+                "type": "string"
             },
             "idlePeers": {
-                "$ref": "types/Counters.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "warmPeers": {
-                "$ref": "types/Counters.schema.json"
+                "type": "string"
             }
         },
         "required": [

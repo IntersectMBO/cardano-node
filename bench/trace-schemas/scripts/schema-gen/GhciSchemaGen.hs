@@ -13,20 +13,21 @@ import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
 import Data.Char (isAlphaNum, isLower, isUpper, isSpace, toLower)
 import Data.List (elemIndex, isPrefixOf, isSuffixOf, sortOn)
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (catMaybes, listToMaybe, mapMaybe)
 import System.Directory
 import System.Environment (getArgs)
 import System.FilePath
 import System.Process
 import System.Exit
 import System.IO
+import Data.IORef
 import Control.Exception (catch, IOException)
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
-import Control.Monad (forM, guard)
+import Control.Monad (forM, guard, unless, when)
 
 --------------------------------------------------------------------------------
 -- Entry point / high-level flow
@@ -35,12 +36,29 @@ import Control.Monad (forM, guard)
 rootDirs :: [FilePath]
 rootDirs =
   [ "cardano-node/src"
-  , "trace-dispatcher/src"
+  , "cardano-submit-api/src"
+  , "cardano-tracer/src"
+  , "../ouroboros-network/ouroboros-network/lib"
+  , "../ouroboros-network/ouroboros-network/tracing"
+  , "../ouroboros-network/ouroboros-network/protocols/lib"
+  , "../ouroboros-network/ouroboros-network/api/lib"
+  , "../ouroboros-network/network-mux/src"
+  , "../ouroboros-network/cardano-diffusion/lib"
+  , "../ouroboros-network/cardano-diffusion/tracing"
+  , "../ouroboros-network/cardano-diffusion/protocols/lib"
+  , "../ouroboros-network/cardano-diffusion/api/lib"
+  , "../ouroboros-network/cardano-diffusion/subscription"
+  , "../ouroboros-consensus/ouroboros-consensus/src/ouroboros-consensus"
+  , "../ouroboros-consensus/ouroboros-consensus-protocol/src/ouroboros-consensus-protocol"
+  , "../ouroboros-consensus/ouroboros-consensus-diffusion/src/ouroboros-consensus-diffusion"
+  , "../ouroboros-consensus/ouroboros-consensus-cardano/src"
+  , "../hermod-tracing/trace-dispatcher/src"
   , "trace-forward/src"
   , "trace-resources/src"
   ]
 
 type ConstructorName = String
+type TypeName = String
 type NamespaceParts = [String]
 type DetailLevel = String
 type HelperFieldMap = Map.Map String (Map.Map String String)
@@ -72,14 +90,19 @@ data Config = Config
 
 main :: IO ()
 main = do
+  warningsRef <- newIORef []
+  let emitWarning msg = do
+        hPutStrLn stderr msg
+        modifyIORef' warningsRef (<> [msg])
   config <- parseArgs =<< getArgs
   let nsFile = "bench/trace-schemas/newNamespaces.txt"
   putStrLn $ "Reading namespaces from " <> nsFile
   namespaces <- filter (not . null) . map T.unpack . T.lines <$> T.readFile nsFile
   putStrLn $ "Loaded " <> show (length namespaces) <> " namespace(s)"
 
+  validatedRootDirs <- validateSourceDirs emitWarning rootDirs
   putStrLn "Collecting Haskell source files..."
-  hsFiles <- collectTargets rootDirs
+  hsFiles <- collectTargets validatedRootDirs
   putStrLn $ "Found " <> show (length hsFiles) <> " candidate source file(s)"
 
   -- Build constructor -> namespace map from namespaceFor clauses
@@ -122,9 +145,18 @@ main = do
         putStrLn $
           "[schema " <> show idx <> "/" <> show (length namespaces) <> "] "
             <> ns
-        updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes ns)
+        updateSchemaForNamespaceWithWarning emitWarning config msgOutDir typeOutDir nsMap fieldVarMap varTypes ns)
     (zip [1 :: Int ..] namespaces)
   putStrLn "Schema generation complete."
+  warnings <- readIORef warningsRef
+  unless (null warnings) $ do
+    let uniqueWarnings = nubPreserve warnings
+    putStrLn ""
+    putStrLn $
+      "Schema generation warnings summary (" <> show (length uniqueWarnings) <> " unique warning(s)):"
+    mapM_ putStrLn uniqueWarnings
+  putStrLn $
+    "Schema generation problems: " <> show (length (nubPreserve warnings))
 
 parseArgs :: [String] -> IO Config
 parseArgs args =
@@ -152,6 +184,19 @@ printHelp =
 
 foldl' :: (b -> a -> b) -> b -> [a] -> b
 foldl' f z xs = go z xs where go acc [] = acc; go acc (y:ys) = let acc' = f acc y in acc' `seq` go acc' ys
+
+validateSourceDirs :: (String -> IO ()) -> [FilePath] -> IO [FilePath]
+validateSourceDirs emitWarning dirs = do
+  dirPresence <- forM dirs $ \dir -> do
+    exists <- doesDirectoryExist dir
+    pure (dir, exists)
+  let missingDirs = [dir | (dir, False) <- dirPresence]
+      existingDirs = [dir | (dir, True) <- dirPresence]
+  mapM_ (\dir -> emitWarning $ "Warning: source directory missing: " <> dir) missingDirs
+  when (null existingDirs) $ do
+    hPutStrLn stderr "Error: no configured source directories exist for schema generation."
+    exitFailure
+  pure existingDirs
 
 -- Read file for quick text parsing; tolerate missing files.
 readFileSafe :: FilePath -> String
@@ -187,13 +232,20 @@ mergeNs = Map.unionWith (++)
 
 -- Parse namespaceFor clauses and collect constructor -> namespace mappings.
 parseNamespaceMap :: String -> Map.Map ConstructorName [NamespaceParts]
-parseNamespaceMap src = go (lines src) Map.empty
+parseNamespaceMap src = go Nothing (lines src) Map.empty
   where
+    typeConstructors = parseTypeConstructors src
+
     startsHeader line =
       "namespaceFor" `isPrefixOf` trim line
 
-    go [] acc = acc
-    go (l:ls) acc
+    go _ [] acc = acc
+    go currentType allLines@(l:ls) acc
+      | startsMetaTraceInstance l =
+          let (_hdr, rest, nextType) = spanMetaTraceInstanceHeader allLines
+          in go nextType rest acc
+      | startsTopLevelDecl l =
+          go Nothing ls acc
       | startsHeader l =
           let (headerLines, afterHeader) = spanUntilHeaderEnd [l] ls
               (bodyLines, rest) = spanNamespaceBody afterHeader
@@ -207,11 +259,11 @@ parseNamespaceMap src = go (lines src) Map.empty
                     then case ctorsAfter "namespaceFor" (takeWhile (/= '=') (unwords headerLines)) of
                       [] -> acc
                       ctors -> foldl' insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
-                  else case extractNamespaceClause (unwords clauseLines) of
+                  else case extractNamespaceClause currentType typeConstructors (unwords clauseLines) of
                     Just clauseInfo -> insertNamespaceClause acc clauseInfo
                     Nothing -> acc
-          in go rest acc'
-      | otherwise = go ls acc
+          in go currentType rest acc'
+      | otherwise = go currentType ls acc
 
     spanUntilHeaderEnd acc [] = (reverse acc, [])
     spanUntilHeaderEnd acc (x:xs)
@@ -237,28 +289,165 @@ parseNamespaceMap src = go (lines src) Map.empty
            , "metricsDocFor"
            ]
 
-    extractNamespaceClause clause = do
+    startsTopLevelDecl line =
+      let t = trim line
+      in not (null line)
+         && not (isSpace (head line))
+         && not ("--" `isPrefixOf` t)
+         && any (`isPrefixOf` t)
+              [ "instance"
+              , "data "
+              , "newtype "
+              , "type "
+              , "class "
+              ]
+
+    startsMetaTraceInstance line =
+      let t = trim line
+      in "instance" `isPrefixOf` t && "MetaTrace" `isInfix` t
+
+    spanMetaTraceInstanceHeader :: [String] -> ([String], [String], Maybe TypeName)
+    spanMetaTraceInstanceHeader [] = ([], [], Nothing)
+    spanMetaTraceInstanceHeader (x:xs) = finish [x] xs
+      where
+        finish acc [] =
+          let hdr = reverse acc
+          in (hdr, [], parseMetaTraceInstanceType (unwords hdr))
+        finish acc rest@(y:ys)
+          | any ("where" `isInfix`) acc =
+              let hdr = reverse acc
+              in (hdr, rest, parseMetaTraceInstanceType (unwords hdr))
+          | otherwise = finish (y:acc) ys
+
+    extractNamespaceClause currentType ctorMap clause = do
       guard ("namespaceFor" `isInfix` clause)
       let lhs = takeWhile (/= '=') clause
       parts <- extractNamespaceParts clause
       let ctors = ctorsAfter "namespaceFor" lhs
+      let inferredCtors =
+            case ctors of
+              [] | isWildcardNamespaceLhs lhs ->
+                    maybe [] (\ty -> singletonConstructors ty ctorMap) currentType
+              [] | isListEmptyNamespaceLhs lhs ->
+                    [listEmptyCtor]
+              _ -> ctors
+      guard (not (null inferredCtors))
+      pure (inferredCtors, parts)
+
+parseMetaTraceInstanceType :: String -> Maybe TypeName
+parseMetaTraceInstanceType hdr = do
+  (_, rest) <- breakSub "MetaTrace" hdr
+  let tyExpr = trim . takeWhile (/= '=') . fst $ breakOn "where" (stripOuterParens (trim rest))
+  guard (not (null tyExpr))
+  guard (head tyExpr /= '[')
+  firstCtorToken tyExpr
+
+isWildcardNamespaceLhs :: String -> Bool
+isWildcardNamespaceLhs lhs =
+  let marker = ("namespaceFor" :: String)
+      after = trim (drop (length marker) lhs)
+  in after == "_"
+
+isListEmptyNamespaceLhs :: String -> Bool
+isListEmptyNamespaceLhs lhs =
+  let marker = ("namespaceFor" :: String)
+      after = trim (drop (length marker) lhs)
+  in after == "[]"
+
+listEmptyCtor :: ConstructorName
+listEmptyCtor = "__list_empty__"
+
+singletonConstructors :: TypeName -> Map.Map TypeName [ConstructorName] -> [ConstructorName]
+singletonConstructors ty ctorMap =
+  case Map.lookup ty ctorMap of
+    Just [ctor] -> [ctor]
+    _ -> []
+
+parseTypeConstructors :: String -> Map.Map TypeName [ConstructorName]
+parseTypeConstructors src = go (lines src) Map.empty
+  where
+    go [] acc = acc
+    go allLines@(l:ls) acc
+      | startsTypeDecl l =
+          let (declLines, rest) = spanTypeDecl allLines
+              acc' = case parseTypeDecl (unwords declLines) of
+                Just (ty, ctors) | not (null ctors) -> Map.insert ty ctors acc
+                _ -> acc
+          in go rest acc'
+      | otherwise = go ls acc
+
+    startsTypeDecl line =
+      let t = trim line
+      in not (null line)
+         && not (isSpace (head line))
+         && (("data " `isPrefixOf` t) || ("newtype " `isPrefixOf` t))
+
+    spanTypeDecl [] = ([], [])
+    spanTypeDecl (x:xs) = step [x] xs
+      where
+        step acc [] = (reverse acc, [])
+        step acc rest@(y:ys)
+          | any hasDeclBody acc && startsNextTopLevel y = (reverse acc, rest)
+          | otherwise = step (y:acc) ys
+
+        hasDeclBody line =
+          "=" `isInfix` line || " where" `isInfix` line
+
+        startsNextTopLevel line =
+          let t = trim line
+          in not (null line)
+             && not (isSpace (head line))
+             && not ("--" `isPrefixOf` t)
+
+    parseTypeDecl decl = do
+      let t = trim decl
+      keyword <- if ("data " :: String) `isPrefixOf` t
+                   then Just ("data " :: String)
+                   else if ("newtype " :: String) `isPrefixOf` t
+                     then Just ("newtype " :: String)
+                     else Nothing
+      let afterKeyword = trim (drop (length keyword) t)
+          tyName = takeWhile (\c -> isAlphaNum c || c == '_' || c == '\'') afterKeyword
+      guard (not (null tyName))
+      (_, rhsText0) <- breakSub "=" afterKeyword
+      let rhsText = trim rhsText0
+      let ctorSegments = splitTopLevelBars rhsText
+          ctors = mapMaybe firstCtorToken ctorSegments
       guard (not (null ctors))
-      pure (ctors, parts)
+      pure (tyName, nubPreserve ctors)
 
-    extractNamespaceParts clause =
-      case extractNsPrependInnerParts clause ++ extractNamespaceLiteralParts clause of
-        [] -> Nothing
-        parts -> Just parts
+splitTopLevelBars :: String -> [String]
+splitTopLevelBars s = go 0 0 0 "" [] s
+  where
+    go _ _ _ cur acc [] = reverse (trim cur : acc)
+    go paren bracket brace cur acc (c:cs)
+      | c == '(' = go (paren + 1) bracket brace (cur ++ [c]) acc cs
+      | c == ')' = go (paren - 1) bracket brace (cur ++ [c]) acc cs
+      | c == '[' = go paren (bracket + 1) brace (cur ++ [c]) acc cs
+      | c == ']' = go paren (bracket - 1) brace (cur ++ [c]) acc cs
+      | c == '{' = go paren bracket (brace + 1) (cur ++ [c]) acc cs
+      | c == '}' = go paren bracket (brace - 1) (cur ++ [c]) acc cs
+      | c == '|' && paren == 0 && bracket == 0 && brace == 0 =
+          go paren bracket brace "" (trim cur : acc) cs
+      | otherwise = go paren bracket brace (cur ++ [c]) acc cs
 
-    extractNsPrependInnerParts clause =
-      case breakOn "nsPrependInner" clause of
-        (_, "") -> []
-        (_, rhs) -> take 1 (quotedStrings rhs)
+extractNamespaceParts :: String -> Maybe NamespaceParts
+extractNamespaceParts clause =
+  case extractNsPrependInnerParts clause ++ extractNamespaceLiteralParts clause of
+    [] -> Nothing
+    parts -> Just parts
 
-    extractNamespaceLiteralParts clause =
-      case breakOn "Namespace" clause of
-        (_, "") -> []
-        (_, rhs) -> quotedStrings rhs
+extractNsPrependInnerParts :: String -> NamespaceParts
+extractNsPrependInnerParts clause =
+  case breakOn "nsPrependInner" clause of
+    (_, "") -> []
+    (_, rhs) -> take 1 (quotedStrings rhs)
+
+extractNamespaceLiteralParts :: String -> NamespaceParts
+extractNamespaceLiteralParts clause =
+  case breakOn "Namespace" clause of
+    (_, "") -> []
+    (_, rhs) -> quotedStrings rhs
 
 insertNamespaceClause :: Map.Map ConstructorName [NamespaceParts]
                       -> ([ConstructorName], NamespaceParts)
@@ -267,12 +456,12 @@ insertNamespaceClause acc (ctors, parts) =
   foldl' (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
 
 isLambdaCaseBody :: [String] -> Bool
-isLambdaCaseBody (l:_) = trim l == "\\case"
+isLambdaCaseBody (l:_) = "\\case" `isInfix` trim l
 isLambdaCaseBody _ = False
 
 dropLeadingLambdaCase :: [String] -> [String]
 dropLeadingLambdaCase (l:ls)
-  | trim l == "\\case" = ls
+  | "\\case" `isInfix` trim l = ls
 dropLeadingLambdaCase ls = ls
 
 hasBranchArrows :: [String] -> Bool
@@ -366,6 +555,8 @@ quotedStrings (_:xs) = quotedStrings xs
 
 data Clause = Clause
   { clauseLevel :: String
+  , clauseType :: Maybe TypeName
+  , clauseCtor :: Maybe ConstructorName
   , clausePattern :: String
   , clauseBody :: [String]
   }
@@ -424,7 +615,7 @@ parseObjectHelperMap src =
               Nothing -> ("", "")
             (more, rest) = spanBranchLines ls
             body = [rhs0 | not (null rhs0)] ++ more
-        in Clause "" pat0 body : helperBranches rest
+        in Clause "" Nothing Nothing pat0 body : helperBranches rest
     | otherwise = helperBranches ls
 
   spanBranchLines = go []
@@ -448,32 +639,57 @@ parseObjectHelperMap src =
 
 -- Extract forMachine function clauses with their patterns and bodies.
 parseForMachineClauses :: String -> [Clause]
-parseForMachineClauses src = go (lines src)
+parseForMachineClauses src = go Nothing (lines src)
   where
+    typeConstructors = parseTypeConstructors src
+
     startsHeader line =
       let t = trim line
       in "forMachine" `isPrefixOf` t || "forMachineGov" `isPrefixOf` t
     hasEquals line = "=" `isInfix` line
-    go [] = []
-    go (l:ls)
+    go _ [] = []
+    go currentType allLines@(l:ls)
+      | startsLogFormattingInstance l =
+          let (_hdr, rest, nextType) = spanInstanceHeader "LogFormatting" allLines
+          in go nextType rest
+      | startsTopLevelDeclForMachine l =
+          go Nothing ls
       | startsHeader l =
           let (headerLines, afterHeader) = spanUntilHeaderEnd [l] ls
               header = unwords headerLines
               (lvlTok, pat) = parseHeader header
               (body, rest) = span (not . startsHeader) afterHeader
               bodyAfterLambda = dropLeadingLambdaCase body
+              mkClause pat' body' = Clause lvlTok currentType (inferClauseCtor typeConstructors currentType pat') pat' body'
           in if "\\case" `isInfix` header || isLambdaCaseBody body
-               then parseLambdaCaseClauses lvlTok bodyAfterLambda ++ go rest
-               else Clause lvlTok pat body : go rest
-      | otherwise = go ls
+               then parseLambdaCaseClauses lvlTok currentType typeConstructors bodyAfterLambda ++ go currentType rest
+               else expandNestedCaseClauses lvlTok currentType typeConstructors pat body ++ go currentType rest
+      | otherwise = go currentType ls
 
     spanUntilHeaderEnd acc [] = (reverse acc, [])
     spanUntilHeaderEnd acc (x:xs)
       | any hasEquals acc = (reverse acc, x:xs)
       | otherwise = spanUntilHeaderEnd (x:acc) xs
 
-parseLambdaCaseClauses :: String -> [String] -> [Clause]
-parseLambdaCaseClauses lvl = go
+    startsLogFormattingInstance line =
+      let t = trim line
+      in "instance" `isPrefixOf` t && "LogFormatting" `isInfix` t
+
+    startsTopLevelDeclForMachine line =
+      let t = trim line
+      in not (null line)
+         && not (isSpace (head line))
+         && not ("--" `isPrefixOf` t)
+         && any (`isPrefixOf` t)
+              [ "instance"
+              , "data "
+              , "newtype "
+              , "type "
+              , "class "
+              ]
+
+parseLambdaCaseClauses :: String -> Maybe TypeName -> Map.Map TypeName [ConstructorName] -> [String] -> [Clause]
+parseLambdaCaseClauses lvl currentType typeConstructors = go
  where
   go [] = []
   go (l:ls)
@@ -483,7 +699,7 @@ parseLambdaCaseClauses lvl = go
               Nothing -> ("", "")
             (more, rest) = spanBranchLines ls
             body = [rhs0 | not (null rhs0)] ++ more
-        in Clause lvl pat0 body : go rest
+        in expandNestedCaseClauses lvl currentType typeConstructors pat0 body ++ go rest
     | otherwise = go ls
 
   spanBranchLines = step []
@@ -494,6 +710,37 @@ parseLambdaCaseClauses lvl = go
       | otherwise = step (x:acc) xs
 
   isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+
+expandNestedCaseClauses :: String -> Maybe TypeName -> Map.Map TypeName [ConstructorName] -> String -> [String] -> [Clause]
+expandNestedCaseClauses lvl currentType typeConstructors pat body =
+  case splitCaseOnBoundVar (Set.fromList (extractVars pat)) body of
+    Just (prefix, branchLines) ->
+      Clause lvl currentType (inferClauseCtor typeConstructors currentType pat) pat body
+        : concatMap descend (parseLambdaCaseClauses lvl currentType typeConstructors branchLines)
+      where
+        descend cl = expandNestedCaseClauses lvl currentType typeConstructors (clausePattern cl) (prefix ++ clauseBody cl)
+    Nothing ->
+      [Clause lvl currentType (inferClauseCtor typeConstructors currentType pat) pat body]
+
+splitCaseOnBoundVar :: Set.Set String -> [String] -> Maybe ([String], [String])
+splitCaseOnBoundVar boundVars = go []
+  where
+    go _ [] = Nothing
+    go acc (line:rest) =
+      case splitCaseLine boundVars line of
+        Just prefixLine ->
+          let prefix = reverse acc ++ [prefixLine | not (null (trim prefixLine))]
+          in Just (prefix, rest)
+        Nothing -> go (line:acc) rest
+
+splitCaseLine :: Set.Set String -> String -> Maybe String
+splitCaseLine boundVars line =
+  listToMaybe
+    [ trim prefix
+    | var <- Set.toList boundVars
+    , let needle = "case " <> var <> " of"
+    , Just (prefix, _) <- [breakSub needle line]
+    ]
 
 parseHeader :: String -> (String, String)
 parseHeader line =
@@ -511,6 +758,27 @@ parseHeader line =
           in stripOuterParens (trim (takeWhile (/= '=') afterLvl))
         Nothing -> ""
   in (lvl, pat)
+
+spanInstanceHeader :: String -> [String] -> ([String], [String], Maybe TypeName)
+spanInstanceHeader className [] = ([], [], Nothing)
+spanInstanceHeader className (x:xs) = finish [x] xs
+  where
+    finish acc [] =
+      let hdr = reverse acc
+      in (hdr, [], parseInstanceTypeForClass className (unwords hdr))
+    finish acc rest@(y:ys)
+      | any ("where" `isInfix`) acc =
+          let hdr = reverse acc
+          in (hdr, rest, parseInstanceTypeForClass className (unwords hdr))
+      | otherwise = finish (y:acc) ys
+
+parseInstanceTypeForClass :: String -> String -> Maybe TypeName
+parseInstanceTypeForClass className hdr = do
+  (_, rest) <- breakSub className hdr
+  let tyExpr = trim . takeWhile (/= '=') . fst $ breakOn "where" (stripOuterParens (trim rest))
+  guard (not (null tyExpr))
+  guard (head tyExpr /= '[')
+  firstCtorToken tyExpr
 
 stripOuterParens :: String -> String
 stripOuterParens s
@@ -585,12 +853,32 @@ selectCtorToken xs@(x:_)
   | x `elem` ["AnyMessageAndAgency", "AnyMessage"] = last xs
   | otherwise = x
 
+inferClauseCtor :: Map.Map TypeName [ConstructorName] -> Maybe TypeName -> String -> Maybe ConstructorName
+inferClauseCtor typeConstructors currentType pat =
+  case ctorFromPattern pat of
+    Just ctor -> Just ctor
+    Nothing
+      | trim pat == "[]" -> Just listEmptyCtor
+    Nothing
+      | isVariableOnlyPattern pat ->
+          currentType >>= \ty ->
+            case Map.lookup ty typeConstructors of
+              Just [ctor] -> Just ctor
+              _ -> Nothing
+      | otherwise -> Nothing
+
+isVariableOnlyPattern :: String -> Bool
+isVariableOnlyPattern pat =
+  case filter (/= "_") (extractVars pat) of
+    [_] -> null (normalizedCtorTokens pat)
+    _ -> False
+
 -- Map JSON field keys to the pattern variable they come from.
 parseFieldVarMap :: HelperFieldMap -> [Clause] -> Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
 parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
   where
     step acc cl =
-      case ctorFromPattern (clausePattern cl) of
+      case clauseCtor cl of
         Nothing -> acc
         Just ctor ->
           let vars = Set.fromList (extractVars (clausePattern cl))
@@ -720,17 +1008,54 @@ parseFieldLine :: Set.Set String -> String -> Maybe (String, String)
 parseFieldLine vars line = do
   key <- parseQuotedKey line
   rhs <- parseDotEqRhs line
-  case inferRhsMarker rhs of
-    Just marker -> Just (key, marker)
-    Nothing -> do
-      let rhsTokens = Set.fromList (tokenize rhs)
-      let hits = filter (`Set.member` rhsTokens) (Set.toList vars)
-      case hits of
-        [v] -> Just (key, v)
-        _ ->
-          if isStringLiteral rhs
-            then Just (key, literalStringVar)
-            else Nothing
+  case extractForwardedVar vars rhs of
+    Just v -> Just (key, v)
+    Nothing ->
+      case inferRhsMarker rhs of
+        Just marker -> Just (key, marker)
+        Nothing -> do
+          let rhsTokens = Set.fromList (tokenize rhs)
+          let hits = filter (`Set.member` rhsTokens) (Set.toList vars)
+          case hits of
+            [v] -> Just (key, v)
+            _ ->
+              if isStringLiteral rhs
+                then Just (key, literalStringVar)
+                else Nothing
+
+extractForwardedVar :: Set.Set String -> String -> Maybe String
+extractForwardedVar vars rhs =
+  listToMaybe
+    [ v
+    | v <- Set.toList vars
+    , isDirectForwardTo v (trim rhs)
+    ]
+
+isDirectForwardTo :: String -> String -> Bool
+isDirectForwardTo var rhs =
+  any (`matchesCall` rhs)
+    [ "forMachine"
+    , "forMachineGov"
+    , "toObject"
+    , "toJSON"
+    ]
+  where
+    matchesCall fn s =
+      case words s of
+        [] -> False
+        (w:rest)
+          | w == fn ->
+              case reverse rest of
+                (lastArg:_) -> normalizeForwardedArg lastArg == var
+                _ -> False
+          | otherwise -> False
+
+normalizeForwardedArg :: String -> String
+normalizeForwardedArg =
+  trim . dropTrailingPunctuation . takeWhile (\c -> isAlphaNum c || c == '_' || c == '\'' || c == '.')
+
+dropTrailingPunctuation :: String -> String
+dropTrailingPunctuation = reverse . dropWhile (`elem` (")],}" :: String)) . reverse
 
 -- Special marker for string literals (e.g. "kind" .= String "...").
 literalStringVar :: String
@@ -854,7 +1179,7 @@ extractImports src =
 
 buildQuery :: Clause -> Maybe (ConstructorName, (String, [String]))
 buildQuery cl = do
-  ctor <- ctorFromPattern (clausePattern cl)
+  ctor <- clauseCtor cl
   let vars = filter (/= "_") (extractVars (clausePattern cl))
   if null vars then Nothing else do
     let body = if length vars == 1 then head vars else "(" ++ commaSep vars ++ ")"
@@ -1026,7 +1351,18 @@ updateSchemaForNamespace :: Config
                          -> VarTypes
                          -> String
                          -> IO ()
-updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes ns = do
+updateSchemaForNamespace = updateSchemaForNamespaceWithWarning (\_ -> pure ())
+
+updateSchemaForNamespaceWithWarning :: (String -> IO ())
+                         -> Config
+                         -> FilePath
+                         -> FilePath
+                         -> Map.Map ConstructorName [NamespaceParts]
+                         -> FieldVarMap
+                         -> VarTypes
+                         -> String
+                         -> IO ()
+updateSchemaForNamespaceWithWarning emitWarning config msgOutDir typeOutDir nsMap fieldVarMap varTypes ns = do
   let parts = splitDot ns
   let ctor =
         case fallbackCtorForNamespace parts of
@@ -1035,6 +1371,16 @@ updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes 
             case findCtor nsMap parts of
               Just c -> Just c
               Nothing -> Nothing
+  case ctor of
+    Nothing ->
+      emitWarning $
+        "Warning: no source found for namespace: " <> ns
+    Just c
+      | Map.notMember c fieldVarMap && Map.notMember c varTypes ->
+          emitWarning $
+            "Warning: namespace resolved to constructor without parsed source/GHCi data: "
+              <> ns <> " -> " <> c
+    _ -> pure ()
   let out = msgOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
   let histOutDir = "bench/trace-schemas/messages-hist"
   let histOut = histOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
@@ -1055,6 +1401,9 @@ updateSchemaForNamespace config msgOutDir typeOutDir nsMap fieldVarMap varTypes 
 fallbackCtorForNamespace :: [String] -> Maybe ConstructorName
 fallbackCtorForNamespace parts
   | ["Net", "Handshake"] `isListPrefixOf` parts = Just diffusionHandshakeCtor
+  | ["BlockFetch", "Decision"] `isListPrefixOf` parts
+  , lastMay parts == Just "EmptyPeersFetch" =
+      Just listEmptyCtor
   | ["Net", "ConnectionManager"] `isListPrefixOf` parts
   , lastMay parts == Just "UnexpectedlyFalseAssertion" =
       Just connectionManagerUnexpectedlyFalseAssertionCtor

@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "domainAddress": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+                "type": "string"
             }
         },
         "required": [

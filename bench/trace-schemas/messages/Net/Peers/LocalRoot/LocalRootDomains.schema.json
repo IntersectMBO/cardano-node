@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "localRootDomains": {
-                "$ref": "types/Ouroboros.Network.PeerSelection.State.LocalRootPeers.Config.schema.json"
+                "type": "string"
             }
         },
         "required": [

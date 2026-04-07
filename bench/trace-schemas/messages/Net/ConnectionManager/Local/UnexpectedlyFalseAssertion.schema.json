@@ -1,19 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "info": {
-                "type": "string"
-            },
-            "kind": {
-                "type": "string"
-            }
-        },
-        "required": [
-            "info",
-            "kind"
-        ],
-        "type": "object"
-    },
+    "data": {},
     "ns": "Net.ConnectionManager.Local.UnexpectedlyFalseAssertion"
 }

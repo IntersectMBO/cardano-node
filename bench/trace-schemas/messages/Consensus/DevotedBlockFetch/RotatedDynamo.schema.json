@@ -6,12 +6,10 @@
                 "type": "string"
             },
             "newPeer": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "oldPeer": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             }
         },
         "required": [

@@ -3,16 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "choiceSet": {
-                "$ref": "types/Set.Set.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "numberPrunedPeers": {
-                "type": "integer"
+                "type": "string"
             },
             "prunedPeers": {
-                "$ref": "types/Set.Set.schema.json"
+                "type": "string"
             }
         },
         "required": [

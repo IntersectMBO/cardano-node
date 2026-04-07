@@ -3,25 +3,19 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "withProtocolTemp": {
-                "anyOf": [
-                    {
-                        "type": "null"
-                    },
-                    {
-                        "$ref": "types/Ouroboros.Network.Mux.WithSomeProtocolTemperature.schema.json"
-                    }
-                ]
+                "type": "string"
             }
         },
         "required": [
             "connectionId",
-            "kind"
+            "kind",
+            "withProtocolTemp"
         ],
         "type": "object"
     },

@@ -6,7 +6,7 @@
                 "type": "string"
             },
             "relayAddresses": {
-                "$ref": "types/Map.Map.schema.json"
+                "type": "string"
             }
         },
         "required": [

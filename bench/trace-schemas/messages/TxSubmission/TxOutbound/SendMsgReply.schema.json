@@ -4,10 +4,14 @@
         "properties": {
             "kind": {
                 "type": "string"
+            },
+            "txs": {
+                "type": "string"
             }
         },
         "required": [
-            "kind"
+            "kind",
+            "txs"
         ],
         "type": "object"
     },

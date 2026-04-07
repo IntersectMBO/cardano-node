@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "time": {
-                "$ref": "types/Data.Time.Clock.Internal.DiffTime.DiffTime.schema.json"
+                "type": "string"
             }
         },
         "required": [

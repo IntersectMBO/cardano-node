@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+                "type": "string"
             }
         },
         "required": [

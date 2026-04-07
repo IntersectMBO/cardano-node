@@ -7,9 +7,6 @@
             },
             "kind": {
                 "type": "string"
-            },
-            "txs": {
-                "type": "string"
             }
         },
         "required": [

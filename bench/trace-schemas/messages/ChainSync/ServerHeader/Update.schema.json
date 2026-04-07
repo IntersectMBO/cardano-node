@@ -12,19 +12,19 @@
                 "type": "integer"
             },
             "blockingRead": {
-                "$ref": "types/BlockingType.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "risingEdge": {
-                "$ref": "types/Enclosing.schema.json"
+                "type": "string"
             },
             "slot": {
                 "type": "integer"
             },
             "tip": {
-                "$ref": "types/Tip.schema.json"
+                "type": "string"
             }
         },
         "required": [

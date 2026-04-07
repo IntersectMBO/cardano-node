@@ -2,15 +2,17 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "address": {},
+            "address": {
+                "type": "string"
+            },
             "from": {
-                "$ref": "types/ConnectionManager.Transition'.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "to": {
-                "$ref": "types/ConnectionManager.Transition'.schema.json"
+                "type": "string"
             }
         },
         "required": [

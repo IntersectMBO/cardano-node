@@ -3,8 +3,7 @@
         "additionalProperties": true,
         "properties": {
             "jumpTarget": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

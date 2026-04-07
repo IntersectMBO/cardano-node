@@ -2,9 +2,11 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "finalChunk": {},
+            "finalChunk": {
+                "type": "string"
+            },
             "initialChunk": {
-                "$ref": "types/ImmDB.ChunkNo.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"

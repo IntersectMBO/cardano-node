@@ -3,13 +3,13 @@
         "additionalProperties": true,
         "properties": {
             "connectionId": {
-                "$ref": "types/ConnectionId.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "provenance": {
-                "$ref": "types/ConnectionManager.Provenance.schema.json"
+                "type": "string"
             }
         },
         "required": [

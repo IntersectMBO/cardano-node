@@ -8,6 +8,9 @@
             "delay": {
                 "type": "string"
             },
+            "forgotten": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
@@ -24,6 +27,7 @@
         "required": [
             "actualEstablished",
             "delay",
+            "forgotten",
             "kind",
             "peer",
             "reason",

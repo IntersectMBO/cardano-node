@@ -1,18 +1,17 @@
 {
     "data": {
         "additionalProperties": true,
-        "description": "Local server accept loop error payload",
         "properties": {
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+                "type": "string"
             }
         },
         "required": [
             "kind",
-            "error"
+            "reason"
         ],
         "type": "object"
     },

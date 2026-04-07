@@ -3,16 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "command": {
-                "$ref": "types/ErrorCommand.schema.json"
+                "type": "string"
             },
             "context": {
-                "$ref": "types/Ouroboros.Network.RethrowPolicy.ErrorContext.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "reason": {
-                "$ref": "types/GHC.Exception.Type.SomeException.schema.json"
+                "type": "string"
             }
         },
         "required": [

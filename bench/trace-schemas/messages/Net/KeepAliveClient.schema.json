@@ -2,21 +2,23 @@
     "data": {
         "additionalProperties": true,
         "properties": {
-            "address": {},
+            "address": {
+                "type": "string"
+            },
             "inboundG": {
-                "$ref": "types/PeerGSV.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "outboundG": {
-                "$ref": "types/PeerGSV.schema.json"
+                "type": "string"
             },
             "rtt": {
-                "type": "number"
+                "type": "string"
             },
             "sampleTime": {
-                "$ref": "types/PeerGSV.schema.json"
+                "type": "string"
             }
         },
         "required": [

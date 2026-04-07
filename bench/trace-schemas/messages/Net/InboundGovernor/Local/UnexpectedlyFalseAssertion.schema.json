@@ -1,19 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "kind": {
-                "type": "string"
-            },
-            "remoteSt": {
-                "type": "string"
-            }
-        },
-        "required": [
-            "kind",
-            "remoteSt"
-        ],
-        "type": "object"
-    },
+    "data": {},
     "ns": "Net.InboundGovernor.Local.UnexpectedlyFalseAssertion"
 }

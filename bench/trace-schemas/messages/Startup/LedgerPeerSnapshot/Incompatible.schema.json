@@ -1,19 +1,4 @@
 {
-    "data": {
-        "additionalProperties": true,
-        "properties": {
-            "kind": {
-                "type": "string"
-            },
-            "message": {
-                "type": "string"
-            }
-        },
-        "required": [
-            "kind",
-            "message"
-        ],
-        "type": "object"
-    },
+    "data": {},
     "ns": "Startup.LedgerPeerSnapshot.Incompatible"
 }

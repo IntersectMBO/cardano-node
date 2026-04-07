@@ -3,17 +3,16 @@
         "additionalProperties": true,
         "properties": {
             "enclosedTime": {
-                "$ref": "types/EnclosingTimed.schema.json"
+                "type": "string"
             },
             "kind": {
                 "type": "string"
             },
             "snapshot": {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
             },
             "tip": {
-                "$ref": "types/RealPoint.schema.json"
+                "type": "string"
             }
         },
         "required": [
