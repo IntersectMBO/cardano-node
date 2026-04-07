@@ -39,7 +39,7 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 10.25
+                      , cardano-api ^>= 10.26
                       , cardano-binary
                       , cardano-cli ^>= 10.15.0.1
                       , cardano-crypto-class ^>=2.3
