@@ -155,7 +155,7 @@ profilesNoEraEmpty = map baseNoDataset
   -- trace-*: FixedLoaded and "tracer.withresources = true" with 6 nodes.
   ------------------------------------------------------------------------------
   let trace =
-          P.empty & V.datasetEmpty . genesis
+          P.empty & V.datasetEmpty . V.genesisVariantVoltaire . P.blocksize64k
         -- TODO: "default-*" uses 6 nodes and `uniCircle`.
         . P.torus . V.hosts 6 . P.loopback
         . P.tracerWithresources
