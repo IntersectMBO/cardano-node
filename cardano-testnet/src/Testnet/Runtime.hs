@@ -53,6 +53,7 @@ import qualified System.Process as IO
 import           System.Process (waitForProcess)
 
 import           Testnet.Filepath
+import           Testnet.Paths (defaultSocketName)
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run (ProcessError (..), initiateProcess)
 import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated,
@@ -135,7 +136,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
       nodePidFile = logDir </> node </> "node.pid"
-      socketRelPath = socketDir </> node </> "sock"
+      socketRelPath = socketDir </> node </> defaultSocketName
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
   hNodeStdout <- retryOpenFile nodeStdoutFile IO.WriteMode

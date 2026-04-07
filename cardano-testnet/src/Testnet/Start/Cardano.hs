@@ -65,6 +65,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
+import           Testnet.Paths (defaultConfigFile, defaultUtxoAddrPath)
 import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
@@ -131,7 +132,7 @@ createTestnetEnv
     testnetOptions genesisOptions onChainParams
     (TmpAbsolutePath tmpAbsPath)
 
-  let configurationFile = tmpAbsPath </> "configuration.yaml"
+  let configurationFile = tmpAbsPath </> defaultConfigFile
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- case genesisHashesPolicy of
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
@@ -247,7 +248,7 @@ cardanoTestnet
         , cardanoKESSource
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
-      nodeConfigFile = tmpAbsPath </> "configuration.yaml"
+      nodeConfigFile = tmpAbsPath </> defaultConfigFile
       byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
@@ -260,7 +261,7 @@ cardanoTestnet
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
-    let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
+    let paymentAddrFile = tmpAbsPath </> defaultUtxoAddrPath idx
 
     execCli_
       [ "latest", "address", "build"
