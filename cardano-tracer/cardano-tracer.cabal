@@ -158,6 +158,7 @@ library
     build-depends:
                         cardano-git-rev ^>=0.2.2
                       , cassava
+                      , string-qq
                       , threepenny-gui
                       , utf8-string
                       , vector

@@ -311,18 +311,9 @@ mkTracerTracer std defSeverity =
       configureTracers configReflection initialTraceConfig [tr]
      where
        initialTraceConfig :: TraceConfig
-       initialTraceConfig =
-         TraceConfig
-         { tcForwarder         = Nothing
-         , tcNodeName          = Nothing
-         , tcResourceFrequency = Nothing
-         , tcLedgerMetricsFrequency = Nothing
-         , tcMetricsPrefix     = Nothing
-         , tcOptions = Map.fromList
-                       [ ([],         [ConfSeverity defSeverity])
-                       , (["Tracer"], [ConfDetail DMaximum])
-                       ]
-         }
+       initialTraceConfig = emptyTraceConfig {
+         tcOptions = Map.fromList [([], [ConfSeverity defSeverity]), (["Tracer"], [ConfDetail DMaximum])]
+       }
 
 mkTimeseriesTracer :: Trace IO FormattedMessage -> IO (Trace IO TimeseriesTrace)
 mkTimeseriesTracer std = do

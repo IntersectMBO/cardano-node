@@ -116,7 +116,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   traceWith tr.assorted TracerInitEventQueues
 #if RTVIEW
-  eventsQueues   <- initEventsQueues tr rtViewStateDir connectedNodesNames dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues tr.assorted rtViewStateDir connectedNodesNames dpRequestors currentDPLock
   rtViewPageOpened <- newTVarIO False
 #endif
 
@@ -162,7 +162,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     traceWith tr.assorted TracerShutdownInitiated
 #if RTVIEW
     backupAllHistory tracerEnv tracerEnvRTView
-    traceWith tr TracerShutdownHistBackup
+    traceWith tr.assorted TracerShutdownHistBackup
 #endif
     applyBrake (teProtocolsBrake tracerEnv)
     traceWith tr.assorted TracerShutdownComplete
