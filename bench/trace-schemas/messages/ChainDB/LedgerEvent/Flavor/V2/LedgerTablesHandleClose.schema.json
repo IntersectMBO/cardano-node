@@ -2,11 +2,16 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "enclosing": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "kind": {
                 "type": "string"
             }
         },
         "required": [
+            "enclosing",
             "kind"
         ],
         "type": "object"

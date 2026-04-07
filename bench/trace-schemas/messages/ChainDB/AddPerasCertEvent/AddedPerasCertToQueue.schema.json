@@ -1,0 +1,27 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "boostedBlock": {
+                "type": "string"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "queueSize": {
+                "$ref": "types/Enclosing'.schema.json"
+            },
+            "round": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "boostedBlock",
+            "kind",
+            "queueSize",
+            "round"
+        ],
+        "type": "object"
+    },
+    "ns": "ChainDB.AddPerasCertEvent.AddedPerasCertToQueue"
+}

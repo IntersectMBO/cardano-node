@@ -7,11 +7,15 @@
             },
             "kind": {
                 "type": "string"
+            },
+            "txIds": {
+                "type": "string"
             }
         },
         "required": [
             "agency",
-            "kind"
+            "kind",
+            "txIds"
         ],
         "type": "object"
     },

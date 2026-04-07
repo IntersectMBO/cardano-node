@@ -9,12 +9,20 @@
             "kind": {
                 "type": "string"
             },
+            "newSuffixSelectView": {
+                "additionalProperties": true,
+                "type": "object"
+            },
             "newTipSelectView": {
                 "additionalProperties": true,
                 "type": "object"
             },
             "newtip": {
                 "type": "string"
+            },
+            "oldSuffixSelectView": {
+                "additionalProperties": true,
+                "type": "object"
             },
             "oldTipSelectView": {
                 "additionalProperties": true,
@@ -24,9 +32,9 @@
         "required": [
             "events",
             "kind",
-            "newTipSelectView",
+            "newSuffixSelectView",
             "newtip",
-            "oldTipSelectView"
+            "oldSuffixSelectView"
         ],
         "type": "object"
     },

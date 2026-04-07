@@ -7,11 +7,15 @@
             },
             "kind": {
                 "type": "string"
+            },
+            "reason": {
+                "type": "string"
             }
         },
         "required": [
             "declined",
-            "kind"
+            "kind",
+            "reason"
         ],
         "type": "object"
     },

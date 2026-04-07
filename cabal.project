@@ -111,8 +111,8 @@ if impl(ghc >= 9.12)
 
 source-repository-package
   type: git
-  location: /home/yupanqui/IO/hermod-tracing
-  tag: 772f8c4d87427ac8fd4622f90126bd8d3edae87f
-  --sha256: sha256-CQF5uC0KbwSMdrQ8DSjnkkgB/rISkweiE7R9DgWAyZw=
+  location: https://github.com/IntersectMBO/hermod-tracing
+  tag: e5d49217cc3cd1bc084c4a2b453f06f93bcb2006
+  --sha256: sha256-eO7604L/xw+52K3jHLU2HbNz7kjCNUvL/DJmeOlP2lI=
   subdir:
     trace-dispatcher

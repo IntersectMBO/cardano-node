@@ -2,16 +2,28 @@
     "data": {
         "additionalProperties": true,
         "properties": {
+            "candidate": {
+                "type": "string"
+            },
             "kind": {
                 "type": "string"
             },
             "length": {
                 "type": "string"
+            },
+            "our": {
+                "type": "string"
+            },
+            "reason": {
+                "type": "string"
             }
         },
         "required": [
+            "candidate",
             "kind",
-            "length"
+            "length",
+            "our",
+            "reason"
         ],
         "type": "object"
     },

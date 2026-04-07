@@ -1,0 +1,15 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "slot": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "slot"
+        ],
+        "type": "object"
+    },
+    "ns": "ChainDB.LedgerEvent.Flavor.V1.LMDB.BackingStoreEvent.Writing"
+}

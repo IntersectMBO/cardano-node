@@ -14,8 +14,7 @@
         },
         "required": [
             "agency",
-            "kind",
-            "txs"
+            "kind"
         ],
         "type": "object"
     },
