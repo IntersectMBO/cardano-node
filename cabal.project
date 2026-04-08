@@ -117,12 +117,12 @@ source-repository-package
   subdir:
     cardano-api
 
--- Points to ouroboros-consensus/leios-prototype
+-- Points to ouroboros-consensus/ch1bo/backwards-compat-block-decoder
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 5ef140601cd2d3a96846f630456f82ab7c68ec45
-  --sha256: sha256-+lDspbkHZSWWcrQ3PaBKxQsM8cKy/rCPWdD2WPcbWGY=
+  tag: 87f344352ee16a688a0e9885e034a299898b8612
+  --sha256: sha256-6qnOaZ6NhseWENyu6OYbOk4P0VbTPTrrRgeDyI1UHDE=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -130,17 +130,16 @@ source-repository-package
     ouroboros-consensus-diffusion
     ouroboros-consensus-observe
 
--- Points to cardano-ledger/leios-prototype
+-- Points to cardano-ledger/ch1bo/backwards-compat-block-decoder
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1327573bfb86f7e596151f77d03fc38982be8749
-  --sha256: sha256-CzA6eucrpsc8WMAtG9aNP0DcGtCxghHe0HSX+Yxvcd8=
+  tag: 8dd0bf777cf36eb5d65c572cb72fa169db08a423
+  --sha256: sha256-NTLH0On8qS6p/z9pJGT1lJtYVbiM5i66J4izlxMe8NQ=
   subdir:
     eras/alonzo/impl
     eras/conway/impl
     eras/shelley/impl
-    eras/shelley/test-suite
     libs/cardano-ledger-core
 
 -- Points to ouroboros-network/leios-prototype
