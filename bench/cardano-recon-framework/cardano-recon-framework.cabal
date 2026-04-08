@@ -79,6 +79,15 @@ library
                     , Cardano.ReCon.LTL.Satisfy
                     , Cardano.ReCon.LTL.Subst
 
+                    , Cardano.ReCon.Presburger.AffineDNF
+                    , Cardano.ReCon.Presburger.CompNF
+                    , Cardano.ReCon.Presburger.Complete
+                    , Cardano.ReCon.Presburger.DNF
+                    , Cardano.ReCon.Presburger.IntTerm.Types
+                    , Cardano.ReCon.Presburger.NegNF
+                    , Cardano.ReCon.Presburger.NormAffineDNF
+                    , Cardano.ReCon.Presburger.QuantifierFree
+
                     , Cardano.ReCon.Trace.Feed
                     , Cardano.ReCon.Trace.Ingest
 
