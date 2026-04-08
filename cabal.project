@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-03-26T20:21:33Z
-  , cardano-haskell-packages 2026-04-01T21:20:01Z
+  , cardano-haskell-packages 2026-04-07T20:21:55Z
 
 active-repositories:
   , :rest
@@ -108,3 +108,18 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 6795cad948bd6dfbd44e59ce8e6d51feaf0df3d8
+  --sha256: sha256-zkGU4kh3bBYqN39aL3CXVzh4w6G6ZnlxoK7I1TBDbV8=
+  subdir: cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: bfe6f48cfb9a4a913c5c15f78af7eb11d975b99e
+  --sha256: sha256-i5Bc6c2yI7JTSJsmumXc3Z2ECvrOnYug8Hlp65Kcpfk=
+  subdir:
+    cardano-cli
