@@ -1,37 +1,26 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 
 -- PlutusV1 must be compiled using plc 1.0
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
 module Cardano.Benchmarking.PlutusScripts.Loop2024 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV1, PlutusScriptVersion (..),
-                   Script (..), toScriptInAnyLang)
-
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV1))
 import           Cardano.Benchmarking.ScriptAPI
-import qualified PlutusLedgerApi.V1 as PlutusV1
-
-import           Prelude hiding (pred, ($), (&&), (<), (==))
-
-import qualified Data.ByteString.Short as SBS
-
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
-import           PlutusTx
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
+import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
+import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-
-scriptName :: String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
+script = mkPlutusBenchScriptFromCompiled
+           PlutusScriptV1
+           $(LitE . StringL . loc_module <$> qLocation)
+           $$(PlutusTx.compile [|| mkValidator ||])
 
 
 {-# INLINABLE mkValidator #-}
@@ -44,8 +33,3 @@ mkValidator _datum redeemer _txContext
     n = unsafeDataAsI redeemer
     loop i = if i == 1000000 then () else loop $ pred i
 
-loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = PlutusV1.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV1
-scriptSerialized = PlutusScriptSerialised loopScriptShortBs
