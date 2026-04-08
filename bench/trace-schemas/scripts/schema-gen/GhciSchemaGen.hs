@@ -807,6 +807,11 @@ extractVars s = filter (not . null) $ filter isVarToken (tokenize s)
     isVarToken (c:_) = isLower c || c == '_'
     isVarToken _ = False
 
+isRelevantVar :: String -> Bool
+isRelevantVar [] = False
+isRelevantVar ('_':_) = False
+isRelevantVar _ = True
+
 tokenize :: String -> [String]
 tokenize = filter (not . null) . splitTokens
   where
@@ -869,7 +874,7 @@ inferClauseCtor typeConstructors currentType pat =
 
 isVariableOnlyPattern :: String -> Bool
 isVariableOnlyPattern pat =
-  case filter (/= "_") (extractVars pat) of
+  case filter isRelevantVar (extractVars pat) of
     [_] -> null (normalizedCtorTokens pat)
     _ -> False
 
@@ -881,7 +886,7 @@ parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
       case clauseCtor cl of
         Nothing -> acc
         Just ctor ->
-          let vars = Set.fromList (extractVars (clausePattern cl))
+          let vars = Set.fromList (filter isRelevantVar (extractVars (clausePattern cl)))
               lvls = case clauseLevel cl of
                 "DMinimal" -> ["Minimal"]
                 "DNormal" -> ["Normal"]
@@ -1180,7 +1185,7 @@ extractImports src =
 buildQuery :: Clause -> Maybe (ConstructorName, (String, [String]))
 buildQuery cl = do
   ctor <- clauseCtor cl
-  let vars = filter (/= "_") (extractVars (clausePattern cl))
+  let vars = filter isRelevantVar (extractVars (clausePattern cl))
   if null vars then Nothing else do
     let body = if length vars == 1 then head vars else "(" ++ commaSep vars ++ ")"
     let expr = "(\\(" ++ clausePattern cl ++ ") -> " ++ body ++ ")"
