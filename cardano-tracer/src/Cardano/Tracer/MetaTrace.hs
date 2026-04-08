@@ -12,6 +12,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Cardano.Tracer.MetaTrace
   ( module Cardano.Tracer.MetaTrace
@@ -21,11 +22,13 @@ module Cardano.Tracer.MetaTrace
 
 import           Cardano.Logging
 import           Cardano.Logging.Resources
+import           Cardano.Timeseries.Component.Trace (TimeseriesTrace)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Types (NodeId (..), NodeName)
 
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
+import           Data.Functor (($>), (<&>))
 import qualified Data.Map.Strict as Map
 import           Data.Text as T (Text, pack)
 import qualified System.IO as Sys
@@ -57,6 +60,9 @@ data TracerTrace
   | TracerStartedLogRotator
   | TracerStartedPrometheus
     { ttPrometheusEndpoint   :: Endpoint
+    }
+  | TracerStartedTimeseries
+    { ttTimeseriesEndpoint   :: Endpoint
     }
   | TracerStartedMonitoring
     { ttMonitoringEndpoint   :: Endpoint
@@ -90,6 +96,13 @@ data TracerTrace
     }
   deriving Show
 
+-- | A bundle of domain-split tracers used in the application.
+data TraceBundle = TraceBundle{
+  -- | A tracer used to trace all kinds of things happening in the application.
+  assorted :: !(Trace IO TracerTrace),
+  -- | A tracer that has to do only with timeseries storing/querying/pruning etc.
+  timeseries :: !(Trace IO TimeseriesTrace)
+}
 
 instance LogFormatting TracerTrace where
   forHuman t@TracerConfigIs{ttWarnRTViewMissing = True} =
@@ -135,6 +148,10 @@ instance LogFormatting TracerTrace where
     TracerStartedPrometheus{..} -> mconcat
       [ "kind"     .= AE.String "TracerStartedPrometheus"
       , "endpoint" .= ttPrometheusEndpoint
+      ]
+    TracerStartedTimeseries{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedTimeseries"
+      , "endpoint" .= ttTimeseriesEndpoint
       ]
     TracerStartedMonitoring{..} -> mconcat
       [ "kind"     .= AE.String "TracerStartedMonitoring"
@@ -202,6 +219,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerAddNewNodeIdMapping {} = Namespace [] ["AddNewNodeIdMapping"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
     namespaceFor TracerStartedPrometheus{} = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedTimeseries{} = Namespace [] ["StartedTimeseriers"]
     namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
     namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
@@ -227,6 +245,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["AddNewNodeIdMapping"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
+    severityFor (Namespace _ ["StartedTimeseries"]) _ = Just Info
     severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
     severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
@@ -256,6 +275,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["AddNewNodeIdMapping"]
       , Namespace [] ["StartedLogRotator"]
       , Namespace [] ["StartedPrometheus"]
+      , Namespace [] ["StartedTimeseries"]
       , Namespace [] ["StartedMonitoring"]
       , Namespace [] ["StartedAcceptors"]
       , Namespace [] ["StartedRTView"]
@@ -273,28 +293,39 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["ForwardingInterrupted"]
       ]
 
-stderrShowTracer :: Trace IO TracerTrace
+stderrShowTracer :: Show a => Trace IO a
 stderrShowTracer =  contramapM'
     (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
 
-mkTracerTracer :: SeverityF -> IO (Trace IO TracerTrace)
-mkTracerTracer defSeverity = do
-  standardTracer
-    >>= machineFormatter
+mkTracerTracer :: Trace IO FormattedMessage -> SeverityF -> IO (Trace IO TracerTrace)
+mkTracerTracer std defSeverity =
+    machineFormatter std
     >>= filterSeverityFromConfig
     >>= \t ->
           let finalTracer = withNames ["Tracer"] (withSeverity t)
-          in configTracerTracer defSeverity finalTracer >> pure finalTracer
+          in configTracerTracer finalTracer $> finalTracer
+  where
+    configTracerTracer :: Trace IO TracerTrace -> IO ()
+    configTracerTracer tr = do
+      configReflection <- emptyConfigReflection
+      configureTracers configReflection initialTraceConfig [tr]
+     where
+       initialTraceConfig :: TraceConfig
+       initialTraceConfig = emptyTraceConfig {
+         tcOptions = Map.fromList [([], [ConfSeverity defSeverity]), (["Tracer"], [ConfDetail DMaximum])]
+       }
 
-configTracerTracer :: SeverityF -> Trace IO TracerTrace -> IO ()
-configTracerTracer defSeverity tr = do
-  configReflection <- emptyConfigReflection
-  configureTracers configReflection initialTraceConfig [tr]
+mkTimeseriesTracer :: Trace IO FormattedMessage -> IO (Trace IO TimeseriesTrace)
+mkTimeseriesTracer std = do
+ !tr <- machineFormatter std >>= filterSeverityFromConfig <&> withNames ["Tracer"] . withSeverity
+ configReflection <- emptyConfigReflection
+ configureTracers configReflection cfg [tr]
+ pure tr
  where
-   initialTraceConfig :: TraceConfig
-   initialTraceConfig = emptyTraceConfig
-     { tcOptions = Map.fromList
-                   [ ([],         [ConfSeverity defSeverity])
-                   , (["Tracer"], [ConfDetail DMaximum])
-                   ]
-     }
+   cfg :: TraceConfig
+   cfg = emptyTraceConfig {tcOptions = Map.fromList [([], [ConfSeverity (SeverityF (Just Info))])]}
+
+mkTraceBundle :: SeverityF -> IO TraceBundle
+mkTraceBundle sev = do
+  !std <- standardTracer
+  TraceBundle <$> mkTracerTracer std sev <*> mkTimeseriesTracer std

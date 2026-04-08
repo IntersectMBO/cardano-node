@@ -164,6 +164,7 @@ data TracerConfig = TracerConfig
   , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
   , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView        :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , hasTimeseries    :: !(Maybe Endpoint)
   , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
     -- Third member of the triplet is the forwarder config.

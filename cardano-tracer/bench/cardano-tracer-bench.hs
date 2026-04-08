@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Logging hiding (LocalSocket)
@@ -61,7 +62,7 @@ main = do
   rtViewPageOpened <- newTVarIO False
 #endif
 
-  tracer <- mkTracerTracer $ SeverityF $ Just Warning
+  tracer <- mkTraceBundle $ SeverityF $ Just Warning
 
   let tracerEnv :: TracerConfig -> HandleRegistry -> TracerEnv
       tracerEnv config handleRegistry = TracerEnv
@@ -73,11 +74,12 @@ main = do
         , teCurrentDPLock         = currentDPLock
         , teDPRequestors          = dpRequestors
         , teProtocolsBrake        = protocolsBrake
-        , teTracer                = tracer
+        , teTracer                = tracer.assorted
         , teReforwardTraceObjects = \_-> pure ()
         , teRegistry              = handleRegistry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teTimeseriesHandle      = Nothing
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -140,22 +142,23 @@ main = do
 
   mkConfig :: FilePath -> LogFormat -> TracerConfig
   mkConfig root format = TracerConfig
-    { networkMagic   = 764824073
-    , network        = AcceptAt (Net.LocalPipe "")
-    , loRequestNum   = Nothing
-    , ekgRequestFreq = Nothing
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , tlsCertificate = Nothing
-    , logging        = NE.fromList [LoggingParams root FileMode format]
-    , rotation       = Nothing
-    , verbosity      = Nothing
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = 764824073
+    , network          = AcceptAt (Net.LocalPipe "")
+    , loRequestNum     = Nothing
+    , ekgRequestFreq   = Nothing
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = NE.fromList [LoggingParams root FileMode format]
+    , rotation         = Nothing
+    , verbosity        = Nothing
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
     , prometheusLabels = Nothing
     }
 

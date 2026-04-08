@@ -48,7 +48,9 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
   lock <- newLock
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (acceptConfig rootDir) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
+  withAsync (doRunCardanoTracer (acceptConfig rootDir)
+              (Just $ rootDir <> "/../state")
+              (TraceBundle stderrShowTracer stderrShowTracer) stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
     withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000) \async2 -> do
@@ -68,6 +70,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
     , ekgRequestFreq   = Just 1.0
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
+    , hasTimeseries    = Nothing
     , hasRTView        = Nothing
     , logging          = LoggingParams root FileMode format :| []
     , rotation         = Just $ RotationParams
@@ -91,7 +94,9 @@ propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
   lock <- newLock
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer initConfig (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
+  withAsync (doRunCardanoTracer initConfig
+              (Just $ rootDir <> "/../state")
+              (TraceBundle stderrShowTracer stderrShowTracer) stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
     withAsync (launchForwardersSimple ts Responder howToConnect1 10000) \async2 -> do
@@ -115,6 +120,7 @@ propMultiInit ts@TestSetup{..} format rootDir howToConnect1 howToConnect2 = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = LoggingParams rootDir FileMode format :| []
     , rotation         = Nothing
@@ -133,7 +139,9 @@ propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
   lock <- newLock
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer respConfig (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \async1 -> do
+  withAsync (doRunCardanoTracer respConfig
+               (Just $ rootDir <> "/../state")
+               (TraceBundle stderrShowTracer stderrShowTracer) stopProtocols dpRequestors) \async1 -> do
     link async1
     sleep 1.0
     -- withAsync (launchForwardersSimple ts Initiator howToConnect 10000) \async2 -> do
@@ -159,6 +167,7 @@ propMultiResp ts@TestSetup{..} format rootDir howToConnect = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = LoggingParams rootDir FileMode format :| []
     , rotation         = Nothing

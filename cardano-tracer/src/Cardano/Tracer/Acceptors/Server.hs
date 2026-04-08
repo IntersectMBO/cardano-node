@@ -5,8 +5,6 @@ module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
   ) where
 
-import "contra-tracer" Control.Tracer (nullTracer)
-
 import           Cardano.Logging (TraceObject)
 import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Acceptors.Utils
@@ -25,25 +23,25 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
 import qualified Ouroboros.Network.Protocol.Handshake as Handshake
+import qualified Ouroboros.Network.Server.Simple as Server
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    localAddressFromPath, localSnocket, makeLocalBearer, makeSocketBearer,
                    socketSnocket)
-import           Ouroboros.Network.Socket (ConnectionId (..),
-                   SomeResponderApplication (..))
-import qualified Ouroboros.Network.Server.Simple as Server
+import           Ouroboros.Network.Socket (ConnectionId (..), SomeResponderApplication (..))
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (wait)
+import           "contra-tracer" Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Functor (void)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Text as Text
-import           Data.Functor (void)
 import           Data.Void (Void)
 import           Data.Word (Word32)
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import qualified System.Metrics.Configuration as EKGF
-import           System.Metrics.Network.Acceptor (acceptEKGMetricsResp)
+import           System.Metrics.Network.Acceptor (acceptMetricsResp)
 
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
@@ -184,9 +182,10 @@ runEKGAcceptor
   -> (ConnectionId addr -> IO ())
   -> RunMiniProtocol 'Mux.ResponderMode initiatorCtx (ResponderContext addr) LBS.ByteString IO Void ()
 runEKGAcceptor tracerEnv ekgConfig errorHandler =
-  acceptEKGMetricsResp
+  acceptMetricsResp
     ekgConfig
     (prepareMetricsStores tracerEnv . rcConnectionId)
+    (store tracerEnv . connIdToNodeId . rcConnectionId)
     (errorHandler . rcConnectionId)
 
 runTraceObjectsAcceptor
