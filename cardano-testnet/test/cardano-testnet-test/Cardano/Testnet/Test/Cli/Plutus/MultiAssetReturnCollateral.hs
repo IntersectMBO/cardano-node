@@ -22,7 +22,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -31,7 +31,7 @@ import qualified Hedgehog.Extras as H
 
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Collateral With Multiassets/"'@
 hprop_collateral_with_tokens :: Property
-hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-tokens" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -145,13 +145,9 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
   -- STEP 2: Attempt to spend from script with collateral containing tokens
   -- This will fail because collateral cannot contain non-ADA tokens
   
-  -- Wait for transactions to be processed and find UTxOs
-  _ <- waitForBlocks epochStateView 1
-  
-  -- Find the UTxO with tokens at wallet1 (for collateral)
-  txinCollateralWithTokensM <- 
+  -- Find the UTxO with tokens at wallet2 (for collateral)
+  (txinCollateralWithTokens, collateralTxOut) <- retryUntilJustM epochStateView (WaitForBlocks 10) $
     findLargestMultiAssetUtxoWithAddress epochStateView sbe $ T.pack maCollateralAddress
-  (txinCollateralWithTokens, collateralTxOut) <- H.evalMaybe txinCollateralWithTokensM
   H.note_ "Collateral TxOut"
   H.noteShow_  collateralTxOut
   -- Find the UTxO at the script address
