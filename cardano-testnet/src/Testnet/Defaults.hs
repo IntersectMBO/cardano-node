@@ -99,6 +99,8 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
+import           Cardano.Node.Testnet.Paths (defaultNodeName, defaultNodeDataDir, defaultUtxoSKeyPath,
+                   defaultUtxoVKeyPath)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -568,14 +570,6 @@ defaultSpoColdSKeyFp n = defaultSpoKeysDir n </> "cold.skey"
 defaultSpoName :: Int -> String
 defaultSpoName n = "pool" <> show n
 
--- | The name of a node (which doesn't have to be a SPO)
-defaultNodeName :: Int -> String
-defaultNodeName n = "node" <> show n
-
--- | The relative path of the node data dir, where the database is stored
-defaultNodeDataDir :: Int -> String
-defaultNodeDataDir n = "node-data" </> defaultNodeName n
-
 -- | The relative path where the SPO keys for the node are stored
 defaultSpoKeysDir :: Int -> String
 defaultSpoKeysDir n = "pools-keys" </> defaultSpoName n
@@ -619,8 +613,8 @@ defaultDelegatorStakeKeyPair n =
 defaultUtxoKeys :: Int -> KeyPair PaymentKey
 defaultUtxoKeys n =
   KeyPair
-    { verificationKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
-    , signingKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
+    { verificationKey = File $ defaultUtxoVKeyPath n
+    , signingKey = File $ defaultUtxoSKeyPath n
     }
 
 
