@@ -23,6 +23,7 @@ import System.IO
 import Data.IORef
 import Control.Exception (catch, IOException)
 import System.IO.Unsafe (unsafePerformIO)
+import Control.Exception (bracket)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
@@ -1162,10 +1163,12 @@ type VarTypes = Map.Map ConstructorName (Map.Map String String)
 -- For each file, ask GHCi for the types of variables extracted from forMachine clauses.
 ghciTypesForFile :: FilePath -> [Clause] -> IO VarTypes
 ghciTypesForFile fp clauses = do
-  let imports = extractImports (readFileSafe fp)
+  let src = readFileSafe fp
+      moduleName = extractModuleName src
+      imports = extractImports src
   let queries = mapMaybe buildQuery clauses
   if null queries then pure Map.empty else do
-    out <- runGhci imports (map (fst . snd) queries)
+    out <- runGhci moduleName imports (map (fst . snd) queries)
     let outputs = splitOutputs out (length queries)
     let pairs = zip queries outputs
     pure $ foldl' mergeVarTypes Map.empty (map parseQueryResult pairs)
@@ -1182,6 +1185,16 @@ extractImports src =
   where
     stripComment l = takeWhile (/= '-') l
 
+extractModuleName :: String -> Maybe String
+extractModuleName src =
+  listToMaybe
+    [ takeWhile (\c -> isAlphaNum c || c == '_' || c == '.') rest
+    | l <- lines src
+    , let t = trim l
+    , "module " `isPrefixOf` t
+    , let rest = drop (length ("module " :: String)) t
+    ]
+
 buildQuery :: Clause -> Maybe (ConstructorName, (String, [String]))
 buildQuery cl = do
   ctor <- clauseCtor cl
@@ -1195,20 +1208,57 @@ buildQuery cl = do
 commaSep :: [String] -> String
 commaSep = foldr1 (\a b -> a ++ ", " ++ b)
 
-runGhci :: [String] -> [String] -> IO String
-runGhci imports cmds = do
-  let ghciCmd = ["cabal", "repl", "cardano-node", "--repl-options=-ignore-dot-ghci", "--repl-options=-v0"]
-  let marker i = "__CMD_" ++ show i ++ "__"
-  let cmdLines =
-        [":set -XGADTs -XTypeFamilies -XDataKinds -XTypeOperators -XRankNTypes -XScopedTypeVariables"]
-        ++ imports
-        ++ concat [ [cmd, ":! echo " ++ marker i] | (i, cmd) <- zip [0..] cmds ]
-        ++ [":quit"]
-  (code, out, err) <- readCreateProcessWithExitCode (proc (head ghciCmd) (tail ghciCmd)) (unlines cmdLines)
-  let combined = out ++ err
-  case code of
-    ExitSuccess -> pure combined
-    _ -> pure combined
+runGhci :: Maybe String -> [String] -> [String] -> IO String
+runGhci moduleName imports cmds =
+  withFilteredGhciProjectFile $ \projectFile -> do
+    let ghciCmd =
+          [ "cabal"
+          , "--project-file=" ++ projectFile
+          , "repl"
+          , "cardano-node"
+          , "--repl-options=-ignore-dot-ghci"
+          , "--repl-options=-v0"
+          ]
+    let marker i = "__CMD_" ++ show i ++ "__"
+    let cmdLines =
+          [":set -XGADTs -XTypeFamilies -XDataKinds -XTypeOperators -XRankNTypes -XScopedTypeVariables"]
+          ++ maybe [] (\m -> [":module + *" ++ m]) moduleName
+          ++ imports
+          ++ concat [ [cmd, ":! echo " ++ marker i] | (i, cmd) <- zip [0..] cmds ]
+          ++ [":quit"]
+    (code, out, err) <- readCreateProcessWithExitCode (proc (head ghciCmd) (tail ghciCmd)) (unlines cmdLines)
+    let combined = out ++ err
+    case code of
+      ExitSuccess -> pure combined
+      _ -> pure combined
+
+withFilteredGhciProjectFile :: (FilePath -> IO a) -> IO a
+withFilteredGhciProjectFile action =
+  bracket create remove action
+  where
+    create = do
+      let fp = ".ghci-schema.cabal.project.tmp"
+      src <- readFile "cabal.project"
+      writeFile fp (filterGhciProject src)
+      pure fp
+    remove fp = removeFile fp `catch` (\(_ :: IOException) -> pure ())
+
+filterGhciProject :: String -> String
+filterGhciProject src = unlines (go False (lines src))
+  where
+    go _ [] = []
+    go True (l:ls)
+      | startsTopLevel l = go False (l:ls)
+      | otherwise = go True ls
+    go False (l:ls)
+      | trim l == "source-repository-package" = go True ls
+      | "extra-packages:" `isPrefixOf` trim l = go False ls
+      | otherwise = l : go False ls
+
+    startsTopLevel line =
+      case line of
+        [] -> False
+        (c:_) -> not (isSpace c)
 
 splitOutputs :: String -> Int -> [String]
 splitOutputs out n = map snd (take n (splitMarkers out))
