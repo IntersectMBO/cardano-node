@@ -54,9 +54,12 @@ sortByTimestamp = sortOn tmsgAt
 -- | Read a text file where every line is a json object representation of a `TraceMessage`.
 --   Trace messages lying within the specified `TemporalEventDurationMicrosec` are grouped in `TemporalEvent`.
 --   The trace messages are sorted by timestamp before any action.
+isCommentLine :: BChar8.ByteString -> Bool
+isCommentLine l = "//" `BChar8.isPrefixOf` l || BChar8.null l
+
 read :: FilePath -> TemporalEventDurationMicrosec -> IO [TemporalEvent]
 read filename duration = do
-  traces <- BChar8.lines <$> BChar8.readFile filename
+  traces <- filter (not . isCommentLine) . BChar8.lines <$> BChar8.readFile filename
   msgs <- sortByTimestamp <$> traverse throwDecodeStrict traces
   let events = slice duration msgs
   pure events

@@ -62,27 +62,45 @@ common common
 library
     import:           common
     exposed-modules:
-                      Cardano.ReCon.LTL.Check
-                    , Cardano.ReCon.LTL.Lang.Formula
-                    , Cardano.ReCon.LTL.Lang.Formula.Parser
-                    , Cardano.ReCon.LTL.Lang.Formula.Prec
-                    , Cardano.ReCon.LTL.Lang.Formula.Yaml
-                    , Cardano.ReCon.LTL.Lang.Fragment
-                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment0
-                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment1
-                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment2
-                    , Cardano.ReCon.LTL.Lang.HomogeneousFormula
-                    , Cardano.ReCon.LTL.Occurs
-                    , Cardano.ReCon.LTL.Pretty
-                    , Cardano.ReCon.LTL.Progress
-                    , Cardano.ReCon.LTL.Rewrite
-                    , Cardano.ReCon.LTL.Satisfy
-                    , Cardano.ReCon.LTL.Subst
+                      Cardano.ReCon.Common.Types
+                    , Cardano.ReCon.Common.Parser
 
+                    , Cardano.ReCon.LTL.Check
+                    , Cardano.ReCon.LTL.Formula
+                    , Cardano.ReCon.LTL.Formula.Parser
+                    , Cardano.ReCon.LTL.Formula.Prec
+                    , Cardano.ReCon.LTL.Formula.Yaml
+                    , Cardano.ReCon.LTL.Formula.Pretty
+                    , Cardano.ReCon.LTL.Satisfy
+
+                    , Cardano.ReCon.Integer.Polynomial.Parser
+                    , Cardano.ReCon.Integer.Polynomial.Term
+                    , Cardano.ReCon.Integer.Polynomial.Value
+
+                    , Cardano.ReCon.Presburger.Decide
+                    , Cardano.ReCon.Presburger.Formula
+                    , Cardano.ReCon.Presburger.Parser
+
+                    , Cardano.ReCon.Trace.Event
                     , Cardano.ReCon.Trace.Feed
                     , Cardano.ReCon.Trace.Ingest
 
     other-modules:
+                      Cardano.ReCon.LTL.Internal.Occurs
+                    , Cardano.ReCon.LTL.Internal.Progress
+                    , Cardano.ReCon.LTL.Internal.Rewrite
+                    , Cardano.ReCon.LTL.Internal.Subst
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula.FinFree
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula.TextFree
+                    , Cardano.ReCon.Presburger.Internal.CooperQE
+                    , Cardano.ReCon.Presburger.Internal.IR.AffineDNF
+                    , Cardano.ReCon.Presburger.Internal.IR.CompNF
+                    , Cardano.ReCon.Presburger.Internal.IR.DNF
+                    , Cardano.ReCon.Presburger.Internal.IR.ForallFree
+                    , Cardano.ReCon.Presburger.Internal.IR.NegNF
+                    , Cardano.ReCon.Presburger.Internal.IR.NormAffineDNF
+                    , Cardano.ReCon.Presburger.Internal.IR.QuantifierFree
     other-extensions:
 
     build-depends:    base
@@ -147,6 +165,13 @@ test-suite cardano-recon-test
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Cardano/ReCon/Unit.hs
+  other-modules:
+      Cardano.ReCon.Integer.Polynomial.Semantics.Suite
+    , Cardano.ReCon.Integer.Polynomial.Syntax.Suite
+    , Cardano.ReCon.LTL.Semantics.Suite
+    , Cardano.ReCon.LTL.Syntax.Suite
+    , Cardano.ReCon.Presburger.Semantics.Suite
+    , Cardano.ReCon.Presburger.Syntax.Suite
   build-depends:
       base
     , cardano-recon-framework
@@ -155,3 +180,19 @@ test-suite cardano-recon-test
     , tasty-hunit
     , text
     , megaparsec
+
+test-suite cardano-recon-integration-test
+  import: common
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Cardano/ReCon/Integration.hs
+  other-modules:
+      Cardano.ReCon.Integration.Suite
+  build-depends:
+      base
+    , cardano-recon-framework
+    , containers
+    , filepath
+    , tasty
+    , tasty-hunit
+    , text

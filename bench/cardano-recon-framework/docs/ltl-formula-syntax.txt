@@ -1,40 +1,61 @@
-s ::= "..."        where ... stands for a list of arbitrary unicode characters such that each is:
-                      — not a control
-                      — if whitespace, then simple ' '
-                      — not a double quote
-x ::= [_a-zA-Z][_a-zA-Z0-9]*
-v ::= <int> | s               // property value, examples:
-                              //   — 42
-                              //   — "hello"
-v̄ ::= {v, ..., v}             // set of property values, examples:
-                              //   — {42, "hello"}
-                              //   — {}
-                              //   — {1, 2, 3, "bye"}
+<string> stands for a list of arbitrary unicode characters in double-quotes such that each is:
+            — not a control
+            — if whitespace, then simple ' '
+            — not a double quote
+<int> stands for an integer                   // examples: 0, -1, 42
+<nat> stands for a natural number written in  // examples: ⁰ ¹ ⁴² (superscript)
+      superscript or subscript Unicode digits //           ₀ ₁ ₄₂ (subscript)
+
+x ::= [_a-zA-Z][_a-zA-Z0-9₀-₉]*
+
+// integer (ℤ) terms
+i{atom} ::= <int> | <int> · x | x | (i{≥universe})
+i{universe} ::= i{≥atom} + i{≥universe}
+              | i{≥atom} - i{≥universe}
+
+// string terms
+s ::= <string>
+
+// property value: integer or string
+v ::= <int> | s
+
+// quantifier domain: a homogeneous set of integers or strings, or a context variable
+v̄ ::= {<int>, ..., <int>}    // integer domain,  examples: {}, {1, 2, 3}
+    | {s, ..., s}             // string domain,   examples: {}, {"a", "b"}
+    | $x                      // context-provided domain variable
+
 t ::= <int> | s | x           // property term, examples:
                               //   — 42
                               //   — "hello"
                               //   — x
                               //   — this_is_variable
-c ::= s = t                   // property constraint, examples:
-                              //   — "slot" = 1
+name ::= [_a-zA-Z][_a-zA-Z0-9._]* | s  // unquoted or quoted, examples:
+                              //   — slot
+                              //   — Forge.Loop.ForgedBlock
+                              //   — "with spaces"
+c ::= name = t                // property constraint, examples:
+                              //   — slot = 1
                               //   — "host" = "macbook-pro"
-                              //   — "slot" = x
+                              //   — slot = x
 c̄ ::= {c, ..., c}             // set of property constraints, examples:
-                              //   — {"slot" = x}
-                              //   — {"slot" = 42, "blockHash" = "xyz"}
+                              //   — {slot = x}
+                              //   — {slot = 42, blockHash = "xyz"}
                               //   — {}
-ns ::= s                      // namespace, examples:
-                              //   — "Forge.Loop.ForgedBlock"
+ns ::= name                   // namespace, examples:
+                              //   — Forge.Loop.ForgedBlock
                               //   — "Forge.Loop.NodeIsLeader"
 
 φ{atom} ::= ⊤ | ⊥ | ns c̄ | (φ{≥universe})
-φ{eq} ::= t = v
+φ{eq} ::= i = i | i < i | i > i | i ≤ i | i ≥ i
+        | x = s               // text equality; only = is supported, not <, >, etc.
 φ{prefix} ::= ◯ φ{≥atom} | ◯ᵏ φ{≥atom} | ♢ᵏ φ{≥atom} | ☐ ᪲ₖ φ{≥atom} | ☐ᵏ φ{≥atom} | ¬ φ{≥atom}
 φ{and} ::= φ{>and} ∧ φ{≥and}
 φ{or} ::= φ{>or} ∨ φ{≥or}
 φ{implies} ::= φ{>implies} ⇒ φ{≥implies}
-φ{universe} ::= ∀(x ∈ v̄). φ{≥universe} | ∀x. φ{≥universe}
-              | ∃(x ∈ v̄). φ{≥universe} | ∃x. φ{≥universe}
-              | φ{≥implies} \|ᵏ φ{≥implies}
+φ{universe} ::= ∀x ∈ v̄. φ{≥universe} | ∀x ∈ ℤ. φ{≥universe} | ∀x ∈ Text. φ{≥universe}
+              | ∃x ∈ v̄. φ{≥universe} | ∃x ∈ ℤ. φ{≥universe} | ∃x ∈ Text. φ{≥universe}
+              | φ{≥implies} |ᵏ φ{≥implies}    // until; | here is not BNF alternation
+
+// k denotes a <nat> encoded as superscript (e.g. ◯⁴²) or subscript (e.g. ☐ ᪲₄₂)
 
 atom < eq = prefix < and < or < implies < universe

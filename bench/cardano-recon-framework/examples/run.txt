@@ -1,0 +1,26 @@
+Example trace tests for cardano-recon
+======================================
+
+Working directory: bench/cardano-recon-framework
+Build:            nix develop -c bash -c "cd bench/cardano-recon-framework && cabal build cardano-recon"
+
+Each test runs:
+  cabal run cardano-recon -- examples/cfgs/formulas.yaml
+      --mode offline --duration 10 --timeunit second
+      --context examples/cfgs/context.yaml
+      <trace>
+
+Positive traces — every formula must produce (✔), none must produce (✗):
+  examples/extracts/ok-1.txt
+  examples/extracts/ok-2.txt
+  examples/extracts/ok-3.txt
+  examples/extracts/ok-4.txt
+  examples/extracts/ok-5.txt
+
+Negative traces — at least one formula must produce (✗):
+  examples/extracts/fail-1.txt
+  examples/extracts/fail-2.txt
+  examples/extracts/fail-3.txt
+  examples/extracts/fail-4.txt
+  examples/extracts/fail-5.txt    (Leios: hash mismatch — node-3 receives a different hash)
+  examples/extracts/fail-6.txt    (Leios: late delivery — node-3 receives after the 60s window)
