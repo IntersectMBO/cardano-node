@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-|
 Module      : Cardano.TxGenerator.Internal.Fifo
 Description : FIFO/queue data structure.
@@ -48,7 +47,9 @@ remove :: Fifo a -> Maybe (Fifo a, a)
 remove fifo = case fifo of
   Fifo [] []    -> Nothing
   Fifo (h:t) y  -> Just (Fifo t y, h)
-  Fifo [] y     -> let ~(h:t) = reverse y in Just (Fifo t [], h)
+  Fifo [] y     -> case reverse y of
+    (h:t) -> Just (Fifo t [], h)
+    []    -> Nothing
 
 -- | Dequeueing /n/ items just iterates calling remove within the
 -- `Maybe` monad. Removing n from a Fifo of length k when k < n is

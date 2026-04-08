@@ -147,6 +147,129 @@ let
     let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
+      genesisFunds =
+        (let
+           # create-testnet-data --testnet-magic 42 --total-supply 2010000000000000 --utxo-keys 100 --genesis-keys 0 --delegated-supply 2000000000000000 --pools 2 --stake-delegators 2 --drep-keys 0 --stuffed-utxo 000000
+           # Ends with 90000000000 each utxo-key.
+           # value = (profile.genesis.funds_balance - profile.genesis.shelley.protocolParams.poolDeposit * profile.composition.n_pools) / profile.genesis.utxo_keys;
+           value = (profile.derived.supply_total - profile.derived.supply_delegated) * 9 / (profile.genesis.utxo_keys * 10);
+         in
+__toJSON
+          (builtins.genList
+            (i:
+              { signing_key = "../genesis/utxo-keys/utxo${toString (i+1)}.skey"; # Key index is not zero based =)
+                inherit value;
+              }
+            )
+            profile.genesis.utxo_keys
+          )
+        )
+      ;
+      txCentrifugeConfig =
+        { # pull-fiction parameters.
+          ##########################
+          initial_inputs =
+            { type = "genesis_utxo_keys";
+              params =
+                { network_magic = profile.genesis.network_magic;
+                  signing_keys_file = "./funds.json";
+                }
+              ;
+            }
+          ;
+          builder =
+            { type = "value";
+              params =
+                { inputs_per_tx  = 2;
+                  outputs_per_tx = 2;
+                  fee = 1000000;
+                  optimistic_recycle = false;
+                }
+              ;
+            }
+          ;
+          rate_limit =
+            { scope = "shared";
+              type = "token_bucket";
+              params = { tps = 12; };
+            }
+          ;
+          max_batch_size = 500;
+          on_exhaustion = "error";
+          # One node per-workload.
+          workloads =
+            builtins.listToAttrs
+              (builtins.genList
+                (i:
+                  { name = "node-${toString i}";
+                    value =
+                      { targets =
+                          { "${toString i}" =
+                            #  { addr = "127.0.0.1";
+                            #    port = (30000 + i);
+                            #  }
+                              { addr = "__addr_${toString i}__";
+                                port = "__port_${toString i}__";
+                              }
+                            ;
+                          }
+                        ;
+                      }
+                    ;
+                  }
+                )
+                profile.composition.n_pool_hosts
+              )
+          ;
+          # tx-centrifuge parameters.
+          ###########################
+          nodeConfig = "../${runningNode}/config.json";
+          protocol_parameters =
+            { epoch_length = profile.genesis.shelley.epochLength;
+              min_fee_a = profile.genesis.shelley.protocolParams.minFeeA;
+              min_fee_b = profile.genesis.shelley.protocolParams.minFeeB;
+            }
+          ;
+          # Tracing parameters.
+          #####################
+          TraceOptions =
+            { "" =
+              { backends = [ "Stdout MachineFormat" ];
+                detail = "DNormal";
+                severity = "Debug";
+              };
+               # ouroboros-network traces.
+               "KeepAlive"                           = { severity="Silence";};
+               "KeepAlive.Receive.KeepAliveResponse" = { severity="Silence";};
+               "KeepAlive.Send.KeepAlive"            = { severity="Silence";};
+               "TxSubmission2"                       = { severity="Silence";};
+               "TxSubmission2.Receive"               = { severity="Silence";};
+               "TxSubmission2.Receive.MsgInit"       = { severity="Silence";};
+               "TxSubmission2.Receive.RequestTxIds"  = { severity="Silence";};
+               "TxSubmission2.Receive.RequestTxs"    = { severity="Silence";};
+               "TxSubmission2.Receive.Done"          = { severity="Silence";};
+               "TxSubmission2.Send"                  = { severity="Silence";};
+               "TxSubmission2.Send.MsgInit"          = { severity="Silence";};
+               "TxSubmission2.Send.ReplyTxIds"       = { severity="Silence";};
+               "TxSubmission2.Send.ReplyTxs"         = { severity="Silence";};
+               "TxSubmission2.Send.Done"             = { severity="Silence";};
+               # tx-centrifuge traces.
+               "TxCentrifuge.Builder.NewTx"   = { severity="Debug";detail="DDetailed";};
+               "TxCentrifuge.Builder.Recycle" = { severity="Debug";detail="DDetailed";};
+               "TxCentrifuge.TxSubmission.RequestTxIds" =
+                 { severity="Debug";detail="DDetailed";};
+               "TxCentrifuge.TxSubmission.ReplyTxIds"   =
+                 { severity="Debug";detail="DDetailed";};
+               "TxCentrifuge.TxSubmission.RequestTxs"   =
+                 { severity="Debug";detail="DDetailed";};
+               "TxCentrifuge.TxSubmission.ReplyTxs"     =
+                 { severity="Debug";detail="DDetailed";};
+            };
+          TurnOnLogMetrics = false;
+          TurnOnLogging = true;
+          TraceOptionNodeName = "leios-generator";
+        }
+      ;
     in {
       start =
         ''
@@ -189,11 +312,12 @@ let
         # Extra workloads end #######################
         #############################################
 
-        ${service.script}
+        echo ${__toJSON genesisFunds} > ./funds.json
+        ${haskellProject.exes.tx-centrifuge}/bin/tx-centrifuge run-script.json
         ''
       ;
 
-      config = (service.decideRunScript service);
+      config = txCentrifugeConfig;
 
       # Not present on every profile.
       # Don't create a derivation to a file containing "null" !!!

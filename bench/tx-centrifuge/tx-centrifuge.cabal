@@ -1,0 +1,211 @@
+cabal-version: 3.0
+
+name:             tx-centrifuge
+version:          0.1.0.0
+synopsis:         Standalone transaction generator for Cardano benchmarking
+description:      Pull-based transaction generator targeting the higher TPS
+                  rates and workload isolation that Leios benchmarking requires.
+                  Built from scratch so that tx-generator's historical baselines
+                  remain untouched.
+category:         Cardano,
+                  Benchmark,
+copyright:        2026 Intersect MBO.
+author:           Federico Mastellone (210034+fmaste@users.noreply.github.com)
+license:          Apache-2.0
+license-files:    LICENSE
+                  NOTICE
+build-type:       Simple
+
+extra-doc-files:  README.md
+data-files:       data/config-shared-10.json
+                  data/config-shared-100k.json
+                  data/config-per-target-0_2.json
+                  data/config-per-target-2k.json
+                  data/config-per-target-200.json
+                  data/config-multi-group.json
+                  data/protocol-parameters.ci-test.json
+
+--------------------------------------------------------------------------------
+
+common project-config
+  default-language:   Haskell2010
+
+common ghc-warnings
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wno-prepositive-qualified-module
+                      -Wno-unticked-promoted-constructors
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -fobject-code -fno-ignore-interface-pragmas
+                      -fno-omit-interface-pragmas
+
+-- -N:    multicore runtime capabilities (critical for high-TPS CPU load).
+-- -A64m: larger nursery to reduce minor-GC frequency in the hot path.
+-- -T:    RTS stats available for tuning/regression checks.
+common rts-defaults
+  ghc-options:        -threaded
+                      -rtsopts
+                      "-with-rtsopts=-N -A64m -T"
+
+--------------------------------------------------------------------------------
+
+executable tx-centrifuge
+  import:             project-config, ghc-warnings, rts-defaults
+  hs-source-dirs:     app
+  main-is:            Main.hs
+  build-depends:      base
+                    , aeson
+                    , async
+                    , bytestring
+                    , cardano-api
+                    , cardano-ledger-core
+                    , cardano-node
+                    , containers
+                    , network
+                    , ouroboros-consensus
+                    , ouroboros-consensus-cardano
+                    , ouroboros-network-framework
+                    , stm
+                    , text
+                    , transformers
+                    , tx-generator
+                    , tx-centrifuge:pull-fiction
+                    , tx-centrifuge:tx-centrifuge-lib
+
+--------------------------------------------------------------------------------
+
+-- | Domain-independent, pull-based load generation engine.
+--
+-- Provides rate-limited pipeline management (input queue, payload queue,
+-- closed-loop recycling), GCRA-based admission control, and workload
+-- orchestration. Zero Cardano dependencies — the library is parameterised over
+-- abstract input and payload types so it can drive any pull-based protocol
+-- (e.g. Cardano's TxSubmission2 mini-protocol).
+library pull-fiction
+  import:             project-config, ghc-warnings
+  hs-source-dirs:     lib/pull-fiction
+  visibility:         public
+  exposed-modules:    Cardano.Benchmarking.PullFiction.Config.Raw
+                      Cardano.Benchmarking.PullFiction.Config.Runtime
+                      Cardano.Benchmarking.PullFiction.Config.Validated
+                      Cardano.Benchmarking.PullFiction.Clock
+                      Cardano.Benchmarking.PullFiction.WorkloadRunner
+  other-modules:      Cardano.Benchmarking.PullFiction.Internal.RateLimiter
+  build-depends:      base >=4.12 && <5
+                    , aeson
+                    , async
+                    , clock
+                    , containers
+                    , stm
+                    , text
+
+-- Sub-library with node functionality decoupled from the core library above.
+library tx-centrifuge-lib
+  import:             project-config, ghc-warnings
+  hs-source-dirs:     lib/tx-centrifuge
+  visibility:         public
+  exposed-modules:    Cardano.Benchmarking.TxCentrifuge.Fund
+                      Cardano.Benchmarking.TxCentrifuge.NodeToNode
+                      Cardano.Benchmarking.TxCentrifuge.NodeToNode.KeepAlive
+                      Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxIdSync
+                      Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxSubmission
+                      Cardano.Benchmarking.TxCentrifuge.Tracing
+                      Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans
+                      Cardano.Benchmarking.TxCentrifuge.TxAssembly
+  build-depends:      base >=4.12 && <5
+                    , aeson
+                    , bytestring
+                    , cardano-api ^>= 10.24.1
+                    , cardano-ledger-api
+                    , cardano-ledger-core
+                    , containers
+                    , io-classes:{io-classes, strict-stm}
+                    , network
+                    , network-mux
+                    , ouroboros-consensus ^>= 0.30
+                    , ouroboros-consensus-cardano ^>= 0.26
+                    , ouroboros-consensus-diffusion ^>= 0.26
+                    , ouroboros-network ^>= 0.22.6
+                    , ouroboros-network-api ^>= 0.16
+                    , ouroboros-network-framework ^>= 0.19.3
+                    , ouroboros-network-protocols ^>= 0.15.2
+                    , random
+                    , serialise
+                    , stm
+                    , contra-tracer
+                    , text
+                    , time
+                    , trace-dispatcher
+                    , typed-protocols:{typed-protocols, stateful} >= 1.0
+
+--------------------------------------------------------------------------------
+
+-- Test suites import rts-defaults so performance/fairness behavior matches
+-- production runtime defaults instead of a different RTS profile.
+
+test-suite pull-fiction-test
+  import:             project-config, ghc-warnings, rts-defaults
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     test/pull-fiction
+  main-is:            Main.hs
+  other-modules:      Test.PullFiction.GeneratorTest
+                      Test.PullFiction.PipelineTest
+                      Paths_tx_centrifuge
+  autogen-modules:    Paths_tx_centrifuge
+  build-depends:      base >=4.12 && <5
+                    , containers
+                    , tasty
+                    , tasty-hunit
+                    , tx-centrifuge:pull-fiction
+                    , tx-centrifuge:test-harness
+
+test-suite tx-centrifuge-test
+  import:             project-config, ghc-warnings, rts-defaults
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     test/tx-centrifuge
+  main-is:            Main.hs
+  other-modules:      Test.TxCentrifuge.TxTest
+                      Paths_tx_centrifuge
+  autogen-modules:    Paths_tx_centrifuge
+  build-depends:      base >=4.12 && <5
+                    , aeson
+                    , cardano-api
+                    , cardano-ledger-core
+                    , clock
+                    , tasty
+                    , tasty-hunit
+                    , tx-centrifuge:tx-centrifuge-lib
+                    , tx-generator
+
+library test-harness
+  import:             project-config, ghc-warnings
+  visibility:         private
+  hs-source-dirs:     test/lib
+  exposed-modules:    Test.PullFiction.Harness
+  build-depends:      base >=4.12 && <5
+                    , aeson
+                    , async
+                    , clock
+                    , containers
+                    , tx-centrifuge:pull-fiction
+
+-- Bench imports rts-defaults so benchmark numbers are measured with the same
+-- RTS configuration used by the executable and tests.
+--------------------------------------------------------------------------------
+
+benchmark core-bench
+  import:             project-config, ghc-warnings, rts-defaults
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     bench
+  main-is:            Bench.hs
+  other-modules:      Paths_tx_centrifuge
+  autogen-modules:    Paths_tx_centrifuge
+  build-depends:      base >=4.12 && <5
+                    , containers
+                    , criterion
+                    , deepseq
+                    , tx-centrifuge:pull-fiction
+                    , tx-centrifuge:test-harness
