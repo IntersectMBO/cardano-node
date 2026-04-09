@@ -108,3 +108,23 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  --sha256: sha256-O4Et7RxR/6hGGGkJ8LyhMZSGDoUcMTvdh6mjmMOV+k8=
+  tag: a1a899f02dfc3fbab2d2bf9e57dc3fad0f25a9c5
+  subdir:
+    cardano-crypto-class
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: d3e76ba55d7e4e1e5e4d7034f0dcc89818e0be15
+  --sha256: sha256-9K+N2QByFLVB0gmAyZqysd/NMmKDngsb/XjlyEicZGU=
+  subdir:
+    eras/shelley/impl
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    eras/conway/impl
+    eras/dijkstra/impl
