@@ -12,6 +12,7 @@ let
 
   bashInteractive    = pkgs.bashInteractive;
   coreutils          = pkgs.coreutils;
+  wget               = pkgs.wget;
   jq                 = pkgs.jq;
   # Avoid rebuilding on every commit because of `set-git-rev`.
   cardano-cli        = haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli;
@@ -142,596 +143,19 @@ in ''
 # desired_producer_tps: ${toString desired_producer_tps}
 # desired_producer_sleep: ${toString desired_producer_sleep}
 
-################################################################################
-# Give a node name ("node-0", "explorer", etc) returns the node's socket path.
-################################################################################
-function get_socket_path {
-
-  # Function arguments.
-  local node_str=$1       # node name / folder to find the socket.
-
-  local socket_path="../../''${node_str}/node.socket"
-  ${coreutils}/bin/echo "''${socket_path}"
+${import ./utils/keys.nix
+  { inherit coreutils jq cardano-cli testnet_magic;
+  }
 }
 
-################################################################################
-# Given a "tx.signed" returns a JSON object that has as "tx_id" and "tx_ix"
-# properties the TxHash#TxIx of the FIRST occurrence of the provided address in
-# its "outputs" and in the "value" property the lovelace it will contain.
-# For example: {"tx_id":"0000000000", "tx_ix": 0, "value":123456}.
-# If NO ADDRESS IS SUPPLIED as argument to this function we use/assume the last
-# output is the change address (--change-address) and you want to use that one
-# to calculate a future expected UTxO.
-################################################################################
-function calculate_next_utxo {
-
-  # Function arguments.
-  local tx_signed=$1
-  local addr=''${2:-null}
-
-  local tx_id
-  # Prints a transaction identifier.
-  tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
-  )"
-  # View transaction as JSON and get index of FIRST output containing "$addr".
-    ${cardano-cli}/bin/cardano-cli debug transaction view \
-      --output-json                                       \
-      --tx-file "''${tx_signed}"                          \
-  | ${jq}/bin/jq --raw-output                             \
-      --argjson tx_id "\"''${tx_id}\""                    \
-      --argjson addr  "\"''${addr}\""                     \
-      '
-          (
-            if $addr == null or $addr == "null"
-            then
-              (.outputs | length - 1)
-            else
-              (
-                .outputs
-              | map(.address == $addr)
-              | index(true)
-              )
-            end
-          ) as $tx_ix
-        | { "tx_id": $tx_id
-          , "tx_ix": $tx_ix
-          , "value": ( .outputs[$tx_ix].amount.lovelace )
-          }
-      '
-}
-
-################################################################################
-# Store the pre-calculated "cached" future UTxO of this address.
-# (Only useful if an address is always used from the same node/socket/path).
-################################################################################
-function store_address_utxo_expected {
-
-  # Function arguments.
-  local tx_signed=$1
-  local addr=$2
-
-  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
-    calculate_next_utxo                        \
-      "''${tx_signed}"                         \
-      "''${addr}"                              \
-  > "''${utxo_file}"
-}
-
-################################################################################
-# Get pre-calculated "cached" future UTxO TxHash#TxIx suitable to use as a part
-# of a "--tx-in" argument. Returns an "empty" string if not available.
-# (Only useful if an address is always used from the same node/socket/path).
-################################################################################
-function get_address_utxo_expected_id {
-
-  # Function arguments.
-  local addr=$1
-
-  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
-  if test -f "''${utxo_file}"
-  then
-    ${jq}/bin/jq --raw-output                  \
-      '( .tx_id + "#" + (.tx_ix | tostring) )' \
-      "''${utxo_file}"
-  fi
-}
-
-################################################################################
-# Get pre-calculated "cached" future UTxO lovelace amount suitable to use as
-# part of a "--tx-in" argument. Returns an "empty" string if not available.
-# (This only works if an address is always used from the same node/socket/path).
-################################################################################
-function get_address_utxo_expected_value {
-
-  # Function arguments.
-  local addr=$1
-
-  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
-  if test -f "''${utxo_file}"
-  then
-    ${jq}/bin/jq --raw-output '.value' "''${utxo_file}"
-  fi
-}
-
-################################################################################
-# Give a "tx.signed" filepath returns "true" or "false".
-# Not to be run during the benchmarking phase: lots of queries!
-################################################################################
-function is_tx_in_mempool {
-
-  # Function arguments.
-  local node_str=$1       # node name / folder where to store the files.
-  local tx_signed=$2
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  local tx_id
-  tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
-  )"
-    ${cardano-cli}/bin/cardano-cli conway query tx-mempool           \
-        tx-exists         "''${tx_id}"                               \
-      --testnet-magic     ${toString testnet_magic}                  \
-      --socket-path       "''${socket_path}"                         \
-  | ${jq}/bin/jq --raw-output                                        \
-      .exists
-}
-
-################################################################################
-# Function to submit the funds-splitting tx and retry if needed.
-# Not to be run during the benchmarking phase: lots of queries!
-################################################################################
-function funds_submit_retry {
-
-  # Function arguments.
-  local node_str=$1         # node name / folder to find the socket to use.
-  local tx_signed=$2        # tx to send and maybe re-send.
-  local addr=$3             # Address to wait for (UTxO id must be cached).
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  local utxo_id
-  utxo_id="$(get_address_utxo_expected_id "''${addr}")"
-
-  local contains_addr="false"
-  local submit_tries=${toString funds_submit_tries}
-  while test ! "''${contains_addr}" = "true"
-  do
-    if test "''${submit_tries}" -le 0
-    then
-      # Time's up!
-      ${coreutils}/bin/echo "funds_submit_retry: Timeout waiting for: ''${addr} - ''${utxo_id}"
-      exit 1
-    else
-
-      # Some debugging.
-      ${coreutils}/bin/echo "funds_submit_retry: submit: ''${tx_signed} (''${submit_tries})"
-
-      # (Re)Submit transaction ignoring errors.
-        ${cardano-cli}/bin/cardano-cli conway transaction submit              \
-          --testnet-magic         ${toString testnet_magic}                   \
-          --socket-path           "''${socket_path}"                          \
-          --tx-file               "''${tx_signed}"                            \
-      || true
-      submit_tries="$((submit_tries - 1))"
-
-      # Wait for the transaction to NOT be in the mempool anymore
-      local in_mempool="true"
-      while test ! "''${in_mempool}" = "false"
-      do
-        ${coreutils}/bin/sleep 1
-        in_mempool="$(is_tx_in_mempool "''${node_str}" "''${tx_signed}")"
-      done
-
-      # Some loops to see if the expected UTxO of this address appears.
-      local utxo_tries=${toString wait_utxo_id_tries}
-      while test ! "''${contains_addr}" = "true" && test "''${utxo_tries}" -gt 0
-      do
-        ${coreutils}/bin/sleep ${toString wait_utxo_id_sleep}
-        # Some debugging.
-        ${coreutils}/bin/echo "funds_submit_retry: wait_utxo_id: ''${utxo_id} (''${utxo_tries})"
-        contains_addr="$(                                      \
-            ${cardano-cli}/bin/cardano-cli conway query utxo   \
-              --testnet-magic     ${toString testnet_magic}    \
-              --socket-path       "''${socket_path}"           \
-              --address           "''${addr}"                  \
-              --output-json                                    \
-          | ${jq}/bin/jq --raw-output                          \
-              --argjson utxo_id "\"''${utxo_id}\""             \
-              'keys | any(. == $utxo_id) // false'             \
-        )"
-        utxo_tries="$((utxo_tries - 1))"
-      done
-
-    fi
-  done
-
-}
-
-################################################################################
-# Evenly split the first UTxO of this key to the addresses in the array!
-# Does it in batchs so we don't exceed "maxTxSize" of 16384.
-# Stores the future UTxOs of all addresses in files for later references.
-# Not to be run during the benchmarking phase: waits for funds between batchs!
-################################################################################
-function funds_from_to {
-
-  # Function arguments.
-  local node_str=''${1};  shift  # node name / folder to find the socket to use.
-  local utxo_vkey=''${1}; shift  # In
-  local utxo_skey=''${1}; shift  # In
-  local reminder=''${1};  shift  # Funds to keep in the origin address.
-  local donation=''${1};  shift  # To treasury.
-  local addrs_array=("$@")       # Outs
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  # Get the "in" address and its first UTxO only once we have the lock.
-  local funds_addr
-  funds_addr="$( \
-    ${cardano-cli}/bin/cardano-cli address build       \
-      --testnet-magic ${toString testnet_magic}        \
-      --payment-verification-key-file "''${utxo_vkey}" \
-  )"
-  # This three only needed for the first batch and to calculate funds per node.
-  local funds_json funds_tx funds_lovelace
-  funds_json="$( \
-    ${cardano-cli}/bin/cardano-cli conway query utxo \
-      --testnet-magic ${toString testnet_magic}      \
-      --socket-path "''${socket_path}"               \
-      --address "''${funds_addr}"                    \
-      --output-json                                  \
-  )"
-  funds_tx="$( \
-      ${coreutils}/bin/echo "''${funds_json}" \
-    | ${jq}/bin/jq -r                         \
-        'keys[0]'                             \
-  )"
-  funds_lovelace="$( \
-      ${coreutils}/bin/echo "''${funds_json}" \
-    | ${jq}/bin/jq -r                         \
-      --arg keyName "''${funds_tx}"           \
-      '.[$keyName].value.lovelace'            \
-  )"
-
-  # Calculate how much lovelace for each output address.
-  local outs_count per_out_lovelace
-  outs_count="''${#addrs_array[@]}"
-  ### HACK: Fees! Always using 550000!!!
-  ### With   2 outputs: "Estimated transaction fee: 172233 Lovelace"
-  ### With  10 outputs: "Estimated transaction fee: 186665 Lovelace"
-  ### With  53 outputs: "Estimated transaction fee: 264281 Lovelace"
-  ### With 150 outputs: "Estimated transaction fee: 439357 Lovelace"
-  ### With 193 outputs: "Estimated transaction fee: 516929 Lovelace"
-  per_out_lovelace="$(                                                         \
-    ${jq}/bin/jq -r --null-input                                               \
-      --argjson numerator    "''${funds_lovelace}"                             \
-      --argjson denominator  "''${outs_count}"                                 \
-      --argjson reminder     "''${reminder}"                                   \
-      --argjson donation     "''${donation}"                                   \
-      '(
-             ( $numerator
-             - $reminder
-             - $donation
-             - ( 550000
-               * ( ($denominator / ${toString outs_per_split_transaction}) | ceil )
-               )
-             )
-           / $denominator
-         | round
-       )'                                                                      \
-  )"
-
-  # Split the funds in batchs (donations only happen in the first batch).
-  local i=0
-  local txOuts_args_array=() txOuts_addrs_array=()
-  local batch=${toString outs_per_split_transaction}
-  local tx_in tx_filename
-  local treasury_donation_args_array=()
-  for addr in "''${addrs_array[@]}"
-  do
-    i="$((i + 1))"
-    # Build the "--tx-out" arguments array of this batch.
-    txOuts_args_array+=("--tx-out")
-    txOuts_args_array+=("''${addr}+''${per_out_lovelace}")
-    txOuts_addrs_array+=("''${addr}")
-
-    # We send if last addr in the for loop or batch max exceeded.
-    if test "$i" -ge "''${#addrs_array[@]}" || test "$i" -ge "$batch"
-    then
-      if test "$batch" -eq ${toString outs_per_split_transaction}
-      then
-        # First transaction.
-        # The input comes from the function arguments.
-        tx_in="''${funds_tx}"
-        # Treasury donation happens only once.
-        if ! test "''${donation}" = "0"
-        then
-          treasury_donation_args_array=("--treasury-donation" "''${donation}")
-        fi
-      else
-        # Not the first batch.
-        # The input comes from the last transaction submitted.
-        # No need to wait for it because the submission function does this!
-        tx_in="$(get_address_utxo_expected_id "''${funds_addr}")"
-        # Treasury donation happens only once.
-        treasury_donation_args_array=()
-      fi
-
-      # Some debugging!
-      ${coreutils}/bin/echo "funds_from_to: ''${utxo_vkey} (''${funds_addr}): --tx-in ''${tx_in}"
-
-      # Send this batch to each node!
-      # Build transaction.
-      tx_filename=./funds_from_to."''${funds_addr}"."''${i}"
-      ${cardano-cli}/bin/cardano-cli conway transaction build               \
-        --testnet-magic         ${toString testnet_magic}                   \
-        --socket-path           "''${socket_path}"                          \
-        --tx-in                 "''${tx_in}"                                \
-        ''${txOuts_args_array[@]}                                           \
-        ''${treasury_donation_args_array[@]}                                \
-        --change-address        "''${funds_addr}"                           \
-        --out-file              "''${tx_filename}.raw"
-      # Sign transaction.
-      ${cardano-cli}/bin/cardano-cli conway transaction sign                \
-        --testnet-magic         ${toString testnet_magic}                   \
-        --signing-key-file      "''${utxo_skey}"                            \
-        --tx-body-file          "''${tx_filename}.raw"                      \
-        --out-file              "''${tx_filename}.signed"
-
-      # Store outs/addresses next UTxO.
-      for addr_cache in "''${txOuts_addrs_array[@]}"
-      do
-        store_address_utxo_expected \
-          "''${tx_filename}.signed" \
-          "''${addr_cache}"
-      done
-      # Without the change address we can't wait for the funds after submission
-      # or calculate the next input to use if an extra batch is needed!
-      store_address_utxo_expected \
-        "''${tx_filename}.signed" \
-        "''${funds_addr}"
-
-      # Submit transaction and wait for settlement.
-      funds_submit_retry            \
-        "''${node_str}"             \
-        "''${tx_filename}.signed"   \
-        "''${funds_addr}"
-
-      # Reset variables for next batch iteration.
-      txOuts_args_array=() txOuts_addrs_array=()
-      batch="$((batch + ${toString outs_per_split_transaction}))"
-    fi
-  done
-}
-
-################################################################################
-# Waits until the UTxOs of this address are not empty (errors on timeout).
-# Not to be run during the benchmarking phase: lots of queries!
-################################################################################
-function wait_any_utxo {
-
-  # Function arguments.
-  local node_str=$1         # node name / folder to find the socket to use.
-  local addr=$2
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  local tries=${toString wait_any_utxo_tries}
-  local utxos_json="{}"
-  while test "''${utxos_json}" = "{}"
-  do
-    if test "''${tries}" -le 0
-    then
-      # Time's up!
-      ${coreutils}/bin/echo "wait_any_utxo: Timeout waiting for: ''${addr}"
-      exit 1
-    fi
-    utxos_json="$( \
-      ${cardano-cli}/bin/cardano-cli conway query utxo     \
-        --testnet-magic     ${toString testnet_magic}      \
-        --socket-path       "''${socket_path}"             \
-        --address           "''${addr}"                    \
-        --output-json                                      \
-    )"
-    if ! test "''${tries}" = ${toString wait_any_utxo_tries}
-    then
-      ${coreutils}/bin/sleep ${toString wait_any_utxo_sleep}
-    fi
-    tries="$((tries - 1))"
-  done
-}
-
-################################################################################
-# Waits until an specific proposal appears or fails.
-# Not to be run during the benchmarking phase: lots of queries!
-################################################################################
-function wait_proposal_id {
-
-  # Function arguments.
-  local node_str=$1         # node name / folder to find the socket to use.
-  local tx_signed=$2
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  # Get proposal's "txId" from the "--tx-file".
-  local tx_id
-  tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid    \
-      --tx-file     "''${tx_signed}"                          \
-  )"
-
-  local contains_proposal="false"
-  local tries=${toString wait_proposal_id_tries}
-  while test "''${contains_proposal}" = "false"
-  do
-    if test "''${tries}" -le 0
-    then
-      # Time's up!
-      ${coreutils}/bin/echo "wait_proposal_id: Timeout waiting for: ''${tx_id}"
-      exit 1
-    else
-      # No "--output-json" needed.
-      contains_proposal="$(                                       \
-          ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-            --testnet-magic     ${toString testnet_magic}         \
-            --socket-path       "''${socket_path}"                \
-        | ${jq}/bin/jq --raw-output                               \
-            --argjson tx_id "\"''${tx_id}\""                      \
-            '.proposals | any(.actionId.txId == $tx_id) // false' \
-      )"
-      if ! test "''${tries}" = ${toString wait_proposal_id_tries}
-      then
-        ${coreutils}/bin/sleep ${toString wait_proposal_id_sleep}
-      fi
-      tries="$((tries - 1))"
-    fi
-  done
-}
-
-################################################################################
-# Waits until an specific number of proposals are visible.
-# Not to be run during the benchmarking phase: lots of queries!
-################################################################################
-function wait_proposals_count {
-
-  # Function arguments.
-  local node_str=$1         # node name / folder to find the socket to use.
-  local count=$2
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  local contains_proposals="false"
-  while test "''${contains_proposals}" = "false"
-  do
-    # No "--output-json" needed.
-    contains_proposals="$(                                      \
-        ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-          --testnet-magic     ${toString testnet_magic}         \
-          --socket-path       "''${socket_path}"                \
-      | ${jq}/bin/jq --raw-output                               \
-          --argjson count "''${count}"                          \
-          '.proposals | length == $count // false'              \
-    )"
-    ${coreutils}/bin/sleep ${toString wait_proposals_count_sleep}
-  done
-}
-
-################################################################################
-# Hack: Given a node "i" and proposal number and a DRep number create always the
-# same address keys.
-# Only supports up to 99 nodes, 9999 proposals and 999999 DReps by adding the
-# missing Hex chars.
-# Returns the file path without the extensions (the ".skey" or ".vkey" part).
-################################################################################
-function create_node_prop_drep_key_files {
-
-  # Function arguments.
-  local node_str=$1 # String for the key file name (not for the socket).
-  local node_i=$2   # This "i" is part of the node name ("node-i").
-  local prop_i=$3
-  local drep_i=$4
-
-  local filename=./"''${node_str}"-prop-"''${prop_i}"-drep-"''${drep_i}"
-  # Now with the extensions.
-  local skey="''${filename}".skey
-  local vkey="''${filename}".vkey
-
-  # Only create if not already there!
-  if ! test -f "''${vkey}"
-  then
-      ${jq}/bin/jq --null-input \
-        --argjson node_i "''${node_i}" \
-        --argjson prop_i "''${prop_i}" \
-        --argjson drep_i "''${drep_i}" \
-        '
-          {"type": "PaymentSigningKeyShelley_ed25519",
-           "description": "Payment Signing Key",
-           "cborHex": (
-                "5820b02868d722df021278c78be3b7363759b37f5852b8747b488bab"
-              + (if   $node_i <=  9
-                 then ("0" + ($node_i | tostring))
-                 elif $node_i >= 10 and $node_i <= 99
-                 then (       $node_i | tostring)
-                 else (error ("Node ID above 99"))
-                 end
-                )
-              + (if   $prop_i <=      9
-                 then (   "000" + ($prop_i | tostring))
-                 elif $prop_i >=   10 and $prop_i <=   99
-                 then (    "00" + ($prop_i | tostring))
-                 elif $prop_i >=  100 and $prop_i <=  999
-                 then (     "0" + ($prop_i | tostring))
-                 elif $prop_i >= 1000 and $prop_i <= 9999
-                 then (           ($prop_i | tostring))
-                 else (error ("Proposal ID above 9999"))
-                 end
-                )
-              + (if   $drep_i <=      9
-                 then ( "00000" + ($drep_i | tostring))
-                 elif $drep_i >=     10 and $drep_i <=     99
-                 then (  "0000" + ($drep_i | tostring))
-                 elif $drep_i >=    100 and $drep_i <=    999
-                 then (   "000" + ($drep_i | tostring))
-                 elif $drep_i >=   1000 and $drep_i <=   9999
-                 then (    "00" + ($drep_i | tostring))
-                 elif $drep_i >=  10000 and $drep_i <=  99999
-                 then (     "0" + ($drep_i | tostring))
-                 elif $drep_i >= 100000 and $drep_i <= 999999
-                 then (           ($drep_i | tostring))
-                 else (error ("DRep ID above 999999"))
-                 end
-                )
-            )
-          }
-        ' \
-    > "''${skey}"
-    ${cardano-cli}/bin/cardano-cli conway key verification-key         \
-      --signing-key-file      "''${skey}"                              \
-      --verification-key-file "''${vkey}"
-  fi
-  ${coreutils}/bin/echo "''${filename}"
-}
-
-################################################################################
-# Get address of the node-proposal-drep combination!
-################################################################################
-function build_node_prop_drep_address {
-
-  # Function arguments.
-  local node_str=$1 # String for the key file name (not for the socket).
-  local node_i=$2   # This "i" is part of the node name ("node-i").
-  local prop_i=$3
-  local drep_i=$4
-
-  local filename addr
-  filename="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
-  addr="''${filename}.addr"
-  # Only create if not already there!
-  if ! test -f "''${addr}"
-  then
-    local vkey="''${filename}".vkey
-      ${cardano-cli}/bin/cardano-cli address build  \
-        --testnet-magic ${toString testnet_magic}   \
-        --payment-verification-key-file "''${vkey}" \
-    > "''${addr}"
-  fi
-  ${coreutils}/bin/cat "''${addr}"
+${import ./utils/utxo.nix
+  { inherit coreutils cardano-cli jq testnet_magic;
+    inherit outs_per_split_transaction funds_submit_tries;
+    inherit wait_any_utxo_tries wait_any_utxo_sleep;
+    inherit wait_utxo_id_tries wait_utxo_id_sleep;
+    inherit wait_proposal_id_tries wait_proposal_id_sleep;
+    inherit wait_proposals_count_sleep;
+  }
 }
 
 ################################################################################
@@ -770,7 +194,7 @@ function governance_funds_genesis {
     )"
     local producer_addr
     # Drep 0 is No DRep (funds for the node).
-    producer_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" 0 0)"
+    producer_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" 0 0)"
     producers_addrs_array+=("''${producer_addr}")
     ${coreutils}/bin/echo "governance_funds_genesis: Splitting to: ''${producer_name} - ''${producer_i} - 0 - (''${producer_addr})"
   done
@@ -807,9 +231,9 @@ function governance_funds_producer {
       ../../node-specs.json              \
   )"
   local producer_addr producer_vkey producer_skey
-  producer_addr="$(build_node_prop_drep_address    "''${producer_name}" "''${producer_i}" 0 0)"
-  producer_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".vkey
-  producer_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".skey
+  producer_addr="$(build_x_y_z_address    "''${producer_name}" "''${producer_i}" 0 0)"
+  producer_vkey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" 0 0)".vkey
+  producer_skey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" 0 0)".skey
 
   # Wait for initial funds to arrive!
   ${coreutils}/bin/echo "governance_funds_producer: Wait for funds:  $(${coreutils}/bin/date --rfc-3339=seconds)"
@@ -830,7 +254,7 @@ function governance_funds_producer {
   for prop_i in {1..${toString proposals_count}}
   do
     local producer_prop_addr
-    producer_prop_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)"
+    producer_prop_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)"
     producer_prop_addr_array+=("''${producer_prop_addr}")
     ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${producer_prop_addr}"
   done
@@ -855,8 +279,8 @@ function governance_funds_producer {
   do
 
     local producer_prop_vkey producer_prop_skey
-    producer_prop_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".vkey
-    producer_prop_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".skey
+    producer_prop_vkey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".vkey
+    producer_prop_skey="$(create_x_y_z_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".skey
 
     local producer_dreps_addrs_array=()
     local drep_step=0
@@ -866,7 +290,7 @@ function governance_funds_producer {
     do
       local producer_drep_addr
       actual_drep="$((drep_step + i))"
-      producer_drep_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" "''${actual_drep}")"
+      producer_drep_addr="$(build_x_y_z_address "''${producer_name}" "''${producer_i}" "''${prop_i}" "''${actual_drep}")"
       producer_dreps_addrs_array+=("''${producer_drep_addr}")
       ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${actual_drep} - ''${producer_drep_addr}"
     done
@@ -925,6 +349,14 @@ function governance_create_constitution {
   | ${jq}/bin/jq -r                                                  \
       '.nextRatifyState.nextEnactState.prevGovActionIds'
 
+  # Copy base-line anchor.
+  ${wget}/bin/wget                                                   \
+    --output-document ./constitution.anchor.json                     \
+    "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json"
+  # Calculate anchor hash.
+  ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
+    --file-text ./constitution.anchor.json                           \
+    --out-file  ./constitution.anchor.hash
   # Create dummy constitution.
     ${coreutils}/bin/echo "My Constitution: free mate and asado"     \
   > ./constitution.txt
@@ -946,7 +378,7 @@ function governance_create_constitution {
   ${cardano-cli}/bin/cardano-cli conway governance action create-constitution \
     --testnet \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json" \
-    --anchor-data-hash "9d99fbca260b2d77e6d3012204e1a8658f872637ae94cdb1d8a53f4369400aa9" \
+    --anchor-data-hash "$(${coreutils}/bin/cat ./constitution.anchor.hash)" \
     --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
@@ -1003,8 +435,8 @@ function governance_create_withdrawal {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local node_drep_skey node_drep_addr
-  node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" 0 "''${drep_i}")".skey
-  node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" 0 "''${drep_i}")"
+  node_drep_skey="$(create_x_y_z_key_files "''${node_str}" "''${node_i}" 0 "''${drep_i}")".skey
+  node_drep_addr="$(build_x_y_z_address    "''${node_str}" "''${node_i}" 0 "''${drep_i}")"
 
   # Funds needed for this governance action ?
   local action_deposit
@@ -1016,12 +448,21 @@ function governance_create_withdrawal {
   local funds_tx
   funds_tx="$(get_address_utxo_expected_id "''${node_drep_addr}")"
 
+  # Copy base-line anchor.
+  ${wget}/bin/wget                                                   \
+    --output-document ./treasury-withdrawal.json                     \
+    "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld"
+  # Calculate anchor hash.
+  ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
+    --file-text   ./treasury-withdrawal.json                         \
+    --out-file    ./treasury-withdrawal.hash
+ 
   local tx_filename=./create-withdrawal."''${node_str}"."''${drep_i}"
   # Create action.
   ${cardano-cli}/bin/cardano-cli conway governance action create-treasury-withdrawal \
     --testnet                                                                                                                    \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld" \
-    --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
+    --anchor-data-hash "$(${coreutils}/bin/cat ./treasury-withdrawal.hash)"                                                      \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
     --deposit-return-stake-verification-key-file  ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
@@ -1200,8 +641,8 @@ function governance_vote_proposal {
   for drep_i in ''${dreps_array[*]}
   do
     local node_drep_skey node_drep_addr
-    node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")".skey
-    node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
+    node_drep_skey="$(create_x_y_z_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")".skey
+    node_drep_addr="$(build_x_y_z_address    "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
     # UTxO are created for 1 vote per transaction so all runs have the same
     # number of UTxOs. We grab the funds from the first address/UTxO.
     if test -z "''${funds_tx-}"
