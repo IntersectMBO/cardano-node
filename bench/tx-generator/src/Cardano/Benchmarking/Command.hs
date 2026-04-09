@@ -28,8 +28,10 @@ import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Setup.TestnetDiscovery (FillDefaults (..), ForceInfra (..),
+                   TestnetConfig (..), TestnetMergeFlags (..), discoverTestnetConfig)
 import           Cardano.TxGenerator.Types (TxGenPlutusParams (..))
-import           Data.Aeson (fromJSON)
+import           Data.Aeson (Value (..), fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Data.Maybe (catMaybes)
@@ -73,9 +75,13 @@ deriving instance Show SignalInfo
 deriving instance Show SignalSpecificInfo
 #endif
 
+data JsonHLSource
+  = FullConfig FilePath
+  | TestnetSource TestnetConfig (Maybe FilePath)
+
 data Command
   = Json FilePath
-  | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
+  | JsonHL JsonHLSource (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
   | Selftest (Maybe FilePath)
   | VersionCmd
@@ -93,8 +99,14 @@ runCommand' iocp = do
     Json actionFile -> do
       script <- parseScriptFileAeson actionFile
       runScript emptyEnv script envConsts >>= handleError . fst
-    JsonHL nixSvcOptsFile nodeConfigOverwrite cardanoTracerOverwrite -> do
-      opts <- parseJSONFile fromJSON nixSvcOptsFile
+    JsonHL source nodeConfigOverwrite cardanoTracerOverwrite -> do
+      opts <- case source of
+        FullConfig f -> parseJSONFile fromJSON f
+        TestnetSource tc Nothing ->
+          discoverTestnetConfig tc (Object mempty)
+        TestnetSource tc (Just f) -> do
+          userConfig <- parseJSONFile pure f
+          discoverTestnetConfig tc userConfig
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       let consts = envConsts { LogTypes.envNixSvcOpts = Just finalOpts }
 
@@ -223,26 +235,60 @@ commandParser
  where
   cmdParser cmd parser description = command cmd $ info parser $ progDesc description
 
-  filePath :: String -> Parser String
-  filePath helpMsg = strArgument (metavar "FILEPATH" <> help helpMsg)
+  filePath :: String -> String -> Parser String
+  filePath metavarName helpMsg = strArgument (metavar metavarName <> help helpMsg)
 
   jsonCmd :: Parser Command
-  jsonCmd = Json <$> filePath "low-level benchmarking script"
+  jsonCmd = Json <$> filePath "FILEPATH" "low-level benchmarking script"
 
   jsonHLCmd :: Parser Command
-  jsonHLCmd = JsonHL <$> filePath "benchmarking options"
+  jsonHLCmd = JsonHL <$> jsonHLSourceOpt
                      <*> nodeConfigOpt
                      <*> tracerConfigOpt
-  compileCmd :: Parser Command
-  compileCmd = Compile <$> filePath "benchmarking options"
 
-  selfTestCmd = Selftest <$> optional (filePath "output file")
+  jsonHLSourceOpt :: Parser JsonHLSource
+  jsonHLSourceOpt =
+        testnetSourceOpt
+    <|> FullConfig <$> filePath "FULL_CONFIG_FILEPATH" "benchmarking options"
+
+  testnetSourceOpt :: Parser JsonHLSource
+  testnetSourceOpt = TestnetSource
+    <$> testnetConfigOpt
+    <*> optional (filePath "PARTIAL_CONFIG_FILEPATH" "partial config overrides")
+
+  testnetConfigOpt :: Parser TestnetConfig
+  testnetConfigOpt = TestnetConfig
+    <$> strOption (long "testnet-config-dir" <> metavar "DIR"
+          <> help "cardano-testnet output directory")
+    <*> testnetMergeFlagsOpt
+
+  testnetMergeFlagsOpt :: Parser TestnetMergeFlags
+  testnetMergeFlagsOpt = TestnetMergeFlags
+    <$> fillDefaultsOpt
+    <*> forceInfraOpt
+
+  fillDefaultsOpt :: Parser FillDefaults
+  fillDefaultsOpt =
+        flag' FillDefaults   (long "fill-defaults"    <> help "Provide default values for missing tx params (default)")
+    <|> flag' NoFillDefaults (long "no-fill-defaults" <> help "Do not fill missing tx params with defaults")
+    <|> pure FillDefaults
+
+  forceInfraOpt :: Parser ForceInfra
+  forceInfraOpt =
+        flag' ForceInfra   (long "force-infra"    <> help "Force testnet infrastructure fields even if user provided different values")
+    <|> flag' NoForceInfra (long "no-force-infra" <> help "Allow user to override infrastructure fields (default)")
+    <|> pure NoForceInfra
+
+  compileCmd :: Parser Command
+  compileCmd = Compile <$> filePath "FULL_CONFIG_FILEPATH" "benchmarking options"
+
+  selfTestCmd = Selftest <$> optional (filePath "FILEPATH" "output file")
 
   nodeConfigOpt :: Parser (Maybe FilePath)
   nodeConfigOpt = option (Just <$> str)
     ( long "nodeConfig"
       <> short 'n'
-      <> metavar "FILENAME"
+      <> metavar "FILEPATH"
       <> value Nothing
       <> help "the node configfile"
     )
