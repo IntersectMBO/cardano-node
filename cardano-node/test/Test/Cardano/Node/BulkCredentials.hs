@@ -55,8 +55,8 @@ mkValidCredentialEnvelopes = do
   kesSKey <- generateSigningKey AsKesKey
   vrfSKey <- generateSigningKey AsVrfKey
   let counter = OperationalCertificateIssueCounter 0 (getVerificationKey coldSKey)
-  opCert <- either (fail . show) pure $
-    fst <$> issueOperationalCertificate
+  opCert <- either (fail . show) (pure . fst) $
+    issueOperationalCertificate
       (getVerificationKey kesSKey)
       (Left $ AnyStakePoolNormalSigningKey coldSKey)
       (KESPeriod 0)
