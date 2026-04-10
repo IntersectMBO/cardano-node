@@ -108,3 +108,10 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 3c557b3d997709e92ddcee055b415227d0c4a82d
+  --sha256: sha256-z9ADSqguJFPzIjFaNk4sj+AHMeRPW6ZC52miuUMEqTA=
+  subdir: .
