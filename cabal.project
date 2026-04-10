@@ -90,10 +90,10 @@ if impl(ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 9b5f3d56102ec924353b11771c13afc4173b6205
+  tag: 912cb2a1b800ed3345fe6cedb86e58e6a98c8190
   subdir:
     ouroboros-network
-  --sha256: sha256-nF0JA1MpcTuaMDMZ8LjVGqv4LL+cWgNATOdt3+rpxaY=
+  --sha256: sha256-2VS60w/LJwfkNdeeuX7mDP1vfyRVhcBhTW5Ht8AV87I=
 
 source-repository-package
   type: git
