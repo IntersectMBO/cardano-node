@@ -254,11 +254,15 @@ test-suite tx-generator-test
   build-depends:        base
                       , aeson
                       , bytestring
+                      , cardano-api
                       , cardano-node
                       , directory
+                      , extra
                       , filepath
+                      , QuickCheck
                       , tasty
                       , tasty-hunit
+                      , tasty-quickcheck
                       , temporary
                       , tx-generator
 

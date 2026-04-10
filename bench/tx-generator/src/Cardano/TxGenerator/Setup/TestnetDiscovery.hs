@@ -22,6 +22,7 @@ import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeProtocolConfig
                    npcTestStartingEra)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription (..))
 
+import           Cardano.Prelude (unless)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Char (isDigit)
@@ -35,7 +36,6 @@ import           System.Exit (die)
 import           System.FilePath ((</>), takeDirectory)
 import           Text.Read (readMaybe)
 
-
 -- | Whether to fill in default values for all 'NixServiceOptions' fields
 -- before merging the user-provided configuration.
 data FillDefaults
@@ -46,7 +46,7 @@ data FillDefaults
   | NoFillDefaults
     -- ^ Start from only the discovered infrastructure keys; the user
     -- configuration must supply every other required field.
-  deriving (Show, Eq)
+  deriving (Show, Eq, Bounded, Enum)
 
 -- | Whether discovered infrastructure values (socket path, signing key,
 -- node config file, target nodes) should override the user-provided
@@ -59,7 +59,7 @@ data ForceInfra
   | NoForceInfra
     -- ^ Let the user configuration win for infrastructure keys as well;
     -- discovered values are used only when the user does not provide them.
-  deriving (Show, Eq)
+  deriving (Show, Eq, Bounded, Enum)
 
 -- | Flags that control how the discovered testnet infrastructure is merged
 -- with user-provided JSON configuration in 'discoverTestnetConfig'.
