@@ -252,9 +252,17 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
+                      , aeson
+                      , bytestring
+                      , cardano-node
+                      , directory
+                      , filepath
                       , tasty
                       , tasty-hunit
+                      , temporary
                       , tx-generator
+
+  other-modules:        TestnetDiscoveryTest
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
