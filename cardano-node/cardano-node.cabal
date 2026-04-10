@@ -270,6 +270,7 @@ test-suite cardano-node-test
                       , yaml
 
   other-modules:        Test.Cardano.Config.Mainnet
+                        Test.Cardano.Node.BulkCredentials
                         Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
