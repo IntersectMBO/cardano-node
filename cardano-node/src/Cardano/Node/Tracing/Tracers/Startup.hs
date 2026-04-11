@@ -282,6 +282,16 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "commit" .= String biCommit
                , "nodeStartTime" .= biNodeStartTime
                ]
+  forMachine _dtal (RpcConfigUpdate config) =
+      mconcat [ "kind" .= String "RpcConfigUpdate"
+               , "message" .= String "RPC configuration update"
+               , "configuration" .= String config ]
+  forMachine _dtal (RpcConfigUpdateError err) =
+      mconcat [ "kind" .= String "RpcConfigUpdateError"
+               , "error" .= String err ]
+  forMachine _dtal RpcForceDisabled =
+      mconcat [ "kind" .= String "RpcForceDisabled"
+               , "error" .= String (ppStartupInfoTrace RpcForceDisabled)]
   forMachine _dtal (MovedTopLevelOption opt) =
       mconcat [ "kind" .= String "MovedTopLevelOption"
               , "option" .= opt
@@ -347,6 +357,12 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["Byron"]
   namespaceFor BINetwork {}  =
     Namespace [] ["Network"]
+  namespaceFor RpcConfigUpdate {} =
+    Namespace [] ["RpcConfigUpdate"]
+  namespaceFor RpcConfigUpdateError {} =
+    Namespace [] ["RpcConfigUpdateError"]
+  namespaceFor RpcForceDisabled =
+    Namespace [] ["RpcForceDisabled"]
   namespaceFor MovedTopLevelOption {} =
     Namespace [] ["MovedTopLevelOption"]
 
@@ -359,6 +375,9 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NonP2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
+  severityFor (Namespace _ ["RpcConfigUpdate"]) _ = Just Notice
+  severityFor (Namespace _ ["RpcConfigUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["RpcForceDisabled"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
@@ -384,6 +403,12 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["BlockForgingUpdateError"]) = Just
     ""
   documentFor (Namespace [] ["BlockForgingBlockTypeMismatch"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcConfigUpdate"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcConfigUpdateError"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcForceDisabled"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdate"]) = Just
     ""
@@ -454,6 +479,9 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["DBValidation"]
     , Namespace [] ["BlockForgingUpdate"]
     , Namespace [] ["BlockForgingBlockTypeMismatch"]
+    , Namespace [] ["RpcConfigUpdate"]
+    , Namespace [] ["RpcConfigUpdateError"]
+    , Namespace [] ["RpcForceDisabled"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
@@ -575,6 +603,10 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnap
 
 ppStartupInfoTrace (LedgerPeerSnapshotLoaded slotNo) =
     "Topology: Peer snapshot containing ledger peers recorded at " <> showT slotNo <> " loaded."
+
+ppStartupInfoTrace (RpcConfigUpdate config) = "Performing RPC configuration update: " <> config
+ppStartupInfoTrace (RpcConfigUpdateError err) = "Error while updating RPC configuration: " <> err
+ppStartupInfoTrace RpcForceDisabled = "RPC endpoint has crashed and because of that it got disabled. Enable gRPC endpoint and send SIGHUP to the node to reenable."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 

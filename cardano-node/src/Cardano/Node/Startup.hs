@@ -141,6 +141,13 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
   | LedgerPeerSnapshotLoaded SlotNo
+  -- | Log that RPC configuration has been updated
+  | RpcConfigUpdate Text
+  -- | Log RPC configuration update error
+  | RpcConfigUpdateError Text
+  -- | Log RPC is forcefully disabled after a RPC server crash.
+  | RpcForceDisabled
+
   | MovedTopLevelOption String
 
 data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile
