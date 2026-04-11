@@ -49,6 +49,8 @@ next (Atom c is) s | ofTy s c =
 next (Atom {}) _ = Bottom
 next (PropForall x phi) s = PropForall x (next phi s)
 next (PropForallN x dom phi) s = PropForallN x dom (next phi s)
+next (PropExists x phi) s = PropExists x (next phi s)
+next (PropExistsN x dom phi) s = PropExistsN x dom (next phi s)
 next (PropEq rel a b) _ = PropEq rel a b
 
 -- | This is an algorithm for (∅ ⊧ ◯ φ)
@@ -61,6 +63,8 @@ terminateNext (Implies phi psi) = terminateNext phi `H.Implies` terminateNext ps
 terminateNext (Not phi) = H.Not (terminateNext phi)
 terminateNext (PropForall x phi) = H.PropForall x (terminateNext phi)
 terminateNext (PropForallN x dom phi) = H.PropForallN x dom (terminateNext phi)
+terminateNext (PropExists x phi) = H.PropExists x (terminateNext phi)
+terminateNext (PropExistsN x dom phi) = H.PropExistsN x dom (terminateNext phi)
 terminateNext (PropEq rel t v) = H.PropEq rel t v
 terminateNext (NextN _ phi) = terminateNext phi
 terminateNext (Atom ty cs) = terminate (Atom ty cs)
@@ -86,5 +90,7 @@ terminate (Not phi)               = H.Not (terminate phi)
 terminate Bottom                  = H.Bottom
 terminate Top                     = H.Top
 terminate (PropForall x phi)      = H.PropForall x (terminate phi)
+terminate (PropExists x phi)      = H.PropExists x (terminate phi)
 terminate (PropForallN x dom phi) = H.PropForallN x dom (terminate phi)
+terminate (PropExistsN x dom phi) = H.PropExistsN x dom (terminate phi)
 terminate (PropEq rel a b)        = H.PropEq rel a b

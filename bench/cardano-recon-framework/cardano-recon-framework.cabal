@@ -4,7 +4,7 @@ description:        Cardano Re(altime) Con(formance) Framework based on Linear T
 category:           Cardano
                     Testing
 copyright:          2026 Intersect.
-version:            1.0.0
+version:            1.1.0
 license:            Apache-2.0
 license-files:      LICENSE
                     NOTICE
@@ -78,6 +78,15 @@ library
                     , Cardano.ReCon.LTL.Rewrite
                     , Cardano.ReCon.LTL.Satisfy
                     , Cardano.ReCon.LTL.Subst
+
+                    , Cardano.ReCon.Presburger.AffineDNF
+                    , Cardano.ReCon.Presburger.CompNF
+                    , Cardano.ReCon.Presburger.Complete
+                    , Cardano.ReCon.Presburger.DNF
+                    , Cardano.ReCon.Presburger.IntTerm.Types
+                    , Cardano.ReCon.Presburger.NegNF
+                    , Cardano.ReCon.Presburger.NormAffineDNF
+                    , Cardano.ReCon.Presburger.QuantifierFree
 
                     , Cardano.ReCon.Trace.Feed
                     , Cardano.ReCon.Trace.Ingest

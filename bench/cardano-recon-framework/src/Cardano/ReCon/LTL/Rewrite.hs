@@ -37,6 +37,8 @@ recurseHomogeneous f self@Top                     = fromMaybe self (f self)
 recurseHomogeneous f self@(PropEq {})             = fromMaybe self (f self)
 recurseHomogeneous f self@(PropForall x phi)      = fromMaybe (PropForall x (recurseHomogeneous f phi)) (f self)
 recurseHomogeneous f self@(PropForallN x dom phi) = fromMaybe (PropForallN x dom (recurseHomogeneous f phi)) (f self)
+recurseHomogeneous f self@(PropExists x phi)      = fromMaybe (PropExists x (recurseHomogeneous f phi)) (f self)
+recurseHomogeneous f self@(PropExistsN x dom phi) = fromMaybe (PropExistsN x dom (recurseHomogeneous f phi)) (f self)
 
 -- | Rewrite the formula by applying the fragment retraction & normalisation recursively.
 rewriteFragment :: (Ord event, Ord ty) => Formula event ty -> Formula event ty
@@ -70,9 +72,14 @@ rewriteHomogeneous = recurseHomogeneous normaliseHomogeneous
 --   (v = v') = ⊥ where v ≠ v'
 --   ∀x. ⊤ = ⊤
 --   ∀x. ⊥ = ⊥
+--   ∃x. ⊤ = ⊤
+--   ∃x. ⊥ = ⊥
 --   ∀(x ∈ ∅). φ       = ⊤
 --   ∀(x ∈ {v} ⊔ v̄). ⊥ = ⊥
 --   ∀(x ∈ {v} ⊔ v̄). ⊤ = ⊤
+--   ∃(x ∈ ∅). φ       = ⊥
+--   ∃(x ∈ {v} ⊔ v̄). ⊥ = ⊥
+--   ∃(x ∈ {v} ⊔ v̄). ⊤ = ⊤
 --   Additionally, unfolds base-cases of finite temporal operators.
 rewriteIdentity :: Eq ty => Formula event ty -> Formula event ty
 rewriteIdentity (Forall k phi) =
@@ -135,9 +142,20 @@ rewriteIdentity (PropForall x phi) =
     Top    -> Top
     Bottom -> Bottom
     phi'    -> PropForall x phi'
+rewriteIdentity (PropExists x phi) =
+  case rewriteIdentity phi of
+    Top    -> Top
+    Bottom -> Bottom
+    phi'    -> PropExists x phi'
 rewriteIdentity (PropForallN _ dom _) | Set.null dom = Top
 rewriteIdentity (PropForallN x dom phi) =
   case rewriteIdentity phi of
     Top -> Top
     Bottom -> Bottom
     phi' -> PropForallN x dom phi'
+rewriteIdentity (PropExistsN _ dom _) | Set.null dom = Bottom
+rewriteIdentity (PropExistsN x dom phi) =
+  case rewriteIdentity phi of
+    Top -> Top
+    Bottom -> Bottom
+    phi' -> PropExistsN x dom phi'
