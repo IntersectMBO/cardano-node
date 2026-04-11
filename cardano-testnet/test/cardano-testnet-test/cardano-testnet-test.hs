@@ -7,6 +7,7 @@ module Main
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Api.TxReferenceInputDatum
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
+import qualified Cardano.Testnet.Test.Cli.Plutus.BuildRaw
 import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
 import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
@@ -94,6 +95,7 @@ tests = do
                 [ ignoreOnWindows "PlutusV3 purposes" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_plutus_purposes_v3
                 , ignoreOnWindows "PlutusV2 transaction with two script certs" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_tx_two_script_certs_v2
                 , ignoreOnWindows "Collateral With Multiassets" Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral.hprop_collateral_with_tokens
+                , ignoreOnWindows "Build Raw Ref Script" Cardano.Testnet.Test.Cli.Plutus.BuildRaw.hprop_build_raw_ref_script_spend
                 , T.testGroup "Cost Calc"
                   [ ignoreOnWindows "Ref Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_ref_plutus_cost_calculation
                   , ignoreOnWindows "Normal Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_plutus_cost_calculation
