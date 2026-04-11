@@ -1,6 +1,8 @@
 # ChangeLog
 
 ## NEXT
+
+## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
   since Node 10.6.2; fixes the RTView-enabled build.
 * Introduce secure communication via HTTPS for EKG and Prometheus metric servers, enabled
@@ -16,6 +18,10 @@
        , "certificateKeyFile": "/path/to/key.pem"
        , "certificateChain": ["/path/to/intermediate1.pem", "/path/to/intermediate2.pem"]
        }
+* Integrate a timeseries store as a REST API:
+   - Tweak ekg-forward to relay node-emanated metrics to the timeseries store
+   - The store can be queried, pruned and configured dynamically via the API
+   - The store can be pruned periodically by an automatic process (configurable)
 
 ## 0.3.6 (November 2025)
 * Implement Prometheus HTTP service discovery (SD) under the URL `/targets`

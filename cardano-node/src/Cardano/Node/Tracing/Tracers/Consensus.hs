@@ -20,6 +20,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , servedBlockLatest
   , ClientMetrics
   , txsMempoolTimeoutSoftCounterName
+  , txsSyncDurationTotalCounterName
   , impliesMempoolTimeoutSoft
   ) where
 
@@ -1087,6 +1088,9 @@ instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
 txsMempoolTimeoutSoftCounterName :: Text.Text
 txsMempoolTimeoutSoftCounterName = "txsMempoolTimeoutSoft"
 
+txsSyncDurationTotalCounterName :: Text.Text
+txsSyncDurationTotalCounterName = "txsSyncDurationTotal"
+
 impliesMempoolTimeoutSoft :: TraceEventMempool blk -> Bool
 impliesMempoolTimeoutSoft = \case
   TraceMempoolRejectedTx _tx _txApplyErr details _mpSz ->
@@ -1184,7 +1188,9 @@ instance
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
-    [ IntM "txsSyncDuration" (round $ 1000 * duration)
+    let durationMs = round (1000 * duration) :: Integer in
+    [ IntM "txsSyncDuration" durationMs
+    , CounterM txsSyncDurationTotalCounterName (Just (fromIntegral durationMs))
     ]
   asMetrics (TraceMempoolSynced RisingEdge) = []
 
@@ -1241,7 +1247,8 @@ instance MetaTrace (TraceEventMempool blk) where
       , ("txsProcessedNum", "")
       ]
     metricsDocFor (Namespace _ ["Synced"]) =
-      [ ("txsSyncDuration", "Time to sync the mempool in ms after block adoption")
+      [ ("txsSyncDuration", "Latest time to sync the mempool in ms after block adoption")
+      , (txsSyncDurationTotalCounterName, "Cumulative time spent syncing the mempool in ms after block adoption")
       ]
     metricsDocFor _ = []
 

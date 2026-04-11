@@ -1312,7 +1312,10 @@ notifyTxsProcessed fStats tr = Tracer $ \case
     updatedTxProcessed <- mapForgingStatsTxsProcessed fStats (+ (length txs))
     traceCounter "txsProcessedNum" tr (fromIntegral updatedTxProcessed)
   TraceMempoolSynced (FallingEdgeWith duration) -> do
-    traceCounter "txsSyncDuration" tr (round $ 1000 * duration :: Int)
+    let durationMs = round $ 1000 * duration :: Int
+    cumulativeSyncMs <- mapForgingStatsTxsSyncDuration fStats (+ durationMs)
+    traceCounter "txsSyncDuration" tr durationMs
+    traceCounter ConsensusTracers.txsSyncDurationTotalCounterName tr cumulativeSyncMs
 
   -- The rest of the constructors.
   _ -> return ()

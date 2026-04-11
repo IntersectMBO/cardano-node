@@ -19,6 +19,8 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Control.Concurrent.MVar
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
+import           Numeric (showFFloat)
+
 
 newtype ReplayBlockState = ReplayBlockState
   { -- | Last slot for which a `ReplayBlockStats` message has been issued.
@@ -63,7 +65,7 @@ instance LogFormatting ReplayBlockStats where
       <> " out of "
       <> textShow (unSlotNo rpsGoalSlot)
       <> ". Progress: "
-      <> textShow (progressForHuman stats)
+      <> pack (showFFloat (Just 2) (progressForHuman stats) mempty)
       <> "%"
 
   asMetrics stats =

@@ -9,11 +9,17 @@ with lib;
 let
   trace-dispatcher =
     recursiveUpdate
-    (removeLegacyTracingOptions cfg)
+    (removeAttrs (removeLegacyTracingOptions cfg) ["TraceOptionForwarder"])
   {
     UseTraceDispatcher   = true;
     TraceOptionResourceFrequency = 1000;
     TraceOptionNodeName = nodeSpec.name;
+
+  ## Set this value to cover our log line rate (~70Hz) on typical bench machines (not the apex hardware).
+  ## It should avoid seeing "TraceObject queue overflowed. Dropped xxx messages ..." on a bench node's stderr.
+    TraceOptionForwarder = {
+      queueSize = 192;
+    };
 
   ## Please see the generated tracing configuration reference at:
   ##
@@ -38,7 +44,7 @@ let
       "BlockFetch.Server".severity = "Debug";
       "BlockchainTime".severity = "Notice";
       "ChainDB".severity = "Debug";
-      "ChainDB.LedgerEvent.Flavor.V1.OnDisk.BackingStoreEvent".severity = "Silence";
+      "ChainDB.LedgerEvent.Flavor.V1.".severity = "Silence";
       "ChainDB.LedgerEvent.Flavor.V2".severity = "Silence";
       "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";
       "ChainSync.Client".severity = "Debug";
@@ -57,11 +63,11 @@ let
       "Net.ConnectionManager.Local".severity = "Debug";
       "Net.ConnectionManager.Remote".severity = "Debug";
       "Net.DNSResolver".severity = "Notice";
-      "Net.ErrorPolicy.Local".severity = "Debug";
-      "Net.ErrorPolicy.Remote".severity = "Debug";
+      "Net.ErrorPolicy".severity = "Debug";
       "Net.Handshake.Local".severity = "Debug";
       "Net.Handshake.Remote".severity = "Debug";
       "Net.InboundGovernor.Local".severity = "Debug";
+      "Net.InboundGovernor.Local.RemoteState".severity = "Info";
       "Net.InboundGovernor.Remote".severity = "Debug";
       "Net.InboundGovernor.Transition".severity = "Debug";
       "Net.Mux.Local".severity = "Notice";
@@ -73,13 +79,10 @@ let
       "Net.PeerSelection.Responder".severity = "Notice";
       "Net.PeerSelection.Selection".severity = "Debug";
       "Net.Peers.Ledger".severity = "Debug";
-      "Net.Peers.List".severity = "Notice";
       "Net.Peers.LocalRoot".severity = "Debug";
       "Net.Peers.PublicRoot".severity = "Debug";
       "Net.Server.Local".severity = "Debug";
       "Net.Server.Remote".severity = "Debug";
-      "Net.Subscription.DNS".severity = "Debug";
-      "Net.Subscription.IP".severity = "Debug";
       "NodeState".severity = "Notice";
       "LedgerMetrics".severity = "Info";
       "Resources".severity = "Debug";

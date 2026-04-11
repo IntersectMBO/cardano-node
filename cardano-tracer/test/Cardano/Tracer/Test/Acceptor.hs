@@ -10,6 +10,7 @@ module Cardano.Tracer.Test.Acceptor
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Logging (standardTracer)
 import qualified Cardano.Logging.Types as Net
 #if RTVIEW
 import           Cardano.Tracer.Handlers.RTView.Run
@@ -53,7 +54,8 @@ launchAcceptorsSimple mode localSock dpName = do
   currentLogLock <- newLock
   currentDPLock <- newLock
 
-  tr <- mkTracerTracer $ SeverityF $ Just Warning
+  std <- standardTracer
+  tr <- mkTracerTracer std $ SeverityF $ Just Warning
 
 #if RTVIEW
   eventsQueues <- initEventsQueues tr Nothing connectedNodesNames dpRequestors currentDPLock
@@ -82,6 +84,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teRegistry              = registry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teTimeseriesHandle      = Nothing
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -111,6 +114,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
     , rotation         = Nothing

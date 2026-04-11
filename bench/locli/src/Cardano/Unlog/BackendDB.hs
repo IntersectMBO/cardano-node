@@ -17,7 +17,7 @@ module Cardano.Unlog.BackendDB
        ) where
 
 import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
-import           Cardano.Prelude (ExceptT)
+import           Cardano.Prelude (ExceptT, (<|>))
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
@@ -35,6 +35,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text.Short as ShortText (unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           Data.Time.Format.ISO8601
 import           GHC.Conc (numCapabilities)
 import           System.Directory (removeFile)
 
@@ -147,14 +148,22 @@ tMinMax [] = fail "tMinMax: empty list of log files"
 tMinMax [log] = do
   ls2 <- BSL.lines <$> BSL.readFile log
   let
-    loMin, loMax :: LogObject
+    loMin :: LogObject
+    loMax :: UTCTime
     loMin = head $ mapMaybe Aeson.decode ls2
-    loMax = fromJust (Aeson.decode $ last ls2)
-  pure (loAt loMin, loAt loMax)
+    loMax = fromJust $ (loAt <$> Aeson.decode (last ls2)) <|> parseTimeStampFromPartial (last ls2)
+  pure (loAt loMin, loMax)
 tMinMax logs = do
   (tMin, _   ) <- tMinMax [head logs]
   (_   , tMax) <- tMinMax [last logs]
   pure (tMin, tMax)
+
+-- extracts timestamp from the last log line even if incomplete (due to node shutdown) - sample data:
+-- {"at":"2026-03-25T16:19:47.482228445Z","ns":"...",...
+parseTimeStampFromPartial :: BSL.ByteString -> Maybe UTCTime
+parseTimeStampFromPartial partial =
+  formatParseM iso8601Format $ BSL.unpack ts
+  where ts = BSL.takeWhile (/= '"') . BSL.drop 7 $ partial
 
 
 -- selects the entire LogObject stream, containing all objects relevant for standard analysis

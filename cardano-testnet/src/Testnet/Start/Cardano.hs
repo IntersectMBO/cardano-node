@@ -33,12 +33,9 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
-import           Cardano.CLI.Type.Common (SigningKeyFile)
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
-import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
-                   NodeHostIPv4Address (..), PortNumber)
+import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty)
-import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
@@ -53,7 +50,6 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           Data.Either
 import           Data.Functor
-import           Data.IP (fromHostAddress)
 import           Data.List (uncons)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
@@ -386,15 +382,6 @@ cardanoTestnet
   -- Make sure that all nodes are healthy by waiting for a chain extension
   mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
 
-  let node1SocketPath = tmpAbsPath </> "socket" </> "node1" </> "sock"
-      utxoSigningKeyFile = File $ (tmpAbsPath </>) $ unFile $ signingKey $ Defaults.defaultUtxoKeys 1
-      nodeDescriptions = NEL.map (\(i, port) -> NodeDescription (NodeAddress (NodeHostIPv4Address (fromHostAddress testnetDefaultIpv4Address)) port) (Defaults.defaultNodeName i) ) portNumbers
-
-  case cardanoEnableTxGenerator testnetOptions of
-    NoTxGeneratorSupport -> pure ()
-    GenerateTemplateConfigForTxGenerator ->
-      generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
         , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
@@ -436,30 +423,6 @@ cardanoTestnet
     makePathsAbsolute = omap (tmpAbsPath </>)
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
-
-    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m ()
-    generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology = do
-      let nixServiceOptions = NixServiceOptions {
-            _nix_debugMode        = False
-          , _nix_tx_count         = 100
-          , _nix_tps              = 10
-          , _nix_inputs_per_tx    = 2
-          , _nix_outputs_per_tx   = 2
-          , _nix_tx_fee           = 212_345
-          , _nix_min_utxo_value   = 1_000_000
-          , _nix_add_tx_size      = 39
-          , _nix_init_cooldown    = 50
-          , _nix_era              = AnyCardanoEra ConwayEra
-          , _nix_plutus           = Nothing
-          , _nix_keepalive        = Just 30
-          , _nix_nodeConfigFile       = Just nodeConfigFilePath
-          , _nix_cardanoTracerSocket  = Nothing
-          , _nix_sigKey               = utxoSigningKeyFile
-          , _nix_localNodeSocketPath  = localNodeSocketPath
-          , _nix_targetNodes          = nodeTopology
-          }
-      liftIOAnnotated . LBS.writeFile (basePath </> "tx-generator-config.json") $ A.encodePretty nixServiceOptions
-      pure ()
 
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
