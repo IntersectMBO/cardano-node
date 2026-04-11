@@ -58,7 +58,7 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionIn
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
-import           Control.Monad (unless, void, when)
+import           Control.Monad (forM, unless, void, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
@@ -376,7 +376,7 @@ instance FromJSON PartialNodeConfiguration where
                 <*> parseShelleyProtocol v
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
-                <*> (if npcExperimentalHardForksEnabled hfp then Just <$> parseDijkstraProtocol v else pure Nothing)
+                <*> (if npcExperimentalHardForksEnabled hfp then parseDijkstraProtocol v else pure Nothing)
                 <*> pure hfp
                 <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
@@ -612,12 +612,13 @@ instance FromJSON PartialNodeConfiguration where
              }
 
       parseDijkstraProtocol v = do
-        npcDijkstraGenesisFile     <- v .:  "DijkstraGenesisFile"
-        npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
-        pure NodeDijkstraProtocolConfiguration {
-               npcDijkstraGenesisFile
-             , npcDijkstraGenesisFileHash
-             }
+        mNpcDijkstraGenesisFile <- v .:? "DijkstraGenesisFile"
+        forM mNpcDijkstraGenesisFile $ \npcDijkstraGenesisFile -> do
+          npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
+          pure NodeDijkstraProtocolConfiguration {
+                 npcDijkstraGenesisFile
+               , npcDijkstraGenesisFileHash
+               }
 
       parseHardForkProtocol v = do
 
