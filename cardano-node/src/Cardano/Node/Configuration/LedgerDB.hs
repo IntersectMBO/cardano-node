@@ -148,4 +148,4 @@ selectorToArgs (V1LMDB ff fp l mxReaders) fastStoragePath =
         ( maybe id (\overrideMaxReaders lim -> lim{LMDB.lmdbMaxReaders = overrideMaxReaders}) mxReaders $
             maybe id (\ll lim -> lim{LMDB.lmdbMapSize = toBytes ll}) l defaultLMDBLimits
         )
-selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgs (Proxy @blk) (fromMaybe "lsm" fp) fastStoragePath
+selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgsIO (Proxy @blk) (fromMaybe "lsm" fp) fastStoragePath
