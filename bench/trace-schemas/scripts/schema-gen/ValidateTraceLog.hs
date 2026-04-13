@@ -10,7 +10,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as Map
-import Data.List (foldl', isSuffixOf, sortOn)
+import qualified Data.List as List
+import Data.List (isSuffixOf, sortOn)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import System.Directory
@@ -108,7 +110,7 @@ main = do
       else exitFailure
 
 parseArgs :: Config -> [String] -> IO Config
-parseArgs config args = go config args
+parseArgs = go
  where
   go cfg [] =
     if null (cfgLogFile cfg)
@@ -179,7 +181,7 @@ loadNamespaceSchemas root = do
       putStrLn $ "  " <> ns <> " -> " <> commaList paths
     exitFailure
 
-  pure (Map.map head grouped)
+  pure (Map.mapMaybe listToMaybe grouped)
 
 extractLogEntries :: FilePath -> FilePath -> IO ExtractedLog
 extractLogEntries logPath tempDir = do
@@ -239,7 +241,7 @@ partitionKnown ::
   [LogEntry] ->
   (Map.Map FilePath [LogEntry], [LogEntry])
 partitionKnown namespaceSchemas =
-  foldl' step (Map.empty, [])
+  List.foldl' step (Map.empty, [])
  where
   step (known, unknown) entry =
     case leNamespace entry >>= (`Map.lookup` namespaceSchemas) of
@@ -251,7 +253,7 @@ validateKnownNamespaces :: Map.Map FilePath [LogEntry] -> IO Bool
 validateKnownNamespaces groups = do
   results <-
     forM (sortOn fst (Map.toList groups)) $ \(schemaPath, groupEntries) -> do
-      let namespaceLabel = maybe (takeBaseName schemaPath) id (leNamespace =<< safeHead groupEntries)
+      let namespaceLabel = fromMaybe (takeBaseName schemaPath) (leNamespace =<< safeHead groupEntries)
       let header =
             "Validating namespace "
               <> namespaceLabel
@@ -342,7 +344,7 @@ isIgnorableWhitespace c = c == 32 || c == 9 || c == 13
 
 withTempDir :: String -> (FilePath -> IO a) -> IO a
 withTempDir prefix action = do
-  tmp <- fmap trimTrailingNewline $ readProcess "mktemp" ["-d", "/tmp/" <> prefix <> ".XXXXXX"] ""
+  tmp <- trimTrailingNewline <$> readProcess "mktemp" ["-d", "/tmp/" <> prefix <> ".XXXXXX"] ""
   createDirectoryIfMissing True tmp
   bracket (pure tmp) removePathForcibly action
 

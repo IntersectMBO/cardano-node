@@ -76,10 +76,6 @@ package bitvec
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
--- standalone scripts; not held to the project-wide -Werror standard
-package trace-schema-gen
-  ghc-options: -Wwarn
-
 allow-newer:
   , katip:Win32
 

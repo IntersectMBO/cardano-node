@@ -39,7 +39,7 @@ import qualified Control.Tracer as TR
 import           Data.Aeson (ToJSON)
 import qualified Data.Aeson.Encode.Pretty as AE
 import           Data.IORef (modifyIORef, newIORef, readIORef)
-import           Data.List (find, groupBy, intersperse, isPrefixOf, nub, sort, sortBy)
+import           Data.List (find, group, groupBy, intersperse, isPrefixOf, nub, sort, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromJust, fromMaybe, mapMaybe)
 import           Data.Text (split)
@@ -607,4 +607,4 @@ docuResultsToNamespaces DocTracer{dtBuilderList} =
       | (ns, doc) <- dtBuilderList
       , DocuResult.isTracer doc || DocuResult.isDatapoint doc
       ]
-    uniqueSorted = map head $ groupBy (==) $ sort namespaces
+    uniqueSorted = map head $ group $ sort namespaces

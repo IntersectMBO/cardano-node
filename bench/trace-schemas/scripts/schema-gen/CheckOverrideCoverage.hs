@@ -18,7 +18,7 @@ generatedRoots =
 overridesRoot :: FilePath
 overridesRoot = "bench/trace-schemas/overrides"
 
-data Config = Config
+newtype Config = Config
   { cfgRange :: Maybe String
   }
 
@@ -50,7 +50,7 @@ main = do
   exitSuccess
 
 parseArgs :: Config -> [String] -> IO Config
-parseArgs config args = go config args
+parseArgs = go
  where
   go cfg [] = pure cfg
   go cfg ("--range" : r : rest) = go cfg {cfgRange = Just r} rest

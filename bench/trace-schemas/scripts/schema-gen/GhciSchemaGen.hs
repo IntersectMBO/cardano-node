@@ -13,7 +13,8 @@ import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
 import Data.Char (isAlphaNum, isLower, isUpper, isSpace, toLower)
 import Data.List (elemIndex, isPrefixOf, isSuffixOf, sortOn)
-import Data.Maybe (catMaybes, listToMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
+import Data.Ord (Down (..))
 import System.Directory
 import System.Environment (getArgs)
 import System.FilePath
@@ -21,9 +22,8 @@ import System.Process
 import System.Exit
 import System.IO
 import Data.IORef
-import Control.Exception (catch, IOException)
+import Control.Exception (catch, IOException, bracket)
 import System.IO.Unsafe (unsafePerformIO)
-import Control.Exception (bracket)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
@@ -85,7 +85,7 @@ inboundGovernorUnexpectedlyFalseAssertionCtor = "__InboundGovernorUnexpectedlyFa
 detailLevels :: [DetailLevel]
 detailLevels = ["Minimal", "Normal", "Detailed", "Maximum"]
 
-data Config = Config
+newtype Config = Config
   { cfgPruneStaleProperties :: Bool
   }
 
@@ -109,7 +109,7 @@ main = do
   -- Build constructor -> namespace map from namespaceFor clauses
   putStrLn "Building namespace map..."
   let sources = map (\fp -> (fp, readFileSafe fp)) hsFiles
-  let nsMap = foldl' mergeNs Map.empty [ normalizeNamespaceMap fp (parseNamespaceMap src) | (fp, src) <- sources ]
+  let nsMap = foldlStrict mergeNs Map.empty [ normalizeNamespaceMap fp (parseNamespaceMap src) | (fp, src) <- sources ]
   -- Parse forMachine clauses and map their field bindings to variables
   putStrLn "Parsing forMachine clauses..."
   let helperFieldMaps = map (parseObjectHelperMap . snd) sources
@@ -119,7 +119,7 @@ main = do
         ]
 
   let fieldVarMap =
-        foldl'
+        foldlStrict
           (Map.unionWith (Map.unionWith Map.union))
           Map.empty
           [ normalizeFieldVarMap fp (parseFieldVarMap helpers clauses)
@@ -133,7 +133,7 @@ main = do
       "[ghci " <> show idx <> "/" <> show (length clausesByFile) <> "] "
         <> fp
     normalizeVarTypesMap fp <$> ghciTypesForFile fp clauses
-  let varTypes = foldl' (Map.unionWith Map.union) Map.empty varTypesMaps
+  let varTypes = foldlStrict (Map.unionWith Map.union) Map.empty varTypesMaps
 
   let msgOutDir = "bench/trace-schemas/messages"
   let typeOutDir = "bench/trace-schemas/types"
@@ -183,8 +183,8 @@ printHelp =
 
 -- Utilities
 
-foldl' :: (b -> a -> b) -> b -> [a] -> b
-foldl' f z xs = go z xs where go acc [] = acc; go acc (y:ys) = let acc' = f acc y in acc' `seq` go acc' ys
+foldlStrict :: (b -> a -> b) -> b -> [a] -> b
+foldlStrict f = go where go acc [] = acc; go acc (y:ys) = let acc' = f acc y in acc' `seq` go acc' ys
 
 validateSourceDirs :: (String -> IO ()) -> [FilePath] -> IO [FilePath]
 validateSourceDirs emitWarning dirs = do
@@ -205,8 +205,8 @@ readFileSafe fp = unsafePerformIO (readFile fp `catch` (\(_e :: IOException) -> 
 
 collectTargets :: [FilePath] -> IO [FilePath]
 collectTargets roots = do
-  files <- fmap concat $ mapM listHsFiles roots
-  fmap catMaybes $ mapM (\fp -> do
+  files <- concat <$> mapM listHsFiles roots
+  catMaybes <$> mapM (\fp -> do
     content <- T.readFile fp
     if "forMachine" `T.isInfixOf` content || "namespaceFor" `T.isInfixOf` content
       then pure (Just fp)
@@ -219,7 +219,7 @@ listHsFiles root = do
   where
     go dir = do
       entries <- listDirectory dir
-      fmap concat $ mapM (\e -> do
+      concat <$> mapM (\e -> do
         let p = dir </> e
         isDir <- doesDirectoryExist p
         if isDir then go p else pure [p | ".hs" `isSuffixOf` p]) entries
@@ -253,16 +253,17 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
               clauseLines = headerLines ++ bodyLines
               header = unwords headerLines
               bodyAfterLambda = dropLeadingLambdaCase bodyLines
-              acc' =
-                if "\\case" `isInfix` header || isLambdaCaseBody bodyLines
-                  then foldl' insertNamespaceClause acc (parseNamespaceLambdaClauses bodyAfterLambda)
-                  else if hasBranchArrows bodyLines
-                    then case ctorsAfter "namespaceFor" (takeWhile (/= '=') (unwords headerLines)) of
+              acc'
+                | "\\case" `isInfix` header || isLambdaCaseBody bodyLines =
+                    foldlStrict insertNamespaceClause acc (parseNamespaceLambdaClauses bodyAfterLambda)
+                | hasBranchArrows bodyLines =
+                    case ctorsAfter "namespaceFor" (takeWhile (/= '=') (unwords headerLines)) of
                       [] -> acc
-                      ctors -> foldl' insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
-                  else case extractNamespaceClause currentType typeConstructors (unwords clauseLines) of
-                    Just clauseInfo -> insertNamespaceClause acc clauseInfo
-                    Nothing -> acc
+                      ctors -> foldlStrict insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
+                | otherwise =
+                    case extractNamespaceClause currentType typeConstructors (unwords clauseLines) of
+                      Just clauseInfo -> insertNamespaceClause acc clauseInfo
+                      Nothing -> acc
           in go currentType rest acc'
       | otherwise = go currentType ls acc
 
@@ -275,7 +276,7 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
     spanNamespaceBody allLines@(x:xs)
       | startsTopLevelMethod x = ([], allLines)
       | otherwise =
-          let (body, rest) = span (not . startsTopLevelMethod) xs
+          let (body, rest) = break startsTopLevelMethod xs
           in (x : body, rest)
 
     startsTopLevelMethod line =
@@ -293,7 +294,7 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
     startsTopLevelDecl line =
       let t = trim line
       in not (null line)
-         && not (isSpace (head line))
+         && not (startsIndented line)
          && not ("--" `isPrefixOf` t)
          && any (`isPrefixOf` t)
               [ "instance"
@@ -328,7 +329,7 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
       let inferredCtors =
             case ctors of
               [] | isWildcardNamespaceLhs lhs ->
-                    maybe [] (\ty -> singletonConstructors ty ctorMap) currentType
+                    maybe [] (`singletonConstructors` ctorMap) currentType
               [] | isListEmptyNamespaceLhs lhs ->
                     [listEmptyCtor]
               _ -> ctors
@@ -340,7 +341,7 @@ parseMetaTraceInstanceType hdr = do
   (_, rest) <- breakSub "MetaTrace" hdr
   let tyExpr = trim . takeWhile (/= '=') . fst $ breakOn "where" (stripOuterParens (trim rest))
   guard (not (null tyExpr))
-  guard (head tyExpr /= '[')
+  guard (headMay tyExpr /= Just '[')
   firstCtorToken tyExpr
 
 isWildcardNamespaceLhs :: String -> Bool
@@ -380,7 +381,7 @@ parseTypeConstructors src = go (lines src) Map.empty
     startsTypeDecl line =
       let t = trim line
       in not (null line)
-         && not (isSpace (head line))
+         && not (startsIndented line)
          && (("data " `isPrefixOf` t) || ("newtype " `isPrefixOf` t))
 
     spanTypeDecl [] = ([], [])
@@ -397,7 +398,7 @@ parseTypeConstructors src = go (lines src) Map.empty
         startsNextTopLevel line =
           let t = trim line
           in not (null line)
-             && not (isSpace (head line))
+             && not (startsIndented line)
              && not ("--" `isPrefixOf` t)
 
     parseTypeDecl decl = do
@@ -418,19 +419,20 @@ parseTypeConstructors src = go (lines src) Map.empty
       pure (tyName, nubPreserve ctors)
 
 splitTopLevelBars :: String -> [String]
-splitTopLevelBars s = go 0 0 0 "" [] s
+splitTopLevelBars = go (0 :: Int) (0 :: Int) (0 :: Int) "" []
   where
+    go :: Int -> Int -> Int -> String -> [String] -> String -> [String]
     go _ _ _ cur acc [] = reverse (trim cur : acc)
-    go paren bracket brace cur acc (c:cs)
-      | c == '(' = go (paren + 1) bracket brace (cur ++ [c]) acc cs
-      | c == ')' = go (paren - 1) bracket brace (cur ++ [c]) acc cs
-      | c == '[' = go paren (bracket + 1) brace (cur ++ [c]) acc cs
-      | c == ']' = go paren (bracket - 1) brace (cur ++ [c]) acc cs
-      | c == '{' = go paren bracket (brace + 1) (cur ++ [c]) acc cs
-      | c == '}' = go paren bracket (brace - 1) (cur ++ [c]) acc cs
-      | c == '|' && paren == 0 && bracket == 0 && brace == 0 =
-          go paren bracket brace "" (trim cur : acc) cs
-      | otherwise = go paren bracket brace (cur ++ [c]) acc cs
+    go paren bracketDepth brace cur acc (c:cs)
+      | c == '(' = go (paren + 1) bracketDepth brace (cur ++ [c]) acc cs
+      | c == ')' = go (paren - 1) bracketDepth brace (cur ++ [c]) acc cs
+      | c == '[' = go paren (bracketDepth + 1) brace (cur ++ [c]) acc cs
+      | c == ']' = go paren (bracketDepth - 1) brace (cur ++ [c]) acc cs
+      | c == '{' = go paren bracketDepth (brace + 1) (cur ++ [c]) acc cs
+      | c == '}' = go paren bracketDepth (brace - 1) (cur ++ [c]) acc cs
+      | c == '|' && paren == 0 && bracketDepth == 0 && brace == 0 =
+          go paren bracketDepth brace "" (trim cur : acc) cs
+      | otherwise = go paren bracketDepth brace (cur ++ [c]) acc cs
 
 extractNamespaceParts :: String -> Maybe NamespaceParts
 extractNamespaceParts clause =
@@ -454,7 +456,7 @@ insertNamespaceClause :: Map.Map ConstructorName [NamespaceParts]
                       -> ([ConstructorName], NamespaceParts)
                       -> Map.Map ConstructorName [NamespaceParts]
 insertNamespaceClause acc (ctors, parts) =
-  foldl' (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
+  foldlStrict (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
 
 isLambdaCaseBody :: [String] -> Bool
 isLambdaCaseBody (l:_) = "\\case" `isInfix` trim l
@@ -489,7 +491,7 @@ parseNamespaceLambdaClauses = mapMaybe parseBranch . go
           | isBranchStart x = (reverse acc, allLines)
           | otherwise = step (x:acc) xs
 
-    isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+    isBranchStart l = "->" `isInfix` l && startsIndented l
 
     parseBranch (pat, body) = do
       let parts = quotedStrings body
@@ -517,18 +519,12 @@ parseNamespaceCaseBranches ctors = mapMaybe parseBranch . go
           | isBranchStart x = (reverse acc, allLines)
           | otherwise = step (x:acc) xs
 
-    isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+    isBranchStart l = "->" `isInfix` l && startsIndented l
 
     parseBranch body = do
       let parts = quotedStrings body
       if null parts then Nothing else Just (ctors, parts)
 
-
-firstCtorAfter :: String -> String -> Maybe String
-firstCtorAfter marker line =
-  case ctorsAfter marker line of
-    (x:_) -> Just x
-    [] -> Nothing
 
 ctorsAfter :: String -> String -> [String]
 ctorsAfter marker line =
@@ -556,7 +552,6 @@ quotedStrings (_:xs) = quotedStrings xs
 
 data Clause = Clause
   { clauseLevel :: String
-  , clauseType :: Maybe TypeName
   , clauseCtor :: Maybe ConstructorName
   , clausePattern :: String
   , clauseBody :: [String]
@@ -602,11 +597,11 @@ parseObjectHelperMap src =
 
   isTopLevelDecl l =
     not (null l)
-      && not (isSpace (head l))
+      && not (startsIndented l)
       && not ("--" `isPrefixOf` trim l)
 
   parseHelperFields body =
-    foldl' (Map.unionWith preferSpecific) Map.empty (mapMaybe parseBranch (helperBranches body))
+    foldlStrict (Map.unionWith preferSpecific) Map.empty (mapMaybe parseBranch (helperBranches body))
 
   helperBranches [] = []
   helperBranches (l:ls)
@@ -616,7 +611,7 @@ parseObjectHelperMap src =
               Nothing -> ("", "")
             (more, rest) = spanBranchLines ls
             body = [rhs0 | not (null rhs0)] ++ more
-        in Clause "" Nothing Nothing pat0 body : helperBranches rest
+        in Clause "" Nothing pat0 body : helperBranches rest
     | otherwise = helperBranches ls
 
   spanBranchLines = go []
@@ -627,7 +622,7 @@ parseObjectHelperMap src =
       | isTopLevelDecl x = (reverse acc, allLines)
       | otherwise = go (x:acc) xs
 
-  isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+  isBranchStart l = "->" `isInfix` l && startsIndented l
 
   parseBranch cl =
     let vars = Set.fromList (extractVars (clausePattern cl))
@@ -659,9 +654,8 @@ parseForMachineClauses src = go Nothing (lines src)
           let (headerLines, afterHeader) = spanUntilHeaderEnd [l] ls
               header = unwords headerLines
               (lvlTok, pat) = parseHeader header
-              (body, rest) = span (not . startsHeader) afterHeader
+              (body, rest) = break startsHeader afterHeader
               bodyAfterLambda = dropLeadingLambdaCase body
-              mkClause pat' body' = Clause lvlTok currentType (inferClauseCtor typeConstructors currentType pat') pat' body'
           in if "\\case" `isInfix` header || isLambdaCaseBody body
                then parseLambdaCaseClauses lvlTok currentType typeConstructors bodyAfterLambda ++ go currentType rest
                else expandNestedCaseClauses lvlTok currentType typeConstructors pat body ++ go currentType rest
@@ -679,7 +673,7 @@ parseForMachineClauses src = go Nothing (lines src)
     startsTopLevelDeclForMachine line =
       let t = trim line
       in not (null line)
-         && not (isSpace (head line))
+         && not (startsIndented line)
          && not ("--" `isPrefixOf` t)
          && any (`isPrefixOf` t)
               [ "instance"
@@ -710,18 +704,18 @@ parseLambdaCaseClauses lvl currentType typeConstructors = go
       | isBranchStart x = (reverse acc, allLines)
       | otherwise = step (x:acc) xs
 
-  isBranchStart l = "->" `isInfix` l && not (null l) && isSpace (head l)
+  isBranchStart l = "->" `isInfix` l && startsIndented l
 
 expandNestedCaseClauses :: String -> Maybe TypeName -> Map.Map TypeName [ConstructorName] -> String -> [String] -> [Clause]
 expandNestedCaseClauses lvl currentType typeConstructors pat body =
   case splitCaseOnBoundVar (Set.fromList (extractVars pat)) body of
     Just (prefix, branchLines) ->
-      Clause lvl currentType (inferClauseCtor typeConstructors currentType pat) pat body
+      Clause lvl (inferClauseCtor typeConstructors currentType pat) pat body
         : concatMap descend (parseLambdaCaseClauses lvl currentType typeConstructors branchLines)
       where
         descend cl = expandNestedCaseClauses lvl currentType typeConstructors (clausePattern cl) (prefix ++ clauseBody cl)
     Nothing ->
-      [Clause lvl currentType (inferClauseCtor typeConstructors currentType pat) pat body]
+      [Clause lvl (inferClauseCtor typeConstructors currentType pat) pat body]
 
 splitCaseOnBoundVar :: Set.Set String -> [String] -> Maybe ([String], [String])
 splitCaseOnBoundVar boundVars = go []
@@ -761,7 +755,7 @@ parseHeader line =
   in (lvl, pat)
 
 spanInstanceHeader :: String -> [String] -> ([String], [String], Maybe TypeName)
-spanInstanceHeader className [] = ([], [], Nothing)
+spanInstanceHeader _className [] = ([], [], Nothing)
 spanInstanceHeader className (x:xs) = finish [x] xs
   where
     finish acc [] =
@@ -778,19 +772,20 @@ parseInstanceTypeForClass className hdr = do
   (_, rest) <- breakSub className hdr
   let tyExpr = trim . takeWhile (/= '=') . fst $ breakOn "where" (stripOuterParens (trim rest))
   guard (not (null tyExpr))
-  guard (head tyExpr /= '[')
+  guard (headMay tyExpr /= Just '[')
   firstCtorToken tyExpr
 
 stripOuterParens :: String -> String
 stripOuterParens s
   | headMay s == Just '('
   , lastMay s == Just ')'
-  , parensWrapWhole s = trim (init (tail s))
+  , parensWrapWhole s = trim (dropOuterDelims s)
   | otherwise = s
 
 parensWrapWhole :: String -> Bool
-parensWrapWhole = go 0
+parensWrapWhole = go (0 :: Int)
   where
+    go :: Int -> String -> Bool
     go _ [] = True
     go depth (c:cs)
       | c == '(' = go (depth + 1) cs
@@ -827,9 +822,6 @@ ctorFromPattern :: String -> Maybe String
 ctorFromPattern pat = case normalizedCtorTokens pat of
   [] -> Nothing
   xs -> Just (selectCtorToken xs)
-  where
-    isCtorToken (c:_) = isUpper c
-    isCtorToken _ = False
 
 normalizeCtorToken :: String -> String
 normalizeCtorToken tok =
@@ -881,7 +873,7 @@ isVariableOnlyPattern pat =
 
 -- Map JSON field keys to the pattern variable they come from.
 parseFieldVarMap :: HelperFieldMap -> [Clause] -> Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
-parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
+parseFieldVarMap helperMap = foldlStrict step Map.empty
   where
     step acc cl =
       case clauseCtor cl of
@@ -898,8 +890,8 @@ parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
               directPairs = mapMaybe (parseFieldLine vars) (collectFieldEntries sanitizedBody)
               helperPairs = concatMap helperPairsForLine sanitizedBody
               pairs = Map.toList (Map.fromListWith preferSpecific (directPairs ++ helperPairs))
-              addOne m (k,v) = foldl' (\mm lvl -> Map.insertWith (Map.union) lvl (Map.singleton k v) mm) m lvls
-          in Map.insertWith (Map.unionWith Map.union) ctor (foldl' addOne Map.empty pairs) acc
+              addOne m (k,v) = foldlStrict (\mm lvl -> Map.insertWith Map.union lvl (Map.singleton k v) mm) m lvls
+          in Map.insertWith (Map.unionWith Map.union) ctor (foldlStrict addOne Map.empty pairs) acc
 
     helperPairsForLine line =
       concatMap helperPairsForName (tokenize line)
@@ -913,7 +905,7 @@ parseFieldVarMap helperMap clauses = foldl' step Map.empty clauses
       | otherwise = old
 
 collectFieldEntries :: [String] -> [String]
-collectFieldEntries = finalize . foldl' step []
+collectFieldEntries = finalize . foldlStrict step []
  where
   step :: [String] -> String -> [String]
   step [] line
@@ -931,7 +923,7 @@ collectFieldEntries = finalize . foldl' step []
     filter (".=" `isInfix`) . map trim . splitTopLevelCommasGeneral . stripOuterList . trim
 
   stripOuterList s
-    | headMay s == Just '[' && lastMay s == Just ']' = init (tail s)
+    | headMay s == Just '[' && lastMay s == Just ']' = dropOuterDelims s
     | otherwise =
         case outerBracketSpan s of
           Just (i, j)
@@ -944,8 +936,9 @@ collectFieldEntries = finalize . foldl' step []
   outerBracketSpan s =
     case elemIndex '[' s of
       Nothing -> Nothing
-      Just start -> matchBracket start 0 start
+      Just start -> matchBracket start (0 :: Int) start
     where
+      matchBracket :: Int -> Int -> Int -> Maybe (Int, Int)
       matchBracket _ _ i | i >= length s = Nothing
       matchBracket start depth i =
         case s !! i of
@@ -963,21 +956,22 @@ fieldEntryNeedsContinuation :: String -> Bool
 fieldEntryNeedsContinuation = hasOpenBalance . trim
   where
     hasOpenBalance s =
-      case go 0 0 0 s of
-        (paren, bracket, brace) -> paren > 0 || bracket > 0 || brace > 0
+      case go (0 :: Int) (0 :: Int) (0 :: Int) s of
+        (paren, bracketDepth, brace) -> paren > 0 || bracketDepth > 0 || brace > 0
 
-    go paren bracket brace [] = (paren, bracket, brace)
-    go paren bracket brace (c:cs)
-      | c == '(' = go (paren + 1) bracket brace cs
-      | c == ')' = go (paren - 1) bracket brace cs
-      | c == '[' = go paren (bracket + 1) brace cs
-      | c == ']' = go paren (bracket - 1) brace cs
-      | c == '{' = go paren bracket (brace + 1) cs
-      | c == '}' = go paren bracket (brace - 1) cs
-      | otherwise = go paren bracket brace cs
+    go :: Int -> Int -> Int -> String -> (Int, Int, Int)
+    go paren bracketDepth brace [] = (paren, bracketDepth, brace)
+    go paren bracketDepth brace (c:cs)
+      | c == '(' = go (paren + 1) bracketDepth brace cs
+      | c == ')' = go (paren - 1) bracketDepth brace cs
+      | c == '[' = go paren (bracketDepth + 1) brace cs
+      | c == ']' = go paren (bracketDepth - 1) brace cs
+      | c == '{' = go paren bracketDepth (brace + 1) cs
+      | c == '}' = go paren bracketDepth (brace - 1) cs
+      | otherwise = go paren bracketDepth brace cs
 
 stripCommentBlocks :: [String] -> [String]
-stripCommentBlocks = snd . foldl' step (0 :: Int, [])
+stripCommentBlocks = snd . foldlStrict step (0 :: Int, [])
   where
     step (depth, acc) line =
       let (depth', cleaned) = stripLine depth line
@@ -996,19 +990,20 @@ stripCommentBlocks = snd . foldl' step (0 :: Int, [])
           in (depth', c : rest)
 
 splitTopLevelCommasGeneral :: String -> [String]
-splitTopLevelCommasGeneral s = go 0 0 0 "" [] s
+splitTopLevelCommasGeneral = go (0 :: Int) (0 :: Int) (0 :: Int) "" []
   where
+    go :: Int -> Int -> Int -> String -> [String] -> String -> [String]
     go _ _ _ cur acc [] = reverse (trim cur : acc)
-    go paren bracket brace cur acc (c:cs)
-      | c == '(' = go (paren + 1) bracket brace (cur ++ [c]) acc cs
-      | c == ')' = go (paren - 1) bracket brace (cur ++ [c]) acc cs
-      | c == '[' = go paren (bracket + 1) brace (cur ++ [c]) acc cs
-      | c == ']' = go paren (bracket - 1) brace (cur ++ [c]) acc cs
-      | c == '{' = go paren bracket (brace + 1) (cur ++ [c]) acc cs
-      | c == '}' = go paren bracket (brace - 1) (cur ++ [c]) acc cs
-      | c == ',' && paren == 0 && bracket == 0 && brace == 0 =
-          go paren bracket brace "" (trim cur : acc) cs
-      | otherwise = go paren bracket brace (cur ++ [c]) acc cs
+    go paren bracketDepth brace cur acc (c:cs)
+      | c == '(' = go (paren + 1) bracketDepth brace (cur ++ [c]) acc cs
+      | c == ')' = go (paren - 1) bracketDepth brace (cur ++ [c]) acc cs
+      | c == '[' = go paren (bracketDepth + 1) brace (cur ++ [c]) acc cs
+      | c == ']' = go paren (bracketDepth - 1) brace (cur ++ [c]) acc cs
+      | c == '{' = go paren bracketDepth (brace + 1) (cur ++ [c]) acc cs
+      | c == '}' = go paren bracketDepth (brace - 1) (cur ++ [c]) acc cs
+      | c == ',' && paren == 0 && bracketDepth == 0 && brace == 0 =
+          go paren bracketDepth brace "" (trim cur : acc) cs
+      | otherwise = go paren bracketDepth brace (cur ++ [c]) acc cs
 
 parseFieldLine :: Set.Set String -> String -> Maybe (String, String)
 parseFieldLine vars line = do
@@ -1171,7 +1166,7 @@ ghciTypesForFile fp clauses = do
     out <- runGhci moduleName imports (map (fst . snd) queries)
     let outputs = splitOutputs out (length queries)
     let pairs = zip queries outputs
-    pure $ foldl' mergeVarTypes Map.empty (map parseQueryResult pairs)
+    pure $ foldlStrict mergeVarTypes Map.empty (map parseQueryResult pairs)
   where
     mergeVarTypes = Map.unionWith Map.union
 
@@ -1183,7 +1178,7 @@ extractImports src =
   , "import " `isPrefixOf` l'
   ]
   where
-    stripComment l = takeWhile (/= '-') l
+    stripComment = takeWhile (/= '-')
 
 extractModuleName :: String -> Maybe String
 extractModuleName src =
@@ -1200,7 +1195,7 @@ buildQuery cl = do
   ctor <- clauseCtor cl
   let vars = filter isRelevantVar (extractVars (clausePattern cl))
   if null vars then Nothing else do
-    let body = if length vars == 1 then head vars else "(" ++ commaSep vars ++ ")"
+    let body = singletonOrTuple vars
     let expr = "(\\(" ++ clausePattern cl ++ ") -> " ++ body ++ ")"
     let cmd = ":t " ++ expr
     Just (ctor, (cmd, vars))
@@ -1224,17 +1219,21 @@ runGhci moduleName imports cmds =
           [":set -XGADTs -XTypeFamilies -XDataKinds -XTypeOperators -XRankNTypes -XScopedTypeVariables"]
           ++ maybe [] (\m -> [":module + *" ++ m]) moduleName
           ++ imports
-          ++ concat [ [cmd, ":! echo " ++ marker i] | (i, cmd) <- zip [0..] cmds ]
+          ++ concat [ [cmd, ":! echo " ++ marker i] | (i, cmd) <- zip [(0 :: Int)..] cmds ]
           ++ [":quit"]
-    (code, out, err) <- readCreateProcessWithExitCode (proc (head ghciCmd) (tail ghciCmd)) (unlines cmdLines)
+    let (ghciProg, ghciArgs) =
+          case ghciCmd of
+            prog:args -> (prog, args)
+            [] -> ("cabal", [])
+    (code, out, err) <- readCreateProcessWithExitCode (proc ghciProg ghciArgs) (unlines cmdLines)
     let combined = out ++ err
     case code of
       ExitSuccess -> pure combined
       _ -> pure combined
 
 withFilteredGhciProjectFile :: (FilePath -> IO a) -> IO a
-withFilteredGhciProjectFile action =
-  bracket create remove action
+withFilteredGhciProjectFile =
+  bracket create remove
   where
     create = do
       let fp = ".ghci-schema.cabal.project.tmp"
@@ -1320,12 +1319,13 @@ parseSigTypes line =
 parseTupleTypes :: String -> [String]
 parseTupleTypes s
   | headMay s == Just '(' && lastMay s == Just ')' && ',' `elem` s =
-      splitTopLevelCommas (init (tail s))
+      splitTopLevelCommas (dropOuterDelims s)
   | otherwise = [s]
 
 splitTopLevelCommas :: String -> [String]
-splitTopLevelCommas s = go 0 "" [] s
+splitTopLevelCommas = go (0 :: Int) "" []
   where
+    go :: Int -> String -> [String] -> String -> [String]
     go _ cur acc [] = reverse (trim cur : acc)
     go depth cur acc (c:cs)
       | c == '(' = go (depth + 1) (cur ++ [c]) acc cs
@@ -1338,7 +1338,7 @@ parseBindings :: String -> Maybe (Map.Map String String)
 parseBindings out =
   let constraints = parseConstraints out
       bindings = mapMaybe parseBindingLine (lines out)
-      applyConstraints ty = foldl' (\t (v, rep) -> replaceToken v rep t) ty constraints
+      applyConstraints ty = foldlStrict (\t (v, rep) -> replaceToken v rep t) ty constraints
       fixed = [ (name, applyConstraints ty) | (name, ty) <- bindings ]
   in if null fixed then Nothing else Just (Map.fromList fixed)
 
@@ -1370,9 +1370,28 @@ headMay :: [a] -> Maybe a
 headMay [] = Nothing
 headMay (x:_) = Just x
 
+singleElement :: [a] -> Maybe a
+singleElement [x] = Just x
+singleElement _ = Nothing
+
+startsIndented :: String -> Bool
+startsIndented = maybe False isSpace . headMay
+
+dropOuterDelims :: String -> String
+dropOuterDelims [] = []
+dropOuterDelims [_] = []
+dropOuterDelims (_:xs) =
+  case reverse xs of
+    [] -> []
+    (_:restRev) -> reverse restRev
+
+singletonOrTuple :: [String] -> String
+singletonOrTuple [v] = v
+singletonOrTuple vars = "(" ++ commaSep vars ++ ")"
+
 lastMay :: [a] -> Maybe a
 lastMay [] = Nothing
-lastMay xs = Just (last xs)
+lastMay xs = headMay (reverse xs)
 
 splitOn :: String -> String -> [String]
 splitOn needle hay = map T.unpack (T.splitOn (T.pack needle) (T.pack hay))
@@ -1397,17 +1416,6 @@ isInfix needle hay = T.isInfixOf (T.pack needle) (T.pack hay)
 
 type FieldVarMap = Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
 
--- Update a single namespace schema on disk.
-updateSchemaForNamespace :: Config
-                         -> FilePath
-                         -> FilePath
-                         -> Map.Map ConstructorName [NamespaceParts]
-                         -> FieldVarMap
-                         -> VarTypes
-                         -> String
-                         -> IO ()
-updateSchemaForNamespace = updateSchemaForNamespaceWithWarning (\_ -> pure ())
-
 updateSchemaForNamespaceWithWarning :: (String -> IO ())
                          -> Config
                          -> FilePath
@@ -1422,10 +1430,7 @@ updateSchemaForNamespaceWithWarning emitWarning config msgOutDir typeOutDir nsMa
   let ctor =
         case fallbackCtorForNamespace parts of
           Just c -> Just c
-          Nothing ->
-            case findCtor nsMap parts of
-              Just c -> Just c
-              Nothing -> Nothing
+          Nothing -> findCtor nsMap parts
   let out = msgOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
   let histOutDir = "bench/trace-schemas/messages-hist"
   let histOut = histOutDir </> foldr (</>) (last parts ++ ".schema.json") (init parts)
@@ -1547,7 +1552,7 @@ splitUnexpectedlyFalseAssertion m =
 -- Merge "data" from messages-hist when we couldn't infer any properties.
 mergeHistDataIfEmpty :: FilePath -> A.Value -> IO A.Value
 mergeHistDataIfEmpty histOut v@(A.Object o) = do
-  hasProps <- pure (hasDataProps o)
+  let hasProps = hasDataProps o
   if hasProps
     then pure v
     else do
@@ -1645,10 +1650,7 @@ updateData config typeOutDir ctor fieldVarMap varTypes lvl o =
                   then KM.filterWithKey (\k _ -> KM.member k inferredProps) props
                   else props
           updatedProps <- KM.traverseWithKey (updateProp typeOutDir ctor fieldVarMap varTypes lvl) propsToUpdate
-          let mergedProps =
-                if cfgPruneStaleProperties config
-                  then KM.union updatedProps inferredProps
-                  else KM.union updatedProps inferredProps
+          let mergedProps = KM.union updatedProps inferredProps
           let d' = KM.insert (K.fromString "properties") (A.Object mergedProps) d
           let d'' = setRequiredFields ctor fieldVarMap varTypes lvl d'
           pure (KM.insert (K.fromString "data") (A.Object d'') o)
@@ -1777,7 +1779,7 @@ findCtor nsMap parts =
     [] -> Nothing
  where
   rankedMatches =
-    reverse . sortOn fst $
+    sortOn (Down . fst) $
       [ (scoreMatch ctor nsParts, ctor)
       | (ctor, nss) <- Map.toList nsMap
       , nsParts <- nss
@@ -1855,7 +1857,7 @@ isList :: String -> Bool
 isList s = headMay s == Just '[' && lastMay s == Just ']'
 
 listElem :: String -> String
-listElem s = trim (init (tail s))
+listElem s = trim (dropOuterDelims s)
 
 isMaybe :: String -> Bool
 isMaybe s = "Maybe " `isPrefixOf` trim s
@@ -1872,7 +1874,7 @@ baseTypeName s =
                 _ -> s'
               _ -> s'
       tokens = filter (not . null) (tokenize s'')
-  in case filter (\t -> case t of (c:_) -> isUpper c; _ -> False) tokens of
+  in case filter (\case (c:_) -> isUpper c; _ -> False) tokens of
       (x:_) -> x
       [] -> s''
 
@@ -1941,7 +1943,7 @@ mergedPropsForType
   -> IO A.Object
 mergedPropsForType fieldVarMap varTypes seen ctor byLevel = do
   let fieldVars =
-        foldl' (Map.unionWith (++)) Map.empty
+        foldlStrict (Map.unionWith (++)) Map.empty
           [ Map.map (:[]) lvlMap
           | lvlMap <- Map.elems byLevel
           ]
@@ -2012,10 +2014,10 @@ mergeSchemas [] = A.object []
 mergeSchemas [x] = x
 mergeSchemas xs =
   let unique = dedupeValues xs
-  in if length unique == 1 then head unique else A.object ["anyOf" A..= unique]
+  in fromMaybe (A.object ["anyOf" A..= unique]) (singleElement unique)
 
 dedupeValues :: [A.Value] -> [A.Value]
-dedupeValues = reverse . foldl' step []
+dedupeValues = reverse . foldlStrict step []
  where
   step acc v =
     let key = BL8.unpack (A.encode v)

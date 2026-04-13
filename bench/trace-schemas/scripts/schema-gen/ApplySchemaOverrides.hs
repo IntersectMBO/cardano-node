@@ -10,6 +10,7 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
 import Control.Monad (forM, unless, when)
 import Data.List (isSuffixOf, sort)
+import Data.Maybe (fromMaybe)
 import System.Directory
   ( createDirectoryIfMissing
   , doesDirectoryExist
@@ -63,7 +64,7 @@ main = do
       exitSuccess
 
 parseArgs :: Config -> [String] -> IO Config
-parseArgs config args = go config args
+parseArgs = go
  where
   go cfg [] = pure cfg
   go cfg ("--root" : root : rest) = go cfg {cfgRoot = root} rest
@@ -179,7 +180,7 @@ findDestructiveOps target patch = goObj "" targetObj patchObj
            (Just _, _)           -> [keyPath <> ": field replacement"]
 
 mergePatch :: A.Value -> A.Value -> A.Value
-mergePatch _ patch@(A.Null) = patch
+mergePatch _ A.Null = A.Null
 mergePatch _ patch@(A.Bool _) = patch
 mergePatch _ patch@(A.String _) = patch
 mergePatch _ patch@(A.Number _) = patch
@@ -192,16 +193,13 @@ mergePatch target (A.Object patchObj) =
    in A.Object (mergeObject targetObj patchObj)
 
 mergeObject :: A.Object -> A.Object -> A.Object
-mergeObject target patch = KM.foldrWithKey step target patch
+mergeObject = KM.foldrWithKey step
  where
   step key value acc =
     case value of
       A.Null -> KM.delete key acc
       A.Object _ ->
-        let existing =
-              case KM.lookup key acc of
-                Just v -> v
-                Nothing -> A.Null
+        let existing = fromMaybe A.Null (KM.lookup key acc)
             merged = mergePatch existing value
          in KM.insert key merged acc
       _ -> KM.insert key value acc

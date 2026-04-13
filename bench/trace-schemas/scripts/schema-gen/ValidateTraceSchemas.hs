@@ -54,7 +54,7 @@ main = do
   exitSuccess
 
 parseArgs :: Config -> [String] -> IO Config
-parseArgs config args = go config args
+parseArgs = go
  where
   go cfg [] = pure cfg
   go cfg ("--meta-schema" : path : rest) = go cfg {cfgMetaSchema = path} rest
