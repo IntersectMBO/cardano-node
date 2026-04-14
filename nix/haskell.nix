@@ -112,13 +112,13 @@ let
       #
       # 1. Nix is a lazy language and the resulting `project` is already
       # in scope. Avoid referring to any of `project` attributes from
-      # within a configuration module. You can instead refer to the final
-      # package set configuration in `config`. If you run into infinite
-      # resursion issues, troubleshooting the latter will be much easier
-      # than troubleshooting the former.
-      #
-      # 2. The same configuration option can be set to different values
-      # from separate modules. How these values will be merged together
+I'm confused by this request. The issue references `ConwayEraOnwardsConway` in `TreasuryDonation.hs`, but you're asking me to modify `nix/haskell.nix` — which is a Nix build configuration file that doesn't contain any `ConwayEraOnwardsConway` references.
+
+I also don't have context from a previous conversation about what specific change was intended for `nix/haskell.nix`.
+
+Could you clarify:
+1. What change should be made to `nix/haskell.nix`?
+2. Or did you mean the target file should be `TreasuryDonation.hs` instead?
       # dependes on the type of the option. The type of each option is
       # listed in the haskell.nix modules reference pages.
       #
