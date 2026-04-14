@@ -164,11 +164,9 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
 
     -- wait till transaction gets included in the block
-    _ <- waitForBlocks epochStateView 1
-
-    -- test if it's in UTxO set
-    utxo1 <- findAllUtxos epochStateView sbe
-    let txUtxo = Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
+    txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
+      (Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') <$> findAllUtxos epochStateView sbe)
+      (not . Utxo.null)
     (length txOuts + 1) === length (toList txUtxo)
 
     let chainTxOuts =
@@ -177,7 +175,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             . reverse
             . map snd
             . toList
-            $ Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
+            $ txUtxo
 
     -- check that the transaction's outputs are the same as we've submitted them
     -- i.e. check the datums
@@ -227,11 +225,11 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
 
     -- wait till transaction gets included in the block
-    _ <- waitForBlocks epochStateView 1
+    txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
+      (Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') <$> findAllUtxos epochStateView sbe)
+      (not . Utxo.null)
 
     -- test if the transaction is visible in UTxO set
-    utxo1 <- findAllUtxos epochStateView sbe
-    let txUtxo = Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
     [toCtxUTxOTxOut txOut] === (snd <$> toList txUtxo)
     pure txUtxo
 

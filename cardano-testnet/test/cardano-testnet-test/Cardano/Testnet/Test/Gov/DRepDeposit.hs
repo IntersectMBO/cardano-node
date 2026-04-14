@@ -21,7 +21,7 @@ import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -32,7 +32,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
-hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'

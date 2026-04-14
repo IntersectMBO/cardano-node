@@ -130,15 +130,10 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
     ]
 
 
-  _ <- waitForBlocks epochStateView 1
-
   H.note_ "Check that stake address is registered"
-  getAccountsStates epochStateView sbe >>=
-    flip H.assertWith
-      (\accountsStates -> isJust $ do
-        _state <- M.lookup stakeKeyHash accountsStates
-        pure () -- TODO: should we check for balance?
-        )
+  void $ retryUntilM epochStateView (WaitForBlocks 5)
+    (getAccountsStates epochStateView sbe)
+    (M.member stakeKeyHash)
 
   -- deregister stake address
   createStakeKeyDeregistrationCertificate
@@ -174,10 +169,8 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
     , "--tx-file", stakeCertDeregTxSignedFp
     ]
 
-  _ <- waitForBlocks epochStateView 1
-
   H.note_ "Check that stake address is deregistered"
-  getAccountsStates epochStateView sbe >>=
-    flip H.assertWith
-      (isNothing . M.lookup stakeKeyHash)
+  void $ retryUntilM epochStateView (WaitForBlocks 5)
+    (getAccountsStates epochStateView sbe)
+    (M.notMember stakeKeyHash)
 

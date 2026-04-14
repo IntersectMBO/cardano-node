@@ -11,26 +11,27 @@ import           Cardano.Api hiding (Value)
 import           Cardano.Api.Experimental (Some (Some))
 import           Cardano.Api.Ledger (EpochInterval (..))
 import           Cardano.Api.UTxO (difference, size)
+
 import           Cardano.Testnet
 
 import           Prelude
-import           Testnet.Types
 
 import           Control.Monad (void)
-
 import           Data.Default.Class (Default (def))
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.Query (getEpochStateView, getTxIx, waitForBlocks,
-                   watchEpochStateUpdate, findAllUtxos)
-import qualified Testnet.Defaults  as Defaults
+import           Testnet.Components.Query (TestnetWaitPeriod (..), findAllUtxos, getEpochStateView,
+                   getTxIx, retryUntilM, watchEpochStateUpdate)
+import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
+import           Testnet.Types
+
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
@@ -60,7 +61,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
     , wallets = wallet0 : wallet1 : _
     } <-
     createAndRunTestnet options def conf
-  
+
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
@@ -69,7 +70,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-publish"
 
   let utxoVKeyFile2 = verificationKeyFp $ paymentKeyInfoPair wallet1
-      
+
   reqSignerHash <- filter (/= '\n') <$>
     execCli' execConfig
       [ eraName, "address", "key-hash"
@@ -148,7 +149,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   -- Attempt to mint from a refernce script
   let assetName = "4D696C6C6172436F696E"
 
- 
+
   simpleMintingPolicyId <- filter (/= '\n') <$>
      execCli' execConfig
        [ eraName, "transaction"
@@ -186,14 +187,11 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
       "signed-tx"
       unsignedUnlockTx
       [Some $ paymentKeyInfoPair wallet1]
-  
+
   utxoPre <- findAllUtxos epochStateView sbe
 
 
   submitTx execConfig cEra signedUnlockTx
-  void $ waitForBlocks epochStateView 1 
-  utxoPost <- findAllUtxos epochStateView sbe
-
-  let diff = difference utxoPost utxoPre
-      
-  size diff H.=== 2
+  void $ retryUntilM epochStateView (WaitForBlocks 5)
+    (size . (`difference` utxoPre) <$> findAllUtxos epochStateView sbe)
+    (== 2)

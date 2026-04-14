@@ -24,10 +24,9 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
-import           Testnet.Process.Cli.SPO (
-                   createStakeKeyRegistrationCertificate)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (aesonObjectLookUp,integrationWorkspace)
+import           Testnet.Property.Util (aesonObjectLookUp, integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -38,7 +37,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Transaction Build Estimate/"'@
 hprop_tx_build_estimate :: Property
-hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_tx_build_estimate = integrationRetryWorkspace 2 "transaction-build-estimate" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -92,7 +91,7 @@ hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \t
     , "--out-file", work </> "pparams.json"
     ]
   let txBodyEstimateFile = work </> "tx-body-estimate.body"
-  void $ execCli' execConfig 
+  void $ execCli' execConfig
     [ eraName, "transaction", "build-estimate"
     , "--shelley-key-witnesses", "2"
     , "--byron-key-witnesses", "0"
@@ -109,17 +108,17 @@ hprop_tx_build_estimate = integrationWorkspace "transaction-build-estimate" $ \t
     , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", txBodyEstimateFile
     ]
-  let debugOutputFile = work </> "debug-output.txt" 
+  let debugOutputFile = work </> "debug-output.txt"
   void $ execCli' execConfig ["debug", "transaction", "view", "--tx-file", txBodyEstimateFile, "--out-file", debugOutputFile]
 
   generated :: Aeson.Value <- H.leftFailM . H.readJsonFile $ debugOutputFile
   mFee <- aesonObjectLookUp generated "fee"
-  case mFee of 
+  case mFee of
     Just (Aeson.String feeText) ->  feeText === "380 Lovelace"
     Just v -> H.failMessage  callStack $ "Expected a String but got: " <> show v
     Nothing -> H.failMessage callStack "Expected a JSON object"
-  
- 
+
+
 
 
 

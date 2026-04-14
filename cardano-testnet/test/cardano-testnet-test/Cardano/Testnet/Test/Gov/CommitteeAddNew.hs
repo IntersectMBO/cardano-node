@@ -46,7 +46,7 @@ import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
 import           Testnet.Types
 
@@ -57,7 +57,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Committee Add New/"'@
 hprop_constitutional_committee_add_new :: Property
-hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -202,11 +202,11 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--out-file", gov </> "stake-hash.addr"
     ]
 
-  stakeKeyHash <- H.readFile $ gov </> "stake-hash.addr" 
+  stakeKeyHash <- H.readFile $ gov </> "stake-hash.addr"
 
   H.note_ $ "Stake key hash:"  <> stakeKeyHash
 
-  
+
 
   -- Create temporary HTTP server with files required by the call to `cardano-cli`
   -- In this case, the server emulates an IPFS gateway

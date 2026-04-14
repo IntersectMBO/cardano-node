@@ -4,16 +4,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral 
+module Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
   ( hprop_collateral_with_tokens
-  ) where 
+  ) where
 
 import           Cardano.Api
+
 import           Cardano.Testnet
 
 import           Prelude
+
+import           Control.Monad (mfilter, void)
 import qualified Data.Aeson as Aeson
-import           Control.Monad (void)
 import           Data.Default.Class
 import qualified Data.Text as T
 import           System.FilePath ((</>))
@@ -21,8 +23,9 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
+import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -31,7 +34,7 @@ import qualified Hedgehog.Extras as H
 
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Collateral With Multiassets/"'@
 hprop_collateral_with_tokens :: Property
-hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-tokens" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -71,12 +74,12 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     ]
   utxo1 <- findUtxosWithAddress epochStateView sbe $ paymentKeyInfoAddr wallet0
 
-  H.noteShow_ utxo1 
+  H.noteShow_ utxo1
     -- Create a simple always-succeeds Plutus V3 script
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
   H.writeFile plutusScript $ T.unpack plutusV3Script
 
-  
+
   -- Get the policy ID
   mintingPolicyId <- filter (/= '\n') <$>
     execCli' execConfig
@@ -84,9 +87,9 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
       , "policyid"
       , "--script-file", plutusScript
       ]
-      
+
   let assetName = "7161636f696e" -- "qacoin" in hex
-  
+
   -- Create a Plutus script address
   plutusSpendingScriptAddr <-
     execCli' execConfig
@@ -113,7 +116,7 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
     , "--tx-out-return-collateral", adaOnlyCollateralValue
     , "--witness-override", show @Int 2
-    , "--tx-out", collateralToBeValue 
+    , "--tx-out", collateralToBeValue
     , "--tx-out", fundPlutusScriptAddrVal
     , "--tx-out-datum-hash-value", "0"
     , "--mint", mintValue
@@ -129,6 +132,7 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--out-file", mintTokensTx
     ]
+  mintTxId <- retrieveTransactionId execConfig $ File mintTokensTx
   let mintTxDebugFile = work </> "mint-tokens-tx-view.json"
   void $ execCli' execConfig ["debug", "transaction", "view", "--tx-file", mintTokensTx, "--out-file", mintTxDebugFile]
 
@@ -144,14 +148,14 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
 
   -- STEP 2: Attempt to spend from script with collateral containing tokens
   -- This will fail because collateral cannot contain non-ADA tokens
-  
-  -- Wait for transactions to be processed and find UTxOs
-  _ <- waitForBlocks epochStateView 1
-  
-  -- Find the UTxO with tokens at wallet1 (for collateral)
-  txinCollateralWithTokensM <- 
-    findLargestMultiAssetUtxoWithAddress epochStateView sbe $ T.pack maCollateralAddress
-  (txinCollateralWithTokens, collateralTxOut) <- H.evalMaybe txinCollateralWithTokensM
+
+  -- Wait for the mint transaction to appear on chain, then find the specific
+  -- multi-asset UTxO it created at wallet2 (for use as collateral with tokens)
+  (txinCollateralWithTokens, collateralTxOut) <-
+    retryUntilJustM epochStateView (WaitForBlocks 5) $
+      mfilter (\(TxIn txId' _, _) -> txId' == mintTxId)
+        <$> findLargestMultiAssetUtxoWithAddress epochStateView sbe (T.pack maCollateralAddress)
+
   H.note_ "Collateral TxOut"
   H.noteShow_  collateralTxOut
   -- Find the UTxO at the script address
@@ -173,8 +177,8 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--out-file", spendScriptUTxOTxBody
     ]
   let prettyTxBodyFile = work </> "spend-script-utxo-tx-body-view.json"
-  void $ execCli' execConfig ["debug", "transaction", "view", "--tx-body-file", spendScriptUTxOTxBody, "--out-file", prettyTxBodyFile] 
-  
+  void $ execCli' execConfig ["debug", "transaction", "view", "--tx-body-file", spendScriptUTxOTxBody, "--out-file", prettyTxBodyFile]
+
   txBodyPrettyJson :: Aeson.Value <- H.leftFailM . H.readJsonFile $ prettyTxBodyFile
   H.note_ "Tx body"
   H.noteShowPretty_ txBodyPrettyJson
@@ -186,10 +190,10 @@ hprop_collateral_with_tokens = integrationWorkspace "collateral-with-tokens" $ \
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet2
     , "--out-file", spendScriptUTxOTx
     ]
-  
+
   let prettyTxFile = work </> "spend-script-utxo-tx-view.json"
-  void $ execCli' execConfig ["debug", "transaction", "view", "--tx-file", spendScriptUTxOTx, "--out-file", prettyTxFile] 
-  
+  void $ execCli' execConfig ["debug", "transaction", "view", "--tx-file", spendScriptUTxOTx, "--out-file", prettyTxFile]
+
   txPrettyJson :: Aeson.Value <- H.leftFailM . H.readJsonFile $ prettyTxFile
   H.noteShowPretty_ txPrettyJson
 
