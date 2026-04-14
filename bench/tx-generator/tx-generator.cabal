@@ -139,7 +139,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
                       , ouroboros-network:{api, framework, framework-tracing, ouroboros-network, protocols} >= 1.1
                       , plutus-ledger-api
                       , plutus-tx
