@@ -161,18 +161,20 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
           let
             !nsTr            = nodeStateTracer tracers
             !tracePrometheus = NodePrometheusSimple >$< nsTr
-          in runPrometheusSimple tracePrometheus ekgStore ps >>= link
+          in link =<< case tcPrometheusSimpleRun trConfig of
+            Nothing         -> runPrometheusSimple tracePrometheus ekgStore ps
+            Just customDoS  -> runPrometheusSimpleWith customDoS tracePrometheus ekgStore ps
 
     pure (kickoffForwarder, kickoffPrometheusSimple, tracers)
 
    where
-    -- This backend can only be used globally, i.e. will always apply to the namespace root.
-    -- Multiple definitions, especially with differing ports, are considered a *misconfiguration*.
+    -- This backend can only be used globally, i.e. only the namespace root will be considered
+    -- for a "PrometheusSimple ..." connection string.
     prometheusSimple :: Maybe (Bool, Maybe HostName, PortNumber)
-    prometheusSimple =
+    prometheusSimple = do
+      options <- [] `Map.lookup` tcOptions trConfig
       listToMaybe [ (noSuff, mHost, portNo)
-                    | options                              <- Map.elems (tcOptions trConfig)
-                    , ConfBackend backends'                <- options
+                    | ConfBackend backends'                <- options
                     , PrometheusSimple noSuff mHost portNo <- backends'
                     ]
 

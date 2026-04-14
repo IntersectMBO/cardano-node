@@ -76,8 +76,11 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Monad.STM (atomically)
 import           Data.ByteString (ByteString)
+import           Data.Foldable (foldMap')
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
+import           Data.Monoid (Sum (..))
+import qualified Data.Set as Set (size)
 import           Data.SOP
 import           Data.SOP.Functors
 import           Data.Word (Word64)
@@ -253,13 +256,13 @@ instance (Ledger.EraAccounts era, Shelley.EraCertState era) => LedgerQueries (Sh
       )
     . Shelley.shelleyLedgerState
   ledgerDelegMapSize =
-      Map.foldl' (\acc -> maybe acc (const $ 1 + acc) . (^. Ledger.stakePoolDelegationAccountStateL)) 0
+      getSum
+    . foldMap' (Sum . Set.size . Ledger.spsDelegators)
+    . Shelley.psStakePools
     . (^. Shelley.nesEsL
-       .  Shelley.esLStateL
-       .  Shelley.lsCertStateL
-       .  Shelley.certDStateL
-       .  Ledger.accountsL
-       .  Ledger.accountsMapL
+      .   Shelley.esLStateL
+      .   Shelley.lsCertStateL
+      .   Shelley.certPStateL
       )
     . Shelley.shelleyLedgerState
 
