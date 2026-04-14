@@ -20,6 +20,8 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
 import           RIO (Display (..))
 
+import           Cardano.Node.Testnet.Paths (defaultSocketDir)
+
 
 makeSprocket
   :: TmpAbsolutePath
@@ -42,7 +44,7 @@ makeTmpRelPath :: TmpAbsolutePath -> FilePath
 makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
 
 makeSocketDir :: TmpAbsolutePath -> FilePath
-makeSocketDir fp = makeTmpRelPath fp </> "socket"
+makeSocketDir fp = makeTmpRelPath fp </> defaultSocketDir
 
 makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
 makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirectory fp

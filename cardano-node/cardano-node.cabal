@@ -84,6 +84,7 @@ library
                         Cardano.Node.Run
                         Cardano.Node.Startup
                         Cardano.Node.STM
+                        Cardano.Node.Testnet.Paths
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API

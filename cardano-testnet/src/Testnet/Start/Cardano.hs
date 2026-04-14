@@ -64,6 +64,8 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
+import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultPortFile,
+                   defaultUtxoAddrPath)
 import           Testnet.Filepath
 import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
@@ -131,7 +133,7 @@ createTestnetEnv
     testnetOptions genesisOptions onChainParams
     (TmpAbsolutePath tmpAbsPath)
 
-  let configurationFile = tmpAbsPath </> "configuration.yaml"
+  let configurationFile = tmpAbsPath </> defaultConfigFile
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- case genesisHashesPolicy of
     WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
@@ -152,7 +154,7 @@ createTestnetEnv
 
     -- Write port file
     case Map.lookup i portNumbersMap of
-      Just port -> liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show port)
+      Just port -> liftIOAnnotated $ writeFile (tmpAbsPath </> defaultPortFile i) (show port)
       Nothing -> throwString $ "Port not found for node " <> show i
 
     producers <- mapM (idToRemoteAddressP2P portNumbersMap) $ NodeId <$> NEL.filter (/= i) nodeIds
@@ -247,7 +249,7 @@ cardanoTestnet
         , cardanoKESSource
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
-      nodeConfigFile = tmpAbsPath </> "configuration.yaml"
+      nodeConfigFile = tmpAbsPath </> defaultConfigFile
       byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
@@ -260,7 +262,7 @@ cardanoTestnet
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
-    let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
+    let paymentAddrFile = tmpAbsPath </> defaultUtxoAddrPath idx
 
     execCli_
       [ "latest", "address", "build"
@@ -279,7 +281,7 @@ cardanoTestnet
   -- Read port numbers from disk (written by createTestnetEnv)
   portNumbers <- forM (NEL.zip (1 :| [2..]) cardanoNodes) $ \(i, _nodeOption) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-        portPath = nodeDataDir </> "port"
+        portPath = tmpAbsPath </> defaultPortFile i
     portStr <- liftIOAnnotated $ readFile portPath
     let port = read portStr :: PortNumber
     let topologyPath = nodeDataDir </> "topology.json"
