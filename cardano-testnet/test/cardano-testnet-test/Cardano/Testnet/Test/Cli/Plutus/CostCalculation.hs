@@ -34,8 +34,8 @@ import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpochStateView, getTxIx,
-                   watchEpochStateUpdate)
+import           Testnet.Components.Query (TestnetWaitPeriod (..), findLargestUtxoForPaymentKey,
+                   getEpochStateDetails, getEpochStateView, getTxIx, retryUntilJustM)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
@@ -110,11 +110,8 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdPublishRefScript <- retrieveTransactionId execConfig signedTxPublishRefScript
   txIxPublishRefScript <-
-    H.evalMaybeM $
-      watchEpochStateUpdate
-        epochStateView
-        (EpochInterval 2)
-        (getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount
 
   -- Submit a transaction to lock money in the reference script
   refScriptLock <- H.createDirectoryIfMissing $ work </> "ref-script-lock"
@@ -137,8 +134,8 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdLock <- retrieveTransactionId execConfig signedTxLock
   txIxLock <-
-    H.evalMaybeM $
-      watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txIdLock transferAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdLock transferAmount
 
   -- Create transaction that uses reference script
   refScriptUnlock <- H.createDirectoryIfMissing $ work </> "ref-script-unlock"
@@ -274,11 +271,8 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdIncludedScriptLock <- retrieveTransactionId execConfig signedTxIncludedScriptLock
   txIxIncludedScriptLock <-
-    H.evalMaybeM $
-      watchEpochStateUpdate
-        epochStateView
-        (EpochInterval 2)
-        (getTxIx sbe txIdIncludedScriptLock includedScriptLockAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdIncludedScriptLock includedScriptLockAmount
 
   -- Create transaction that uses reference script
   includedScriptUnlock <- H.createDirectoryIfMissing $ work </> "included-script-unlock"
@@ -391,11 +385,8 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdSimpleScriptLock <- retrieveTransactionId execConfig signedTxSimpleScriptLock
   txIxSimpleScriptLock <-
-    H.evalMaybeM $
-      watchEpochStateUpdate
-        epochStateView
-        (EpochInterval 2)
-        (getTxIx sbe txIdSimpleScriptLock lockedAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdSimpleScriptLock lockedAmount
 
   -- Create transaction that unlocks the simple script UTxO we just created
   simpleScriptUnlockWork <- H.createDirectoryIfMissing $ work </> "simple-script-unlock"

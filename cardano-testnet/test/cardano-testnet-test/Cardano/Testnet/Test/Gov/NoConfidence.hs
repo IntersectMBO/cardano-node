@@ -129,8 +129,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   epochStateView <- getEpochStateView configurationFile (File socketPath)
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 3) $ \anyNewEpochState->
-    pure $ committeeIsPresent True anyNewEpochState
+  retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 3) $ committeeIsPresent True <$> getEpochStateDetails epochStateView
 
   -- Step 2. Propose motion of no confidence. DRep and SPO voting thresholds must be met.
 
@@ -189,8 +188,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 10) $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   let spoVotes :: [(String, Int)]
       spoVotes =  [("yes", 1), ("yes", 2), ("no", 3)]
@@ -238,7 +236,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) (return . committeeIsPresent False)
+  retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 10) $ committeeIsPresent False <$> getEpochStateDetails epochStateView
 
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()

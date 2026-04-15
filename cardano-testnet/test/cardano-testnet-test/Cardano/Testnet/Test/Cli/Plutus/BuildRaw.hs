@@ -8,41 +8,31 @@ module Cardano.Testnet.Test.Cli.Plutus.BuildRaw (
 )
 where
 
-import Cardano.Api hiding (Value)
-import Cardano.Api.Experimental (Some (Some))
-import Cardano.Api.Ledger (EpochInterval (..))
+import           Cardano.Api hiding (Value)
+import           Cardano.Api.Experimental (Some (Some))
+import           Cardano.Api.Ledger (EpochInterval (..))
 
-import Cardano.Testnet
+import           Cardano.Testnet
 
-import Prelude
+import           Prelude
 
-import Control.Monad (void)
-import Data.Default.Class (Default (def))
+import           Control.Monad (void)
+import           Data.Default.Class (Default (def))
 import qualified Data.Text as Text
-import System.FilePath ((</>))
+import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import Testnet.Components.Query (
-    findLargestUtxoForPaymentKey,
-    getEpochStateView,
-    getTxIx,
-    watchEpochStateUpdate,
- )
+import           Testnet.Components.Query (TestnetWaitPeriod (..), findLargestUtxoForPaymentKey,
+                   getEpochStateDetails, getEpochStateView, getTxIx, retryUntilJustM)
 import qualified Testnet.Defaults as Defaults
-import Testnet.Process.Cli.Transaction (
-    TxOutAddress (..),
-    mkSpendOutputsOnlyTx,
-    retrieveTransactionId,
-    signTx,
-    submitTx,
- )
-import Testnet.Process.Run (execCli', mkExecConfig)
-import Testnet.Property.Util (integrationRetryWorkspace)
-import Testnet.Start.Types (eraToString)
-import Testnet.Types
+import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
+                   retrieveTransactionId, signTx, submitTx)
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types (eraToString)
+import           Testnet.Types
 
-import Hedgehog (Property)
-import qualified Hedgehog as H
+import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
@@ -118,11 +108,8 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
 
     txIdPublishRefScript <- retrieveTransactionId execConfig signedTxPublishRefScript
     txIxPublishRefScript <-
-        H.evalMaybeM $
-            watchEpochStateUpdate
-                epochStateView
-                (EpochInterval 2)
-                (getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount)
+        retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+            getEpochStateDetails epochStateView >>= getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount
 
     -- Step 2: Lock funds at script address
     refScriptLock <- H.createDirectoryIfMissing $ work </> "ref-script-lock"
@@ -143,8 +130,8 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
 
     txIdLock <- retrieveTransactionId execConfig signedTxLock
     txIxLock <-
-        H.evalMaybeM $
-            watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txIdLock transferAmount)
+        retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+            getEpochStateDetails epochStateView >>= getTxIx sbe txIdLock transferAmount
 
     -- Step 3: Query protocol parameters
     void $
@@ -207,8 +194,5 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
     -- Verify the transaction landed on chain
     txIdUnlock <- retrieveTransactionId execConfig signedUnlockTx
     void $
-        H.evalMaybeM $
-            watchEpochStateUpdate
-                epochStateView
-                (EpochInterval 2)
-                (getTxIx sbe txIdUnlock (transferAmount - fee))
+        retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+            getEpochStateDetails epochStateView >>= getTxIx sbe txIdUnlock (transferAmount - fee)

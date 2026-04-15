@@ -22,8 +22,8 @@ import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.Query (TestnetWaitPeriod (..), findAllUtxos, getEpochStateView,
-                   getTxIx, retryUntilM, watchEpochStateUpdate)
+import           Testnet.Components.Query (TestnetWaitPeriod (..), findAllUtxos,
+                   getEpochStateDetails, getEpochStateView, getTxIx, retryUntilJustM, retryUntilM)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
@@ -33,7 +33,6 @@ import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
@@ -103,11 +102,8 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdPublishRefScript <- retrieveTransactionId execConfig signedTxPublishRefScript
   txIxPublishRefScript <-
-    H.evalMaybeM $
-      watchEpochStateUpdate
-        epochStateView
-        (EpochInterval 2)
-        (getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdPublishRefScript scriptPublishUTxOAmount
 
   -- Submit a transaction to lock money in the reference script
   refScriptLock <- H.createDirectoryIfMissing $ work </> "ref-script-lock"
@@ -130,8 +126,8 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   -- Wait until transaction is on chain and obtain transaction identifier
   txIdLock <- retrieveTransactionId execConfig signedTxLock
   txIxLock <-
-    H.evalMaybeM $
-      watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txIdLock transferAmount)
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $
+      getEpochStateDetails epochStateView >>= getTxIx sbe txIdLock transferAmount
 
   -- Create transaction that uses reference script
   refScriptUnlock <- H.createDirectoryIfMissing $ work </> "ref-script-unlock"

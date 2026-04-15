@@ -418,7 +418,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs timeout) $
+      maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   return (governanceActionTxId, governanceActionIndex)

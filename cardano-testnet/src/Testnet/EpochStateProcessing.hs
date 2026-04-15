@@ -4,6 +4,7 @@
 
 module Testnet.EpochStateProcessing
   ( maybeExtractGovernanceActionIndex
+  , maybeExtractGovernanceActionExpiry
   , waitForGovActionVotes
   ) where
 
@@ -17,15 +18,15 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
 
-import           Control.Monad
+import           Control.Monad (void)
 import qualified Data.Map as Map
-import           Data.Maybe
 import           Data.Word (Word16)
 import           GHC.Exts (IsList (toList), toList)
 import           GHC.Stack
 import           Lens.Micro (to, (^.))
 
-import           Testnet.Components.Query (EpochStateView, watchEpochStateUpdate)
+import           Testnet.Components.Query (EpochStateView, TestnetWaitPeriod (..),
+                   getEpochStateDetails, retryUntilJustM)
 
 import           Hedgehog
 import           Hedgehog.Extras (MonadAssertion)
@@ -49,6 +50,32 @@ maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState _) =
       | ti1 == L.extractHash ti2 = Just gai
     compareWithTxId _ x _ _ = x
 
+-- | Look up the @gasExpiresAfter@ epoch for the governance action submitted
+-- by the given transaction id. Returns 'Nothing' if the proposal is not
+-- present in the current proposals map (either because it has not yet been
+-- recorded or because it has already been removed).
+--
+-- The ledger removes an expired proposal at the start of epoch
+-- @gasExpiresAfter + 1@ (via the RATIFY rule), so callers that want to
+-- observe the proposal gone should wait until @currentEpoch > expiresAfter@.
+maybeExtractGovernanceActionExpiry
+  :: HasCallStack
+  => TxId -- ^ transaction id searched for
+  -> AnyNewEpochState
+  -> Maybe EpochNo
+maybeExtractGovernanceActionExpiry txid (AnyNewEpochState sbe newEpochState _) =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "Governance actions only available in Conway era onwards")
+    (\ceo -> conwayEraOnwardsConstraints ceo $ do
+        let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
+        Map.foldlWithKey' (compareWithTxId txid) Nothing (L.proposalsActionsMap proposals)
+    )
+    sbe
+  where
+    compareWithTxId (TxId ti1) Nothing (GovActionId (L.TxId ti2) _) gas
+      | ti1 == L.extractHash ti2 = Just (L.gasExpiresAfter gas)
+    compareWithTxId _ x _ _ = x
+
 -- | Wait for the last gov action proposal in the list to have DRep or SPO votes.
 waitForGovActionVotes
   :: forall m. HasCallStack
@@ -58,10 +85,9 @@ waitForGovActionVotes
   => EpochStateView -- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.
   -> EpochInterval -- ^ The maximum wait time in epochs.
   -> m ()
-waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
-  mResult <- watchEpochStateUpdate epochStateView maxWait checkForVotes
-  when (isNothing mResult) $
-    H.failMessage callStack "waitForGovActionVotes: No votes appeared before timeout."
+waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $
+  void $ retryUntilJustM epochStateView (WaitForEpochs maxWait) $
+    getEpochStateDetails epochStateView >>= checkForVotes
   where
     checkForVotes
       :: HasCallStack
