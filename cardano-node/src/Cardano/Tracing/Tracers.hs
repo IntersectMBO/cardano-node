@@ -862,6 +862,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.kesAgentTracer = tracerOnOff (traceKesAgent trSel) verb "kesAgent" tr
     , Consensus.txLogicTracer = tracerOnOff (traceTxLogic trSel) verb "txLogic" tr
     , Consensus.txCountersTracer = tracerOnOff (traceTxCounters trSel) verb "txCounters" tr
+                                <> txSubmissionCountersEKG tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
