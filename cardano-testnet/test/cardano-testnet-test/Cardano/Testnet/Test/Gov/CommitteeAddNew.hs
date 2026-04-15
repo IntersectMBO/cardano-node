@@ -251,8 +251,8 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
   governanceActionTxId <- H.noteShowM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ L.EpochInterval 1) $
+      maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   dRepVoteFiles <-
     DRep.generateVoteFiles
@@ -296,7 +296,8 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
   length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
   length spoVotes === length gaSpoVotes
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
+  retryUntilJustM epochStateView (WaitForEpochs $ L.EpochInterval 1) $
+    committeeIsPresent <$> getEpochStateDetails epochStateView
 
   -- show proposed committee meembers
   H.noteShow_ ccCredentials

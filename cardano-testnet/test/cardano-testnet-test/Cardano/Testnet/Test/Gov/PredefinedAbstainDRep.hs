@@ -287,8 +287,8 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 1)
+      $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   pure (governanceActionTxId, governanceActionIndex)
 
