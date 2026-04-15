@@ -862,6 +862,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.kesAgentTracer = tracerOnOff (traceKesAgent trSel) verb "kesAgent" tr
     , Consensus.txLogicTracer = tracerOnOff (traceTxLogic trSel) verb "txLogic" tr
     , Consensus.txCountersTracer = tracerOnOff (traceTxCounters trSel) verb "txCounters" tr
+                                <> txSubmissionCountersEKG tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1853,3 +1854,16 @@ showOnOff (OnOff True) name trcer = annotateSeverity
 
 withName :: Text -> Trace IO Text -> Tracer IO String
 withName name tr = contramap Text.pack $ toLogObject $ appendName name tr
+
+txSubmissionCountersEKG :: Trace IO Text -> Tracer IO TxSubmissionCounters
+txSubmissionCountersEKG tr = Tracer $ \TxSubmissionCounters{..} -> do
+  traceCounter "txSubmission.txIdMessagesSent"    tr (fromIntegral txIdMessagesSent)
+  traceCounter "txSubmission.txIdsRequested"      tr (fromIntegral txIdsRequested)
+  traceCounter "txSubmission.txIdRepliesReceived" tr (fromIntegral txIdRepliesReceived)
+  traceCounter "txSubmission.txIdsReceived"       tr (fromIntegral txIdsReceived)
+  traceCounter "txSubmission.txMessagesSent"      tr (fromIntegral txMessagesSent)
+  traceCounter "txSubmission.txsRequested"        tr (fromIntegral txsRequested)
+  traceCounter "txSubmission.txRepliesReceived"   tr (fromIntegral txRepliesReceived)
+  traceCounter "txSubmission.txsReceived"         tr (fromIntegral txsReceived)
+  traceCounter "txSubmission.txsOmitted"          tr (fromIntegral txsOmitted)
+  traceCounter "txSubmission.lateBodies"          tr (fromIntegral lateBodies)
