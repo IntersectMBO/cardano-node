@@ -2361,4 +2361,11 @@ instance ToObject TxSubmissionCounters where
             , "txsReceived" .= txsReceived
             , "txsOmitted" .= txsOmitted
             , "lateBodies" .= lateBodies
+            , "txsAccepted" .= txsAccepted
+            , "txsRejected" .= txsRejected
+            , "txIdBlockingReqsSent" .= txIdBlockingReqsSent
+            , "txIdPipelinedReqsSent" .= txIdPipelinedReqsSent
+            , "txIdBlockingWaitMs" .= txIdBlockingWaitMs
+            , "txPipelineWaitMs" .= txPipelineWaitMs
+            , "txSubmissionWaitMs" .= txSubmissionWaitMs
             ]
