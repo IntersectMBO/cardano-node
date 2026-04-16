@@ -31,17 +31,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-  -- ../cardano-api/cardano-api
-  -- ../ouroboros-consensus/ouroboros-consensus
-  -- ../ouroboros-consensus/ouroboros-consensus-cardano
-  -- ../ouroboros-consensus/ouroboros-consensus-protocol
-  -- ../ouroboros-consensus/ouroboros-consensus-diffusion
-  -- ../ouroboros-consensus/ouroboros-consensus-observe
-  -- ../cardano-ledger/eras/alonzo/impl
-  -- ../cardano-ledger/eras/conway/impl
-  -- ../cardano-ledger/eras/shelley/impl
-  -- ../cardano-ledger/eras/shelley/test-suite
-  -- ../cardano-ledger/libs/cardano-ledger-core
 
 extra-packages: Cabal
 
@@ -134,13 +123,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1327573bfb86f7e596151f77d03fc38982be8749
-  --sha256: sha256-CzA6eucrpsc8WMAtG9aNP0DcGtCxghHe0HSX+Yxvcd8=
+  tag: 22d32274ca2657f2966873b225aa9604852c4c77
+  --sha256: sha256-TnHTS2FDeUQoa3dIPSZwZ16svGw990arktNVx7z7aWY=
   subdir:
+    eras/allegra/impl
     eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
     eras/conway/impl
+    eras/conway/test-suite
+    eras/mary/impl
     eras/shelley/impl
     eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
     libs/cardano-ledger-core
     libs/cardano-protocol-tpraos
 
