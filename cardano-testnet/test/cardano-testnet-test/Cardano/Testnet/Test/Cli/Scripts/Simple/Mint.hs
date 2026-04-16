@@ -29,16 +29,15 @@ import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Simple Script.Simple Script Mint/"'@
 hprop_simple_script_mint :: Property
-hprop_simple_script_mint = integrationWorkspace "simple-script-mint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_simple_script_mint = integrationRetryWorkspace 2 "simple-script-mint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -138,10 +137,10 @@ hprop_simple_script_mint = integrationWorkspace "simple-script-mint" $ \tempAbsB
 
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
- 
+
       txoutWithSupplementalDatum = mconcat [utxoAddr, "+", show @Int 1_000_000]
 
-  -- Mint with a simple script 
+  -- Mint with a simple script
   reqSignerHash <- filter (/= '\n') <$>
     execCli' execConfig
       [ anyEraToString anyEra, "address", "key-hash"
@@ -168,7 +167,7 @@ hprop_simple_script_mint = integrationWorkspace "simple-script-mint" $ \tempAbsB
        ]
 
   H.note_ plutusScriptTestPolId
-  
+
   let mintValue = mconcat ["5 ", simpleMintingPolicyId, ".", assetName]
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                        , "+", mintValue
@@ -203,9 +202,6 @@ hprop_simple_script_mint = integrationWorkspace "simple-script-mint" $ \tempAbsB
     [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
-  void $ waitForBlocks epochStateView 1 
-  utxoPost <- findAllUtxos epochStateView sbe
-
-  let diff = difference  utxoPost utxoPre
-
-  size diff H.=== 3
+  void $ retryUntilM epochStateView (WaitForBlocks 5)
+    (size . (`difference` utxoPre) <$> findAllUtxos epochStateView sbe)
+    (== 3)

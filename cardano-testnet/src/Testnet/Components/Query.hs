@@ -27,6 +27,7 @@ module Testnet.Components.Query
   , waitUntilEpoch
   , waitForBlocks
   , retryUntilJustM
+  , retryUntilM
 
   , findAllUtxos
   , findUtxosWithAddress
@@ -182,6 +183,49 @@ retryUntilJustM esv timeout act = withFrozenCallStack $ do
         Nothing -> do
           H.threadDelay 300_000
           go startingValue
+
+    getCurrentValue = withFrozenCallStack $
+      case timeout of
+        WaitForEpochs _ -> unEpochNo <$> getCurrentEpochNo esv
+        WaitForSlots _ -> unSlotNo <$> getSlotNumber esv
+        WaitForBlocks _ -> unBlockNo <$> getBlockNumber esv
+
+    timeoutW64 =
+      case timeout of
+        WaitForEpochs (EpochInterval n) -> fromIntegral n
+        WaitForSlots n -> n
+        WaitForBlocks n -> n
+
+-- | Like 'retryUntilJustM' but takes a plain action and a predicate instead of
+-- an action returning 'Maybe'. On timeout, annotates the last value that failed
+-- the predicate. Intermediate attempts produce no annotations.
+retryUntilM
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => MonadAssertion m
+  => Show a
+  => EpochStateView
+  -> TestnetWaitPeriod -- ^ timeout
+  -> m a              -- ^ action to retry
+  -> (a -> Bool)      -- ^ predicate that must hold
+  -> m a
+retryUntilM esv timeout act predicate = withFrozenCallStack $ do
+  startingValue <- getCurrentValue
+  go startingValue
+  where
+    go startingValue = withFrozenCallStack $ do
+      result <- act
+      if predicate result
+        then pure result
+        else do
+          cv <- getCurrentValue
+          if timeoutW64 + startingValue < cv
+            then do
+              H.noteShow_ result
+              H.note_ $ "Predicate not satisfied after: " <> show timeout
+              H.failure
+            else H.threadDelay 300_000 >> go startingValue
 
     getCurrentValue = withFrozenCallStack $
       case timeout of
