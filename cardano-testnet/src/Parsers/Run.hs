@@ -25,6 +25,11 @@ import           Parsers.Version
 import           RIO (display, forever, logInfo, runSimpleApp, threadDelay)
 import           UnliftIO.Resource (runResourceT)
 
+import           Cardano.Api (serialiseToJSON)
+import           Cardano.Prelude (decodeUtf8)
+import qualified Data.Text.IO as Text
+import           Testnet.Defaults (defaultYamlConfig)
+
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
 
@@ -36,6 +41,7 @@ data CardanoTestnetCommands
   | CreateTestnetEnv CardanoTestnetCreateEnvOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
+  | PrintTestnetConfigTemplate
 
 commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
@@ -44,8 +50,8 @@ commands envCli =
     , fmap CreateTestnetEnv (subparser cmdCreateEnv)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
+    , subparser (command "print-testnet-config-template" (info (pure PrintTestnetConfigTemplate) (progDesc "Print the testnet configuration template to stdout")) <> internal)
     ]
-
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
@@ -53,6 +59,7 @@ runTestnetCmd = \case
   CreateTestnetEnv cmdOpts -> createEnvOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
+  PrintTestnetConfigTemplate -> runPrintTestnetTemplate
 
 createEnvOptions :: CardanoTestnetCreateEnvOptions -> IO ()
 createEnvOptions CardanoTestnetCreateEnvOptions
@@ -104,3 +111,6 @@ runCardanoOptions CardanoTestnetCliOptions
     waitForShutdown = do
       logInfo "Waiting for shutdown (Ctrl+C)"
       forever (threadDelay 100_000)
+
+runPrintTestnetTemplate :: IO ()
+runPrintTestnetTemplate = Text.putStrLn $ decodeUtf8 $ serialiseToJSON defaultYamlConfig
