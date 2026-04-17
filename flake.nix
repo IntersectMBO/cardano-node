@@ -109,9 +109,20 @@
           // import ./nix/svclib.nix {inherit (final) pkgs;};
       })
       (final: prev: {
-        # For musl builds, make sure the static `liburing.a` file is not deleted in `postInstall`
-        # ex: https://github.com/NixOS/nixpkgs/blob/f84a9816b2d5f7caade4b2fab16a66486abb7038/pkgs/by-name/li/liburing/package.nix#L43-L45
-        liburing = prev.liburing.overrideAttrs (attrs: final.lib.optionalAttrs final.stdenv.hostPlatform.isMusl {
+        # Override liburing to 2.14 for io_uring_set_iowait support
+        # nixpkgs pin provides 2.9; nixpkgs-unstable HEAD already ships 2.14.
+        # This override can be removed once the haskellNix nixpkgs pin catches up.
+        liburing = prev.liburing.overrideAttrs (attrs: {
+          version = "2.14";
+          src = final.fetchFromGitHub {
+            owner = "axboe";
+            repo = "liburing";
+            tag = "liburing-2.14";
+            hash = "sha256-bSq4M28JRND4bdaIv/KXcCDB35cYM7gra1GVO3poWfc=";
+          };
+        } // final.lib.optionalAttrs final.stdenv.hostPlatform.isMusl {
+          # For musl builds, make sure the static `liburing.a` file is not deleted in `postInstall`
+          # ex: https://github.com/NixOS/nixpkgs/blob/f84a9816b2d5f7caade4b2fab16a66486abb7038/pkgs/by-name/li/liburing/package.nix#L43-L45
           postInstall = builtins.replaceStrings [ "rm $out/lib/liburing*.a" ] [ "" ] attrs.postInstall;
         });
       })
