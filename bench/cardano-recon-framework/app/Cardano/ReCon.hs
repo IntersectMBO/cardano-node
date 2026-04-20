@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE PackageImports #-}
 
 module Main(main) where
@@ -6,16 +5,16 @@ module Main(main) where
 import           Cardano.Logging
 import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..),
                    runPrometheusSimple)
-import           Cardano.Logging.Types.TraceMessage (TraceMessage (..))
-import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts)
-import           Cardano.ReCon.Common (extractProps)
+import           Cardano.Logging.Types.TraceMessage ()
+import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts, timeunitToMicrosecond)
+import           Cardano.ReCon.Trace.Event ()
 import           Cardano.ReCon.LTL.Check (checkFormula, prettyError)
-import           Cardano.ReCon.LTL.Lang.Formula
-import           Cardano.ReCon.LTL.Lang.Formula.Parser (Context (..))
-import qualified Cardano.ReCon.LTL.Lang.Formula.Parser as Parser
-import           Cardano.ReCon.LTL.Lang.Formula.Yaml
-import           Cardano.ReCon.LTL.Pretty (prettyFormula)
-import qualified Cardano.ReCon.LTL.Pretty as Prec
+import           Cardano.ReCon.LTL.Formula
+import           Cardano.ReCon.LTL.Formula.Parser (Context (..))
+import qualified Cardano.ReCon.LTL.Formula.Parser as Parser
+import           Cardano.ReCon.LTL.Formula.Yaml
+import           Cardano.ReCon.LTL.Formula.Pretty (prettyFormula)
+import qualified Cardano.ReCon.LTL.Formula.Pretty as Prec
 import           Cardano.ReCon.LTL.Satisfy
 import           Cardano.ReCon.Trace.Feed (TemporalEvent (..), TemporalEventDurationMicrosec, read,
                    readS)
@@ -31,31 +30,20 @@ import           Control.Monad (forever, when, (>=>))
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Foldable (for_)
 import           Data.IORef (IORef, newIORef, readIORef)
-import           Data.List (find)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe, isJust, listToMaybe)
-import           Data.Text (Text, unpack)
+import           Data.Maybe (fromMaybe, listToMaybe)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Traversable (for)
+import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Network.HostName (HostName)
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (Success)
 import           System.Exit (die)
 import qualified System.Metrics as EKG
 
-import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Streaming
 
-
-instance Event TemporalEvent Text where
-  ofTy (TemporalEvent _ msgs) c = isJust $ find (\msg -> msg.tmsgNS == c) msgs
-  props (TemporalEvent _ msgs) c =
-    case find (\msg -> msg.tmsgNS == c) msgs of
-      Just x  -> Map.insert "host" (TextValue x.tmsgHost)       $
-                   Map.insert "thread" (TextValue x.tmsgThread) $
-                     extractProps x.tmsgData
-      Nothing -> error ("Not an event of type " <> unpack c)
-  beg (TemporalEvent t _) = t
 
 check :: Word -> Trace IO App.TraceMessage -> Formula TemporalEvent Text -> [TemporalEvent] -> IO ()
 check idx {- Formula index -} tr phi events =
@@ -107,10 +95,6 @@ checkOffline tr eventDuration file phis = do
     check idx tr phi events
   threadDelay 200_000 -- Give the tracer a grace period to output the logs to whatever backend
 
--- | Convert time unit used in the yaml (currently second) input to μs.
-unitToMicrosecond :: Word -> Word
-unitToMicrosecond = (1_000_000 *)
-
 setupTraceDispatcher :: Maybe FilePath -> IO (Trace IO App.TraceMessage)
 setupTraceDispatcher optTraceDispatcherConfigFile = do
   stdTr <- standardTracer
@@ -155,7 +139,7 @@ main = do
   ctx <- Map.toList . fromMaybe Map.empty <$> for options.context (readPropValues >=> dieOnYamlException)
   putStrLn "Context:"
   print ctx
-  formulas <- readFormulas options.formulas (Context ctx) Parser.text >>= dieOnYamlException
+  formulas <- readFormulas options.formulas (Context { interpDomain = ctx, varKinds = Map.empty }) Parser.name >>= dieOnYamlException
   for_ (fmap (\phi -> (phi, checkFormula mempty phi)) formulas) $ \case
     (phi, e : es) -> die $
       Text.unpack $
@@ -164,7 +148,7 @@ main = do
         <> " is syntactically invalid:\n"
         <> Text.unlines (fmap (("— " <>) . prettyError) (e : es))
     (_, []) -> pure ()
-  let formulas' = fmap (interpTimeunit (\u -> unitToMicrosecond u `div` fromIntegral options.duration)) formulas
+  let formulas' = fmap (interpTimeunit (\u -> timeunitToMicrosecond options.timeunit u `div` fromIntegral options.duration)) formulas
   tr <- setupTraceDispatcher options.traceDispatcherCfg
   case options.mode of
     Offline -> do

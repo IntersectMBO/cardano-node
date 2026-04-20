@@ -1,0 +1,6 @@
+// FAILS: RBReceived for node-3 arrives at 07:11:05 — 65 seconds after RBGenerated, exceeding the 60s window — violates formula 5
+{"at":"2025-12-01T07:10:00.000000Z","ns":"RBGenerated","data":{"kind":"RBGenerated","slot":10,"hash":"abc123"},"sev":"Info","thread":"1","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:10:05.000000Z","ns":"RBReceived","data":{"kind":"RBReceived","slot":11,"hash":"abc123","node":"node-1"},"sev":"Info","thread":"1","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:10:10.000000Z","ns":"RBReceived","data":{"kind":"RBReceived","slot":12,"hash":"abc123","node":"node-2"},"sev":"Info","thread":"1","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:11:05.000000Z","ns":"RBReceived","data":{"kind":"RBReceived","slot":13,"hash":"abc123","node":"node-3"},"sev":"Info","thread":"1","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:12:00.000000Z","ns":"Placeholder","data":{},"sev":"Info","thread":"1","host":"russoul-mac.local"}

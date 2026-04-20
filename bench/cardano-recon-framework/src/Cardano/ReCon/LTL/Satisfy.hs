@@ -9,10 +9,10 @@ module Cardano.ReCon.LTL.Satisfy(
   , SatisfyMetrics(..)
   ) where
 
-import           Cardano.ReCon.LTL.Lang.Formula
-import           Cardano.ReCon.LTL.Lang.HomogeneousFormula (eval)
-import           Cardano.ReCon.LTL.Progress
-import           Cardano.ReCon.LTL.Rewrite
+import           Cardano.ReCon.LTL.Formula
+import           Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula (eval)
+import           Cardano.ReCon.LTL.Internal.Progress
+import           Cardano.ReCon.LTL.Internal.Rewrite
 
 import           Prelude hiding (Foldable (..), lookup)
 
@@ -23,8 +23,8 @@ import           Data.Word (Word64)
 import           Streaming
 
 #ifdef TRACE
-import qualified Cardano.ReCon.LTL.Lang.Formula.Prec       as Prec
-import           Cardano.ReCon.LTL.Pretty                  (prettyFormula)
+import qualified Cardano.ReCon.LTL.Formula.Prec       as Prec
+import           Cardano.ReCon.LTL.Formula.Pretty     (prettyFormula)
 import qualified Data.Text                                 as Text
 import           Debug.Trace                               (trace)
 #endif
@@ -35,7 +35,7 @@ import           Debug.Trace                               (trace)
 --   or effectful and potentially infinite (i.e. a Stream, cf. `satisfiesS`).
 
 -- | The result of checking satisfaction of a formula against a timeline.
--- | If unsatisfied, stores points in the timeline "relevant" to the formula.
+--   If unsatisfied, stores points in the timeline "relevant" to the formula.
 data SatisfactionResult event ty = Satisfied | Unsatisfied (Relevance event ty) deriving (Show, Eq)
 
 traceFormula :: Show ty => String -> Formula event ty -> Formula event ty
@@ -54,8 +54,7 @@ handleNext (!n, !formula0) m =
   let formula1 = traceFormula ("(" <> show (1 + n) <> ")\ninitial:") formula0
       formula2 = traceFormula "next:" $ next formula1 m
       formula3 = traceFormula "rewrite-hom:" (rewriteHomogeneous formula2)
-      formula4 = traceFormula "rewrite-frag:" $ rewriteFragment formula3
-      formula5 = traceFormula "rewrite-id:" (rewriteIdentity formula4) in
+      formula5 = traceFormula "rewrite-id:" (rewriteIdentity formula3) in
   case formula5 of
     Top     -> Left Satisfied
     Bottom  -> Left (Unsatisfied (relevance formula0))

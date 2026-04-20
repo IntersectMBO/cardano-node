@@ -1,4 +1,4 @@
-module Cardano.ReCon.Cli(Mode(..), CliOptions(..), opts) where
+module Cardano.ReCon.Cli(Timeunit(..), timeunitToMicrosecond, Mode(..), CliOptions(..), opts) where
 
 
 import           Control.Arrow ((>>>))
@@ -20,6 +20,7 @@ readMode = eitherReader $ \case
   "online"  -> Right Online
   _         -> Left "Expected either of: 'offline' or 'online'"
 
+
 readBool :: ReadM Bool
 readBool = eitherReader $ fmap toLower >>> \case
   "true"   -> Right True
@@ -30,6 +31,51 @@ readBool = eitherReader $ fmap toLower >>> \case
 
 parseMode :: Parser Mode
 parseMode = option readMode (long "mode" <> metavar "<offline|online>" <> help "mode")
+
+data Timeunit = Hour | Minute | Second | Millisecond | Microsecond deriving (Ord, Eq)
+
+-- | Convert `Timeunit` to μs.
+timeunitToMicrosecond :: Timeunit -> Word -> Word
+timeunitToMicrosecond Hour        = (3_600_000_000 *)
+timeunitToMicrosecond Minute      = (60_000_000 *)
+timeunitToMicrosecond Second      = (1_000_000 *)
+timeunitToMicrosecond Millisecond = (1_000 *)
+timeunitToMicrosecond Microsecond = id
+
+instance Show Timeunit where
+  show Hour        = "hour"
+  show Minute      = "minute"
+  show Second      = "second"
+  show Millisecond = "millisecond"
+  show Microsecond = "microsecond"
+
+readTimeunit :: ReadM Timeunit
+readTimeunit = eitherReader $ fmap toLower >>> \case
+  "hour"         -> Right Hour
+  "h"            -> Right Hour
+  "minute"       -> Right Minute
+  "min"          -> Right Minute
+  "m"            -> Right Minute
+  "second"       -> Right Second
+  "sec"          -> Right Second
+  "s"            -> Right Second
+  "millisecond"  -> Right Millisecond
+  "millisec"     -> Right Millisecond
+  "millis"       -> Right Millisecond
+  "ms"           -> Right Millisecond
+  "microsecond"  -> Right Microsecond
+  "microsec"     -> Right Microsecond
+  "micros"       -> Right Microsecond
+  "μs"           -> Right Microsecond
+  _              -> Left "Can't read a Timeunit"
+
+parseTimeunit :: Parser Timeunit
+parseTimeunit = option readTimeunit $
+     long "timeunit"
+  <> metavar "<hour|minute|second|millisecond|microsecond>"
+  <> showDefault
+  <> value Second
+  <> help "timeunit"
 
 parseEventDuration :: Parser Word
 parseEventDuration = option auto (long "duration" <> metavar "INT" <> help "temporal event duration (μs)")
@@ -82,6 +128,7 @@ data CliOptions = CliOptions
   , context             :: Maybe FilePath
   , enableProgressDumps :: Bool
   , enableSeekToEnd     :: Bool
+  , timeunit            :: Timeunit
   }
 
 parseCliOptions :: Parser CliOptions
@@ -95,6 +142,7 @@ parseCliOptions = CliOptions
               <*> parseContext
               <*> parseDumpMetrics
               <*> parseSeekToEnd
+              <*> parseTimeunit
 
 opts :: ParserInfo CliOptions
 opts = info (parseCliOptions <**> helper)

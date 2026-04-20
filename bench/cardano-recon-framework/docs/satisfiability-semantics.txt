@@ -2,42 +2,77 @@
 -------- Satisfiability rules of formulas (assuming a background first-order logic) ------
 ------------------------------------------------------------------------------------------
 
+ Integer terms: t ::= k·x | c | t₁ + t₂            (k, c ∈ ℤ, x ∈ Var)
+ Binary relations: rel ∈ {=, <, ≤, >, ≥}
+ Text terms: s ::= x | v                            (x ∈ Var, v ∈ Text)
+
  ∅ ⊧ φ
-(∅ ⊧ A ty c̄)        ⇔ ⊥
-(∅ ⊧ ◯ (φ ∨ ψ))     ⇔ (∅ ⊧ ◯ φ) ∨ (∅ ⊧ ◯ ψ)
-(∅ ⊧ ◯ (φ ∧ ψ))     ⇔ (∅ ⊧ ◯ φ) ∧ (∅ ⊧ ◯ ψ)
-(∅ ⊧ ◯ (φ ⇒ ψ))     ⇔ (∅ ⊧ ◯ φ) ⇒ (∅ ⊧ ◯ ψ)
-(∅ ⊧ ◯ (¬ φ))       ⇔ ¬ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ ⊥)           ⇔ ⊥
-(∅ ⊧ ◯ ⊤)           ⇔ ⊤
-(∅ ⊧ ◯ (t = v))     ⇔ t = v
-(∅ ⊧ ◯ (ty c̄))      ⇔ ⊥
-(∅ ⊧ ◯ (◯ φ))       ⇔ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ (◯ᵏ φ))      ⇔ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ (☐ ᪲ φ))      ⇔ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ (♢⁰ φ))      ⇔ ⊥
-(∅ ⊧ ◯ (♢¹⁺ᵏ φ))    ⇔ (∅ ⊧ ◯ (φ ∨ ◯ (♢ᵏ φ))) ⇔ ... ⇔ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ (☐⁰ φ))      ⇔ ⊤
-(∅ ⊧ ◯ (☐¹⁺ᵏ φ))    ⇔ (∅ ⊧ ◯ (φ ∧ ◯ (☐ᵏ φ))) ⇔ ... ⇔ (∅ ⊧ ◯ φ)
-(∅ ⊧ ◯ (φ |⁰ ψ))    ⇔ ⊤
-(∅ ⊧ ◯ (φ |¹⁺ᵏ ψ))  ⇔ (∅ ⊧ ◯ (...))
+(∅ ⊧ ty c̄)                      ⇔ ⊥
+(∅ ⊧ ◯ (φ ∨ ψ))                 ⇔ (∅ ⊧ ◯ φ) ∨ (∅ ⊧ ◯ ψ)
+(∅ ⊧ ◯ (φ ∧ ψ))                 ⇔ (∅ ⊧ ◯ φ) ∧ (∅ ⊧ ◯ ψ)
+(∅ ⊧ ◯ (φ ⇒ ψ))                 ⇔ (∅ ⊧ ◯ φ) ⇒ (∅ ⊧ ◯ ψ)
+(∅ ⊧ ◯ (¬ φ))                   ⇔ ¬ (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ ⊥)                       ⇔ ⊥
+(∅ ⊧ ◯ ⊤)                       ⇔ ⊤
+(∅ ⊧ ◯ (t rel t'))              ⇔ t rel t'        (Presburger atom; t, t' closed integer terms)
+(∅ ⊧ ◯ (s = v))                 ⇔ s = v           (closed text equality)
+(∅ ⊧ ◯ (ty c̄))                  ⇔ ⊥
+(∅ ⊧ ◯ (◯ φ))                   ⇔ (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (◯ᵏ φ))                  ⇔ (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (☐ ᪲ₖ φ))                 ⇔ (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∀x ∈ ℤ. φ))             ⇔ ∀x ∈ ℤ. (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∃x ∈ ℤ. φ))             ⇔ ∃x ∈ ℤ. (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∀x ∈ Text. φ))          ⇔ ∀x ∈ Text. (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∃x ∈ Text. φ))          ⇔ ∃x ∈ Text. (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∀x ∈ v̄. φ))             ⇔ ∀x ∈ v̄. (∅ ⊧ ◯ φ)
+(∅ ⊧ ◯ (∃x ∈ v̄. φ))             ⇔ ∃x ∈ v̄. (∅ ⊧ ◯ φ)
 
 
  t t̄ ⊧ φ
-(_ t̄ ⊧ ◯ φ)         ⇔ (t̄ ⊧ φ)
-(e _ ⊧ p c̄)         ⇔ c̄ ⊆ props e   if ty e = p
-                      ⊥             otherwise, where
+(_ t̄ ⊧ ◯ φ)                     ⇔ (t̄ ⊧ φ)
+(e _ ⊧ ty c̄)                    ⇔ ⋀_{c ∈ c̄} match(e, ty, c)   if ty e = ty
+                                  ⊥   otherwise, where
 
-     ∅ ⊆ P ⇔ ⊤
-     {x = t} ⊔ c̄ ⊆ P ⇔ t = P(x) ∧ c̄ ⊆ P   if P(x) is defined
-                       ⊥                  otherwise
+     match(e, ty, key = t : ℤ)    ≜  t = intProps(e, ty)[key]      (yields PropIntBinRel Eq)
+     match(e, ty, key = s : Text) ≜  s = textProps(e, ty)[key]     (yields PropTextEq)
+
+ The resulting constraints carry no temporal operators and are resolved in the
+ connective & event property fragment below.
+
 
  t̄ ⊧ φ     // connective & event property fragments
-(t̄ ⊧ ∀x. φ)         ⇔ (∀x. (t̄ ⊧ φ))
-(t̄ ⊧ ∀(x ∈ v̄). φ)   ⇔ (∀(x ∈ v̄). (t̄ ⊧ φ))
-(t̄ ⊧ φ ∨ ψ)         ⇔ ((t̄ ⊧ φ) ∨ (t̄ ⊧ ψ))
-(t̄ ⊧ φ ∧ ψ)         ⇔ ((t̄ ⊧ φ) ∧ (t̄ ⊧ ψ))
-(t̄ ⊧ φ ⇒ ψ)         ⇔ ((t̄ ⊧ φ) ⇒ (t̄ ⊧ ψ))
-(t̄ ⊧ ¬ φ)           ⇔ ¬ (t̄ ⊧ φ)
-(t̄ ⊧ ⊥)             ⇔ ⊥
-(t̄ ⊧ ⊤)             ⇔ ⊤
+// Quantifiers
+(t̄ ⊧ ∀x ∈ ℤ. φ)                 ⇔ ∀x ∈ ℤ. (t̄ ⊧ φ)      // decided by Cooper's QE
+(t̄ ⊧ ∃x ∈ ℤ. φ)                 ⇔ ∃x ∈ ℤ. (t̄ ⊧ φ)      // decided by Cooper's QE
+(t̄ ⊧ ∀x ∈ Text. φ)              ⇔ ∀x ∈ Text. (t̄ ⊧ φ)   // see note on text quantifiers below
+(t̄ ⊧ ∃x ∈ Text. φ)              ⇔ ∃x ∈ Text. (t̄ ⊧ φ)   // see note on text quantifiers below
+(t̄ ⊧ ∀x ∈ v̄. φ)                 ⇔ ⋀_{v ∈ v̄} (t̄ ⊧ φ[v/x])
+(t̄ ⊧ ∃x ∈ v̄. φ)                 ⇔ ⋁_{v ∈ v̄} (t̄ ⊧ φ[v/x])
+// Connectives
+(t̄ ⊧ φ ∨ ψ)                      ⇔ (t̄ ⊧ φ) ∨ (t̄ ⊧ ψ)
+(t̄ ⊧ φ ∧ ψ)                      ⇔ (t̄ ⊧ φ) ∧ (t̄ ⊧ ψ)
+(t̄ ⊧ φ ⇒ ψ)                      ⇔ (t̄ ⊧ φ) ⇒ (t̄ ⊧ ψ)
+(t̄ ⊧ ¬ φ)                        ⇔ ¬ (t̄ ⊧ φ)
+(t̄ ⊧ ⊥)                          ⇔ ⊥
+(t̄ ⊧ ⊤)                          ⇔ ⊤
+// Atoms
+(t̄ ⊧ t rel t')                   ⇔ t rel t'   (Presburger arithmetic; decided by Cooper's QE)
+(t̄ ⊧ s = v)                      ⇔ s = v      (text equality)
+
+
+ Notes on decision procedures
+// Integer arithmetic — Presburger (Cooper's QE):
+//   Any closed formula built from t rel t', ∧, ∨, ¬, ⇒, ∀x ∈ ℤ, ∃x ∈ ℤ is decidable.
+//   Cooper's quantifier-elimination algorithm eliminates each quantifier in turn,
+//   reducing the formula to a ground arithmetic sentence, then evaluating it.
+//
+// Text quantifiers — finite enumeration with placeholder:
+//   Since text variables only appear in equalities (s = v), the truth of ∀x ∈ Text. φ
+//   depends only on which concrete values x is compared to inside φ.
+//   Let {v₁, ..., vₙ} be all text constants that x is tested against in φ. Then:
+//
+//   (t̄ ⊧ ∀x ∈ Text. φ) ⇔ (t̄ ⊧ φ[☐/x]) ∧ (t̄ ⊧ φ[v₁/x]) ∧ ... ∧ (t̄ ⊧ φ[vₙ/x])
+//   (t̄ ⊧ ∃x ∈ Text. φ) ⇔ (t̄ ⊧ φ[☐/x]) ∨ (t̄ ⊧ φ[v₁/x]) ∨ ... ∨ (t̄ ⊧ φ[vₙ/x])
+//
+//   where ☐ is a placeholder string distinct from all vᵢ, so (☐ = vᵢ) ≡ ⊥ for every i.
+//   This is complete: any string x is either one of the vᵢ or some other string (covered by ☐).

@@ -5,10 +5,10 @@ module Cardano.ReCon.TraceMessage where
 import           Cardano.Logging
 import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
 import qualified Cardano.Logging.Types.TraceMessage as Envelop
-import           Cardano.ReCon.Common (extractProps)
-import           Cardano.ReCon.LTL.Lang.Formula (Formula, PropValue (..), Relevance)
-import qualified Cardano.ReCon.LTL.Lang.Formula.Prec as Prec
-import           Cardano.ReCon.LTL.Pretty (prettyFormula)
+import           Cardano.ReCon.Common (extractJsonProps)
+import           Cardano.ReCon.LTL.Formula (Formula, Relevance)
+import qualified Cardano.ReCon.LTL.Formula.Prec as Prec
+import           Cardano.ReCon.LTL.Formula.Pretty (prettyFormula)
 import           Cardano.ReCon.LTL.Satisfy (SatisfactionResult (..))
 import           Cardano.ReCon.Trace.Feed (TemporalEvent (..))
 
@@ -61,11 +61,11 @@ red text = "\x001b[31m" <> text <> "\x001b[0m"
 prettyTraceMessage :: Envelop.TraceMessage -> Text
 prettyTraceMessage Envelop.TraceMessage{..} =
   toStrict $ toLazyText $ encodePrettyToTextBuilder  $
-    Map.insert "at" (TextValue (showT tmsgAt))       $
-      Map.insert "namespace" (TextValue tmsgNS)      $
-        Map.insert "host" (TextValue tmsgHost)       $
-          Map.insert "thread" (TextValue tmsgThread) $
-            extractProps tmsgData
+    Map.insert "at" (String (showT tmsgAt))        $
+      Map.insert "namespace" (String tmsgNS)       $
+        Map.insert "host" (String tmsgHost)        $
+          Map.insert "thread" (String tmsgThread)  $
+            extractJsonProps tmsgData
 
 prettyTemporalEvent :: TemporalEvent -> Text -> Text
 prettyTemporalEvent (TemporalEvent _ msgs) ns =
