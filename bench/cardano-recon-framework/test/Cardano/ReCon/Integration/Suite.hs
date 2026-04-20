@@ -14,19 +14,11 @@ import           Control.Monad (forM_)
 import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Paths_cardano_recon_framework (getDataDir)
 import           System.Exit (die)
 import           System.FilePath ((</>))
 import           Test.Tasty
 import           Test.Tasty.HUnit
-
-formulasFile :: FilePath
-formulasFile = "examples/cfgs/formulas.yaml"
-
-contextFile :: FilePath
-contextFile = "examples/cfgs/context.yaml"
-
-tracesDir :: FilePath
-tracesDir = "examples/extracts"
 
 eventDuration :: Word
 eventDuration = 10          -- μs per event bucket (= --duration 10)
@@ -36,6 +28,10 @@ second = 1_000_000          -- μs                 (= --timeunit second)
 
 integrationTests :: IO TestTree
 integrationTests = do
+  dataDir  <- getDataDir
+  let formulasFile = dataDir </> "examples" </> "cfgs" </> "formulas.yaml"
+  let contextFile  = dataDir </> "examples" </> "cfgs" </> "context.yaml"
+  let tracesDir    = dataDir </> "examples" </> "extracts"
   ctx      <- readPropValues contextFile >>= orDie
   formulas <- readFormulas formulasFile
                 (Context { interpDomain = Map.toList ctx, varKinds = Map.empty })
@@ -44,30 +40,30 @@ integrationTests = do
   let fs = map (interpTimeunit (\u -> u * second `div` eventDuration)) formulas
   pure $ testGroup "Trace integration"
     [ testGroup "Positive — every formula must pass"
-        [ mkPositive fs "ok-1.txt"
-        , mkPositive fs "ok-2.txt"
-        , mkPositive fs "ok-3.txt"
-        , mkPositive fs "ok-4.txt"
-        , mkPositive fs "ok-5.txt"
+        [ mkPositive fs tracesDir "ok-1.txt"
+        , mkPositive fs tracesDir "ok-2.txt"
+        , mkPositive fs tracesDir "ok-3.txt"
+        , mkPositive fs tracesDir "ok-4.txt"
+        , mkPositive fs tracesDir "ok-5.txt"
         ]
     , testGroup "Negative — at least one formula must fail"
-        [ mkNegative fs "fail-1.txt"
-        , mkNegative fs "fail-2.txt"
-        , mkNegative fs "fail-3.txt"
-        , mkNegative fs "fail-4.txt"
-        , mkNegative fs "fail-5.txt"
-        , mkNegative fs "fail-6.txt"
+        [ mkNegative fs tracesDir "fail-1.txt"
+        , mkNegative fs tracesDir "fail-2.txt"
+        , mkNegative fs tracesDir "fail-3.txt"
+        , mkNegative fs tracesDir "fail-4.txt"
+        , mkNegative fs tracesDir "fail-5.txt"
+        , mkNegative fs tracesDir "fail-6.txt"
         ]
     ]
 
-mkPositive :: [Formula TemporalEvent Text] -> String -> TestTree
-mkPositive fs name = testCase name $ do
+mkPositive :: [Formula TemporalEvent Text] -> FilePath -> String -> TestTree
+mkPositive fs tracesDir name = testCase name $ do
   events <- Feed.read (tracesDir </> name) eventDuration
   forM_ fs $ \phi ->
     satisfies phi events @?= Satisfied
 
-mkNegative :: [Formula TemporalEvent Text] -> String -> TestTree
-mkNegative fs name = testCase name $ do
+mkNegative :: [Formula TemporalEvent Text] -> FilePath -> String -> TestTree
+mkNegative fs tracesDir name = testCase name $ do
   events <- Feed.read (tracesDir </> name) eventDuration
   assertBool "expected at least one Unsatisfied" $
     any isUnsatisfied (map (`satisfies` events) fs)

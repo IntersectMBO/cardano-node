@@ -13,6 +13,20 @@ maintainer:         ruslan.feizerakhmanov@iohk.io
 
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
+data-files:
+    examples/cfgs/context.yaml
+    examples/cfgs/formulas.yaml
+    examples/extracts/ok-1.txt
+    examples/extracts/ok-2.txt
+    examples/extracts/ok-3.txt
+    examples/extracts/ok-4.txt
+    examples/extracts/ok-5.txt
+    examples/extracts/fail-1.txt
+    examples/extracts/fail-2.txt
+    examples/extracts/fail-3.txt
+    examples/extracts/fail-4.txt
+    examples/extracts/fail-5.txt
+    examples/extracts/fail-6.txt
                     README.md
                     recon-language-overview.md
                     docs/*.txt
@@ -188,6 +202,9 @@ test-suite cardano-recon-integration-test
   main-is: Cardano/ReCon/Integration.hs
   other-modules:
       Cardano.ReCon.Integration.Suite
+    , Paths_cardano_recon_framework
+  autogen-modules:
+      Paths_cardano_recon_framework
   build-depends:
       base
     , cardano-recon-framework
