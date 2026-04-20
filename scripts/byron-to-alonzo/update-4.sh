@@ -67,7 +67,7 @@ cardano-cli allegra transaction build-raw \
             --out-file tx3.txbody
 
 # Sign the transaction body with the two genesis delegate keys,
-# and the the uxto spending key.
+# and the uxto spending key.
 
 cardano-cli allegra transaction sign \
             --signing-key-file addresses/user1.skey \

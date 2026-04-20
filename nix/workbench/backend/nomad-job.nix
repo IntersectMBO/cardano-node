@@ -1265,7 +1265,7 @@ let
     # set to true, when the leader task completes, all other tasks within
     # the task group will be gracefully shutdown. The shutdown process
     # starts by applying the shutdown_delay if configured. It then stops
-    # the the leader task first, followed by non-sidecar and non-poststop
+    # the leader task first, followed by non-sidecar and non-poststop
     # tasks, and finally sidecar tasks. Once this process completes,
     # post-stop tasks are triggered. See the lifecycle documentation for a
     # complete description of task lifecycle management.
