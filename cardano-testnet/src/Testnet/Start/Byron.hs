@@ -6,19 +6,18 @@
 {-# LANGUAGE NumericUnderscores #-}
 
 module Testnet.Start.Byron
-  ( createByronGenesis
+  ( ByronGenesisOptions(..)
+  , createByronGenesis
   , byronDefaultGenesisOptions
   ) where
 
-import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Stack
 
-import           Testnet.Process.Run
+import           Testnet.Process.RunIO (execCli_)
 
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
-import           Hedgehog.Internal.Property (MonadTest)
 
 data ByronGenesisOptions = ByronGenesisOptions
   { byronNumBftNodes :: Int
@@ -41,7 +40,7 @@ byronDefaultGenesisOptions = ByronGenesisOptions
 -- | Creates a default Byron genesis. This is required for any testnet, predominantly because
 -- we inject our ADA supply into our testnet via the Byron genesis.
 createByronGenesis
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  :: (MonadIO m, HasCallStack)
   => Int
   -> UTCTime
   -> ByronGenesisOptions
