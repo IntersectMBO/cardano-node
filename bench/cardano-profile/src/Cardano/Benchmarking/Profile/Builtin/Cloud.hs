@@ -170,7 +170,8 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt
-  , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing        . cgmem
+  , valueVolt & P.name "value-volt-lsmt-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt . cgmem
+  , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing                      . cgmem
   , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing
