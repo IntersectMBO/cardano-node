@@ -67,6 +67,8 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-solo-xs"      . V.valueLocal . n1 . V.datasetOct2021 . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo"         . V.valueLocal . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo-xl"      . V.valueLocal . n1 . V.datasetOct2021 . durationXL . P.traceForwardingOn
+  -- chain creation
+  , fs & P.name "fschain-512k-xs"               . V.valueLocal . n1 . V.datasetOct2021 . durationXS . P.traceForwardingOn                                         . P.analysisUnitary   . P.blocksize512k
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"         . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
