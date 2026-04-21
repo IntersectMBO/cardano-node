@@ -1,0 +1,43 @@
+{
+    "activeSlotsCoeff": 1.0e-9,
+    "epochLength": 0,
+    "genDelegs": {},
+    "initialFunds": {},
+    "maxKESEvolutions": 0,
+    "maxLovelaceSupply": 0,
+    "networkId": "Mainnet",
+    "networkMagic": 42,
+    "protocolParams": {
+        "a0": 0,
+        "decentralisationParam": 0,
+        "eMax": 0,
+        "extraEntropy": {
+            "tag": "NeutralNonce"
+        },
+        "keyDeposit": 0,
+        "maxBlockBodySize": 0,
+        "maxBlockHeaderSize": 0,
+        "maxTxSize": 0,
+        "minFeeA": 0,
+        "minFeeB": 0,
+        "minPoolCost": 0,
+        "minUTxOValue": 0,
+        "nOpt": 0,
+        "poolDeposit": 0,
+        "protocolVersion": {
+            "major": 0,
+            "minor": 0
+        },
+        "rho": 0,
+        "tau": 0
+    },
+    "securityParam": 1,
+    "slotLength": 0,
+    "slotsPerKESPeriod": 0,
+    "staking": {
+        "pools": {},
+        "stake": {}
+    },
+    "systemStart": "1970-01-01T00:00:00Z",
+    "updateQuorum": 0
+}

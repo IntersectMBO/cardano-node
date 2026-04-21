@@ -6,8 +6,9 @@ global_genesis_format_version=October-13-2025
 # Resolve genesis backend once (at source time, no output).
 # Each backend file defines: spec-*, pool-relays-*, profile-cache-key-*,
 # profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
-if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
-else                                          genesis_backend=jq
+if   [[ ${WB_GENESIS_CHUNKS:-0}  -eq 1 ]]; then genesis_backend=chunks
+elif [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
+else                                            genesis_backend=jq
 fi
 
 usage_genesis() {
