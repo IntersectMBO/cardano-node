@@ -142,6 +142,7 @@ source-repository-package
     eras/shelley/impl
     eras/shelley/test-suite
     libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
 
 -- Points to ouroboros-network/leios-prototype
 source-repository-package
