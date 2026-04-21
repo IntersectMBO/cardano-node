@@ -6,8 +6,9 @@ global_genesis_format_version=June-22-2026
 # Resolve genesis backend once (at source time, no output).
 # Each backend file defines: spec-*, profile-cache-key-*,
 # profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
-if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
-else                                          genesis_backend=jq
+if   [[ ${WB_GENESIS_RIPPER:-0}  -eq 1 ]]; then genesis_backend=ripper
+elif [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
+else                                            genesis_backend=jq
 fi
 
 usage_genesis() {
@@ -33,7 +34,9 @@ set -euo pipefail
 
 local op=${1:-$(usage_genesis)}; shift
 
-if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+if   [[ $WB_GENESIS_RIPPER -eq 1 ]]; then
+    info genesis "$(red using ripper backend)"
+elif [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
     info genesis "$(red using modular configuration)"
 fi
 
@@ -195,7 +198,8 @@ case "$op" in
         fi
         ;;
 
-    # Called by: genesis-jq.sh (genesis-create-jq).
+    # Called by: genesis-jq.sh (genesis-create-jq),
+    #            genesis-ripper.sh (protocol-cache-ensure).
     # $1: era name (byron, shelley, alonzo, conway, dijkstra).
     # $2: profile JSON file path.
     # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).

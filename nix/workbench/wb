@@ -10,6 +10,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 # By default the new genesis creation is disabled
 : "${WB_MODULAR_GENESIS:=0}"
 
+# Separate dataset and protocols caching using create-testnet-data
+: "${WB_GENESIS_RIPPER:=0}"
+
 # By default, enable the new database storage backend for `locli`
 : "${WB_LOCLI_DB:=1}"
 
@@ -27,6 +30,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/genesis/genesis.sh
 . "$global_basedir"/genesis/genesis-jq.sh
 . "$global_basedir"/genesis/genesis-modular.sh
+. "$global_basedir"/genesis/genesis-ripper.sh
 . "$global_basedir"/topology/topology.sh
 
 . "$global_basedir"/evaluate/evaluate.sh

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 #
 # Legacy (jq-based) genesis backend.
-# Used when WB_MODULAR_GENESIS=0 (the default).
+# Used when WB_MODULAR_GENESIS=0 and WB_GENESIS_RIPPER=0 (the defaults).
 #
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,

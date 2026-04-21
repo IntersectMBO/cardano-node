@@ -36,6 +36,7 @@ project.shellFor {
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
+    progress "WB_GENESIS_RIPPER="      $WB_GENESIS_RIPPER
 
     function parse_git_branch() {
         git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
