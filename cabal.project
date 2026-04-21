@@ -126,18 +126,10 @@ source-repository-package
   tag: 22d32274ca2657f2966873b225aa9604852c4c77
   --sha256: sha256-TnHTS2FDeUQoa3dIPSZwZ16svGw990arktNVx7z7aWY=
   subdir:
-    eras/allegra/impl
     eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/babbage/test-suite
     eras/conway/impl
-    eras/conway/test-suite
-    eras/mary/impl
     eras/shelley/impl
     eras/shelley/test-suite
-    eras/shelley-ma/test-suite
-    libs/cardano-ledger-api
     libs/cardano-ledger-core
     libs/cardano-protocol-tpraos
 
