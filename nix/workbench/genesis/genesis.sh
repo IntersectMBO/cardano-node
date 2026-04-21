@@ -3,6 +3,13 @@
 
 global_genesis_format_version=October-13-2025
 
+# Resolve genesis backend once (at source time, no output).
+# Each backend file defines: spec-*, pool-relays-*, profile-cache-key-*,
+# profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
+if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
+else                                          genesis_backend=jq
+fi
+
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
     $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
@@ -29,15 +36,14 @@ set -euo pipefail
 
 local op=${1:-$(usage_genesis)}; shift
 
-if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-    info genesis "$(red using modular configuration)"
-fi
-
-if [[ $WB_CREATE_TESTNET_DATA -ne 1 ]]; then
-    info genesis "$(red falling back to create-staked)"
-fi
-
 case "$op" in
+
+    # Called by: run.sh (line 433)
+    # [--force]: optional, forces cache regeneration
+    # $1: profile JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/profile.json)
+    # $2: node-specs JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/node-specs.json)
+    # $3: cache directory (e.g. ~/.cache/cardano-workbench, defaults to envjqr 'cacheDir')
+    # Returns: absolute path to the genesis cache entry on stdout
     prepare-cache-entry )
         local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
 
@@ -125,22 +131,6 @@ case "$op" in
         return 0
         ;;
 
-    profile-cache-key)
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          profile-cache-key-modular "$@"
-        else
-          profile-cache-key-jq "$@"
-        fi
-        ;;
-
-    profile-cache-key-input )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          profile-cache-key-input-modular "$@"
-        else
-          profile-cache-key-input-jq "$@"
-        fi
-        ;;
-
     genesis-from-preset )
         local usage="USAGE: wb genesis $op PRESET GENESIS-DIR"
         local preset=${1:?$usage}
@@ -159,22 +149,6 @@ case "$op" in
           cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/"$f")" "$dir/$f"
         done;;
 
-    spec )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          spec-modular "$@"
-        else
-          spec-jq "$@"
-        fi
-        ;;
-
-    pool-relays )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          pool-relays-modular "$@"
-        else
-          pool-relays-jq "$@"
-        fi
-        ;;
-
     actually-genesis )
         local usage="USAGE: wb genesis $op PROFILE-JSON NODE-SPECS DIR"
         local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
@@ -185,11 +159,7 @@ case "$op" in
 
         progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
 
-        if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
-            genesis-create-testnet-data "$profile_json" "$dir"
-        else
-            genesis-create-staked "$profile_json" "$dir"
-        fi
+        "genesis-create-$genesis_backend" "$profile_json" "$dir"
 
         info genesis "sealing"
         cat <<<"$cache_key_input"               > "$dir"/cache.key.input
@@ -197,230 +167,52 @@ case "$op" in
         cat <<<"$global_genesis_format_version" > "$dir"/layout.version
         ;;
 
+    # -- Dispatched to backend -------------------------------------------------
+
+    # Called by: genesis.sh prepare-cache-entry.
+    # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
+    # Returns: JSON or string written to cache.key.input for debugging.
+    profile-cache-key-input )
+        "profile-cache-key-input-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis.sh prepare-cache-entry.
+    # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
+    # Returns: short cache directory name (e.g. "ci-test-coay-1c5c3ba-8444286").
+    profile-cache-key )
+        "profile-cache-key-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data),
+    #            genesis-dataset.sh (protocol-cache-ensure).
+    # $1: era name (byron, shelley, alonzo, conway, dijkstra).
+    # $2: profile JSON file path.
+    # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).
+    spec )
+        "spec-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
+    # $1: profile JSON file path.
+    # Returns: JSON pool relays on stdout.
+    pool-relays )
+        "pool-relays-$genesis_backend" "$@"
+        ;;
+
+    # Called by: run.sh.
+    # $1: profile JSON file path (run dir's profile.json, e.g. run/current/profile.json).
+    # $2: timing JSON string (from `profile allocate-time`).
+    # $3: genesis cache entry path (e.g. ~/.cache/cardano-workbench/genesis/ci-test-coay-...).
+    # $4: output directory (run dir's genesis/, e.g. run/current/genesis).
     derive-from-cache )
-        local usage="USAGE: wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
-        local profile=${1:?$usage}
-        local timing=${2:?$usage}
-        local cache_entry=${3:?$usage}
-        local outdir=${4:?$usage}
-
-        mkdir -p "$outdir"
-
-        local preset
-        preset=$(profile preset "$profile")
-        if [[ -n "$preset" ]]; then
-          progress "genesis" "instantiating from preset $(with_color white "$preset"):  $cache_entry"
-          mkdir -p "$outdir"/byron
-          cp -f "$cache_entry"/genesis*.json "$outdir"
-          cp -f "$cache_entry"/byron/*.json  "$outdir"/byron
-          return
-        fi
-
-        progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
-
-        ln -s "$profile"                          "$outdir"/profile.json
-        ln -s "$cache_entry"                      "$outdir"/cache-entry
-        ln -s "$cache_entry"/cache.key            "$outdir"
-        ln -s "$cache_entry"/cache.key.input      "$outdir"
-        ln -s "$cache_entry"/layout.version       "$outdir"
-
-        # create-testnet-data does not create these directories if there are no keys in them
-        [[ -d "$dir"/delegate-keys ]] && ln -s "$cache_entry"/delegate-keys "$outdir"
-        [[ -d "$dir"/genesis-keys  ]] && ln -s "$cache_entry"/genesis-keys  "$outdir"
-
-        cp -a "$cache_entry"/node-keys            "$outdir"
-        chmod -R go-rwx                           "$outdir"/node-keys
-
-        ln -s "$cache_entry"/pools                "$outdir"
-        ln -s "$cache_entry"/stake-delegator-keys "$outdir"
-        ln -s "$cache_entry"/utxo-keys            "$outdir"
-
-        ## genesis
-        cp    "$cache_entry"/genesis*.json        "$outdir"
-        chmod u+w                                 "$outdir"/genesis*.json
-
-        genesis finalise-cache-entry "$profile" "$timing" "$outdir"
+        "derive-from-cache-$genesis_backend" "$@"
         ;;
 
-    finalise-cache-entry )
-        local usage="USAGE: wb genesis $op PROFILE-JSON TIMING-JSON-EXPR DIR"
-        local profile_json=${1:?$usage}
-        local timing=${2:?$usage}
-        local dir=${3:?$usage}
-
-        if profile has-preset "$profile_json"; then
-          return
-        fi
-
-        progress "genesis" "finalizing retrieved cache entry in:  $outdir"
-
-        local system_start_epoch
-        system_start_epoch="$(jq '.start' -r <<<"$timing")"
-
-        genesis-byron "$system_start_epoch" "$dir" "$profile_json"
-
-        # The genesis cache entry in $outdir needs post-processing:
-        # * the system start date might get an adjustment offset into the future
-        # * some workbench profile content not captured by the genesis cache key will be patched in
-
-        # For devs: this should cover all fields modified by
-        # * nix/workbench/profile/pparams/delta-*.jq (workbench)
-        # * bench/cardano-profile/data/genesis/overlays/*.json (cardano-profile)
-        # These modifications are small deltas to base profiles, which do not, and should
-        # not, result in recreation of the entire staked genesis, as that is large on-disk
-        # and takes long to create.
-
-        # Shelley: startTime, protocolVersion, maxBlockBodySize
-        jq '$prof[0].genesis.shelley as $shey
-             | $shey.protocolParams.protocolVersion   as $pver
-             | $shey.protocolParams.maxBlockBodySize  as $bsize
-             | . * { systemStart: $timing.systemStart }
-             | if $pver  != null then . * { protocolParams: { protocolVersion:  $pver  } } else . end
-             | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
-          --argjson timing "$timing" \
-          --slurpfile prof "$profile_json" \
-          "$dir"/genesis-shelley.json |
-          sponge "$dir"/genesis-shelley.json
-
-        # Alonzo: Execution budgets
-        # NB. PlutusV1 and PlutusV2 cost models are *NOT* covered here; they're encoded
-        #     as key-value-map in the profile, but need to be [Integer] in genesis.
-        jq '$prof[0].genesis.alonzo as $alzo
-             | $alzo.maxBlockExUnits.exUnitsMem   as $bl_mem
-             | $alzo.maxBlockExUnits.exUnitsSteps as $bl_steps
-             | $alzo.maxTxExUnits.exUnitsMem      as $tx_mem
-             | $alzo.maxTxExUnits.exUnitsSteps    as $tx_steps
-             | if $bl_mem   != null then . * { maxBlockExUnits: { memory: $bl_mem}   } else . end
-             | if $bl_steps != null then . * { maxBlockExUnits: { steps:  $bl_steps} } else . end
-             | if $tx_mem   != null then . * { maxTxExUnits:    { memory: $tx_mem}   } else . end
-             | if $tx_steps != null then . * { maxTxExUnits:    { steps:  $tx_steps} } else . end' \
-          --slurpfile prof "$profile_json" \
-          "$dir"/genesis.alonzo.json |
-          sponge "$dir"/genesis.alonzo.json
-
-        # Conway: plutusV3CostModel
-        jq '$prof[0].genesis.conway as $coay
-             | $coay.plutusV3CostModel as $pv3cost
-             | if $pv3cost != null then . * { plutusV3CostModel: $pv3cost } else . end' \
-          --slurpfile prof "$profile_json" \
-          "$dir"/genesis.conway.json |
-          sponge "$dir"/genesis.conway.json
-
-        ;;
 
     * )
       usage_genesis
       ;;
 
     esac
-}
-
-__KEY_ROOT=
-Massage_the_key_file_layout_to_match_AWS() {
-    local profile_json=${1:?$usage}
-    local node_specs=${2:?$usage}
-    local dir=${3:?$usage}
-    local ids
-    local pool_density_map
-
-    pool_density_map=$(topology density-map "$node_specs")
-    if [[ -z "$pool_density_map" ]]; then
-      fatal "failed: topology density-map '$node_specs'"
-    fi
-    info genesis "pool density map:  $pool_density_map"
-
-    __KEY_ROOT=$dir
-
-    read -r -a ids <<< "$(jq 'keys | join(" ")' -cr <<< "$pool_density_map")"
-
-    local bid=1 pid=1 did=1 ## (B)FT, (P)ool, (D)ense pool
-    for id in "${ids[@]}"; do
-        mkdir -p "$dir"/node-keys/cold
-
-        #### cold keys (do not copy to production system)
-        if   jqtest ".composition.dense_pool_density > 1" "$profile_json" &&
-             jqtest ".[\"$id\"]  > 1" <<<"$pool_density_map"
-        then ## Dense/bulk pool
-           info genesis "bulk pool $did -> node-$id"
-           cp -f "$(key_genesis bulk      bulk "$did")" "$(key_depl bulk   bulk "$id")"
-           did=$((did + 1))
-        elif jqtest ".[\"$id\"] != 0" <<<"$pool_density_map"
-        then ## Singular pool
-           info genesis "pool $pid -> node-$id"
-           cp -f "$(key_genesis cold       sig "$pid")" "$(key_depl cold    sig "$id")"
-           cp -f "$(key_genesis cold       ver "$pid")" "$(key_depl cold    ver "$id")"
-           cp -f "$(key_genesis opcert    cert "$pid")" "$(key_depl opcert none "$id")"
-           cp -f "$(key_genesis opcert   count "$pid")" "$(key_depl cold  count "$id")"
-           cp -f "$(key_genesis KES        sig "$pid")" "$(key_depl KES     sig "$id")"
-           cp -f "$(key_genesis KES        ver "$pid")" "$(key_depl KES     ver "$id")"
-           cp -f "$(key_genesis VRF        sig "$pid")" "$(key_depl VRF     sig "$id")"
-           cp -f "$(key_genesis VRF        ver "$pid")" "$(key_depl VRF     ver "$id")"
-           pid=$((pid + 1))
-        else ## BFT node
-           info genesis "BFT $bid -> node-$id"
-           cp -f "$(key_genesis deleg      sig "$bid")" "$(key_depl cold    sig "$id")"
-           cp -f "$(key_genesis deleg      ver "$bid")" "$(key_depl cold    ver "$id")"
-           cp -f "$(key_genesis delegCert cert "$bid")" "$(key_depl opcert none "$id")"
-           cp -f "$(key_genesis deleg    count "$bid")" "$(key_depl cold  count "$id")"
-           cp -f "$(key_genesis delegKES   sig "$bid")" "$(key_depl KES     sig "$id")"
-           cp -f "$(key_genesis delegKES   ver "$bid")" "$(key_depl KES     ver "$id")"
-           cp -f "$(key_genesis delegVRF   sig "$bid")" "$(key_depl VRF     sig "$id")"
-           cp -f "$(key_genesis delegVRF   ver "$bid")" "$(key_depl VRF     ver "$id")"
-           bid=$((bid + 1))
-        fi
-    done
-}
-
-key_depl() {
-    local type=$1 kind=$2 id=$3
-    case "$kind" in
-            bulk )     suffix='.creds';;
-            cert )     suffix='.cert';;
-            count )    suffix='.counter';;
-            none )     suffix=;;
-            sig )      suffix='.skey';;
-            ver )      suffix='.vkey';;
-            * )        fatal "key_depl: unknown key kind: '$kind'";; esac
-    case "$type" in
-            bulk )     stem=node-keys/bulk$id;;
-            cold )     stem=node-keys/cold/operator$id;;
-            opcert )   stem=node-keys/node$id.opcert;;
-            KES )      stem=node-keys/node-kes$id;;
-            VRF )      stem=node-keys/node-vrf$id;;
-            * )        fatal "key_depl: unknown key type: '$type'";; esac
-    echo "$__KEY_ROOT/$stem$suffix"
-}
-
-key_genesis() {
-    local type=$1 kind=$2 id=$3
-    case "$kind" in
-            bulk )     suffix='.creds';;
-            cert )     suffix='.cert';;
-            count )    suffix='.counter';;
-            none )     suffix=;;
-            sig )      suffix='.skey';;
-            ver )      suffix='.vkey';;
-            * )        fatal "key_genesis: unknown key kind: '$kind'";; esac
-    case "$type" in
-            bulk )     stem=pools/bulk$id;;
-            cold )     stem=pools/cold$id;;
-            opcert )   stem=pools/opcert$id;;
-            KES )      stem=pools/kes$id;;
-            VRF )      stem=pools/vrf$id;;
-            deleg )    stem=delegate-keys/delegate$id;;
-            delegCert )stem=delegate-keys/opcert$id;;
-            delegKES ) stem=delegate-keys/delegate$id.kes;;
-            delegVRF ) stem=delegate-keys/delegate$id.vrf;;
-            * )        fatal "key_genesis: unknown key type: '$type'";; esac
-    echo "$__KEY_ROOT/$stem$suffix"
-}
-
-genesis-byron() {
-    set -euo pipefail
-    if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-      genesis-byron-modular "$@"
-    else
-      genesis-byron-jq "$@"
-    fi
 }
 

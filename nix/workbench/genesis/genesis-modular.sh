@@ -2,6 +2,11 @@
 #
 # Modular (Nix-based) genesis backend.
 # Used when WB_MODULAR_GENESIS=1.
+#
+# Implements the backend interface:
+#   profile-cache-key-input-modular, profile-cache-key-modular,
+#   spec-modular, pool-relays-modular,
+#   genesis-create-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
     set -euo pipefail
@@ -33,6 +38,12 @@ spec-modular() {
     local profile_json=${2:?missing profile_json}
     local node_specs=${3:?missing node_specs}
 
+    # dijkstra is not in the Nix modules, fall back to jq
+    if [[ "$era" == "dijkstra" ]]; then
+      spec-jq "$@"
+      return
+    fi
+
     # nix wants absolute paths
     profile_json=$(realpath "$profile_json")
     node_specs=$(realpath "$node_specs")
@@ -55,26 +66,14 @@ pool-relays-modular() {
     evaluate --profile "$profile_json" --node-specs "$node_specs" genesis.pool-relays | jq
 }
 
-genesis-byron-modular() {
-    local system_start_epoch=$1
-    local dir=$2
-    local profile_json=$3
+# Entry point for genesis creation (delegates to legacy; modular only
+# replaces spec/cache-key/byron generation, not the create-testnet-data call).
+genesis-create-modular() {
+    genesis-create-jq "$@";
+}
 
-    # nix wants absolute paths
-    profile_json=$(realpath "$profile_json")
-
-    evaluate --profile "$profile_json" genesis.byron > "$dir"/byron-protocol-params.json
-    read -r -a args <<< "$(evaluate --profile "${profile_json}" genesis.byron-genesis-args | jq -r)"
-
-    cli_args=(
-        --genesis-output-dir         "$dir"/byron
-        --protocol-parameters-file   "$dir"/byron-protocol-params.json
-        --start-time                 "$system_start_epoch"
-        "${args[@]}"
-    )
-    rm -rf "$dir"/byron
-
-    verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
-    cardano-cli byron genesis genesis "${cli_args[@]}"
+# Same derive-from-cache as legacy.
+derive-from-cache-modular() {
+    derive-from-cache-jq "$@";
 }
 

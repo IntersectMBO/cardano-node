@@ -119,8 +119,8 @@ let
                   TargetNumberOfActivePeers          = max 15 valency;
                   TargetNumberOfEstablishedPeers     = max 40 valency;
 
-                  ByronGenesisFile             = "../genesis/byron/genesis.json";
-                  ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
+                  ByronGenesisFile             = "../genesis/genesis.byron.json";
+                  ShelleyGenesisFile           = "../genesis/genesis.shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
                   DijkstraGenesisFile          = "../genesis/genesis.dijkstra.json";
@@ -170,9 +170,12 @@ let
       executable = "cardano-node";
     #########################################
     } // optionalAttrs isProducer {
-      operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
-      kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
-      vrfKey                 = "../genesis/node-keys/node-vrf${toString i}.skey";
+      # Key paths match create-testnet-data output layout directly.
+      # create-testnet-data uses 1-indexed pool dirs (pool1, pool2, ...).
+      # Dense/bulk pools and BFT nodes are not supported by create-testnet-data.
+      operationalCertificate = "../genesis/pools-keys/pool${toString (i + 1)}/opcert.cert";
+      kesKey                 = "../genesis/pools-keys/pool${toString (i + 1)}/kes.skey";
+      vrfKey                 = "../genesis/pools-keys/pool${toString (i + 1)}/vrf.skey";
     } // optionalAttrs profile.node.tracer {
       tracerSocketPathConnect = mkDefault "../tracer/tracer.socket";
     };
