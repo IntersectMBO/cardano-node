@@ -219,8 +219,7 @@ defaultYamlHardforkViaConfig sbe =
   hardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
   hardforkViaConfig sbe' =
     Aeson.fromList $
-      [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-      , ("ExperimentalProtocolsEnabled", Aeson.Bool True) ]
+      [ ("ExperimentalProtocolsEnabled", Aeson.Bool True) ]
       ++ (case sbe' of
             ShelleyBasedEraShelley ->
                 [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0) ]
