@@ -58,13 +58,22 @@ durationChain x = let
   g = Types.generator p
   in p {Types.generator = g {Types.tx_count = Just 90000}}
 
+durationChainM :: Types.Profile -> Types.Profile
+durationChainM x = let 
+  p =   timescaleChain 
+      . P.shutdownOnSlot 2400
+      . P.generatorEpochs 3
+      $ x
+  g = Types.generator p
+  in p {Types.generator = g {Types.tx_count = Just 90000}}
+
 timescaleChain :: Types.Profile -> Types.Profile
 timescaleChain =
     P.slotDuration 1 . P.epochLength 600
-  . P.activeSlotsCoeff 0.01 . P.parameterK 3
+  . P.activeSlotsCoeff 0.015 . P.parameterK 3
 
 valueChain :: Types.Profile -> Types.Profile
-valueChain = V.valueBase . P.tps 25
+valueChain = V.valueBase . P.tps 100
 
 --------------------------------------------------------------------------------
 
@@ -86,7 +95,8 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-solo"         . V.valueLocal . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo-xl"      . V.valueLocal . n1 . V.datasetOct2021 . durationXL . P.traceForwardingOn
   -- chain creation
-  , fs & P.name "fschain-512k-xs"               . valueChain   . n1 . V.datasetOct2021 . durationChain . P.traceForwardingOn                                         . P.analysisUnitary  . P.blocksize512k
+  , fs & P.name "fschain-768k-xs"               . valueChain   . n1 . V.datasetOct2021 . durationChain  . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
+  , fs & P.name "fschain-768k"                  . valueChain   . n1 . V.datasetOct2021 . durationChainM . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"         . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
