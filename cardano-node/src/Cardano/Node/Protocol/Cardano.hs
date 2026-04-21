@@ -181,8 +181,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
       , Consensus.cardanoProtocolVersion = if npcExperimentalHardForksEnabled
-                                           then ProtVer (natVersion @11) 0
-                                           else ProtVer (natVersion @10) 8
+                                           then ProtVer (natVersion @12) 0
+                                           else ProtVer (natVersion @11) 0
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
