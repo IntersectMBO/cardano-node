@@ -117,12 +117,12 @@ source-repository-package
   subdir:
     cardano-api
 
--- Points to ouroboros-consensus/dnadales/cumulative-tx-size
+-- Points to ouroboros-consensus/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 960f76137ffa84c0602d5556eb6556bd60ce86fd
-  --sha256: sha256-kzzBAa26iGaQyo5BF//ybRX3x5gWM9V10+N3t9XV0Yw=
+  tag: 8eeb4c4e50477c9470dce221ba1396bab6fbf472
+  --sha256: sha256-Lt/S/thAvAvkdJ5Gn1ErxRnMLPUY5UvxX2IFHQM+1sA=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
