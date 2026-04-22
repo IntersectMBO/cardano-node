@@ -232,23 +232,7 @@ createSPOGenesisAndFiles
 
   -- Older cardano-cli versions do not generate byron-genesis.json from
   -- create-testnet-data.  Create it via the legacy byron command when missing.
-  let byronGenesisPath = tempAbsPath </> Defaults.defaultGenesisFilepath ByronEra
-  unlessFileExists byronGenesisPath $ do
-    let byronGenDir = tempAbsPath </> "byron-gen-command"
-        byronParamsFp = tempAbsPath </> "byron-params.json"
-        byronOpts = byronDefaultGenesisOptions
-          { byronNumBftNodes = fromIntegral nPoolNodes }
-    liftIOAnnotated $ LBS.writeFile byronParamsFp $ Aeson.encode Defaults.defaultByronProtocolParamsJsonValue
-    createByronGenesis genesisTestnetMagic startTime byronOpts byronParamsFp byronGenDir
-    liftIOAnnotated $ do
-      System.renameFile (byronGenDir </> "genesis.json") byronGenesisPath
-      forM_ [1..nPoolNodes] $ \i -> do
-        let ii = fromIntegral i :: Int
-            poolKeysDir = tempAbsPath </> Defaults.defaultSpoKeysDir ii
-            padIdx = let s = show (ii - 1) in replicate (3 - length s) '0' ++ s
-        System.copyFile (byronGenDir </> ("delegate-keys." ++ padIdx ++ ".key")) (poolKeysDir </> "byron-delegate.key")
-        System.copyFile (byronGenDir </> ("delegation-cert." ++ padIdx ++ ".json")) (poolKeysDir </> "byron-delegation.cert")
-      System.removeFile byronParamsFp
+  createByronGenesisIfMissing startTime
 
   -- For eras whose --spec-* flag was not supported, write a default genesis
   -- file so that the node configuration and hash computation stay uniform.
@@ -282,6 +266,25 @@ createSPOGenesisAndFiles
     specFlag supported e =
         let flag = "--spec-" ++ eraToString e
         in mwhen (supported flag) [flag, genesisInputFilepath e]
+
+    createByronGenesisIfMissing startTime = do
+      let byronGenesisPath = tempAbsPath </> Defaults.defaultGenesisFilepath ByronEra
+      unlessFileExists byronGenesisPath $ do
+        let byronGenDir = tempAbsPath </> "byron-gen-command"
+            byronParamsFp = tempAbsPath </> "byron-params.json"
+            byronOpts = byronDefaultGenesisOptions
+              { byronNumBftNodes = fromIntegral nPoolNodes }
+        liftIOAnnotated $ LBS.writeFile byronParamsFp $ Aeson.encode Defaults.defaultByronProtocolParamsJsonValue
+        createByronGenesis genesisTestnetMagic startTime byronOpts byronParamsFp byronGenDir
+        liftIOAnnotated $ do
+          System.renameFile (byronGenDir </> "genesis.json") byronGenesisPath
+          forM_ [1..nPoolNodes] $ \i -> do
+            let ii = fromIntegral i :: Int
+                poolKeysDir = tempAbsPath </> Defaults.defaultSpoKeysDir ii
+                padIdx = let s = show (ii - 1) in replicate (3 - length s) '0' ++ s
+            System.copyFile (byronGenDir </> ("delegate-keys." ++ padIdx ++ ".key")) (poolKeysDir </> "byron-delegate.key")
+            System.copyFile (byronGenDir </> ("delegation-cert." ++ padIdx ++ ".json")) (poolKeysDir </> "byron-delegation.cert")
+          System.removeFile byronParamsFp
 
     unlessFileExists fp act = do
       exists <- liftIOAnnotated $ System.doesFileExist fp
