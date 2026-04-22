@@ -230,16 +230,18 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
-  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
-  ledgerDRepCount    :: LedgerState blk EmptyMK -> Int
-  ledgerDRepMapSize  :: LedgerState blk EmptyMK -> Int
+  ledgerUtxoSize          :: LedgerState blk EmptyMK -> Int
+  ledgerDelegMapSize      :: LedgerState blk EmptyMK -> Int
+  ledgerDRepCount         :: LedgerState blk EmptyMK -> Int
+  ledgerDRepMapSize       :: LedgerState blk EmptyMK -> Int
+  ledgerCumulativeTxBytes :: LedgerState blk EmptyMK -> Word64
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
-  ledgerDelegMapSize _ = 0
-  ledgerDRepCount    _ = 0
-  ledgerDRepMapSize  _ = 0
+  ledgerDelegMapSize      _ = 0
+  ledgerDRepCount         _ = 0
+  ledgerDRepMapSize       _ = 0
+  ledgerCumulativeTxBytes _ = 0
 
 instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
@@ -275,13 +277,15 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
+  ledgerCumulativeTxBytes = Shelley.shelleyCumulativeTxBytes
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize     = ledgerUtxoSize     . unFlip . project . Flip
-  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
-  ledgerDRepCount    = ledgerDRepCount    . unFlip . project . Flip
-  ledgerDRepMapSize  = ledgerDRepMapSize  . unFlip . project . Flip
+  ledgerUtxoSize          = ledgerUtxoSize          . unFlip . project . Flip
+  ledgerDelegMapSize      = ledgerDelegMapSize      . unFlip . project . Flip
+  ledgerDRepCount         = ledgerDRepCount         . unFlip . project . Flip
+  ledgerDRepMapSize       = ledgerDRepMapSize       . unFlip . project . Flip
+  ledgerCumulativeTxBytes = ledgerCumulativeTxBytes . unFlip . project . Flip
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -316,6 +320,14 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepMapSize ledgerAlonzo
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepMapSize ledgerConway
+  ledgerCumulativeTxBytes = \case
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerCumulativeTxBytes ledgerByron
+    Cardano.LedgerStateShelley ledgerShelley -> ledgerCumulativeTxBytes ledgerShelley
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerCumulativeTxBytes ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerCumulativeTxBytes ledgerMary
+    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerCumulativeTxBytes ledgerAlonzo
+    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerCumulativeTxBytes ledgerBabbage
+    Cardano.LedgerStateConway  ledgerConway  -> ledgerCumulativeTxBytes ledgerConway
 
 --
 -- * Node kernel
