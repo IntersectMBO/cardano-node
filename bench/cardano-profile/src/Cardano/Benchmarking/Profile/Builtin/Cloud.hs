@@ -126,13 +126,16 @@ profilesNoEraCloud =
                  . plutusDesc
       valueVolt  = P.empty & baseVoltaire . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
                  . valueDesc
+      valueV11   = valueVolt & P.v11Preview
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . plutusDesc
+      plutusV11  = plutusVolt & P.v11Preview
       -- memory-constrained
       loop       = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
       loop2024   = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
       loopVolt   = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
       loopV3Volt = plutusVolt & plutusLoopBase   . V.plutusTypeLoopV3   . P.analysisSizeSmall
+      loopV11    = plutusV11  & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
       -- steps-constrained
       ecdsa    = plutus     & plutusSecpBase   . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
@@ -167,6 +170,7 @@ profilesNoEraCloud =
   , value     & P.name "value-oldtracing-nomadperf"                        . P.dreps      0 . P.oldTracing
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing
+  , valueV11  & P.name "value-voltv11-nomadperf"                           . P.dreps  10000 . P.newTracing
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.newTracing . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt
@@ -182,6 +186,7 @@ profilesNoEraCloud =
   , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing
   -- Plutus (post-Voltaire profiles)
   , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing
+  , loopV11     & P.name "plutus-voltv11-nomadperf"                        . P.dreps  10000 . P.newTracing
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000 . P.newTracing
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . P.newTracing . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . P.newTracing . blockMem2x
