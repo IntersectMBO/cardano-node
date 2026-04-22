@@ -1,0 +1,9 @@
+{
+  "shelley": {
+    "protocolParams": {
+      "protocolVersion": {
+        "major": 11
+      }
+    }
+  }
+}
