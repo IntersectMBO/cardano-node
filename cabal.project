@@ -112,6 +112,8 @@ if impl(ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/jasagredo/lsm-tree
-  tag: 1b051d463e80ec8f712a23eaa7f830b8031e0b02
-  --sha256: sha256-b9C/GMek5flEfkuVGLAahEP07BF+WDgDMp/4kfHdGZA=
-  subdir: lsm-tree
+  tag: 11415bfb7886bb7a7d92f5fe043f2eae5e33ae9c
+  --sha256: sha256-+/FWq+WNHI4rAnv8ZSCdccjlgYC4XOBmlQGJ+mCVFjM=
+  subdir:
+    lsm-tree
+    blockio
