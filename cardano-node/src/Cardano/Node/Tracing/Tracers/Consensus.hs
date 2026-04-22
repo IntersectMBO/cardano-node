@@ -2285,40 +2285,47 @@ instance ( StandardHash blk
 
   forHuman = showT
 
------
-
 instance LogFormatting TraceLeiosKernel where
-  forHuman = showT
-  forMachine _dtal = traceLeiosKernelToObject
+    forHuman = showT
+    forMachine _dtal = traceLeiosKernelToObject
 
-  asMetrics (TraceLeiosBlockForged{eb, ebMeasure}) =
-      [ CounterM "Forge.endorser-block.total-count" Nothing
-      , CounterM "Forge.endorser-block.total-tx-count" (Just . fromIntegral . length $ leiosEbTxs eb)
-      , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes $ ebMeasure)
-      , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory $ ebMeasure)
-      , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps $ ebMeasure)
-      , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
-      ]
-  asMetrics _ = []
+    asMetrics (TraceLeiosBlockForged{eb, ebMeasure}) =
+        [ CounterM "Forge.endorser-block.total-count" Nothing
+        , CounterM "Forge.endorser-block.total-tx-count" (Just . fromIntegral . length $ leiosEbTxs eb)
+        , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes $ ebMeasure)
+        , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory $ ebMeasure)
+        , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps $ ebMeasure)
+        , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
+        ]
+    asMetrics _ = []
 
 instance MetaTrace TraceLeiosKernel where
-  namespaceFor _ = Namespace [] []
+    namespaceFor _ = Namespace [ ] [ "TraceLeiosKernel" ]
 
-  severityFor _ (Just TraceLeiosDbException{}) = Just Error
-  severityFor _ _ = Just Debug
+    severityFor _ (Just TraceLeiosDbException{}) = Just Error
+    severityFor _ _ = Just Debug
 
-  documentFor _ = Nothing
-  allNamespaces = [ Namespace [] [] ]
+    documentFor _ = Nothing
+    allNamespaces = [Namespace [] [ "TraceLeiosKernel" ]]
+
+    metricsDocFor _ =
+        [ ("Forge.endorser-block.total-count", "Counter of forged endorser blocks")
+        , ("Forge.endorser-block.total-tx-count", "Total number of transactions in the forged endorser block")
+        , ("Forge.endorser-block.total-tx-bytes", "Total transaction bytes in the forged endorser block")
+        , ("Forge.endorser-block.total-tx-xu-memory", "Total execution units (memory) in the forged endorser block")
+        , ("Forge.endorser-block.total-tx-xu-time", "Total execution units (time) in the forged endorser block")
+        , ("Forge.endorser-block.total-tx-ref-script-size-bytes", "Total reference script size bytes in the forged endorser block")
+        ]
 
 instance LogFormatting TraceLeiosPeer where
-  forHuman = showT
-  forMachine _dtal = traceLeiosPeerToObject
+    forHuman = showT
+    forMachine _dtal = traceLeiosPeerToObject
 
 instance MetaTrace TraceLeiosPeer where
-  namespaceFor _ = Namespace [] []
+    namespaceFor _ = Namespace [] [ "TraceLeiosPeer" ]
 
-  severityFor _ (Just TraceLeiosPeerDbException{}) = Just Error
-  severityFor _ _ = Just Debug
+    severityFor _ (Just TraceLeiosPeerDbException{}) = Just Error
+    severityFor _ _ = Just Debug
 
-  documentFor _ = Nothing
-  allNamespaces = [ Namespace [] [] ]
+    documentFor _ = Nothing
+    allNamespaces = [Namespace [] [ "TraceLeiosPeer" ]]
