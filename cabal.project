@@ -108,3 +108,10 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/jasagredo/lsm-tree
+  tag: 1b051d463e80ec8f712a23eaa7f830b8031e0b02
+  --sha256: sha256-b9C/GMek5flEfkuVGLAahEP07BF+WDgDMp/4kfHdGZA=
+  subdir: lsm-tree
