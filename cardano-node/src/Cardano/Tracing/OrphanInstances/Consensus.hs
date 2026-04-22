@@ -255,6 +255,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
 
   getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
+  getSeverityAnnotation ChainDB.TracePerasVoteDbEvent{} = Info
   getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
@@ -795,6 +796,7 @@ instance ( ConvertRawHash blk
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
       ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TracePerasVoteDbEvent ev -> showT ev
       ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
@@ -1081,6 +1083,10 @@ instance ( ConvertRawHash blk
 
   toObject _verb (ChainDB.TracePerasCertDbEvent ev) =
     mconcat [ "kind" .= String "TracePerasCertDbEvent"
+            , "event" .= show ev
+            ]
+  toObject _verb (ChainDB.TracePerasVoteDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasVoteDbEvent"
             , "event" .= show ev
             ]
   toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
