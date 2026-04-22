@@ -262,7 +262,7 @@ createSPOGenesisAndFiles
      , inputGenesisDijkstraFp
      , tempAbsPath </> "byron.genesis.spec.json" -- Created by create-testnet-data
     ]
-    (\fp -> liftIOAnnotated $ whenM (System.doesFileExist fp) (System.removeFile fp))
+    $ \fp -> liftIOAnnotated $ whenM (System.doesFileExist fp) (System.removeFile fp)
 
   return genesisShelleyDir
   where
