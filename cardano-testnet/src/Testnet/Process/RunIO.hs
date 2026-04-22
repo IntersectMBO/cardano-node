@@ -98,9 +98,8 @@ execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
 -- Returns 'Nothing' if the binary can't be found or the command fails.
 getCliHelpText :: MonadIO m => [String] -> m (Maybe String)
 getCliHelpText args = liftIO $ do
-  result <- try $ runRIO () $
+  result <- tryAny $ runRIO () $
     execFlexAny' defaultExecConfig "cardano-cli" "CARDANO_CLI" (args ++ ["--help"])
-  let _ = result :: Either SomeException (ExitCode, String, String)
   pure $ case result of
     Right (_, stdout', _) -> Just stdout'
     Left _ -> Nothing
