@@ -9,13 +9,26 @@ module TraceSchemaGen.CheckOverrideCoverage
   , listChangedPaths
   , main
   , overridesRoot
-  , parseArgs
   ) where
 
 import Control.Monad (unless, when)
 import Data.List (isPrefixOf, isSuffixOf, sort, stripPrefix)
+import Options.Applicative
+  ( Parser
+  , ParserInfo
+  , execParser
+  , fullDesc
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , optional
+  , progDesc
+  , strOption
+  , (<**>)
+  )
 import qualified Data.Set as Set
-import System.Environment (getArgs)
 import System.Exit (ExitCode (..), exitFailure, exitSuccess)
 import System.FilePath (dropExtension)
 import System.Process (proc, readCreateProcessWithExitCode)
@@ -39,7 +52,7 @@ defaultConfig = Config {cfgRange = Nothing}
 
 main :: IO ()
 main = do
-  config <- parseArgs defaultConfig =<< getArgs
+  config <- execParser parserInfo
   generatedChanged <- listChangedPaths config generatedRoots
   overrideChanged <- Set.fromList <$> listChangedPaths config [overridesRoot]
 
@@ -61,27 +74,24 @@ main = do
   putStrLn "Override coverage check passed."
   exitSuccess
 
-parseArgs :: Config -> [String] -> IO Config
-parseArgs = go
- where
-  go cfg [] = pure cfg
-  go cfg ("--range" : r : rest) = go cfg {cfgRange = Just r} rest
-  go _ ["--help"] = printHelp >> exitSuccess
-  go _ ["-h"] = printHelp >> exitSuccess
-  go _ unknown = do
-    putStrLn $ "Unrecognized arguments: " <> unwords unknown
-    printHelp
-    exitFailure
+configParser :: Parser Config
+configParser =
+  Config
+    <$> optional
+      ( strOption
+          ( long "range"
+         <> metavar "GIT_RANGE"
+         <> help "Diff range to inspect, e.g. origin/master...HEAD"
+          )
+      )
 
-printHelp :: IO ()
-printHelp =
-  putStrLn $
-    unlines
-      [ "Usage: runghc bench/trace-schemas/scripts/schema-gen/CheckOverrideCoverage.hs [options]"
-      , ""
-      , "Options:"
-      , "  --range GIT_RANGE   Diff range to inspect, e.g. origin/master...HEAD"
-      ]
+parserInfo :: ParserInfo Config
+parserInfo =
+  info
+    (configParser <**> helper)
+    ( fullDesc
+   <> progDesc "Check that changed generated schemas have matching override updates"
+    )
 
 listChangedPaths :: Config -> [FilePath] -> IO [FilePath]
 listChangedPaths config paths = do

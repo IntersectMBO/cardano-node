@@ -11,7 +11,6 @@ module TraceSchemaGen.ApplySchemaOverrides
   , mergePatch
   , normalizePatch
   , overrideRelToTarget
-  , parseArgs
   , processOverride
   , readJsonFile
   , stripPrefixPath
@@ -25,13 +24,30 @@ import qualified Data.ByteString.Lazy as BL
 import Control.Monad (forM, unless, when)
 import Data.List (isSuffixOf, sort)
 import Data.Maybe (fromMaybe)
+import Options.Applicative
+  ( Parser
+  , ParserInfo
+  , execParser
+  , fullDesc
+  , header
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , progDesc
+  , showDefault
+  , strOption
+  , switch
+  , value
+  , (<**>)
+  )
 import System.Directory
   ( createDirectoryIfMissing
   , doesDirectoryExist
   , doesFileExist
   , listDirectory
   )
-import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 import System.FilePath
   ( (</>)
@@ -64,7 +80,7 @@ defaultConfig =
 
 main :: IO ()
 main = do
-  config <- parseArgs defaultConfig =<< getArgs
+  config <- execParser parserInfo
   let overridesRoot = cfgRoot config </> "overrides"
   overridesExists <- doesDirectoryExist overridesRoot
   if not overridesExists
@@ -85,33 +101,37 @@ main = do
         putStrLn $ "Updated " <> show (length changedTargets) <> " target schema file(s)."
       exitSuccess
 
-parseArgs :: Config -> [String] -> IO Config
-parseArgs = go
- where
-  go cfg [] = pure cfg
-  go cfg ("--root" : root : rest) = go cfg {cfgRoot = root} rest
-  go cfg ("--check" : rest) = go cfg {cfgCheck = True} rest
-  go cfg ("--verbose" : rest) = go cfg {cfgVerbose = True} rest
-  go cfg ("--allow-destructive" : rest) = go cfg {cfgAllowDestructive = True} rest
-  go _ ["--help"] = printHelp >> exitSuccess
-  go _ ["-h"] = printHelp >> exitSuccess
-  go _ unknown = do
-    putStrLn $ "Unrecognized arguments: " <> unwords unknown
-    printHelp
-    exitFailure
+configParser :: Parser Config
+configParser =
+  Config
+    <$> strOption
+      ( long "root"
+     <> metavar "PATH"
+     <> value defaultRoot
+     <> showDefault
+     <> help "trace-schemas root path"
+      )
+    <*> switch
+      ( long "check"
+     <> help "Dry-run; fail if any target file would change"
+      )
+    <*> switch
+      ( long "verbose"
+     <> help "Print each override mapping"
+      )
+    <*> switch
+      ( long "allow-destructive"
+     <> help "Allow overrides that delete or replace existing fields"
+      )
 
-printHelp :: IO ()
-printHelp =
-  putStrLn $
-    unlines
-      [ "Usage: runghc bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs [options]"
-      , ""
-      , "Options:"
-      , "  --root PATH          trace-schemas root path (default: bench/trace-schemas)"
-      , "  --check              Dry-run; fail if any target file would change"
-      , "  --verbose            Print each override mapping"
-      , "  --allow-destructive  Allow overrides that delete or replace existing fields"
-      ]
+parserInfo :: ParserInfo Config
+parserInfo =
+  info
+    (configParser <**> helper)
+    ( fullDesc
+   <> progDesc "Apply schema override sidecars to generated trace schemas"
+   <> header "apply-schema-overrides"
+    )
 
 listOverrideFiles :: FilePath -> IO [FilePath]
 listOverrideFiles root = do
@@ -212,14 +232,14 @@ mergePatch target (A.Object patchObj) =
 mergeObject :: A.Object -> A.Object -> A.Object
 mergeObject = KM.foldrWithKey step
  where
-  step key value acc =
-    case value of
+  step key patchValue acc =
+    case patchValue of
       A.Null -> KM.delete key acc
       A.Object _ ->
         let existing = fromMaybe A.Null (KM.lookup key acc)
-            merged = mergePatch existing value
+            merged = mergePatch existing patchValue
          in KM.insert key merged acc
-      _ -> KM.insert key value acc
+      _ -> KM.insert key patchValue acc
 
 stripPrefixPath :: FilePath -> FilePath -> IO FilePath
 stripPrefixPath prefix full =

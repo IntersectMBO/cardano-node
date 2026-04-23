@@ -35,6 +35,7 @@ library
     containers,
     directory,
     filepath,
+    optparse-applicative,
     process,
     text,
     vector,
