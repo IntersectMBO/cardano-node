@@ -111,6 +111,7 @@ library
                         Parsers.Run
                         Testnet.Blockfrost
                         Testnet.Components.Configuration
+                        Testnet.Components.EpochStateView
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
