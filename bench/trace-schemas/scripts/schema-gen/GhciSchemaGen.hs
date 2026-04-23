@@ -12,7 +12,7 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
 import Data.Char (isAlphaNum, isLower, isUpper, isSpace, toLower)
-import Data.List (elemIndex, isPrefixOf, isSuffixOf, sortOn)
+import Data.List (elemIndex, foldl', isInfixOf, isPrefixOf, isSuffixOf, sortOn, stripPrefix)
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.Ord (Down (..))
 import System.Directory
@@ -23,12 +23,11 @@ import System.Exit
 import System.IO
 import Data.IORef
 import Control.Exception (catch, IOException, bracket)
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
-import Control.Monad (forM, guard, unless, when)
+import Control.Monad (filterM, forM, guard, unless, when)
 
 --------------------------------------------------------------------------------
 -- Entry point / high-level flow
@@ -98,7 +97,7 @@ main = do
   config <- parseArgs =<< getArgs
   let nsFile = "bench/trace-schemas/newNamespaces.txt"
   putStrLn $ "Reading namespaces from " <> nsFile
-  namespaces <- filter (not . null) . map T.unpack . T.lines <$> T.readFile nsFile
+  namespaces <- filter (not . null) . lines <$> readFile' nsFile
   putStrLn $ "Loaded " <> show (length namespaces) <> " namespace(s)"
 
   validatedRootDirs <- validateSourceDirs emitWarning rootDirs
@@ -108,8 +107,10 @@ main = do
 
   -- Build constructor -> namespace map from namespaceFor clauses
   putStrLn "Building namespace map..."
-  let sources = map (\fp -> (fp, readFileSafe fp)) hsFiles
-  let nsMap = foldlStrict mergeNs Map.empty [ normalizeNamespaceMap fp (parseNamespaceMap src) | (fp, src) <- sources ]
+  sources <- forM hsFiles $ \fp -> do
+    src <- readFileSafe fp
+    pure (fp, src)
+  let nsMap = foldl' mergeNs Map.empty [ normalizeNamespaceMap fp (parseNamespaceMap src) | (fp, src) <- sources ]
   -- Parse forMachine clauses and map their field bindings to variables
   putStrLn "Parsing forMachine clauses..."
   let helperFieldMaps = map (parseObjectHelperMap . snd) sources
@@ -119,7 +120,7 @@ main = do
         ]
 
   let fieldVarMap =
-        foldlStrict
+        foldl'
           (Map.unionWith (Map.unionWith Map.union))
           Map.empty
           [ normalizeFieldVarMap fp (parseFieldVarMap helpers clauses)
@@ -133,7 +134,7 @@ main = do
       "[ghci " <> show idx <> "/" <> show (length clausesByFile) <> "] "
         <> fp
     normalizeVarTypesMap fp <$> ghciTypesForFile fp clauses
-  let varTypes = foldlStrict (Map.unionWith Map.union) Map.empty varTypesMaps
+  let varTypes = foldl' (Map.unionWith Map.union) Map.empty varTypesMaps
 
   let msgOutDir = "bench/trace-schemas/messages"
   let typeOutDir = "bench/trace-schemas/types"
@@ -183,9 +184,6 @@ printHelp =
 
 -- Utilities
 
-foldlStrict :: (b -> a -> b) -> b -> [a] -> b
-foldlStrict f = go where go acc [] = acc; go acc (y:ys) = let acc' = f acc y in acc' `seq` go acc' ys
-
 validateSourceDirs :: (String -> IO ()) -> [FilePath] -> IO [FilePath]
 validateSourceDirs emitWarning dirs = do
   dirPresence <- forM dirs $ \dir -> do
@@ -200,17 +198,17 @@ validateSourceDirs emitWarning dirs = do
   pure existingDirs
 
 -- Read file for quick text parsing; tolerate missing files.
-readFileSafe :: FilePath -> String
-readFileSafe fp = unsafePerformIO (readFile fp `catch` (\(_e :: IOException) -> pure ""))
+readFileSafe :: FilePath -> IO String
+readFileSafe fp = readFile fp `catch` (\(_e :: IOException) -> pure "")
 
 collectTargets :: [FilePath] -> IO [FilePath]
 collectTargets roots = do
   files <- concat <$> mapM listHsFiles roots
-  catMaybes <$> mapM (\fp -> do
+  filterM (\fp -> do
     content <- T.readFile fp
     if "forMachine" `T.isInfixOf` content || "namespaceFor" `T.isInfixOf` content
-      then pure (Just fp)
-      else pure Nothing) files
+      then pure True
+      else pure False) files
 
 listHsFiles :: FilePath -> IO [FilePath]
 listHsFiles root = do
@@ -254,12 +252,12 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
               header = unwords headerLines
               bodyAfterLambda = dropLeadingLambdaCase bodyLines
               acc'
-                | "\\case" `isInfix` header || isLambdaCaseBody bodyLines =
-                    foldlStrict insertNamespaceClause acc (parseNamespaceLambdaClauses bodyAfterLambda)
+                | "\\case" `isInfixOf` header || isLambdaCaseBody bodyLines =
+                    foldl' insertNamespaceClause acc (parseNamespaceLambdaClauses bodyAfterLambda)
                 | hasBranchArrows bodyLines =
                     case ctorsAfter "namespaceFor" (takeWhile (/= '=') (unwords headerLines)) of
                       [] -> acc
-                      ctors -> foldlStrict insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
+                      ctors -> foldl' insertNamespaceClause acc (parseNamespaceCaseBranches ctors bodyLines)
                 | otherwise =
                     case extractNamespaceClause currentType typeConstructors (unwords clauseLines) of
                       Just clauseInfo -> insertNamespaceClause acc clauseInfo
@@ -269,7 +267,7 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
 
     spanUntilHeaderEnd acc [] = (reverse acc, [])
     spanUntilHeaderEnd acc (x:xs)
-      | any ("=" `isInfix`) acc = (reverse acc, x:xs)
+      | any ("=" `isInfixOf`) acc = (reverse acc, x:xs)
       | otherwise = spanUntilHeaderEnd (x:acc) xs
 
     spanNamespaceBody [] = ([], [])
@@ -306,7 +304,7 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
 
     startsMetaTraceInstance line =
       let t = trim line
-      in "instance" `isPrefixOf` t && "MetaTrace" `isInfix` t
+      in "instance" `isPrefixOf` t && "MetaTrace" `isInfixOf` t
 
     spanMetaTraceInstanceHeader :: [String] -> ([String], [String], Maybe TypeName)
     spanMetaTraceInstanceHeader [] = ([], [], Nothing)
@@ -316,13 +314,13 @@ parseNamespaceMap src = go Nothing (lines src) Map.empty
           let hdr = reverse acc
           in (hdr, [], parseMetaTraceInstanceType (unwords hdr))
         finish acc rest@(y:ys)
-          | any ("where" `isInfix`) acc =
+          | any ("where" `isInfixOf`) acc =
               let hdr = reverse acc
               in (hdr, rest, parseMetaTraceInstanceType (unwords hdr))
           | otherwise = finish (y:acc) ys
 
     extractNamespaceClause currentType ctorMap clause = do
-      guard ("namespaceFor" `isInfix` clause)
+      guard ("namespaceFor" `isInfixOf` clause)
       let lhs = takeWhile (/= '=') clause
       parts <- extractNamespaceParts clause
       let ctors = ctorsAfter "namespaceFor" lhs
@@ -393,7 +391,7 @@ parseTypeConstructors src = go (lines src) Map.empty
           | otherwise = step (y:acc) ys
 
         hasDeclBody line =
-          "=" `isInfix` line || " where" `isInfix` line
+          "=" `isInfixOf` line || " where" `isInfixOf` line
 
         startsNextTopLevel line =
           let t = trim line
@@ -456,26 +454,26 @@ insertNamespaceClause :: Map.Map ConstructorName [NamespaceParts]
                       -> ([ConstructorName], NamespaceParts)
                       -> Map.Map ConstructorName [NamespaceParts]
 insertNamespaceClause acc (ctors, parts) =
-  foldlStrict (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
+  foldl' (\m ctor -> Map.insertWith (++) ctor [parts] m) acc ctors
 
 isLambdaCaseBody :: [String] -> Bool
-isLambdaCaseBody (l:_) = "\\case" `isInfix` trim l
+isLambdaCaseBody (l:_) = "\\case" `isInfixOf` trim l
 isLambdaCaseBody _ = False
 
 dropLeadingLambdaCase :: [String] -> [String]
 dropLeadingLambdaCase (l:ls)
-  | "\\case" `isInfix` trim l = ls
+  | "\\case" `isInfixOf` trim l = ls
 dropLeadingLambdaCase ls = ls
 
 hasBranchArrows :: [String] -> Bool
-hasBranchArrows = any ("->" `isInfix`)
+hasBranchArrows = any ("->" `isInfixOf`)
 
 parseNamespaceLambdaClauses :: [String] -> [([ConstructorName], NamespaceParts)]
 parseNamespaceLambdaClauses = mapMaybe parseBranch . go
   where
     go [] = []
     go (l:ls)
-      | "->" `isInfix` l =
+      | "->" `isInfixOf` l =
           let (pat0, rhs0) = case breakSub "->" l of
                 Just (a, b) -> (trim a, trim b)
                 Nothing -> ("", "")
@@ -491,7 +489,7 @@ parseNamespaceLambdaClauses = mapMaybe parseBranch . go
           | isBranchStart x = (reverse acc, allLines)
           | otherwise = step (x:acc) xs
 
-    isBranchStart l = "->" `isInfix` l && startsIndented l
+    isBranchStart l = "->" `isInfixOf` l && startsIndented l
 
     parseBranch (pat, body) = do
       let parts = quotedStrings body
@@ -503,7 +501,7 @@ parseNamespaceCaseBranches ctors = mapMaybe parseBranch . go
   where
     go [] = []
     go (l:ls)
-      | "->" `isInfix` l =
+      | "->" `isInfixOf` l =
           let (_pat0, rhs0) = case breakSub "->" l of
                 Just (a, b) -> (trim a, trim b)
                 Nothing -> ("", "")
@@ -519,7 +517,7 @@ parseNamespaceCaseBranches ctors = mapMaybe parseBranch . go
           | isBranchStart x = (reverse acc, allLines)
           | otherwise = step (x:acc) xs
 
-    isBranchStart l = "->" `isInfix` l && startsIndented l
+    isBranchStart l = "->" `isInfixOf` l && startsIndented l
 
     parseBranch body = do
       let parts = quotedStrings body
@@ -570,15 +568,15 @@ parseObjectHelperMap src =
     Set.fromList
       [ trim (takeWhile (\c -> isAlphaNum c || c == '_') l)
       | l <- lines src
-      , "::" `isInfix` l
-      , "Aeson.Object" `isInfix` l
+      , "::" `isInfixOf` l
+      , "Aeson.Object" `isInfixOf` l
       ]
 
   helperBodies [] = []
   helperBodies (l:ls)
     | Just name <- helperDefName l
     , name `Set.member` helperNames
-    , "= \\case" `isInfix` l =
+    , "= \\case" `isInfixOf` l =
         let (body, rest) = spanIndented ls
         in (name, body) : helperBodies rest
     | otherwise = helperBodies ls
@@ -601,11 +599,11 @@ parseObjectHelperMap src =
       && not ("--" `isPrefixOf` trim l)
 
   parseHelperFields body =
-    foldlStrict (Map.unionWith preferSpecific) Map.empty (mapMaybe parseBranch (helperBranches body))
+    foldl' (Map.unionWith preferSpecific) Map.empty (mapMaybe parseBranch (helperBranches body))
 
   helperBranches [] = []
   helperBranches (l:ls)
-    | "->" `isInfix` l =
+    | "->" `isInfixOf` l =
         let (pat0, rhs0) = case breakSub "->" l of
               Just (a, b) -> (trim a, trim b)
               Nothing -> ("", "")
@@ -622,7 +620,7 @@ parseObjectHelperMap src =
       | isTopLevelDecl x = (reverse acc, allLines)
       | otherwise = go (x:acc) xs
 
-  isBranchStart l = "->" `isInfix` l && startsIndented l
+  isBranchStart l = "->" `isInfixOf` l && startsIndented l
 
   parseBranch cl =
     let vars = Set.fromList (extractVars (clausePattern cl))
@@ -642,7 +640,7 @@ parseForMachineClauses src = go Nothing (lines src)
     startsHeader line =
       let t = trim line
       in "forMachine" `isPrefixOf` t || "forMachineGov" `isPrefixOf` t
-    hasEquals line = "=" `isInfix` line
+    hasEquals line = "=" `isInfixOf` line
     go _ [] = []
     go currentType allLines@(l:ls)
       | startsLogFormattingInstance l =
@@ -656,7 +654,7 @@ parseForMachineClauses src = go Nothing (lines src)
               (lvlTok, pat) = parseHeader header
               (body, rest) = break startsHeader afterHeader
               bodyAfterLambda = dropLeadingLambdaCase body
-          in if "\\case" `isInfix` header || isLambdaCaseBody body
+          in if "\\case" `isInfixOf` header || isLambdaCaseBody body
                then parseLambdaCaseClauses lvlTok currentType typeConstructors bodyAfterLambda ++ go currentType rest
                else expandNestedCaseClauses lvlTok currentType typeConstructors pat body ++ go currentType rest
       | otherwise = go currentType ls
@@ -668,7 +666,7 @@ parseForMachineClauses src = go Nothing (lines src)
 
     startsLogFormattingInstance line =
       let t = trim line
-      in "instance" `isPrefixOf` t && "LogFormatting" `isInfix` t
+      in "instance" `isPrefixOf` t && "LogFormatting" `isInfixOf` t
 
     startsTopLevelDeclForMachine line =
       let t = trim line
@@ -688,7 +686,7 @@ parseLambdaCaseClauses lvl currentType typeConstructors = go
  where
   go [] = []
   go (l:ls)
-    | "->" `isInfix` l =
+    | "->" `isInfixOf` l =
         let (pat0, rhs0) = case breakSub "->" l of
               Just (a, b) -> (trim a, trim b)
               Nothing -> ("", "")
@@ -704,7 +702,7 @@ parseLambdaCaseClauses lvl currentType typeConstructors = go
       | isBranchStart x = (reverse acc, allLines)
       | otherwise = step (x:acc) xs
 
-  isBranchStart l = "->" `isInfix` l && startsIndented l
+  isBranchStart l = "->" `isInfixOf` l && startsIndented l
 
 expandNestedCaseClauses :: String -> Maybe TypeName -> Map.Map TypeName [ConstructorName] -> String -> [String] -> [Clause]
 expandNestedCaseClauses lvl currentType typeConstructors pat body =
@@ -741,7 +739,7 @@ parseHeader :: String -> (String, String)
 parseHeader line =
   let ws = words line
       keyword = case () of
-        _ | "forMachineGov" `isInfix` line -> "forMachineGov"
+        _ | "forMachineGov" `isInfixOf` line -> "forMachineGov"
           | otherwise -> "forMachine"
       lvl = case dropWhile (/= keyword) ws of
         (_:l:_) -> l
@@ -762,7 +760,7 @@ spanInstanceHeader className (x:xs) = finish [x] xs
       let hdr = reverse acc
       in (hdr, [], parseInstanceTypeForClass className (unwords hdr))
     finish acc rest@(y:ys)
-      | any ("where" `isInfix`) acc =
+      | any ("where" `isInfixOf`) acc =
           let hdr = reverse acc
           in (hdr, rest, parseInstanceTypeForClass className (unwords hdr))
       | otherwise = finish (y:acc) ys
@@ -873,7 +871,7 @@ isVariableOnlyPattern pat =
 
 -- Map JSON field keys to the pattern variable they come from.
 parseFieldVarMap :: HelperFieldMap -> [Clause] -> Map.Map ConstructorName (Map.Map DetailLevel (Map.Map String String))
-parseFieldVarMap helperMap = foldlStrict step Map.empty
+parseFieldVarMap helperMap = foldl' step Map.empty
   where
     step acc cl =
       case clauseCtor cl of
@@ -890,8 +888,8 @@ parseFieldVarMap helperMap = foldlStrict step Map.empty
               directPairs = mapMaybe (parseFieldLine vars) (collectFieldEntries sanitizedBody)
               helperPairs = concatMap helperPairsForLine sanitizedBody
               pairs = Map.toList (Map.fromListWith preferSpecific (directPairs ++ helperPairs))
-              addOne m (k,v) = foldlStrict (\mm lvl -> Map.insertWith Map.union lvl (Map.singleton k v) mm) m lvls
-          in Map.insertWith (Map.unionWith Map.union) ctor (foldlStrict addOne Map.empty pairs) acc
+              addOne m (k,v) = foldl' (\mm lvl -> Map.insertWith Map.union lvl (Map.singleton k v) mm) m lvls
+          in Map.insertWith (Map.unionWith Map.union) ctor (foldl' addOne Map.empty pairs) acc
 
     helperPairsForLine line =
       concatMap helperPairsForName (tokenize line)
@@ -905,22 +903,22 @@ parseFieldVarMap helperMap = foldlStrict step Map.empty
       | otherwise = old
 
 collectFieldEntries :: [String] -> [String]
-collectFieldEntries = finalize . foldlStrict step []
+collectFieldEntries = finalize . foldl' step []
  where
   step :: [String] -> String -> [String]
   step [] line
-    | ".=" `isInfix` line = [line]
+    | ".=" `isInfixOf` line = [line]
     | otherwise = []
   step acc@(cur:rest) line
     | fieldEntryNeedsContinuation cur = (cur <> " " <> trim line) : rest
-    | ".=" `isInfix` line = line : acc
+    | ".=" `isInfixOf` line = line : acc
     | otherwise = acc
 
-  finalize = concatMap splitFieldFragments . reverse . filter (".=" `isInfix`)
+  finalize = concatMap splitFieldFragments . reverse . filter (".=" `isInfixOf`)
 
   splitFieldFragments :: String -> [String]
   splitFieldFragments =
-    filter (".=" `isInfix`) . map trim . splitTopLevelCommasGeneral . stripOuterList . trim
+    filter (".=" `isInfixOf`) . map trim . splitTopLevelCommasGeneral . stripOuterList . trim
 
   stripOuterList s
     | headMay s == Just '[' && lastMay s == Just ']' = dropOuterDelims s
@@ -971,7 +969,7 @@ fieldEntryNeedsContinuation = hasOpenBalance . trim
       | otherwise = go paren bracketDepth brace cs
 
 stripCommentBlocks :: [String] -> [String]
-stripCommentBlocks = snd . foldlStrict step (0 :: Int, [])
+stripCommentBlocks = snd . foldl' step (0 :: Int, [])
   where
     step (depth, acc) line =
       let (depth', cleaned) = stripLine depth line
@@ -1086,48 +1084,48 @@ stringArrayExprVar = "__string_array_expr__"
 -- Heuristic detection for String-literal RHS.
 isStringLiteral :: String -> Bool
 isStringLiteral s =
-  "String \"" `isInfix` s || "String '" `isInfix` s
+  "String \"" `isInfixOf` s || "String '" `isInfixOf` s
 
 inferRhsMarker :: String -> Maybe String
 inferRhsMarker rhs
   | isStringLiteral rhs = Just literalStringVar
-  | "Number (fromIntegral" `isInfix` rhs = Just integerExprVar
-  | "Number (fromRational" `isInfix` rhs = Just numberExprVar
+  | "Number (fromIntegral" `isInfixOf` rhs = Just integerExprVar
+  | "Number (fromRational" `isInfixOf` rhs = Just numberExprVar
   | "Number " `isPrefixOf` trim rhs = Just numberExprVar
   | "String " `isPrefixOf` trim rhs = Just renderedStringVar
-  | "forMachine " `isInfix` rhs = Just objectExprVar
-  | "toObject " `isInfix` rhs = Just objectExprVar
-  | "Aeson.object" `isInfix` rhs = Just objectExprVar
-  | "object [" `isInfix` rhs = Just objectExprVar
-  | "mconcat [" `isInfix` rhs = Just objectExprVar
-  | "toJSON [" `isInfix` rhs = Just arrayExprVar
-  | "toJSONList (map show" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSONList (map showT" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSONList (map textShow" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSONList (map (show" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSONList " `isInfix` rhs = Just arrayExprVar
-  | "toJSON (map show" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSON (map showT" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSON (map textShow" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSON (map (show" `isInfix` rhs = Just stringArrayExprVar
-  | "toJSON (map (" `isInfix` rhs = Just arrayExprVar
-  | "toJSON (Set.toList" `isInfix` rhs = Just arrayExprVar
-  | "toJSON (Map.keys" `isInfix` rhs = Just arrayExprVar
-  | "toJSON (Map.elems" `isInfix` rhs = Just arrayExprVar
-  | "toJSON True" `isInfix` rhs = Just booleanExprVar
-  | "toJSON False" `isInfix` rhs = Just booleanExprVar
-  | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) [" is", "==", "/=", "&&", "||", " not "] = Just booleanExprVar
-  | "String (" `isInfix` rhs = Just renderedStringVar
-  | "textShow" `isInfix` rhs = Just renderedStringVar
-  | "showT" `isInfix` rhs = Just renderedStringVar
-  | "renderHeaderHash" `isInfix` rhs = Just renderedStringVar
-  | "renderChainHash" `isInfix` rhs = Just renderedStringVar
-  | "renderPoint" `isInfix` rhs = Just renderedStringVar
-  | "toJSON (unBlockNo" `isInfix` rhs = Just integerExprVar
-  | "toJSON (unSlotNo" `isInfix` rhs = Just integerExprVar
-  | "toJSON (fromIntegral" `isInfix` rhs = Just integerExprVar
-  | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) ["Word", "Int", "SlotNo", "BlockNo", "EpochNo", "length ", "length(", "fragmentLength"] = Just integerExprVar
-  | "toJSON (" `isInfix` rhs && any (`isInfix` rhs) ["Double", "Float", "NominalDiffTime", "DiffTime"] = Just numberExprVar
+  | "forMachine " `isInfixOf` rhs = Just objectExprVar
+  | "toObject " `isInfixOf` rhs = Just objectExprVar
+  | "Aeson.object" `isInfixOf` rhs = Just objectExprVar
+  | "object [" `isInfixOf` rhs = Just objectExprVar
+  | "mconcat [" `isInfixOf` rhs = Just objectExprVar
+  | "toJSON [" `isInfixOf` rhs = Just arrayExprVar
+  | "toJSONList (map show" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSONList (map showT" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSONList (map textShow" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSONList (map (show" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSONList " `isInfixOf` rhs = Just arrayExprVar
+  | "toJSON (map show" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSON (map showT" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSON (map textShow" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSON (map (show" `isInfixOf` rhs = Just stringArrayExprVar
+  | "toJSON (map (" `isInfixOf` rhs = Just arrayExprVar
+  | "toJSON (Set.toList" `isInfixOf` rhs = Just arrayExprVar
+  | "toJSON (Map.keys" `isInfixOf` rhs = Just arrayExprVar
+  | "toJSON (Map.elems" `isInfixOf` rhs = Just arrayExprVar
+  | "toJSON True" `isInfixOf` rhs = Just booleanExprVar
+  | "toJSON False" `isInfixOf` rhs = Just booleanExprVar
+  | "toJSON (" `isInfixOf` rhs && any (`isInfixOf` rhs) [" is", "==", "/=", "&&", "||", " not "] = Just booleanExprVar
+  | "String (" `isInfixOf` rhs = Just renderedStringVar
+  | "textShow" `isInfixOf` rhs = Just renderedStringVar
+  | "showT" `isInfixOf` rhs = Just renderedStringVar
+  | "renderHeaderHash" `isInfixOf` rhs = Just renderedStringVar
+  | "renderChainHash" `isInfixOf` rhs = Just renderedStringVar
+  | "renderPoint" `isInfixOf` rhs = Just renderedStringVar
+  | "toJSON (unBlockNo" `isInfixOf` rhs = Just integerExprVar
+  | "toJSON (unSlotNo" `isInfixOf` rhs = Just integerExprVar
+  | "toJSON (fromIntegral" `isInfixOf` rhs = Just integerExprVar
+  | "toJSON (" `isInfixOf` rhs && any (`isInfixOf` rhs) ["Word", "Int", "SlotNo", "BlockNo", "EpochNo", "length ", "length(", "fragmentLength"] = Just integerExprVar
+  | "toJSON (" `isInfixOf` rhs && any (`isInfixOf` rhs) ["Double", "Float", "NominalDiffTime", "DiffTime"] = Just numberExprVar
   | otherwise = Nothing
 
 parseQuotedKey :: String -> Maybe String
@@ -1158,15 +1156,16 @@ type VarTypes = Map.Map ConstructorName (Map.Map String String)
 -- For each file, ask GHCi for the types of variables extracted from forMachine clauses.
 ghciTypesForFile :: FilePath -> [Clause] -> IO VarTypes
 ghciTypesForFile fp clauses = do
-  let src = readFileSafe fp
+  src <- readFileSafe fp
+  let
       moduleName = extractModuleName src
       imports = extractImports src
-  let queries = mapMaybe buildQuery clauses
+      queries = mapMaybe buildQuery clauses
   if null queries then pure Map.empty else do
     out <- runGhci moduleName imports (map (fst . snd) queries)
     let outputs = splitOutputs out (length queries)
     let pairs = zip queries outputs
-    pure $ foldlStrict mergeVarTypes Map.empty (map parseQueryResult pairs)
+    pure $ foldl' mergeVarTypes Map.empty (map parseQueryResult pairs)
   where
     mergeVarTypes = Map.unionWith Map.union
 
@@ -1273,7 +1272,7 @@ splitOutputs out n = map snd (take n (splitMarkers out))
 
 parseQueryResult :: ((ConstructorName, (String, [String])), String) -> VarTypes
 parseQueryResult ((ctor, (_cmd, vars)), out) =
-  let isErr = "error:" `isInfix` out
+  let isErr = "error:" `isInfixOf` out
       varTypes = if isErr
         then parseBindings out
         else parseSignature out vars
@@ -1290,7 +1289,7 @@ parseSignature out vars = do
 
 findSigBlock :: String -> Maybe String
 findSigBlock out =
-  case break (isInfix "::") (lines out) of
+  case break (isInfixOf "::") (lines out) of
     (_, []) -> Nothing
     (_, sigStart:rest) ->
       let sigLines = sigStart : takeWhile isSigContinuation rest
@@ -1338,7 +1337,7 @@ parseBindings :: String -> Maybe (Map.Map String String)
 parseBindings out =
   let constraints = parseConstraints out
       bindings = mapMaybe parseBindingLine (lines out)
-      applyConstraints ty = foldlStrict (\t (v, rep) -> replaceToken v rep t) ty constraints
+      applyConstraints ty = foldl' (\t (v, rep) -> replaceToken v rep t) ty constraints
       fixed = [ (name, applyConstraints ty) | (name, ty) <- bindings ]
   in if null fixed then Nothing else Just (Map.fromList fixed)
 
@@ -1408,9 +1407,6 @@ headWord :: String -> String
 headWord s = case words s of
   [] -> ""
   (x:_) -> x
-
-isInfix :: String -> String -> Bool
-isInfix needle hay = T.isInfixOf (T.pack needle) (T.pack hay)
 
 -- Schema update
 
@@ -1560,8 +1556,8 @@ mergeHistDataIfEmpty histOut v@(A.Object o) = do
       if not histExists
         then pure v
         else do
-          bs <- BL.readFile histOut
-          case A.decode bs of
+          histValue <- A.decodeFileStrict' histOut
+          case histValue of
             Just (A.Object ho) ->
               case KM.lookup (K.fromString "data") ho of
                 Just d -> pure (A.Object (KM.insert (K.fromString "data") d o))
@@ -1878,9 +1874,6 @@ baseTypeName s =
       (x:_) -> x
       [] -> s''
 
-stripPrefix :: String -> String -> Maybe String
-stripPrefix pre s = if pre `isPrefixOf` s then Just (drop (length pre) s) else Nothing
-
 ensureTypeSchema :: FilePath -> String -> FieldVarMap -> VarTypes -> Set.Set String -> IO ()
 ensureTypeSchema out name fieldVarMap varTypes seen = do
   createDirectoryIfMissing True (takeDirectory out)
@@ -1943,7 +1936,7 @@ mergedPropsForType
   -> IO A.Object
 mergedPropsForType fieldVarMap varTypes seen ctor byLevel = do
   let fieldVars =
-        foldlStrict (Map.unionWith (++)) Map.empty
+        foldl' (Map.unionWith (++)) Map.empty
           [ Map.map (:[]) lvlMap
           | lvlMap <- Map.elems byLevel
           ]
@@ -2017,7 +2010,7 @@ mergeSchemas xs =
   in fromMaybe (A.object ["anyOf" A..= unique]) (singleElement unique)
 
 dedupeValues :: [A.Value] -> [A.Value]
-dedupeValues = reverse . foldlStrict step []
+dedupeValues = reverse . foldl' step []
  where
   step acc v =
     let key = BL8.unpack (A.encode v)
