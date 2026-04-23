@@ -21,6 +21,24 @@ common common
   build-depends:
     base >= 4.14 && < 5,
 
+library
+  import:         common
+  hs-source-dirs: src
+  exposed-modules:
+    TraceSchemaGen.ApplySchemaOverrides
+    TraceSchemaGen.CheckOverrideCoverage
+    TraceSchemaGen.ValidateTraceSchemas
+  build-depends:
+    aeson,
+    aeson-pretty,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    process,
+    text,
+    vector,
+
 executable schema-gen
   import:         common
   main-is:        GhciSchemaGen.hs
@@ -41,20 +59,14 @@ executable apply-schema-overrides
   main-is:        ApplySchemaOverrides.hs
   hs-source-dirs: .
   build-depends:
-    aeson,
-    aeson-pretty,
-    bytestring,
-    directory,
-    filepath,
+    trace-schema-gen,
 
 executable validate-trace-schemas
   import:         common
   main-is:        ValidateTraceSchemas.hs
   hs-source-dirs: .
   build-depends:
-    directory,
-    filepath,
-    process,
+    trace-schema-gen,
 
 executable validate-trace-log
   import:         common
@@ -74,5 +86,20 @@ executable check-override-coverage
   main-is:        CheckOverrideCoverage.hs
   hs-source-dirs: .
   build-depends:
-    containers,
-    process,
+    trace-schema-gen,
+
+test-suite trace-schema-gen-test
+  import:         common
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:
+    aeson,
+    bytestring,
+    directory,
+    filepath,
+    tasty,
+    tasty-hunit,
+    temporary,
+    text,
+    trace-schema-gen,
