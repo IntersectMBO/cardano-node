@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Experimental (Some (..))
+import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Genesis as L
@@ -33,7 +33,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
-import           Testnet.EpochStateProcessing (waitForGovActionVotes)
+import           Testnet.EpochStateProcessing (unsafeEraFromSbe, waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -241,20 +241,13 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
 committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState _, _, _) =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "Constitutional committee does not exist pre-Conway era")
-    (const $ let mCommittee = newEpochState
-                                ^. L.nesEsL
-                                 . L.esLStateL
-                                 . L.lsUTxOStateL
-                                 . L.utxosGovStateL
-                                 . L.cgsCommitteeL
-            in if committeeExists
-               then if isSJust mCommittee
-                    then Just () -- The committee is non empty and we terminate.
-                    else Nothing
-               else if mCommittee == SNothing
-                    then Just ()  -- The committee is empty and we terminate.
-                    else Nothing
-    )
-    sbe
+  obtainCommonConstraints (unsafeEraFromSbe sbe) $ do
+    let mCommittee = newEpochState
+                       ^. L.nesEsL
+                        . L.esLStateL
+                        . L.lsUTxOStateL
+                        . L.utxosGovStateL
+                        . L.cgsCommitteeL
+    guard $ if committeeExists
+      then isSJust mCommittee    -- The committee is non empty and we terminate.
+      else mCommittee == SNothing -- The committee is empty and we terminate.

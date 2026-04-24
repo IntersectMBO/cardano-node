@@ -88,6 +88,22 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-api
+  tag: d0cfc2b866da41541eb7ab3ba1e88a07183b6073
+  --sha256: sha256-NfJ0O/W6Y7hUf1UXGijOGq1enAI+YteQCacu2tICras=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-cli
+  tag: 7d2bb89f2cb9034cfbf51e9ddd3defe41fcefc0a
+  --sha256: sha256-42RsgjCzq9/VxMTvVBDhmZd9ue39ZMg5oJX0cfL3ocw=
+  subdir:
+    cardano-cli
+
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
   source-repository-package

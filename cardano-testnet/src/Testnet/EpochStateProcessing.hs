@@ -3,12 +3,14 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Testnet.EpochStateProcessing
-  ( maybeExtractGovernanceActionIndex
+  ( unsafeEraFromSbe
+  , maybeExtractGovernanceActionIndex
   , maybeExtractGovernanceActionExpiry
   , waitForGovActionVotes
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Era, obtainCommonConstraints, sbeToEra)
 import           Cardano.Api.Ledger (EpochInterval (..), GovActionId (..))
 import qualified Cardano.Api.Ledger as L
 
@@ -30,7 +32,6 @@ import           Testnet.Components.Query (EpochStateView, TestnetWaitPeriod (..
 
 import           Hedgehog
 import           Hedgehog.Extras (MonadAssertion)
-import qualified Hedgehog.Extras as H
 
 maybeExtractGovernanceActionIndex
   :: HasCallStack
@@ -38,13 +39,9 @@ maybeExtractGovernanceActionIndex
   -> AnyNewEpochState
   -> Maybe Word16
 maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState _) =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "Governance actions only available in Conway era onwards")
-    (\ceo -> conwayEraOnwardsConstraints ceo $ do
-        let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
-        Map.foldlWithKey' (compareWithTxId txid) Nothing (L.proposalsActionsMap proposals)
-    )
-    sbe
+  obtainCommonConstraints (unsafeEraFromSbe sbe) $ do
+    let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
+    Map.foldlWithKey' (compareWithTxId txid) Nothing $ L.proposalsActionsMap proposals
   where
     compareWithTxId (TxId ti1) Nothing (GovActionId (L.TxId ti2) (L.GovActionIx gai)) _
       | ti1 == L.extractHash ti2 = Just gai
@@ -64,16 +61,12 @@ maybeExtractGovernanceActionExpiry
   -> AnyNewEpochState
   -> Maybe EpochNo
 maybeExtractGovernanceActionExpiry txid (AnyNewEpochState sbe newEpochState _) =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "Governance actions only available in Conway era onwards")
-    (\ceo -> conwayEraOnwardsConstraints ceo $ do
-        let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
-        Map.foldlWithKey' (compareWithTxId txid) Nothing (L.proposalsActionsMap proposals)
-    )
-    sbe
+  obtainCommonConstraints (unsafeEraFromSbe sbe) $ do
+    let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
+    Map.foldlWithKey' (compareWithTxId txid) Nothing $ L.proposalsActionsMap proposals
   where
     compareWithTxId (TxId ti1) Nothing (GovActionId (L.TxId ti2) _) govActionState
-      | ti1 == L.extractHash ti2 = Just (L.gasExpiresAfter govActionState)
+      | ti1 == L.extractHash ti2 = Just $ L.gasExpiresAfter govActionState
     compareWithTxId _ x _ _ = x
 
 -- | Wait for the last gov action proposal in the list to have DRep or SPO votes.
@@ -93,20 +86,20 @@ waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $
       :: HasCallStack
       => (AnyNewEpochState, SlotNo, BlockNo)
       -> m (Maybe ())
-    checkForVotes (AnyNewEpochState actualEra newEpochState _, _, _) = withFrozenCallStack $ do
-      caseShelleyToBabbageOrConwayEraOnwards
-        (const $ H.note_ "Only Conway era onwards is supported" >> failure)
-        (\ceo -> do
-          let govState = conwayEraOnwardsConstraints ceo $ newEpochState ^. newEpochStateGovStateL
-              proposals = govState ^. L.cgsProposalsL . L.pPropsL . to toList
-          if null proposals
+    checkForVotes (AnyNewEpochState actualEra newEpochState _, _, _) = withFrozenCallStack $
+      obtainCommonConstraints (unsafeEraFromSbe actualEra) $ do
+        let proposals = newEpochState ^. newEpochStateGovStateL . L.cgsProposalsL . L.pPropsL . to toList
+        if null proposals
+          then pure Nothing
+          else do
+            let lastProposal = last proposals
+                gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
+                gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
+            if null gaDRepVotes && null gaSpoVotes
             then pure Nothing
-            else do
-              let lastProposal = last proposals
-                  gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
-                  gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
-              if null gaDRepVotes && null gaSpoVotes
-              then pure Nothing
-              else pure $ Just ()
-        )
-        actualEra
+            else pure $ Just ()
+
+-- | Unsafely convert a 'ShelleyBasedEra' witness to an experimental 'Era' witness.
+-- Throws an 'error' for deprecated (pre-Conway) eras.
+unsafeEraFromSbe :: HasCallStack => ShelleyBasedEra era -> Era era
+unsafeEraFromSbe = either (error . show) id . sbeToEra
