@@ -895,7 +895,7 @@ let
                   in
                      # Recreate the "run-script.json" with IPs and ports that are
                      # nomad template variables.
-                     (runScriptToGoTemplate
+                     (runScriptToGoTemplate2
                        runScript
                        # Just the node names.
                        (lib.attrsets.mapAttrsToList
@@ -1392,6 +1392,32 @@ let
         { "Producers": ${nodesReferencesStr}
         }
         ''
+  ;
+
+  runScriptToGoTemplate2 = runScript: _: builtins.replaceStrings
+    (
+      (builtins.genList
+        (i: ''__addr_${toString i}__'')
+        100
+      )  
+      ++
+      (builtins.genList
+        (i: ''"__port_${toString i}__"'')
+        100
+      )
+    )
+    (
+      (builtins.genList
+        (i: ''{{range nomadService "${(nodeNameToServicePortName "node-${toString i}")}"}}{{.Address}}{{end}}'')
+        100
+      )  
+      ++
+      (builtins.genList
+        (i: ''{{range nomadService "${(nodeNameToServicePortName "node-${toString i}")}"}}{{.Port}}{{end}}'')
+        100
+      )
+    )
+    (lib.generators.toJSON {} runScript)
   ;
 
   # Convert from generator's "run-script.json" with all addresses being
