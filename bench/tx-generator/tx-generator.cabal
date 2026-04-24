@@ -86,6 +86,7 @@ library
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
                         Cardano.TxGenerator.Setup.NodeConfig
+                        Cardano.TxGenerator.Setup.TestnetDiscovery
                         Cardano.TxGenerator.Setup.Plutus
                         Cardano.TxGenerator.PlutusContext
                         Cardano.TxGenerator.Setup.SigningKey
@@ -127,6 +128,7 @@ library
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , directory
                       , dlist
                       , extra
                       , filepath
