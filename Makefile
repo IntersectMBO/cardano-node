@@ -42,13 +42,13 @@ trace-schemas-regenerate: ## Regenerate trace schemas, apply overrides, validate
 	bash bench/trace-schemas/scripts/schema-gen/RegenerateTraceSchemas.sh
 
 trace-schemas-overrides-check: ## Check whether all schema overrides are applied
-	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --check --verbose"
+	nix run .#apply-schema-overrides -- --check --verbose
 
 trace-schemas-overrides-coverage: ## Fail when generated schema files change without matching override sidecars (use RANGE=origin/master...HEAD in CI)
-	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/CheckOverrideCoverage.hs ${if ${RANGE},--range ${RANGE}}"
+	nix run .#check-override-coverage -- ${if ${RANGE},--range ${RANGE}}
 
 trace-schemas-validate: ## Validate trace message schemas against meta.schema.json
-	nix develop -c bash -lc "GHC_ENVIRONMENT=- runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"
+	nix run .#validate-trace-schemas
 
 ###
 ### Workbench

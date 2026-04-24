@@ -6,13 +6,21 @@ or the step-by-step commands:
 
 `GHC_ENVIRONMENT=- nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.yaml --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md`
 
-`nix develop -c bash -c 'runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'`
+`nix run .#schema-gen`
 
-`nix develop -c bash -c "runghc bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --verbose"`
+`nix run .#apply-schema-overrides -- --verbose`
 
-`nix develop -c bash -c "runghc bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"`
+`nix run .#validate-trace-schemas`
 
-`nix develop -c bash -c "runghc bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"`
+`nix run .#validate-trace-log -- --log-file run/.../stdout`
+
+Additional checks:
+
+`make trace-schemas-overrides-check`
+
+`make trace-schemas-overrides-coverage RANGE=origin/master...HEAD`
+
+`make trace-schemas-validate`
 
 ## What it does
 
@@ -23,7 +31,7 @@ or the step-by-step commands:
 ## High-level flow
 
 1. **Find relevant Haskell files**
-   - Scans `cardano-node/src`, `cardano-submit-api/src`, `cardano-tracer/src`, `trace-dispatcher/src`, `trace-forward/src`, `trace-resources/src`.
+   - Scans `cardano-node/src`, `cardano-submit-api/src`, `cardano-tracer/src`, `trace-forward/src`, `trace-resources/src`, and several tracing-related directories in `ouroboros-network`, `ouroboros-consensus`, and `hermod-tracing`.
    - Warns when any configured source directory is missing, instead of silently ignoring it.
    - Keeps only `.hs` files that contain `forMachine` or `namespaceFor`.
 
@@ -39,7 +47,7 @@ or the step-by-step commands:
    - Literal string RHS like `"kind" .= String "X"` are treated as string fields.
 
 4. **Ask GHCi for types**
-   - For each file, it runs `cabal repl cardano-node` and issues `:t` queries for patterns.
+   - For each file, it runs GHCi and issues `:t` queries for patterns.
    - Extracts variable types from the returned type signatures or error output.
    - This becomes a map `constructor -> variable -> type`.
 
@@ -69,14 +77,20 @@ or the step-by-step commands:
 
 - `ValidateTraceSchemas.hs` checks `meta.schema.json` with `check-jsonschema`, then validates every file in `bench/trace-schemas/messages` against that meta-schema.
 - The Haskell script controls discovery and execution; the actual JSON Schema validation is delegated to `check-jsonschema` via `nix run nixpkgs#check-jsonschema`.
-- Run it with `runghc -package-env - ...` so the standalone script does not inherit the repo's package environment.
+- Run it via the packaged flake executable: `nix run .#validate-trace-schemas`.
 - `ValidateTraceLog.hs` validates a real cardano-node log file: it skips the non-JSON preamble, validates the common envelope against `TraceMessage.schema.json`, validates known namespaces against the matching schema in `bench/trace-schemas/messages`, and reports namespaces that do not have a corresponding message schema.
+
+## Packaging and tests
+
+- The scripts are packaged in `bench/trace-schemas/scripts/schema-gen/trace-schema-gen.cabal` as executables, which is why they can be invoked with `nix run .#...`.
+- The smaller helper scripts also have a package test suite:
+  - `nix develop -c cabal test trace-schema-gen-test`
 
 ## Human changes that survive regeneration
 
 - Treat `bench/trace-schemas/messages` and `bench/trace-schemas/types` as generated outputs.
 - Put manual edits in sidecar override patches under `bench/trace-schemas/overrides`.
-- Apply overrides with `ApplySchemaOverrides.hs` after every generation.
+- Apply overrides with `nix run .#apply-schema-overrides -- --verbose` after every generation.
 - Enforce in CI with:
   - `make trace-schemas-regenerate`
   - `make trace-schemas-overrides-check`
