@@ -257,9 +257,12 @@ test-suite tx-generator-test
                       , cardano-api
                       , cardano-node
                       , directory
+                      , extra
                       , filepath
+                      , QuickCheck
                       , tasty
                       , tasty-hunit
+                      , tasty-quickcheck
                       , temporary
                       , tx-generator
 
