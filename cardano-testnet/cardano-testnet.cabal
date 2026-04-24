@@ -218,6 +218,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Transaction
                         Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+                        Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
                         Cardano.Testnet.Test.DumpConfig
                         Cardano.Testnet.Test.FoldEpochState
                         Cardano.Testnet.Test.Gov.CommitteeAddNew
