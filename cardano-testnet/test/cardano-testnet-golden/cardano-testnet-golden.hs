@@ -24,6 +24,7 @@ tests = pure $ T.testGroup "Golden tests"
   [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Cardano.Testnet.Test.Golden.Config.goldenDefaultConfigYaml
   , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Cardano.Testnet.Test.Golden.Help.golden_HelpAll
   , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Cardano.Testnet.Test.Golden.Help.golden_HelpCmds
+  , H.testPropertyNamed "golden_VersionCmd" (fromString "golden_VersionCmd") Cardano.Testnet.Test.Golden.Help.golden_VersionCmd
   ]
 
 ingredients :: [T.Ingredient]
