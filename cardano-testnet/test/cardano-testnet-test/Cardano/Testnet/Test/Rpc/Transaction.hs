@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -26,12 +27,13 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.Fix
+import           Control.Monad.Trans.Control (liftBaseOp)
 import           Data.Default.Class
 import qualified Data.Text.Encoding as T
 import           GHC.Stack
 import           Lens.Micro
 
+import           Testnet.Components.Query (TestnetWaitPeriod (..), getEpochStateView, retryUntilM)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
@@ -40,7 +42,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
-import           RIO (ByteString, threadDelay)
+import           RIO (ByteString)
 
 -- | Run with:
 -- @TASTY_PATTERN='/RPC Transaction Submit/' cabal test cardano-testnet-test@
@@ -54,11 +56,13 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
       addrInEra = AsAddressInEra eraProxy
 
   TestnetRuntime
-    { testnetNodes = node0 : _
+    { configurationFile
+    , testnetNodes = node0 : _
     , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : (PaymentKeyInfo _ addrTxt1) : _
     } <-
     createAndRunTestnet options def conf
 
+  epochStateView <- getEpochStateView configurationFile $ nodeSocketPath node0
   rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
 
   -- prepare tx inputs and output address
@@ -116,40 +120,30 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
 
   H.noteShowPretty_ utxosResponse
 
-  (utxos, submitResponse) <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
-    submitResponse <-
+  liftBaseOp (Rpc.withConnection def rpcServer) $ \conn -> do
+    submitResponse <- H.noteShowM . H.evalIO $
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.SubmitService "submitTx")) $
         def & U5c.tx .~ (def & U5c.raw .~ serialiseToCBOR signedTx)
 
-    fix $ \loop -> do
-      resp <- Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) def
+    submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. U5c.ref
 
-      let previousBlockNo = pparamsResponse ^. U5c.ledgerTip . U5c.height
-          currentBlockNo = resp ^. U5c.ledgerTip . U5c.height
-      -- wait for 2 blocks
-      when (previousBlockNo + 1 >= currentBlockNo) $ do
-        threadDelay 500_000
-        loop
+    H.note_ "Ensure that submitted transaction ID is in the submitted transactions list"
+    txId' === submittedTxId
 
     -- TODO use searchUtxos when available
-    utxos <-
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) def
-    pure (utxos, submitResponse)
+    H.note_ $ "Ensure that there are 2 UTXOs in the address " <> show addrTxt1
+    utxosForAddress <- retryUntilM epochStateView (WaitForBlocks 10)
+      (do utxos <- H.evalIO $
+            Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) def
+          flip filterM (utxos ^. U5c.items) $ \utxo -> do
+            utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. U5c.cardano . U5c.address
+            pure $ addr1 == utxoAddress
+      )
+      (\xs -> length xs == 2)
 
-  submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. U5c.ref
-
-  H.note_ "Ensure that submitted transaction ID is in the submitted transactions list"
-  txId' === submittedTxId
-
-  H.note_ $ "Ensure that there are 2 UTXOs in the address " <> show addrTxt1
-  utxosForAddress <- H.noteShowM . flip filterM (utxos ^. U5c.items) $ \utxo -> do
-    utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. U5c.cardano . U5c.address
-    pure $ addr1 == utxoAddress
-  2 === length utxosForAddress
-
-  let outputsAmounts = map (^. U5c.cardano . U5c.coin) utxosForAddress
-  H.note_ $ "Ensure that the output sent is one of the utxos for the address " <> show addrTxt1
-  H.assertWith outputsAmounts $ elem (inject amount)
+    let outputsAmounts = map (^. U5c.cardano . U5c.coin) utxosForAddress
+    H.note_ $ "Ensure that the output sent is one of the utxos for the address " <> show addrTxt1
+    H.assertWith outputsAmounts $ elem (inject amount)
 
 txoRefToTxIn :: (HasCallStack, MonadTest m) => Proto UtxoRpc.TxoRef -> m TxIn
 txoRefToTxIn r = withFrozenCallStack $ do
