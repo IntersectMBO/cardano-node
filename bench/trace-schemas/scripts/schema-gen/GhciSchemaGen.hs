@@ -13,7 +13,7 @@ import qualified Data.Aeson.Key as K
 import qualified Data.Vector as V
 import Data.Char (isAlphaNum, isLower, isUpper, isSpace, toLower)
 import Data.List (elemIndex, foldl', isInfixOf, isPrefixOf, isSuffixOf, sortOn, stripPrefix)
-import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Data.Ord (Down (..))
 import System.Directory
 import System.Environment (getArgs)
