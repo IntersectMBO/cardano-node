@@ -69,8 +69,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
-        { cardanoNodeEra = asbe
-        , cardanoNodes =
+        { creationEra = asbe
+        , creationNodes =
             SpoNodeOptions [] :|
           [ SpoNodeOptions []
           , SpoNodeOptions []
@@ -154,7 +154,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    (creationEra cTestnetOptions)
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp

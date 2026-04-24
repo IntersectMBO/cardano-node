@@ -59,7 +59,7 @@ import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpe
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
+import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), creationNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -86,14 +86,16 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def
-        { genesisEpochLength = 100
-        -- We change slotCoeff because epochLength must be equal to:
-        -- securityParam * 10 / slotCoeff
-        , genesisActiveSlotsCoeff = 0.5
+      fastTestnetOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def
+            { genesisEpochLength = 100
+            -- We change slotCoeff because epochLength must be equal to:
+            -- securityParam * 10 / slotCoeff
+            , genesisActiveSlotsCoeff = 0.5
+            }
         }
-      nPools = cardanoNumPools fastTestnetOptions
+      nPools = creationNumPools fastTestnetOptions
 
   TestnetRuntime
     { testnetMagic
@@ -101,7 +103,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     , configurationFile
     , wallets=wallet0:wallet1:_
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions def conf
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 

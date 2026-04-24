@@ -153,16 +153,16 @@ createSPOGenesisAndFiles
   :: MonadIO m
   => HasCallStack
   => MonadThrow m
-  => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
-  -> TestnetOnChainParams
+  => TestnetCreationOptions
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles
-  testnetOptions genesisOptions@GenesisOptions{genesisTestnetMagic}
-  onChainParams
+  creationOptions@TestnetCreationOptions
+    { creationGenesisOptions=genesisOptions@GenesisOptions{genesisTestnetMagic}
+    , creationOnChainParams=onChainParams
+    }
   (TmpAbsolutePath tempAbsPath) =  do
-  AnyShelleyBasedEra sbe <- pure cardanoNodeEra
+  AnyShelleyBasedEra sbe <- pure creationEra
 
 
   let genesisShelleyDir = takeDirectory inputGenesisShelleyFp
@@ -171,9 +171,9 @@ createSPOGenesisAndFiles
 
   let -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
-      numStakeDelegators = max 3 (fromIntegral cardanoNumDReps) :: Int
+      numStakeDelegators = max 3 (fromIntegral creationNumDReps) :: Int
 
-  shelleyGenesis'' <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply genesisOptions
+  shelleyGenesis'' <- getDefaultShelleyGenesis creationEra creationMaxSupply genesisOptions
   -- TODO: Remove this rewrite.
   -- 50 second epochs
   -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
@@ -209,10 +209,10 @@ createSPOGenesisAndFiles
     ++
     [ "--testnet-magic", show genesisTestnetMagic
     , "--pools", show nPoolNodes
-    , "--total-supply",     show cardanoMaxSupply -- Half of this will be delegated, see https://github.com/IntersectMBO/cardano-cli/pull/874
+    , "--total-supply",     show creationMaxSupply -- Half of this will be delegated, see https://github.com/IntersectMBO/cardano-cli/pull/874
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys]
-    <> monoidForEraInEon @ConwayEraOnwards era (const ["--drep-keys", show cardanoNumDReps])
+    <> monoidForEraInEon @ConwayEraOnwards era (const ["--drep-keys", show creationNumDReps])
     <> [ "--start-time", DTC.formatIso8601 startTime
     , "--out-dir", tempAbsPath
     ]
@@ -230,8 +230,8 @@ createSPOGenesisAndFiles
     inputGenesisAlonzoFp  = genesisInputFilepath AlonzoEra
     inputGenesisConwayFp  = genesisInputFilepath ConwayEra
     inputGenesisDijkstraFp  = genesisInputFilepath DijkstraEra
-    nPoolNodes = cardanoNumPools testnetOptions
-    CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply, cardanoNumDReps} = testnetOptions
+    nPoolNodes = creationNumPools creationOptions
+    TestnetCreationOptions{creationEra, creationMaxSupply, creationNumDReps} = creationOptions
     genesisInputFilepath :: Pretty (eon era) => eon era -> FilePath
     genesisInputFilepath e = tempAbsPath </> ("genesis-input." <> eraToString e <> ".json")
     createTestnetDataFlag :: Pretty (eon era) => eon era -> [String]

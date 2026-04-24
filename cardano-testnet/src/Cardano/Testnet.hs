@@ -10,7 +10,9 @@ module Cardano.Testnet (
   retryOnAddressInUseError,
 
   -- ** Testnet options
-  CardanoTestnetOptions(..),
+  TestnetCreationOptions(..),
+  TestnetRuntimeOptions(..),
+  TestnetEnvOptions(..),
   RpcSupport(..),
   NodeOption(..),
   cardanoDefaultTestnetNodeOptions,

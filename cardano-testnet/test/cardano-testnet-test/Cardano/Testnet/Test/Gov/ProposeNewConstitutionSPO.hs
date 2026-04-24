@@ -55,15 +55,15 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNodes =
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNodes =
             SpoNodeOptions [] :|
           [ SpoNodeOptions []
           , SpoNodeOptions []
           ]
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
         }
-      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -71,7 +71,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
     , wallets=wallet0:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

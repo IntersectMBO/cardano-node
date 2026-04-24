@@ -1,37 +1,32 @@
 Usage: cardano-testnet (cardano | create-env | version | help)
 
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
-  [--max-lovelace-supply WORD64]
-  [--node-logging-format LOGGING_FORMAT]
-  [--num-dreps NUMBER]
+Usage: cardano-testnet cardano 
+  [ --node-env FILEPATH [--preserve-timestamps]
+  | [--num-pool-nodes COUNT]
+    [--max-lovelace-supply WORD64]
+    [--num-dreps NUMBER]
+    [--testnet-magic INT]
+    [--epoch-length SLOTS]
+    [--slot-length SECONDS]
+    [--active-slots-coeff DOUBLE]
+    [--params-file FILEPATH | --params-mainnet]
+    [--output-dir DIRECTORY]
+  ]
   [--enable-new-epoch-state-logging]
-  [--output-dir DIRECTORY]
   [--enable-grpc]
   [--use-kes-agent]
-  [--testnet-magic INT]
-  [--epoch-length SLOTS]
-  [--slot-length SECONDS]
-  [--active-slots-coeff DOUBLE]
-  [--node-env FILEPATH]
-  [--preserve-timestamps]
-  [--params-file FILEPATH | --params-mainnet]
 
   Start a testnet and keep it running until stopped
 
 Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--max-lovelace-supply WORD64]
-  [--node-logging-format LOGGING_FORMAT]
   [--num-dreps NUMBER]
-  [--enable-new-epoch-state-logging]
-  [--output-dir DIRECTORY]
-  [--enable-grpc]
-  [--use-kes-agent]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
-  --output DIRECTORY
   [--params-file FILEPATH | --params-mainnet]
+  --output DIRECTORY
 
   Create a sandbox for Cardano testnet
 

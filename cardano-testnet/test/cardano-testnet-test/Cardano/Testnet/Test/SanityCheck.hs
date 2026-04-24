@@ -50,14 +50,15 @@ hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sa
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = def
-      shelleyOptions = def
-        { genesisEpochLength = 100
-        , genesisSlotLength = 0.1
+  let creationOptions = def
+        { creationGenesisOptions = def
+            { genesisEpochLength = 100
+            , genesisSlotLength = 0.1
+            }
         }
 
   TestnetRuntime{configurationFile, testnetNodes}
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   nr@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   let socketPath = nodeSocketPath nr

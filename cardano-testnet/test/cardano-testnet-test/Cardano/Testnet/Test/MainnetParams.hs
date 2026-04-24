@@ -18,8 +18,7 @@ import           Lens.Micro ((^?))
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..),
-                   TestnetOnChainParams (..), UserProvidedEnv (..))
+import           Testnet.Start.Types (GenesisOptions (..), TestnetOnChainParams (..))
 
 import           Hedgehog ((/==))
 import qualified Hedgehog as H
@@ -30,23 +29,21 @@ import qualified Hedgehog.Extras as H
 hprop_mainnet_params :: H.Property
 hprop_mainnet_params = integrationRetryWorkspace 2 "mainnet-params" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
-  let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
-      genesisOptions = def { genesisEpochLength = 200 }
-      createEnvOptions = def
-        { ceoOnChainParams = OnChainParamsFile
+  let creationOptions = def
+        { creationGenesisOptions = def { genesisEpochLength = 200 }
+        , creationOnChainParams = OnChainParamsFile
             "test/cardano-testnet-test/files/input/blockfrost-params.json"
         }
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  liftToIntegration $ createTestnetEnv
-    testnetOptions genesisOptions createEnvOptions conf
+  liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Run testnet with mainnet on-chain params
   TestnetRuntime
     { testnetNodes
     , testnetMagic
-    } <- liftToIntegration $ cardanoTestnet testnetOptions conf
+    } <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
   -- Get a running node
   TestnetNode{nodeSprocket} <- H.headM testnetNodes

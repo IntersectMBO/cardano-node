@@ -19,7 +19,7 @@ import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
-                   UpdateTimestamps (..), UserProvidedEnv (..))
+                   UpdateTimestamps (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -29,13 +29,12 @@ import qualified Hedgehog.Extras as H
 hprop_update_time_stamps :: H.Property
 hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
-  let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
-      genesisOptions = def { genesisEpochLength = 200 }
+  let creationOptions = def { creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
   liftToIntegration $ createTestnetEnv
-    testnetOptions genesisOptions def
+    creationOptions
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
     conf{genesisHashesPolicy = WithoutHashes}
@@ -45,6 +44,6 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   H.threadDelay $ double2Int $ realToFrac startTimeOffsetSeconds * 1_000_000 * 1.2
 
   -- Run testnet and specify to update time stamps before starting
-  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf{updateTimestamps = UpdateTimestamps}
+  runtime <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf{updateTimestamps = UpdateTimestamps}
 
   nodesProduceBlocks tmpDir runtime

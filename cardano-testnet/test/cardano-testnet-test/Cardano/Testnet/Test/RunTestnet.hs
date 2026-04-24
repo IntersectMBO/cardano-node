@@ -6,7 +6,7 @@ module Cardano.Testnet.Test.RunTestnet
   ( hprop_run_testnet
   ) where
 
-import           Cardano.Testnet (createAndRunTestnet, mkConf)
+import           Cardano.Testnet (TestnetCreationOptions (..), createAndRunTestnet, mkConf)
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
 import           Prelude
@@ -24,10 +24,11 @@ import qualified Hedgehog.Extras as H
 hprop_run_testnet :: H.Property
 hprop_run_testnet = integrationRetryWorkspace 2 "run-testnet" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
-  let shelleyOptions = def { genesisEpochLength = 200 }
-      testnetOptions = def
+  let creationOptions = def
+        { creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   conf <- mkConf tmpDir
-  runtime <- createAndRunTestnet testnetOptions shelleyOptions conf
+  runtime <- createAndRunTestnet creationOptions def conf
 
   nodesProduceBlocks tmpDir runtime

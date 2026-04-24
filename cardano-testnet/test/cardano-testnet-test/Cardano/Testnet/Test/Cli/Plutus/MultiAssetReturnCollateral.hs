@@ -45,14 +45,14 @@ hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-toke
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:wallet2:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

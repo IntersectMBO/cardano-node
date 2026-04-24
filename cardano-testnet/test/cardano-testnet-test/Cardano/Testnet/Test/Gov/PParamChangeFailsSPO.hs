@@ -61,8 +61,10 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -70,7 +72,7 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
     , wallets=wallet0:wallet1:_wallet2:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

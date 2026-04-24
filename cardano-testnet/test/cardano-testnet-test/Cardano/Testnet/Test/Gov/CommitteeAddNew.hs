@@ -47,7 +47,7 @@ import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx,
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
+import           Testnet.Start.Types (GenesisOptions (..), creationNumPools)
 import           Testnet.Types
 
 import           Hedgehog
@@ -73,17 +73,17 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
               -> [(String, Int)] -- ^ [(vote, ordering number)]
       mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
-      nSpos = fromIntegral $ cardanoNumPools fastTestnetOptions
+      nSpos = fromIntegral $ creationNumPools creationOptions
       ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = fromIntegral nDrepVotes
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = fromIntegral nDrepVotes
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
-      shelleyOptions = def { genesisEpochLength = 200 }
   H.annotateShow drepVotes
   H.noteShow_ nDrepVotes
 
@@ -92,7 +92,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
   poolSprocket1 <- H.noteShow $ nodeSprocket node

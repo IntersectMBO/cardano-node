@@ -64,10 +64,12 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
       era = toCardanoEra sbe
       eraName = eraToString era
 
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 200
-                           , genesisActiveSlotsCoeff = 0.3
-                           }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 200
+                                       , genesisActiveSlotsCoeff = 0.3
+                                       }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -75,7 +77,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow nodeSprocket

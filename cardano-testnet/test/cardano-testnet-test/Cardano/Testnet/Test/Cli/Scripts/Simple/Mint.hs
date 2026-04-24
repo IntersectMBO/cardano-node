@@ -48,14 +48,14 @@ hprop_simple_script_mint = integrationRetryWorkspace 2 "simple-script-mint" $ \t
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

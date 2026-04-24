@@ -69,7 +69,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
-      cTestnetOptions = def { cardanoNodeEra = asbe }
+      cTestnetOptions = def { creationEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
@@ -149,7 +149,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    (creationEra cTestnetOptions)
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp

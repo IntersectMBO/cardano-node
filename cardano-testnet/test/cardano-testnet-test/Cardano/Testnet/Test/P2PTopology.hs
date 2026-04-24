@@ -7,7 +7,7 @@ module Cardano.Testnet.Test.P2PTopology
   ) where
 
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Testnet (CardanoTestnetOptions (..), cardanoTestnet, createTestnetEnv,
+import           Cardano.Testnet (TestnetCreationOptions (..), cardanoTestnet, createTestnetEnv,
                    mkConf)
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
@@ -18,8 +18,8 @@ import           System.FilePath ((</>))
 
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (CreateEnvOptions (..), GenesisOptions (..), NodeId,
-                   TopologyType (..), UserProvidedEnv (..))
+import           Testnet.Start.Types (GenesisOptions (..), NodeId,
+                   TopologyType (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -30,20 +30,18 @@ import qualified Hedgehog.Extras as H
 hprop_p2p_topology :: H.Property
 hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
-  let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
-      genesisOptions = def { genesisEpochLength = 200 }
-      createEnvOptions = def { ceoTopologyType = P2PTopology }
+  let creationOptions = def { creationGenesisOptions = def { genesisEpochLength = 200 } }
       someTopologyFile = tmpDir </> "node-data" </> "node1" </> "topology.json"
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  liftToIntegration $ createTestnetEnv testnetOptions genesisOptions createEnvOptions conf
+  liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Check that the topology is indeed P2P
   eTopology <- H.readJsonFile someTopologyFile
   (_topology :: P2P.NetworkTopology NodeId) <- H.leftFail eTopology
 
   -- Run testnet with generated config
-  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf
+  runtime <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
   nodesProduceBlocks tmpDir runtime
