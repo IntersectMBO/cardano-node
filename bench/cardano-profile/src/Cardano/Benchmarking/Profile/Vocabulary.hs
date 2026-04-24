@@ -114,13 +114,166 @@ genesisVariantVoltaire = genesisVariantLatest
 -- Definition vocabulary: funds.
 --------------------------------
 
+-- | Estimate the number of genesis UTxO keys (funds) required for continuous
+-- load generation using @on_confirm@ recycling.
+--
+-- @
+-- funds = ceiling((M + J + D × B + Q × S) / S × I)
+-- @
+--
+-- * @M@: single-node mempool capacity in bytes
+--   (@MempoolCapacityBytesOverride@ rounded up to whole blocks by Consensus).
+-- * @J@: disjoint mempool bytes across all nodes. The caller pre-computes
+--   this as @nodes × (1 - syncRatio) × mempool@; 0 for perfect sync.
+-- * @D@: confirmation depth (blocks on top before recycling).
+-- * @Q@: payload queue depth (built txs waiting to be fetched by workers).
+-- * @B@: effective block body size in bytes (@maxBlockBodySize@ minus
+--   @fixedBlockBodyOverhead@ (1024) to account for block serialization
+--   overhead not captured by summing individual tx sizes).
+-- * @S@: serialised transaction size in bytes.
+-- * @I@: inputs per transaction (= UTxO keys consumed per tx).
+--
+-- Counts the maximum funds simultaneously locked in the pipeline:
+--
+-- @
+-- payload queue (Q txs) → mempool (M bytes) → unconfirmed (D blocks) → recycled
+-- @
+--
+-- __TPS is irrelevant.__ The tx-centrifuge is pull-based, the node requests
+-- transactions when its mempool has room. In steady state the submission rate
+-- is driven by block production, not TPS. TPS only determines how quickly the
+-- mempool fills initially, that is enough txs to fill all mempools if the
+-- resulting drain rate allows it.
+--
+-- __Mempool sync ratio.__ With perfect sync (@syncRatio = 1.0@) all mempools
+-- hold the same txs and the mempool counts once. In practice, propagation
+-- latency and asymmetric connectivity cause partial disjointness: each node
+-- has a fraction of unique txs that still consume funds. The effective
+-- mempool is @syncRatio × M + nodes × (1 - syncRatio) × M@. With
+-- @syncRatio = 1.0@ this collapses to @M@ (count once); with
+-- @syncRatio = 0.7@ and 52 nodes it becomes @0.7 × M + 52 × 0.3 × M@.
+--
+-- __Confirmation depth and fork safety.__ Forks of depth <= D are safe, the
+-- recycler receives orphan events and recycles original inputs. Forks deeper
+-- than D cause permanent fund loss (outputs already recycled, originals gone).
+-- Fork frequency depends only on the active slot coefficient @f@ (typically
+-- 0.05); a depth-K fork requires K consecutive slot battles (≈ 0.001^K),
+-- making D = 2 safe for virtually all configurations.
+--
+-- __Payload queue (Q).__ The builder's payload queue (bounded TBQueue,
+-- hardcoded to 8192 in Config.Runtime) holds already-built transactions
+-- whose input funds are already consumed. Back-to-back blocks can drain
+-- this queue before the recycler/builder refill it, fatal with
+-- @on_exhaustion = error@. The queue depth is counted in transactions
+-- (not blocks) and contributes directly to the in-flight fund count.
+utxoKeys
+  :: Integer -- ^ Payload queue capacity (built txs waiting to be fetched).
+             --   Hardcoded to 8192 in Config.Runtime.
+  -> Integer -- ^ Mempool capacity in bytes (per node).
+  -> Integer -- ^ Disjoint mempool bytes across all nodes. Total unique bytes
+             --   not shared by all mempools: @nodes × (1 - syncRatio) × mempool@.
+             --   0 for perfect sync; the caller pre-computes this from the
+             --   number of nodes and the estimated sync ratio.
+  -> Integer -- ^ Max block body size in bytes (protocol parameter).
+  -> Integer -- ^ Confirmation depth (blocks on top before recycling).
+             --   Also the fork protection depth: forks of depth <= D are safe;
+             --   deeper forks cause permanent fund loss.
+  -> Integer -- ^ Serialised transaction size in bytes.
+  -> Integer -- ^ Inputs per transaction.
+  -> Integer -- ^ Estimated number of genesis UTxO keys (funds) needed.
+utxoKeys queueDepth mempoolBytes disjointBytes blockBytes confirmDepth txBytes inputsPerTx =
+  let -- Block capacity: blockBytes - fixedBlockBodyOverhead (1024).
+      effectiveBlockBytes = blockBytes - 1024
+      -- The mempool uses its own size accounting, not wire sizes.
+      -- See fixedBlockBodyOverhead and perTxOverhead in
+      -- Ouroboros.Consensus.Shelley.Ledger.Mempool.
+      -- Tx size in mempool: sizeTxF + perTxOverhead (4, hardcoded constant).
+      -- sizeTxF is ~1 byte smaller than the wire size (Api.serialiseToCBOR), so
+      -- the net mempool tx size is ~3 bytes larger than the wire size.
+      txBytesMempool = txBytes + 3
+      -- Consensus rounds the override up to whole blocks (ceiling division
+      -- using the effective block size, not raw maxBlockBodySize);
+      -- see computeMempoolCapacity in Ouroboros.Consensus.Mempool.Capacity.
+      effectiveMempoolBlocks =
+        (mempoolBytes + effectiveBlockBytes - 1) `div` effectiveBlockBytes
+      effectiveMempoolBytes = effectiveMempoolBlocks * effectiveBlockBytes
+      -- Total pipeline depth in bytes (switch to Double for division).
+      pipelineBytes = fromIntegral (effectiveMempoolBytes + disjointBytes)
+                    + fromIntegral (confirmDepth * effectiveBlockBytes)
+                    + fromIntegral (queueDepth * txBytesMempool) :: Double
+  in  ceiling (pipelineBytes / fromIntegral txBytesMempool * fromIntegral inputsPerTx)
+
 -- Defined in the "genesis" property and it's for the tx-generator.
 fundsDefault :: Types.Profile -> Types.Profile
-fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys 1
+fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000
+             . P.utxoKeys
+                 (utxoKeys
+                   -- Payload queue depth (Config.Runtime TBQueue capacity).
+                   8192
+                   -- MempoolCapacityBytesOverride, rounded internally like
+                   -- Consensus does.
+                   25000000
+                   -- Disjoint mempool bytes (0 = perfect sync).
+                   0
+                   -- Max block body size (bytes).
+                   90112
+                   -- Confirmation depth (blocks on top); AKA fork protection.
+                   2
+                   -- Steady-state tx size (bytes). The initial batch uses
+                   -- genesis keys (one per fund, 2 witnesses → 371 bytes), but
+                   -- after recycling all inputs share the builder's single
+                   -- signing key (1 witness → 270 bytes). Use the steady-state
+                   -- size: smaller txs means more txs fit per block, so more
+                   -- funds are needed to keep the pipeline full.
+                   270
+                   -- Inputs per tx.
+                   2
+                 )
 
 -- Some profiles have a higher `funds_balance` in `Genesis`. Needed? Fix it?
 fundsDouble :: Types.Profile -> Types.Profile
-fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoKeys 1
+fundsDouble =
+  let -- Payload queue depth (Config.Runtime TBQueue capacity).
+      queueDepth    = 8192
+      -- MempoolCapacityBytesOverride, rounded internally like Consensus does.
+      mempoolBytes  = 25000000
+      -- Max block body size (bytes).
+      blockBytes    = 90112
+      -- Confirmation depth (blocks on top); AKA fork protection.
+      confirmDepth  = 2
+      -- Steady-state tx size (bytes). The initial batch uses genesis keys (one
+      -- per fund, 2 witnesses → 371 bytes), but after recycling all inputs
+      -- share the builder's single signing key (1 witness → 270 bytes). Use the
+      -- steady-state size: smaller txs means more txs fit per block, so more
+      -- funds are needed to keep the pipeline full.
+      txBytes       = 270
+      -- Inputs per tx.
+      inputsPerTx   = 2
+      -- Disjoint mempool extra: with "per_target" rate limit, each region
+      -- maintains a mostly-independent mempool. The base pipeline formula
+      -- covers ONE full mempool; each additional region needs its own mempool's
+      -- worth of unique TXs, scaled by how disjoint they are.
+      -- Measured inter-region disjointness is ~80% (1 - avg Jaccard ~0.20).
+      -- With 0% disjoint (all shared): extra = 0 (same as relay/shared).
+      -- With 100% disjoint (no overlap): extra = mempoolBytes × (nRegions-1).
+      -- Formula: mempoolBytes × (nRegions - 1) × disjointness
+      nRegions      = 3
+      disjointness  = 0.80 :: Double
+      disjointBytes = ceiling
+                     $ fromIntegral mempoolBytes
+                     * fromIntegral (nRegions - 1 :: Integer)
+                     * disjointness
+  in  P.poolBalance 1000000000000000 . P.funds 20000000000000
+    . P.utxoKeys
+        (utxoKeys
+          queueDepth
+          mempoolBytes
+          disjointBytes
+          blockBytes
+          confirmDepth
+          txBytes
+          inputsPerTx
+        )
 
 fundsVoting :: Types.Profile -> Types.Profile
 fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
