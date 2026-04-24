@@ -51,8 +51,8 @@ import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
-import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
-                   getTxIx, watchEpochStateUpdate)
+import           Testnet.Components.Query (EpochStateView, TestnetWaitPeriod (..), checkDRepsNumber,
+                   getEpochStateDetails, getEpochStateView, getSlotNumber, getTxIx, retryUntilJustM)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpendOutputsOnlyTx,
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
@@ -341,7 +341,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
 
         -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx
-        txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txId transferAmount)
+        txIx <- retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ getEpochStateDetails epochStateView >>= getTxIx sbe txId transferAmount
         -- Query the reference script size
         let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"
@@ -459,11 +459,11 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     -> ShelleyGenesis
     -> m SlotNo -- ^ The block number reached
   waitForFuturePParamsToStabilise epochStateView shelleyGenesisConf = withFrozenCallStack $
-    H.noteShowM . H.nothingFailM $
-      watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(_, slotNo, _) -> do
-        pure $ if areFuturePParamsStable shelleyGenesisConf slotNo
-               then Just slotNo
-               else Nothing
+    H.noteShowM $ retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ do
+      slotNo <- getSlotNumber epochStateView
+      pure $ if areFuturePParamsStable shelleyGenesisConf slotNo
+             then Just slotNo
+             else Nothing
 
   -- We wait till a slot after: 4 * securityParam / slotCoeff
   -- If we query 'govState' before that we get 'PotentialPParamsUpdate'

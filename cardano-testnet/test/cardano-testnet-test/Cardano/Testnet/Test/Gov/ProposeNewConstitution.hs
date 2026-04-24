@@ -229,8 +229,8 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-    pure $ maybeExtractGovernanceActionIndex governanceActionTxId anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 1)
+      $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"

@@ -29,6 +29,7 @@ module Cardano.Testnet (
 
   -- * EpochState processsing helper functions
   maybeExtractGovernanceActionIndex,
+  maybeExtractGovernanceActionExpiry,
 
   -- * Processes
   procChairman,
