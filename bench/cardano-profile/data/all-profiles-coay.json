@@ -77549,9 +77549,7 @@
     "name": "utxoscale-solo-12M16G-nomadperfssd",
     "node": {
       "heap_limit": 16384,
-      "rts_flags_override": [
-        "-M16384m"
-      ],
+      "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 7200,
       "ssd_directory": null,

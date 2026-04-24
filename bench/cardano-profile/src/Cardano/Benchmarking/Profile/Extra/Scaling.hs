@@ -57,7 +57,7 @@ profilesNoEraScalingCloud =
       fast  = P.empty & V.genesisVariantPreVoltaire . C.composeFiftytwo . E.base . E.fastDuration . nomadSsd
       value = P.empty & C.base . C.valueDuration . nomadSsd
   in [
-    utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire . P.rtsHeapLimit 16384 . P.heapLimit 16384
+    utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire . P.heapLimit 16384
   , utxoScale   & P.name "utxoscale-solo-12M64G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing

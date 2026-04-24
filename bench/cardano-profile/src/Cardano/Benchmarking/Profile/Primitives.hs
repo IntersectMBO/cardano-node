@@ -78,10 +78,11 @@ module Cardano.Benchmarking.Profile.Primitives (
   , newTracing, oldTracing
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
-  -- Node's RTS params.
-  , rtsGcNonMoving, rtsGcAllocSize, rtsGcParallel, rtsGcLoadBalance
-  , rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
+  -- Node's RTS `-M`.
   , heapLimit
+  -- RTS params.
+  , rtsGcNonMoving, rtsGcAllocSize, rtsGcParallel, rtsGcLoadBalance
+  , rtsThreads, rtsEventlogged, rtsHeapProf
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
@@ -662,6 +663,18 @@ shutdownOnOff = node
       }
   )
 
+-- Heap limit.
+--------------
+
+-- Heap limit in "m", as `-M1000m`.
+heapLimit :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+heapLimit l = node
+  (\n ->
+    if isJust (Types.heap_limit n)
+    then error "heapLimit: `heap_limit` already set (not Nothing)."
+    else n {Types.heap_limit = Just l}
+  )
+
 -- RTS params.
 --------------
 
@@ -685,23 +698,12 @@ rtsGcAllocSize size = rtsAppend $ "-A" ++ show size ++ "m"
 rtsThreads :: Integer -> Types.Profile -> Types.Profile
 rtsThreads n = rtsAppend $ "-N" ++ show n
 
-rtsHeapLimit :: Integer -> Types.Profile -> Types.Profile
-rtsHeapLimit n = rtsAppend $ "-M" ++ show n ++ "m"
-
 rtsEventlogged :: Types.Profile -> Types.Profile
 rtsEventlogged = rtsAppend "-l"
 
 -- turns on heap profiling via workbench profile, as this does not require a -profiled build
 rtsHeapProf :: Types.Profile -> Types.Profile
 rtsHeapProf = rtsAppend "-hT"
-
-heapLimit :: HasCallStack => Integer -> Types.Profile -> Types.Profile
-heapLimit l = node
-  (\n ->
-    if isJust (Types.heap_limit n)
-    then error "heapLimit: `heap_limit` already set (not Nothing)."
-    else n {Types.heap_limit = Just l}
-  )
 
 -- Generator.
 --------------------------------------------------------------------------------

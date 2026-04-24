@@ -65,7 +65,25 @@ let
     { name, i, kind, port, isProducer, ... }@nodeSpec: valency:
     {
       inherit isProducer port;
-      inherit (profile.node) rts_flags_override;
+      rts_flags_override =
+        let profile_rts_flags =
+              if profile.node ? "rts_flags_override"
+              then
+                if __isList profile.node.rts_flags_override
+                then profile.node.rts_flags_override
+                else throw "profile.node.rts_flags_override is not a list."
+              else []
+        ;
+        in
+          # Don't add a heap limit to the explorer node.
+          # Only producers nodes (node-*) get the heap limit applied.
+          if name == "explorer"
+          then profile_rts_flags
+          else
+            if profile.node ? "heap_limit" && __isInt profile.node.heap_limit
+            then profile_rts_flags ++ [ "-M${toString profile.node.heap_limit}m" ]
+            else profile_rts_flags
+      ;
 
       nodeId         = i;
       databasePath   = "db";
