@@ -59,8 +59,8 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
       sbe = ShelleyBasedEraConway
       eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-      options = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
         }
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -70,7 +70,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   poolNode1 <- H.headM testnetNodes
 

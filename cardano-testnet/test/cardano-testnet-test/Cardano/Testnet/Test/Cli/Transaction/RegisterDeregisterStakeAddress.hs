@@ -51,8 +51,10 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -60,7 +62,7 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

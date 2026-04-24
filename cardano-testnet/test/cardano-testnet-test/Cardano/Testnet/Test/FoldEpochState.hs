@@ -29,9 +29,9 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       sbe = ShelleyBasedEraConway
-      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
-  runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet options def conf
+  runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet creationOptions def conf
 
   socketPathAbs <- do
     socketPath' <- H.sprocketArgumentName <$> H.headM (testnetSprockets runtime)

@@ -53,14 +53,15 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc = RpcEnabled}
+      creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
 
   TestnetRuntime
     { testnetMagic
     , configurationFile
     , testnetNodes = node0@TestnetNode{nodeSprocket} : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet creationOptions runtimeOptions conf
 
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)

@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,9 +14,11 @@ module Parsers.Run
 import           Cardano.CLI.Environment
 
 import           Control.Monad (void)
+import           Data.Maybe (fromMaybe)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
+import           Testnet.Filepath (unTmpAbsPath)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
@@ -56,50 +59,37 @@ runTestnetCmd = \case
 
 createEnvOptions :: CardanoTestnetCreateEnvOptions -> IO ()
 createEnvOptions CardanoTestnetCreateEnvOptions
-  { createEnvTestnetOptions=testnetOptions
-  , createEnvGenesisOptions=genesisOptions
+  { createEnvCreationOptions=creationOptions
   , createEnvOutputDir=outputDir
-  , createEnvCreateEnvOptions=ceOptions
   } = do
       conf <- mkConfigAbs outputDir
       void $ createTestnetEnv
-        testnetOptions genesisOptions ceOptions
+        creationOptions
         -- Do not add hashes to the main config file, so that genesis files
         -- can be modified without having to recompute hashes every time.
         conf{genesisHashesPolicy = WithoutHashes}
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
-runCardanoOptions CardanoTestnetCliOptions
-  { cliTestnetOptions=testnetOptions
-  , cliGenesisOptions=genesisOptions
-  , cliNodeEnvironment=env
-  , cliUpdateTimestamps=updateTimestamps'
-  , cliOnChainParams=onChainParams
-  } = do
-    case env of
-      NoUserProvidedEnv -> do
-        -- Create the sandbox, then run cardano-testnet.
-        -- It is not necessary to honor `cliUpdateTimestamps` here, because
-        -- the genesis files will be created with up-to-date stamps already.
-        conf <- mkConfigAbs "testnet"
-        runSimpleApp . runResourceT $ do
-          logInfo $ "Creating environment: " <> display (tempAbsPath conf)
-          createTestnetEnv testnetOptions genesisOptions (CreateEnvOptions onChainParams) conf
-          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-          void $ cardanoTestnet testnetOptions conf
-          logInfo "Testnet started"
-          waitForShutdown
-      UserProvidedEnv nodeEnvPath -> do
-        -- Run cardano-testnet in the sandbox provided by the user
-        -- In that case, 'cardanoOutputDir' is not used
-        conf <- mkConfigAbs nodeEnvPath
-        runSimpleApp . runResourceT $ do
-          logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-          void $ cardanoTestnet
-            testnetOptions
-            conf{updateTimestamps=updateTimestamps'}
-          logInfo "Testnet started"
-          waitForShutdown
+runCardanoOptions = \case
+  StartFromScratch StartFromScratchOptions{scratchCreationOptions, scratchOutputDir, scratchRuntimeOptions} -> do
+    let dirName = fromMaybe "testnet" scratchOutputDir
+    conf <- mkConfigAbs dirName
+    runSimpleApp . runResourceT $ do
+      logInfo $ "Creating environment: " <> display (tempAbsPath conf)
+      createTestnetEnv scratchCreationOptions conf
+      logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+      void $ cardanoTestnet (creationNodes scratchCreationOptions) scratchRuntimeOptions conf
+      logInfo "Testnet started"
+      waitForShutdown
+  StartFromEnv StartFromEnvOptions{fromEnvOptions, fromEnvRuntimeOptions} -> do
+    conf <- mkConfigAbs (envPath fromEnvOptions)
+    nodes <- readNodeOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
+    runSimpleApp . runResourceT $ do
+      logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+      void $ cardanoTestnet nodes fromEnvRuntimeOptions
+               conf{updateTimestamps = envUpdateTimestamps fromEnvOptions}
+      logInfo "Testnet started"
+      waitForShutdown
   where
     waitForShutdown = do
       logInfo "Waiting for shutdown (Ctrl+C)"

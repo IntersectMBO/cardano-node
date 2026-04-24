@@ -60,8 +60,10 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 100 }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -69,7 +71,7 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
     , wallets = wallet0:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -133,8 +135,10 @@ hprop_tx_withdrawal_reward_plutus_v3 = integrationRetryWorkspace 2 "tx-withdrawa
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 100 }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -142,7 +146,7 @@ hprop_tx_withdrawal_reward_plutus_v3 = integrationRetryWorkspace 2 "tx-withdrawa
     , wallets = wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

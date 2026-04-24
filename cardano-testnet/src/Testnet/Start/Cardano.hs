@@ -12,7 +12,11 @@
 
 module Testnet.Start.Cardano
   ( CardanoTestnetCliOptions(..)
-  , CardanoTestnetOptions(..)
+  , StartFromScratchOptions(..)
+  , StartFromEnvOptions(..)
+  , TestnetCreationOptions(..)
+  , TestnetRuntimeOptions(..)
+  , TestnetEnvOptions(..)
   , NodeOption(..)
   , cardanoDefaultTestnetNodeOptions
 
@@ -23,6 +27,7 @@ module Testnet.Start.Cardano
   , createTestnetEnv
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
+  , readNodeOptionsFromEnv
   , retryOnAddressInUseError
 
   , liftToIntegration
@@ -35,7 +40,7 @@ import qualified Cardano.Api.Byron as Byron
 
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
-import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty)
+import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
@@ -47,10 +52,11 @@ import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Default.Class (def)
+import           Data.Default.Class ()
 import           Data.Either
+import           Data.Maybe (mapMaybe)
 import           Data.Functor
-import           Data.List (uncons)
+import           Data.List (sort, stripPrefix, uncons)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
@@ -91,9 +97,9 @@ import           UnliftIO.Exception (stringException)
 testMinimumConfigurationRequirements :: ()
   => HasCallStack
   => MonadIO m
-  => CardanoTestnetOptions -> m ()
-testMinimumConfigurationRequirements options = withFrozenCallStack $ do
-  when (cardanoNumPools options < 1) $ do
+  => NonEmpty NodeOption -> m ()
+testMinimumConfigurationRequirements nodes = withFrozenCallStack $ do
+  unless (any isSpoNodeOptions nodes) $ do
     throwString "Need at least one SPO node to produce blocks, but got none."
 
 liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a
@@ -106,31 +112,25 @@ createTestnetEnv :: ()
   => MonadIO m
   => MonadThrow m
   => MonadFail m
-  => CardanoTestnetOptions
-  -> GenesisOptions
-  -> CreateEnvOptions
+  => TestnetCreationOptions
   -> Conf
   -> m ()
 createTestnetEnv
-  testnetOptions@CardanoTestnetOptions
-    { cardanoNodeEra=asbe
-    , cardanoNodes
-    }
-  genesisOptions
-  CreateEnvOptions
-    { ceoOnChainParams=onChainParams
+  creationOptions@TestnetCreationOptions
+    { creationEra=asbe
+    , creationNodes
     }
   Conf
     { genesisHashesPolicy
     , tempAbsPath=TmpAbsolutePath tmpAbsPath
     } = do
 
-  testMinimumConfigurationRequirements testnetOptions
+  testMinimumConfigurationRequirements creationNodes
 
   AnyShelleyBasedEra sbe <- pure asbe
 
   _ <- createSPOGenesisAndFiles
-    testnetOptions genesisOptions onChainParams
+    creationOptions
     (TmpAbsolutePath tmpAbsPath)
 
   let configurationFile = tmpAbsPath </> defaultConfigFile
@@ -141,13 +141,13 @@ createTestnetEnv
 
   liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
-  portNumbers <- forM (NEL.zip (1 :| [2..]) cardanoNodes)
+  portNumbers <- forM (NEL.zip (1 :| [2..]) creationNodes)
     (\(i, _nodeOption) -> (i,) <$> H.randomPort testnetDefaultIpv4Address)
 
   let portNumbersMap = Map.fromList (NEL.toList portNumbers)
 
   -- Create network topology and write port files
-  let nodeIds = fst <$> NEL.zip (1 :| [2..]) cardanoNodes
+  let nodeIds = fst <$> NEL.zip (1 :| [2..]) creationNodes
   forM_ nodeIds $ \i -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
@@ -161,8 +161,7 @@ createTestnetEnv
     let topology = Defaults.defaultP2PTopology producers
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
--- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
--- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
+-- | Starts the given nodes. You can either:
 --
 -- 1. Pass a value 'UserProvidedNodeOptions filepath' to specify your own node configuration file.
 --    In this case, only 1 node will be started (TODO: allow an arbitrary number of nodes to be started)
@@ -233,22 +232,22 @@ cardanoTestnet
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => CardanoTestnetOptions -- ^ The options to use
+  => NonEmpty NodeOption -- ^ The nodes to start
+  -> TestnetRuntimeOptions -- ^ Runtime options
   -> Conf -- ^ Path to the test sandbox
   -> m TestnetRuntime
 cardanoTestnet
-  testnetOptions
+  cardanoNodes
+  TestnetRuntimeOptions
+    { runtimeEnableNewEpochStateLogging=enableNewEpochStateLogging
+    , runtimeEnableRpc=cardanoEnableRpc
+    , runtimeKESSource=cardanoKESSource
+    }
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
     , updateTimestamps
     } = do
-  let CardanoTestnetOptions
-        { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
-        , cardanoNodes
-        , cardanoEnableRpc
-        , cardanoKESSource
-        } = testnetOptions
-      nPools = cardanoNumPools testnetOptions
+  let nPools = NumPools $ length $ NEL.filter isSpoNodeOptions cardanoNodes
       nodeConfigFile = tmpAbsPath </> defaultConfigFile
       byronGenesisFile = tmpAbsPath </> "byron-genesis.json"
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
@@ -471,16 +470,14 @@ idToRemoteAddressP2P portNumbersMap (NodeId i) = case Map.lookup i portNumbersMa
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()
   => HasCallStack
-  => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
+  => TestnetCreationOptions
+  -> TestnetRuntimeOptions
   -> Conf -- ^ Path to the test sandbox
   -> H.Integration TestnetRuntime
-createAndRunTestnet testnetOptions genesisOptions conf = do
+createAndRunTestnet creationOptions runtimeOptions conf = do
   liftToIntegration $ do
-     createTestnetEnv
-       testnetOptions genesisOptions def
-       conf
-     cardanoTestnet testnetOptions conf
+     createTestnetEnv creationOptions conf
+     cardanoTestnet (creationNodes creationOptions) runtimeOptions conf
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError
@@ -511,3 +508,21 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
     maximumTimeout = 150
     -- Wait for that many seconds before retrying.
     retryTimeout = 5
+
+-- | Read node options from an existing testnet environment directory.
+-- Scans @node-data/@ for node directories and checks @pools-keys/@ to
+-- classify each node as SPO or relay.
+readNodeOptionsFromEnv :: MonadIO m => FilePath -> m (NonEmpty NodeOption)
+readNodeOptionsFromEnv envDir = do
+  entries <- liftIO $ IO.listDirectory (envDir </> "node-data")
+  let nodeNums = sort $ mapMaybe parseNodeNum entries
+  case nodeNums of
+    [] -> throwString "No node directories found in environment"
+    (n:ns) -> mapM classifyNode (n :| ns)
+  where
+    parseNodeNum s = do
+      rest <- stripPrefix "node" s
+      readMaybe rest :: Maybe Int
+    classifyNode i = do
+      hasPools <- liftIO $ IO.doesDirectoryExist (envDir </> Defaults.defaultSpoKeysDir i)
+      pure $ if hasPools then SpoNodeOptions [] else RelayNodeOptions []

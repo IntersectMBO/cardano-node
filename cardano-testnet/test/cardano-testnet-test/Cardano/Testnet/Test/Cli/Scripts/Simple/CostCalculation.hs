@@ -51,7 +51,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
     cEra = AnyCardanoEra era
     eraName = eraToString era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+    creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
 
   TestnetRuntime
     { configurationFile
@@ -59,7 +59,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
     , testnetNodes
     , wallets = wallet0 : wallet1 : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet creationOptions def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

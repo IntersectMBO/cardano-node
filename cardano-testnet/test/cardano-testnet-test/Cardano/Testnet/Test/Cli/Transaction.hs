@@ -54,14 +54,14 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

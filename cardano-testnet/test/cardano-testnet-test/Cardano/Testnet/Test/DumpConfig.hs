@@ -26,8 +26,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
-                   UserProvidedEnv (..))
+import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -37,8 +36,7 @@ import qualified Hedgehog.Extras as H
 hprop_dump_config :: H.Property
 hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
-  let testnetOptions = def { cardanoOutputDir = UserProvidedEnv tmpDir }
-      genesisOptions = def { genesisEpochLength = 200 }
+  let creationOptions = def { creationGenesisOptions = def { genesisEpochLength = 200 } }
       byronGenesisFile = tmpDir </> "byron-genesis.json"
       shelleyGenesisFile = tmpDir </> "shelley-genesis.json"
 
@@ -46,7 +44,7 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   conf <- mkConf tmpDir
 
   liftToIntegration $ createTestnetEnv
-    testnetOptions genesisOptions def
+    creationOptions
     -- Do not add hashes to the main config file, so that genesis files
     -- can be modified without having to recompute hashes every time.
     conf{genesisHashesPolicy = WithoutHashes}
@@ -71,6 +69,6 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
   -- Run testnet with generated config
-  runtime <- liftToIntegration $ cardanoTestnet testnetOptions conf
+  runtime <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
   nodesProduceBlocks tmpDir runtime

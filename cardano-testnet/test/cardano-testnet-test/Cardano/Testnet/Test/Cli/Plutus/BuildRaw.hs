@@ -53,7 +53,7 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
         cEra = AnyCardanoEra era
         eraName = eraToString era
         tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-        options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+        creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
 
     TestnetRuntime
         { configurationFile
@@ -61,7 +61,7 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
         , testnetNodes
         , wallets = wallet0 : wallet1 : _
         } <-
-        createAndRunTestnet options def conf
+        createAndRunTestnet creationOptions def conf
 
     poolNode1 <- H.headM testnetNodes
     poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1

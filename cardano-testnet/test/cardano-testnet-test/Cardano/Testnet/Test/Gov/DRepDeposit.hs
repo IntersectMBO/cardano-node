@@ -45,11 +45,11 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 0
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = 0
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
         }
-      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -57,7 +57,7 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

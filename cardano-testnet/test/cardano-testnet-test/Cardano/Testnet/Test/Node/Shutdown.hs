@@ -206,16 +206,16 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   let maxSlot = 150
       epochLength = 300
       slotLen = 0.1
-  let fastTestnetOptions = def
-        { cardanoNodes =
+  let creationOptions = def
+        { creationNodes =
             SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
+        , creationGenesisOptions = def
+            { genesisEpochLength = epochLength
+            , genesisSlotLength = slotLen
+            , genesisActiveSlotsCoeff = 50.0 / fromIntegral epochLength
+            }
         }
-      shelleyOptions = def
-        { genesisEpochLength = epochLength
-        , genesisSlotLength = slotLen
-        , genesisActiveSlotsCoeff = 50.0 / fromIntegral epochLength
-        }
-  testnetRuntime <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+  testnetRuntime <- createAndRunTestnet creationOptions def conf
   let allNodes = testnetNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
@@ -252,10 +252,11 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = def
-      shelleyOptions = def { genesisEpochLength = 300 }
+  let creationOptions = def
+        { creationGenesisOptions = def { genesisEpochLength = 300 }
+        }
   testnetRuntime
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
   TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
 
   -- send SIGINT

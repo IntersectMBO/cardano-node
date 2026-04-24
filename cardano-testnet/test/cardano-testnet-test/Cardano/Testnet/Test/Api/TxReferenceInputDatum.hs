@@ -57,14 +57,14 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
       beo = convert ceo
       sbe = convert ceo
       eraProxy = proxyToAsType Proxy
-      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+      creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
 
   tr@TestnetRuntime
     { configurationFile
     , testnetNodes = node0 : _
     , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : wallet1 : _
     } <-
-    createAndRunTestnet options def conf
+    createAndRunTestnet creationOptions def conf
 
   systemStart <- H.noteShowM $ getStartTime tempAbsPath' tr
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)

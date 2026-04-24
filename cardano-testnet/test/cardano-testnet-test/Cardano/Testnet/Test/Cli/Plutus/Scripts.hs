@@ -57,14 +57,14 @@ hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purpos
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -207,14 +207,14 @@ hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- createAndRunTestnet options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   SpoNodeKeys{poolNodeKeysCold=KeyPair{verificationKey=spoKeyCold}} <- H.nothingFail $ poolKeys node

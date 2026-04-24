@@ -46,8 +46,10 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
 
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 100 }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -55,7 +57,7 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
     , wallets=wallet0:_
     , configurationFile
     }
-    <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
