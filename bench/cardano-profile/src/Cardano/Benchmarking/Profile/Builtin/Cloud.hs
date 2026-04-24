@@ -171,6 +171,9 @@ profilesNoEraCloud =
   , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-lsmt-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . ephemeral . P.lsmt . cgmem
+             -- Heap from sample LSMT run goes from 2,825,912,320 bytes to 3,690,253,517 bytes (all nodes).
+             -- Using 4,227,124,429 bytes, as 1024-base megabytes, to force the garbage collector during genesis reading with no pressure later during the benchmarking phase.
+              . P.heapLimit 4031
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000 . P.newTracing                      . cgmem
   , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . P.newTracing . ephemeral . P.lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
