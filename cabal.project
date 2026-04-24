@@ -110,8 +110,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 1e7c387d40d1bd4c95b6d042ffd801aefb127c93
-  --sha256: sha256-jz/rM/mzWaoXD9FQFqaLn+iYWsfCpdmXLQHVDy4+aUU=
+  tag: 0dac44526e8ee9fa49cddaa164bd3beea4cdc0d1
+  --sha256: sha256-pshHHLhM4EdsZhBK16N1FDQ3clsCMjGT08yWJYsAuH8=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -123,8 +123,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 22d32274ca2657f2966873b225aa9604852c4c77
-  --sha256: sha256-TnHTS2FDeUQoa3dIPSZwZ16svGw990arktNVx7z7aWY=
+  tag: 6b831537f4dd3863da18c9a2a82b81d946a12052
+  --sha256: sha256-YI5tb+kcY4uDOCiK42AD+j1JvfVWc8IgO6Acr7HBEnc=
   subdir:
     eras/alonzo/impl
     eras/conway/impl
