@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api hiding (txId)
-import           Cardano.Api.Experimental (Some (..))
+import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -40,7 +40,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
-import           Testnet.EpochStateProcessing (waitForGovActionVotes)
+import           Testnet.EpochStateProcessing (unsafeEraFromSbe, waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
@@ -354,17 +354,11 @@ filterRatificationState
   -> String -- ^ Submitted guard rail script hash
   -> AnyNewEpochState
   -> Bool
-filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState _) = do
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "filterRatificationState: Only conway era supported")
-
-    (const $ do
-      let rState = Ledger.extractDRepPulsingState $ newEpochState ^. L.newEpochStateGovStateL . L.drepPulsingStateGovStateL
-          constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
-          constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
-          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: constitution does not have a guardrail script")
-                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionGuardrailsScriptHashL
-      Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
-
-    )
-    sbe
+filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState _) =
+  obtainCommonConstraints (unsafeEraFromSbe sbe) $ do
+    let rState = Ledger.extractDRepPulsingState $ newEpochState ^. L.newEpochStateGovStateL . L.drepPulsingStateGovStateL
+        constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
+        constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
+        L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: constitution does not have a guardrail script")
+                                              $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionGuardrailsScriptHashL
+    Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
