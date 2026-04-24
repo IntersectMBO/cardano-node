@@ -170,12 +170,12 @@ Concrete example files are also available in:
 
 Apply overrides:
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --verbose"`
+`nix run .#apply-schema-overrides -- --verbose`
 
 Check that overrides are already applied:
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ApplySchemaOverrides.hs --check --verbose"`
+`nix run .#apply-schema-overrides -- --check --verbose`
 
 Fail when generated schema files changed without matching override file updates:
 
-`nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/CheckOverrideCoverage.hs --range origin/master...HEAD"`
+`nix run .#check-override-coverage -- --range origin/master...HEAD`
