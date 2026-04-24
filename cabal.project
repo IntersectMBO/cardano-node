@@ -41,6 +41,7 @@ packages:
   bench/cardano-topology
   bench/locli
   bench/plutus-scripts-bench
+  bench/tx-centrifuge
   bench/tx-generator
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
