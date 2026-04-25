@@ -17,8 +17,8 @@ If negative, reports as such and lists the events that have been relevant to the
 ## CLI Syntax
 
 ```
-Usage: cardano-recon FILE --mode <offline|online> --duration INT FILES 
-                     [--retention INT] [--trace-dispatcher-cfg FILE] 
+Usage: cardano-recon FILE --mode <offline|online> --duration INT FILES
+                     [--retention INT] [--trace-dispatcher-cfg FILE]
                      [--context FILE] [--dump-metrics BOOL] [--seek-to-end BOOL]
 
   Check formula satisfiability against a log of trace messages
@@ -39,5 +39,5 @@ Available options:
 
 ## Build flags
   - _debug_ for enabling verbose tracing of formulas as they evolve (multiple traces per each temporal event).
-  - _crash_on_missing_key_ for making the application crash if a formula atom is evaluated on an event which is missing
+  - _crash-on-missing-key_ for making the application crash if a formula atom is evaluated on an event which is missing
     a key the atom is referencing.
