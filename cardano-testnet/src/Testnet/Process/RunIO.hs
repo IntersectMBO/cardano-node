@@ -8,6 +8,7 @@
 module Testnet.Process.RunIO
   ( execCli'
   , execCli_
+  , getCliHelpText
   , mkExecConfig
   , procNode
   , procKesAgent
@@ -92,6 +93,16 @@ execCli
   => [String]
   -> RIO env String
 execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
+
+-- | Best-effort query of the @cardano-cli@ help text for a subcommand.
+-- Returns 'Nothing' if the binary can't be found or the command fails.
+getCliHelpText :: MonadIO m => [String] -> m (Maybe String)
+getCliHelpText args = liftIO $ do
+  result <- tryAny $ runRIO () $
+    execFlexAny' defaultExecConfig "cardano-cli" "CARDANO_CLI" (args ++ ["--help"])
+  pure $ case result of
+    Right (_, stdout', _) -> Just stdout'
+    Left _ -> Nothing
 
 -- | Create a process returning its stdout.
 --
