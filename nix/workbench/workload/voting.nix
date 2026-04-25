@@ -26,8 +26,8 @@ let
     else throw "Conway genesis needed!"
   ;
   # Where to obtain the genesis funds from.
-  genesis_funds_vkey = "../../genesis/cache-entry/utxo-keys/utxo2.vkey";
-  genesis_funds_skey = "../../genesis/cache-entry/utxo-keys/utxo2.skey";
+  genesis_funds_vkey = "../../genesis/utxo-keys/utxo2/utxo.vkey";
+  genesis_funds_skey = "../../genesis/utxo-keys/utxo2/utxo.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 

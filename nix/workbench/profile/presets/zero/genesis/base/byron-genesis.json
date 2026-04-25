@@ -1,0 +1,42 @@
+{
+    "avvmDistr": {
+    },
+    "blockVersionData": {
+        "heavyDelThd": "0",
+        "maxBlockSize": "0",
+        "maxHeaderSize": "0",
+        "maxProposalSize": "0",
+        "maxTxSize": "0",
+        "mpcThd": "0",
+        "scriptVersion": 0,
+        "slotDuration": "0",
+        "softforkRule": {
+            "initThd": "0",
+            "minThd": "0",
+            "thdDecrement": "0"
+        },
+        "txFeePolicy": {
+            "multiplier": "0",
+            "summand": "0"
+        },
+        "unlockStakeEpoch": "0",
+        "updateImplicit": "0",
+        "updateProposalThd": "0",
+        "updateVoteThd": "0"
+    },
+    "ftsSeed": "0",
+    "protocolConsts": {
+        "k": 0,
+        "protocolMagic": 0,
+        "vssMaxTTL": 0,
+        "vssMinTTL": 0
+    },
+    "startTime": 0,
+    "bootStakeholders": {
+    },
+    "heavyDelegation": {
+    },
+    "nonAvvmBalances": {},
+    "vssCerts": {
+    }
+}

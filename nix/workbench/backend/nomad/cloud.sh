@@ -875,8 +875,14 @@ deploy-genesis-nomadcloud() {
   local genesis_file_name="${nomad_job_name}.tar.zst"
   msg "$(blue Creating) $(yellow "\"${genesis_file_name}\"") ..."
   # TODO: These files are link to file that don't exist!
-  rm "${dir}"/genesis/profile.json
-  rm "${dir}"/genesis/stake-delegator-keys
+  if test -e "${dir}"/genesis/profile.json
+  then
+    rm "${dir}"/genesis/profile.json
+  fi
+  if test -e "${dir}"/genesis/stake-delegators
+  then
+    rm "${dir}"/genesis/stake-delegators
+  fi
   find -L "${dir}"/genesis -printf "%P\n"         \
     | tar --create --zstd                         \
       --dereference --hard-dereference            \

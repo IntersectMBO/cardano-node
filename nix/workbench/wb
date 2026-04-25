@@ -13,6 +13,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 # For genesis creating, create-testnet-data is the default CLI command; set to 0 to fall back to create-staked
 : "${WB_CREATE_TESTNET_DATA:=1}"
 
+# Separate dataset and protocols caching using create-testnet-data; set to 0 to always run cardano-cli directly
+: "${WB_GENESIS_CHUNKS:=0}"
+
 # By default, enable the new database storage backend for `locli`
 : "${WB_LOCLI_DB:=1}"
 
@@ -28,6 +31,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/analyse/analyse.sh
 . "$global_basedir"/profile/profile.sh
 . "$global_basedir"/genesis/genesis.sh
+. "$global_basedir"/genesis/genesis-chunks.sh
+. "$global_basedir"/genesis/genesis-jq.sh
+. "$global_basedir"/genesis/genesis-modular.sh
 . "$global_basedir"/topology/topology.sh
 
 . "$global_basedir"/evaluate/evaluate.sh

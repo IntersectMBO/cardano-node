@@ -396,8 +396,8 @@ case "$op" in
         then v1=("${v0[@]/#logs/            'unlog-db' --run-logs \"$adir\"/log-manifest-db.json }")
         else v1=("${v0[@]/#logs/            'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
         fi
-        v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
-        v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
+        v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis/genesis.shelley.json }")
+        v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis/genesis.shelley.json }")
         v4=("${v3[@]/#read-chain/           'read-chain'         --chain \"$adir\"/chain.json}")
         v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'         --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json }")
@@ -506,7 +506,7 @@ case "$op" in
         vi=(${vh[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
         vj=(${vi[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
         vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --org-report $adir/'summary.org' })
-        vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $dir/genesis-shelley.json })
+        vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $dir/genesis/genesis.shelley.json })
         local ops_final=(${vl[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
