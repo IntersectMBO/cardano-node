@@ -108,3 +108,18 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/jasagredo/lsm-tree
+  tag: 238aade84e8d02aa9122d3bc9ad5dadce51e21a2
+  --sha256: sha256-orpgnV43rxkvgxv8cPzPbY29vHD81j70cy8U/XRrFB0=
+  subdir:
+    lsm-tree
+    blockio
+
+source-repository-package
+    type: git
+    location: https://github.com/jasagredo/blockio-uring
+    tag: d240e13233a62dfab800700c4d9f247538f0ced8
+    --sha256: sha256-BuKux+QD3lcpPd1/4S4E5WjPXgyCb5XRaqs83yVGv0U=
