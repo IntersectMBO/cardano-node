@@ -30,6 +30,8 @@ import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as AesonTypes
 import           Data.Bifunctor (first)
 import           Data.Monoid (Last (..))
 import           Data.String
@@ -56,6 +58,20 @@ prop_sanityCheck_POM =
     case nc of
       Left err -> failWith Nothing $ "Partial Options Monoid sanity check failure: " <> err
       Right config -> config === expectedConfig
+
+prop_parseExperimentalHardForksWithoutDijkstraGenesis :: Property
+prop_parseExperimentalHardForksWithoutDijkstraGenesis =
+  withTests 1 . Hedgehog.property $ do
+    partialConfig <- evalEither $ AesonTypes.parseEither Aeson.parseJSON experimentalHardForkConfigWithoutDijkstra
+    protocolConfig <- evalEither $ extractProtocolConfig partialConfig
+    protocolConfig === testNodeProtocolConfiguration
+
+prop_parseExperimentalHardForksWithDijkstraGenesis :: Property
+prop_parseExperimentalHardForksWithDijkstraGenesis =
+  withTests 1 . Hedgehog.property $ do
+    partialConfig <- evalEither $ AesonTypes.parseEither Aeson.parseJSON experimentalHardForkConfigWithDijkstra
+    protocolConfig <- evalEither $ extractProtocolConfig partialConfig
+    protocolConfig === expectedProtocolConfigWithDijkstra
 
 testNodeByronProtocolConfiguration :: NodeByronProtocolConfiguration
 testNodeByronProtocolConfiguration =
@@ -127,6 +143,59 @@ testNodeProtocolConfiguration =
     Nothing -- Dijkstra configuration
     testNodeHardForkProtocolConfiguration
     testNodeCheckpointsConfiguration
+
+testNodeDijkstraProtocolConfiguration :: NodeDijkstraProtocolConfiguration
+testNodeDijkstraProtocolConfiguration =
+  NodeDijkstraProtocolConfiguration
+    { npcDijkstraGenesisFile = GenesisFile "dummy-dijkstra-genesis-file"
+    , npcDijkstraGenesisFileHash = Nothing
+    }
+
+expectedProtocolConfigWithDijkstra :: NodeProtocolConfiguration
+expectedProtocolConfigWithDijkstra =
+  NodeProtocolConfigurationCardano
+    testNodeByronProtocolConfiguration
+    testNodeShelleyProtocolConfiguration
+    testNodeAlonzoProtocolConfiguration
+    testNodeConwayProtocolConfiguration
+    (Just testNodeDijkstraProtocolConfiguration)
+    testNodeHardForkProtocolConfiguration
+    testNodeCheckpointsConfiguration
+
+experimentalHardForkConfigWithoutDijkstra :: Aeson.Value
+experimentalHardForkConfigWithoutDijkstra =
+  Aeson.object
+    [ "ByronGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "ShelleyGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "AlonzoGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "ConwayGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "RequiresNetworkMagic" Aeson..= RequiresNoMagic
+    , "LastKnownBlockVersion-Major" Aeson..= (0 :: Int)
+    , "LastKnownBlockVersion-Minor" Aeson..= (0 :: Int)
+    , "LastKnownBlockVersion-Alt" Aeson..= (0 :: Int)
+    , "ExperimentalHardForksEnabled" Aeson..= True
+    ]
+
+experimentalHardForkConfigWithDijkstra :: Aeson.Value
+experimentalHardForkConfigWithDijkstra =
+  Aeson.object
+    [ "ByronGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "ShelleyGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "AlonzoGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "ConwayGenesisFile" Aeson..= ("dummmy-genesis-file" :: FilePath)
+    , "DijkstraGenesisFile" Aeson..= ("dummy-dijkstra-genesis-file" :: FilePath)
+    , "RequiresNetworkMagic" Aeson..= RequiresNoMagic
+    , "LastKnownBlockVersion-Major" Aeson..= (0 :: Int)
+    , "LastKnownBlockVersion-Minor" Aeson..= (0 :: Int)
+    , "LastKnownBlockVersion-Alt" Aeson..= (0 :: Int)
+    , "ExperimentalHardForksEnabled" Aeson..= True
+    ]
+
+extractProtocolConfig :: PartialNodeConfiguration -> Either Text NodeProtocolConfiguration
+extractProtocolConfig partialConfig =
+  case pncProtocolConfig partialConfig of
+    Last (Just protocolConfig) -> Right protocolConfig
+    Last Nothing -> Left "Missing protocol configuration in parsed partial node configuration"
 
 -- | Example partial configuration theoretically created from a
 -- config yaml file.
