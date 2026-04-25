@@ -48,7 +48,7 @@ baseNoDataset =
 
 -- TODO: Move to `base` when "default*" and "oldtracing" genesis are the same.
 genesis :: Types.Profile -> Types.Profile
-genesis = V.genesisVariant300
+genesis = V.genesisVariantVoltaire
 
 --------------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ fastDuration =
 
 ciTestDuration :: Types.Profile -> Types.Profile
 ciTestDuration =
-    V.timescaleCompressed . P.shutdownOnBlock 8
+    V.timescaleCompressed . P.shutdownOnBlock 180
   -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
   --       Create a "time.epochs" or "time.blocks" or similar, IDK!
   -- This applies to all profiles!
@@ -143,7 +143,7 @@ profilesNoEraEmpty = map baseNoDataset
   -- ci-test-hydra: FixedLoaded and "--shutdown-on-block-synced 3" with 2 nodes.
   ------------------------------------------------------------------------------
   let ciTestHydra =
-          P.empty & V.datasetEmpty . V.genesisVariantPreVoltaire . ciTestDuration
+          P.empty & V.datasetEmpty . genesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
         . P.analysisSizeSmall
   in [
