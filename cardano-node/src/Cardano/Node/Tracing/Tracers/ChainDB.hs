@@ -49,6 +49,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Backend as V2
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 import qualified Ouroboros.Consensus.Storage.PerasCertDB.Impl as PerasCertDB
+import qualified Ouroboros.Consensus.Storage.PerasVoteDB.Impl as PerasVoteDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -59,6 +60,7 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Data.Aeson (Object, Value (String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -121,6 +123,7 @@ instance (  LogFormatting (Header blk)
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) ->
           "Chain Selection was unstarved by " <> renderRealPoint pt
   forHuman (ChainDB.TracePerasCertDbEvent ev) = forHuman ev
+  forHuman (ChainDB.TracePerasVoteDbEvent ev) = forHuman ev
   forHuman (ChainDB.TraceAddPerasCertEvent ev) = forHuman ev
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
@@ -153,6 +156,8 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TracePerasCertDbEvent v) =
     forMachine details v
+  forMachine details (ChainDB.TracePerasVoteDbEvent v) =
+    forMachine details v
   forMachine details (ChainDB.TraceAddPerasCertEvent v) =
     forMachine details v
 
@@ -170,6 +175,7 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
   asMetrics (ChainDB.TracePerasCertDbEvent v)       = asMetrics v
+  asMetrics (ChainDB.TracePerasVoteDbEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceAddPerasCertEvent v)      = asMetrics v
 
 
@@ -200,6 +206,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TracePerasCertDbEvent ev) =
     nsPrependInner "PerasCertDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TracePerasVoteDbEvent ev) =
+    nsPrependInner "PerasVoteDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceAddPerasCertEvent ev) =
     nsPrependInner "AddPerasCertEvent" (namespaceFor ev)
 
@@ -249,6 +257,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -301,6 +313,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -353,6 +369,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -412,6 +432,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     documentFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
   documentFor (Namespace out ("PerasCertDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk))
+  documentFor (Namespace out ("PerasVoteDbEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk))
   documentFor (Namespace out ("AddPerasCertEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceAddPerasCertEvent blk))
   documentFor _ = Nothing
@@ -441,6 +463,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
           ++ map  (nsPrependInner "PerasCertDbEvent")
                   (allNamespaces :: [Namespace (PerasCertDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "PerasVoteDbEvent")
+                  (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "AddPerasCertEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddPerasCertEvent blk)])
             )
@@ -1749,6 +1773,14 @@ instance ( StandardHash blk
           LedgerDB.MetadataBackendMismatch ->
              " Snapshot was created for a different backend. Convert it with `snapshot-converter`."
         _ -> ""
+  forHuman (LedgerDB.SnapshotRequestDelayed _snapshotRequestTime delayBeforeSnapshotting slots) =
+    Text.unwords ["Scheduling to take ledger state snapshots at slots "
+                 , showT (NonEmpty.toList slots)
+                 , ", with a randomised delay of"
+                 , showT delayBeforeSnapshotting
+                 ]
+  forHuman (LedgerDB.SnapshotRequestCompleted) = "Completed taking a ledger state snapshot"
+
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1763,11 +1795,23 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "InvalidSnapshot"
             , "snapshot" .= forMachine dtals snap
             , "failure" .= show failure ]
+  forMachine _dtals (LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots) =
+    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestDelayed"
+             , "requestTime" .= show snapshotRequestTime
+             , "delayBeforeSnapshotting " .= show delayBeforeSnapshotting
+             , "slots" .= show slots
+             ]
+  forMachine _dtals (LedgerDB.SnapshotRequestCompleted) =
+    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestCompleted"
+             ]
+
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
+    namespaceFor LedgerDB.SnapshotRequestDelayed {}  = Namespace [] ["SnapshotRequestDelayed"]
+    namespaceFor LedgerDB.SnapshotRequestCompleted {} = Namespace [] ["SnapshotRequestCompleted"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
@@ -1786,6 +1830,10 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
          , " seems to be from an old node or different backend, it will"
          , " be deleted"
          ]
+    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
+        "A delayed snapshot requested was issued. The snapshot will be initiated at the specified timestamp, with the specified delay and for the specified slots"
+    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
+        "The delayed snapshot request was completed"
     documentFor _ = Nothing
 
     allNamespaces =
@@ -3084,25 +3132,35 @@ instance (Show (PBFT.PBftVerKeyHash c))
 
 -- PerasCertDB.TraceEvent instances
 instance LogFormatting (PerasCertDB.TraceEvent blk) where
-  forHuman (PerasCertDB.AddedPerasCert _cert _peer) = "Added Peras certificate to database"
-  forHuman (PerasCertDB.IgnoredCertAlreadyInDB _cert _peer) = "Ignored Peras certificate already in database"
-  forHuman PerasCertDB.OpenedPerasCertDB = "Opened Peras certificate database"
-  forHuman PerasCertDB.ClosedPerasCertDB = "Closed Peras certificate database"
-  forHuman (PerasCertDB.AddingPerasCert _cert _peer) = "Adding Peras certificate to database"
+  forHuman (PerasCertDB.AddCert roundNo _cert result) =
+    "Peras certificate for round " <> Text.pack (show roundNo) <> ": " <> Text.pack (show result)
+  forHuman (PerasCertDB.GarbageCollected slotNo) =
+    "Peras certificate DB garbage collected at slot " <> Text.pack (show slotNo)
 
-  forMachine _dtal (PerasCertDB.AddedPerasCert cert _peer) =
-    mconcat ["kind" .= String "AddedPerasCert",
-             "cert" .= String (Text.pack $ show cert)]
-  forMachine _dtal (PerasCertDB.IgnoredCertAlreadyInDB cert _peer) =
-    mconcat ["kind" .= String "IgnoredCertAlreadyInDB",
-             "cert" .= String (Text.pack $ show cert)]
-  forMachine _dtal PerasCertDB.OpenedPerasCertDB =
-    mconcat ["kind" .= String "OpenedPerasCertDB"]
-  forMachine _dtal PerasCertDB.ClosedPerasCertDB =
-    mconcat ["kind" .= String "ClosedPerasCertDB"]
-  forMachine _dtal (PerasCertDB.AddingPerasCert cert _peer) =
-    mconcat ["kind" .= String "AddingPerasCert",
-             "cert" .= String (Text.pack $ show cert)]
+  forMachine _dtal (PerasCertDB.AddCert roundNo _cert result) =
+    mconcat ["kind" .= String "AddCert",
+             "round" .= String (Text.pack $ show roundNo),
+             "result" .= String (Text.pack $ show result)]
+  forMachine _dtal (PerasCertDB.GarbageCollected slotNo) =
+    mconcat ["kind" .= String "GarbageCollected",
+             "slot" .= String (Text.pack $ show slotNo)]
+
+  asMetrics _ = []
+
+-- PerasVoteDB.TraceEvent instances
+instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
+  forHuman (PerasVoteDB.AddVote voteId _vote result) =
+    "Peras vote " <> Text.pack (show voteId) <> ": " <> Text.pack (show result)
+  forHuman (PerasVoteDB.GarbageCollected slotNo) =
+    "Peras vote DB garbage collected at slot " <> Text.pack (show slotNo)
+
+  forMachine _dtal (PerasVoteDB.AddVote voteId _vote result) =
+    mconcat ["kind" .= String "AddVote",
+             "voteId" .= String (Text.pack $ show voteId),
+             "result" .= String (Text.pack $ show result)]
+  forMachine _dtal (PerasVoteDB.GarbageCollected slotNo) =
+    mconcat ["kind" .= String "GarbageCollected",
+             "slot" .= String (Text.pack $ show slotNo)]
 
   asMetrics _ = []
 
@@ -3164,51 +3222,57 @@ instance ConvertRawHash blk => LogFormatting (ChainDB.TraceAddPerasCertEvent blk
 
 -- PerasCertDB.TraceEvent MetaTrace instance
 instance MetaTrace (PerasCertDB.TraceEvent blk) where
-  namespaceFor (PerasCertDB.AddedPerasCert _ _) =
-    Namespace [] ["AddedPerasCert"]
-  namespaceFor (PerasCertDB.IgnoredCertAlreadyInDB _ _) =
-    Namespace [] ["IgnoredCertAlreadyInDB"]
-  namespaceFor PerasCertDB.OpenedPerasCertDB =
-    Namespace [] ["OpenedPerasCertDB"]
-  namespaceFor PerasCertDB.ClosedPerasCertDB =
-    Namespace [] ["ClosedPerasCertDB"]
-  namespaceFor (PerasCertDB.AddingPerasCert _ _) =
-    Namespace [] ["AddingPerasCert"]
+  namespaceFor (PerasCertDB.AddCert _ _ _) =
+    Namespace [] ["AddCert"]
+  namespaceFor (PerasCertDB.GarbageCollected _) =
+    Namespace [] ["GarbageCollected"]
 
-  severityFor (Namespace _ ["AddedPerasCert"]) _ = Just Info
-  severityFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just Info
-  severityFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just Info
-  severityFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just Info
-  severityFor (Namespace _ ["AddingPerasCert"]) _ = Just Debug
+  severityFor (Namespace _ ["AddCert"]) _ = Just Info
+  severityFor (Namespace _ ["GarbageCollected"]) _ = Just Debug
   severityFor _ _ = Nothing
 
-  privacyFor (Namespace _ ["AddedPerasCert"]) _ = Just Public
-  privacyFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just Public
-  privacyFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just Public
-  privacyFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just Public
-  privacyFor (Namespace _ ["AddingPerasCert"]) _ = Just Public
+  privacyFor (Namespace _ ["AddCert"]) _ = Just Public
+  privacyFor (Namespace _ ["GarbageCollected"]) _ = Just Public
   privacyFor _ _ = Nothing
 
-  detailsFor (Namespace _ ["AddedPerasCert"]) _ = Just DNormal
-  detailsFor (Namespace _ ["IgnoredCertAlreadyInDB"]) _ = Just DNormal
-  detailsFor (Namespace _ ["OpenedPerasCertDB"]) _ = Just DNormal
-  detailsFor (Namespace _ ["ClosedPerasCertDB"]) _ = Just DNormal
-  detailsFor (Namespace _ ["AddingPerasCert"]) _ = Just DDetailed
+  detailsFor (Namespace _ ["AddCert"]) _ = Just DNormal
+  detailsFor (Namespace _ ["GarbageCollected"]) _ = Just DNormal
   detailsFor _ _ = Nothing
 
-  documentFor (Namespace _ ["AddedPerasCert"]) = Just "Certificate added to Peras certificate database"
-  documentFor (Namespace _ ["IgnoredCertAlreadyInDB"]) = Just "Certificate ignored as it was already in the database"
-  documentFor (Namespace _ ["OpenedPerasCertDB"]) = Just "Peras certificate database opened"
-  documentFor (Namespace _ ["ClosedPerasCertDB"]) = Just "Peras certificate database closed"
-  documentFor (Namespace _ ["AddingPerasCert"]) = Just "Adding certificate to Peras certificate database"
+  documentFor (Namespace _ ["AddCert"]) = Just "Certificate added to Peras certificate database"
+  documentFor (Namespace _ ["GarbageCollected"]) = Just "Garbage collection performed on Peras certificate database"
   documentFor _ = Nothing
 
   allNamespaces =
-    [Namespace [] ["AddedPerasCert"],
-     Namespace [] ["IgnoredCertAlreadyInDB"],
-     Namespace [] ["OpenedPerasCertDB"],
-     Namespace [] ["ClosedPerasCertDB"],
-     Namespace [] ["AddingPerasCert"]]
+    [Namespace [] ["AddCert"],
+     Namespace [] ["GarbageCollected"]]
+
+-- PerasVoteDB.TraceEvent MetaTrace instance
+instance MetaTrace (PerasVoteDB.TraceEvent blk) where
+  namespaceFor (PerasVoteDB.AddVote _ _ _) =
+    Namespace [] ["AddVote"]
+  namespaceFor (PerasVoteDB.GarbageCollected _) =
+    Namespace [] ["GarbageCollected"]
+
+  severityFor (Namespace _ ["AddVote"]) _ = Just Info
+  severityFor (Namespace _ ["GarbageCollected"]) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  privacyFor (Namespace _ ["AddVote"]) _ = Just Public
+  privacyFor (Namespace _ ["GarbageCollected"]) _ = Just Public
+  privacyFor _ _ = Nothing
+
+  detailsFor (Namespace _ ["AddVote"]) _ = Just DNormal
+  detailsFor (Namespace _ ["GarbageCollected"]) _ = Just DNormal
+  detailsFor _ _ = Nothing
+
+  documentFor (Namespace _ ["AddVote"]) = Just "Vote added to Peras vote database"
+  documentFor (Namespace _ ["GarbageCollected"]) = Just "Garbage collection performed on Peras vote database"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [Namespace [] ["AddVote"],
+     Namespace [] ["GarbageCollected"]]
 
 -- ChainDB.TraceAddPerasCertEvent MetaTrace instance
 instance MetaTrace (ChainDB.TraceAddPerasCertEvent blk) where

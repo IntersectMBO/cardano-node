@@ -91,6 +91,7 @@ import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Proxy
 import           Data.Text (Text, pack)
 import qualified Data.Text as Text
@@ -185,6 +186,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
         LedgerDB.InitFailureRead (LedgerDB.ReadMetadataError _ LedgerDB.MetadataBackendMismatch) -> Warning
         LedgerDB.InitFailureRead (LedgerDB.ReadMetadataError _ LedgerDB.MetadataFileDoesNotExist) -> Warning
         _ -> Error
+      LedgerDB.SnapshotRequestDelayed {} -> Info
+      LedgerDB.SnapshotRequestCompleted -> Info
     LedgerDB.LedgerReplayEvent {} -> Info
     LedgerDB.LedgerDBForkerEvent {} -> Debug
     LedgerDB.LedgerDBFlavorImplEvent {} -> Debug
@@ -255,6 +258,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
 
   getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
+  getSeverityAnnotation ChainDB.TracePerasVoteDbEvent{} = Info
   getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
@@ -628,6 +632,11 @@ instance ( ConvertRawHash blk
             ", duration: " <> showT t
           LedgerDB.DeletedSnapshot snap ->
             "Deleted old snapshot " <> showT snap
+          LedgerDB.SnapshotRequestDelayed _snapshotRequestTime delayBeforeSnapshotting slots ->
+            "Scheduling to take ledger state snapshots at slots " <> showT (NonEmpty.toList slots)
+            <> ", with randomised delay of"
+            <> showT delayBeforeSnapshotting
+          LedgerDB.SnapshotRequestCompleted -> "Completed taking a ledger state snapshot"
         LedgerDB.LedgerReplayEvent ev' -> case ev' of
           LedgerDB.TraceReplayStartEvent ev'' -> case ev'' of
             LedgerDB.ReplayFromGenesis ->
@@ -795,6 +804,7 @@ instance ( ConvertRawHash blk
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
       ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TracePerasVoteDbEvent ev -> showT ev
       ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
@@ -1083,6 +1093,10 @@ instance ( ConvertRawHash blk
     mconcat [ "kind" .= String "TracePerasCertDbEvent"
             , "event" .= show ev
             ]
+  toObject _verb (ChainDB.TracePerasVoteDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasVoteDbEvent"
+            , "event" .= show ev
+            ]
   toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
     mconcat [ "kind" .= String "TraceAddPerasCertEvent"
             , "event" .= show ev
@@ -1104,6 +1118,14 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.InvalidSnapshot"
                  , "snapshot" .= toObject verb snap
                  , "failure" .= show failure ]
+      LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestDelayed"
+                 , "requestTime" .= show snapshotRequestTime
+                 , "delayBeforeSnapshotting " .= show delayBeforeSnapshotting
+                 , "slots" .= show slots]
+      LedgerDB.SnapshotRequestCompleted ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestCompleted"
+                 ]
     LedgerDB.LedgerReplayEvent ev' -> case ev' of
       LedgerDB.TraceReplayStartEvent ev'' -> case ev'' of
         LedgerDB.ReplayFromGenesis ->
