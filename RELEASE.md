@@ -31,15 +31,15 @@ This is the release process for node releases
 
 This is the release process for node release hot fixes:
 
-1. **Create a hotfix branch**  
-   - **Branch naming format**: `release/X.Y.Z` (e.g., for a hotfix on cabal version `10.5` already tagged and released as `10.5.0`, name it `release/10.5.1`).  
-   - **Important**: CI will only run if the branch follows this exact naming convention.  
+1. **Create a hotfix branch**
+   - **Branch naming format**: `release/X.Y.Z` (e.g., for a hotfix on cabal version `10.5` already tagged and released as `10.5.0`, name it `release/10.5.1`).
+   - **Important**: CI will only run if the branch follows this exact naming convention.
 
-2. **Update the version**  
-   - Bump the Node version in the `cabal` file to reflect the hotfix changes. 
+2. **Update the version**
+   - Bump the Node version in the `cabal` file to reflect the hotfix changes.
 
-3. **Follow the standard release process**  
-   Resume from **Step 3** of the [normal release process](#release-process). 
+3. **Follow the standard release process**
+   Resume from **Step 3** of the [normal release process](#release-process).
 
 # Rotating Release Engineer Role
 
@@ -116,16 +116,16 @@ There's a script (`scripts/generate-release-changelog-links.hs`) that generates 
 Example usage:
 
 ```shellsession
-$ nix build .#project.x86_64-linux.plan-nix.json
+$ nix build .#project.x86_64-linux.plan-nix
 ...
-$ scripts/generate-release-changelog-links.hs -- -o links.md result-json $GITHUB_API_TOKEN
+$ scripts/generate-release-changelog-links.hs -o links.md result-json $GITHUB_API_TOKEN
 ...
 ```
 
 For more information, including how to generate / retrieve a GitHub API token, use
 
 ```
-scripts/generate-release-changelog-links.hs -- --help
+scripts/generate-release-changelog-links.hs --help
 ```
 
 Note that this is a cabal script and may take a while to build all the dependencies. You will need to have the `zlib` native library available, either installed via your OS package manager or by using `nix-shell -p zlib`.
