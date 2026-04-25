@@ -119,8 +119,49 @@ fundsDefault :: Types.Profile -> Types.Profile
 fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys (2*500*4)
 
 -- Some profiles have a higher `funds_balance` in `Genesis`. Needed? Fix it?
+--
+-- UTxO key count for issue ouroboros-leios#789 (stress-test tx diffusion):
+--
+--   Target TPS:           148 TPS (to reach 40 kB/s with 270-byte txs)
+--   Inputs per tx:        2 (2-in / 2-out transactions)
+--   UTxO consumption:     148 * 2 = 296 UTxOs/second
+--
+--   Block body size:      90,112 bytes
+--   Tx size (CBOR):       270 bytes
+--   Txs per block:        floor(90112 / 270) = 333 txs
+--   UTxOs recycled/block: 333 * 2 outputs = 666 UTxOs
+--   Block interval:       ~20 seconds
+--   Recycle rate:         666 / 20 = 33.3 UTxOs/second
+--
+--   Recycle strategy:     on_confirm, depth 2
+--   First recycling at:   ~60 seconds (inclusion + 2 blocks)
+--
+--   Mempool capacity:     25,000,000 bytes (25 MB)
+--   Net fill rate:        40,000 - 4,506 = 35,494 bytes/second
+--   Time to fill:         25,000,000 / 35,494 = ~705 seconds
+--
+--   Phase 1 (0-60s, no recycling):
+--     consumed = 296 * 60                          = 17,760 UTxOs
+--
+--   Phase 2 (60-705s, recycling at chain rate):
+--     consumed = 296 * 645                         = 190,920 UTxOs
+--     recycled = 33.3 * 645                        =  21,479 UTxOs
+--     net consumed                                 = 169,441 UTxOs
+--
+--   Base requirement:     17,760 + 169,441         = 187,201 UTxOs
+--
+--   Fork losses (explorer may switch forks ~60 times per run,
+--   no mechanism to recycle orphaned funds):
+--     per fork: 333 orphaned txs * 2 inputs        = 666 UTxOs lost
+--     60 forks                                     = 39,960 UTxOs
+--     cascade estimate (1x direct loss)            = 39,960 UTxOs
+--
+--   Total:               187,201 + 39,960 + 39,960 = 267,121 UTxOs
+--   With 10% margin:     267,121 * 1.1             = 293,833 UTxOs
+--   Rounded up:          300,000 UTxOs
+--
 fundsDouble :: Types.Profile -> Types.Profile
-fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoKeys (52*500*4)
+fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoKeys 300000
 
 fundsVoting :: Types.Profile -> Types.Profile
 fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2

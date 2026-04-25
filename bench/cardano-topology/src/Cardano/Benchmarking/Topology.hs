@@ -15,7 +15,7 @@ module Cardano.Benchmarking.Topology (
 import           Prelude hiding (id)
 
 import           Data.Function  ((&))
-import           Data.List      (tails, sortOn, uncons)
+import           Data.List      (tails, uncons)
 import           Data.Maybe     (isJust)
 
 import qualified Cardano.Benchmarking.Topology.Types as Types
@@ -69,7 +69,8 @@ mkExplorer explorerLocation coreNodes =
     , nodeId = length coreNodes
     , region = explorerLocation
     -- Explorer producers sorted by numeric id, not region or something else.
-    , producers = map Types.name (sortOn Types.nodeId coreNodes)
+    --, producers = map Types.name (sortOn Types.nodeId coreNodes)
+    , producers = ["node-0", "node-1", "node-2"]
     , org = "IOHK"
     , pools = Nothing
     , stakePool = Nothing

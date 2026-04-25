@@ -51,12 +51,26 @@ baseVoltaire =
     baseInternal
   . V.genesisVariantVoltaire
 
+baseLeios :: Types.Profile -> Types.Profile
+baseLeios =
+    P.fixedLoaded
+  . composeFiftyOne
+  . P.maxBlockSize 90112
+  -- All cloud profiles use trace forwarding.
+  . P.traceForwardingOn
+  . P.initCooldown 45
+  . P.analysisStandard
+  . V.genesisVariantVoltaire
+
 baseVoting :: Types.Profile -> Types.Profile
 baseVoting =
     baseVoltaire
   . P.voting
 
 --------------------------------------------------------------------------------
+
+composeFiftyOne :: Types.Profile -> Types.Profile
+composeFiftyOne = P.torus      . V.hosts 51 . P.withExplorerNode
 
 composeFiftytwo :: Types.Profile -> Types.Profile
 composeFiftytwo = P.torusDense . V.hosts 52 . P.withExplorerNode
@@ -195,6 +209,14 @@ profilesNoEraCloud =
   , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing
   , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.newTracing . P.budgetBlockStepsOneAndAHalf
   , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.newTracing . P.budgetBlockStepsDouble
+  ]
+  ---------
+  -- Leios.
+  ---------
+  ++
+  let valueLeios = P.empty & baseLeios . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
+  in [
+    valueLeios & P.name "value-leios-nomadperf" . P.dreps 10000 . P.newTracing
   ]
   ----------
   -- Voting.

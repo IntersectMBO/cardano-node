@@ -203,35 +203,41 @@ __toJSON
           rate_limit =
             { scope = "shared";
               type = "token_bucket";
-              params = { tps = 12; };
+              params = { tps = 148; };
             }
           ;
-          max_batch_size = 500;
+          max_batch_size = null;
           on_exhaustion = "error";
           # One node per-workload.
           workloads =
-            builtins.listToAttrs
-              (builtins.genList
-                (i:
-                  { name = "node-${toString i}";
-                    value =
-                      { targets =
-                          { "${toString i}" =
-                            #  { addr = "127.0.0.1";
-                            #    port = (30000 + i);
-                            #  }
-                              { addr = "__addr_${toString i}__";
-                                port = "__port_${toString i}__";
-                              }
-                            ;
-                          }
-                        ;
-                      }
-                    ;
-                  }
-                )
-                profile.composition.n_pool_hosts
-              )
+#            builtins.listToAttrs
+#              (builtins.genList
+#                (i:
+#                  { name = "node-${toString i}";
+#                    value =
+#                      { targets =
+#                          { "${toString i}" =
+#                              { addr = "127.0.0.1";
+#                                port = (30000 + i);
+#                              }
+#                            #  { addr = "__addr_${toString i}__";
+#                            #    port = "__port_${toString i}__";
+#                            #  }
+#                            ;
+#                          }
+#                        ;
+#                      }
+#                    ;
+#                  }
+#                )
+#                profile.composition.n_pool_hosts
+#              )
+            { targets =
+                { addr = "__addr_51__";
+                  port = "__port_51__";
+                }
+              ;
+            }
           ;
           # tx-centrifuge parameters.
           ###########################
