@@ -108,3 +108,9 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+   type: git
+   location: https://github.com/jasagredo/blockio-uring
+   tag: c907fdf5df0154cf3627e2d1fed12e52706c4336
+   --sha256: sha256-tWuaVgm5qcvyff2r56wRmpIWYI0w9LGX3556AYrQI1I=
