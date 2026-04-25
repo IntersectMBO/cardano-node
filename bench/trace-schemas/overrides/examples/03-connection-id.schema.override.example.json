@@ -1,0 +1,6 @@
+{
+  "_target": "bench/trace-schemas/types/ConnectionId.schema.json",
+  "properties": {
+    "legacyDebugField": null
+  }
+}

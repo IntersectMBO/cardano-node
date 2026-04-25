@@ -1,0 +1,106 @@
+cabal-version: 3.0
+
+name:          trace-schema-gen
+version:       0.1.0.0
+synopsis:      Scripts for generating and validating cardano-node trace JSON schemas
+category:      Cardano, Tracing
+copyright:     2024-2026 Input Output Global Inc (IOG), 2024-2026 Intersect.
+author:        IOHK
+maintainer:    operations@iohk.io
+license:       Apache-2.0
+build-type:    Simple
+
+common common
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wcompat
+  build-depends:
+    base >= 4.14 && < 5,
+
+library
+  import:         common
+  hs-source-dirs: src
+  exposed-modules:
+    TraceSchemaGen.ApplySchemaOverrides
+    TraceSchemaGen.CheckOverrideCoverage
+    TraceSchemaGen.ValidateTraceSchemas
+  build-depends:
+    aeson,
+    aeson-pretty,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    optparse-applicative,
+    process,
+    text,
+    vector,
+
+executable schema-gen
+  import:         common
+  main-is:        GhciSchemaGen.hs
+  hs-source-dirs: .
+  build-depends:
+    aeson,
+    aeson-pretty,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    process,
+    text,
+    vector,
+
+executable apply-schema-overrides
+  import:         common
+  main-is:        ApplySchemaOverrides.hs
+  hs-source-dirs: .
+  build-depends:
+    trace-schema-gen,
+
+executable validate-trace-schemas
+  import:         common
+  main-is:        ValidateTraceSchemas.hs
+  hs-source-dirs: .
+  build-depends:
+    trace-schema-gen,
+
+executable validate-trace-log
+  import:         common
+  main-is:        ValidateTraceLog.hs
+  hs-source-dirs: .
+  build-depends:
+    aeson,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    process,
+    text,
+
+executable check-override-coverage
+  import:         common
+  main-is:        CheckOverrideCoverage.hs
+  hs-source-dirs: .
+  build-depends:
+    trace-schema-gen,
+
+test-suite trace-schema-gen-test
+  import:         common
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:
+    aeson,
+    bytestring,
+    directory,
+    filepath,
+    tasty,
+    tasty-hunit,
+    temporary,
+    text,
+    trace-schema-gen,

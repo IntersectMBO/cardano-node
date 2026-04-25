@@ -46,6 +46,7 @@ packages:
   bench/tx-generator
   bench/cardano-recon-framework
   bench/cardano-timeseries-io
+  bench/trace-schemas/scripts/schema-gen
   trace-resources
   trace-forward
 
@@ -108,3 +109,5 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+
