@@ -86,6 +86,7 @@ library
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
                         Cardano.TxGenerator.Setup.NodeConfig
+                        Cardano.TxGenerator.Setup.TestnetDiscovery
                         Cardano.TxGenerator.Setup.Plutus
                         Cardano.TxGenerator.PlutusContext
                         Cardano.TxGenerator.Setup.SigningKey
@@ -127,6 +128,7 @@ library
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , directory
                       , dlist
                       , extra
                       , filepath
@@ -250,9 +252,21 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
+                      , aeson
+                      , bytestring
+                      , cardano-api
+                      , cardano-node
+                      , directory
+                      , extra
+                      , filepath
+                      , QuickCheck
                       , tasty
                       , tasty-hunit
+                      , tasty-quickcheck
+                      , temporary
                       , tx-generator
+
+  other-modules:        TestnetDiscoveryTest
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists

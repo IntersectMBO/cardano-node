@@ -28,6 +28,7 @@ import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Setup.TestnetDiscovery (TestnetConfig (..), discoverTestnetConfig)
 import           Cardano.TxGenerator.Types (TxGenPlutusParams (..))
 import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
@@ -75,7 +76,7 @@ deriving instance Show SignalSpecificInfo
 
 data Command
   = Json FilePath
-  | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
+  | JsonHL FilePath (Maybe TestnetConfig) (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
   | Selftest (Maybe FilePath)
   | VersionCmd
@@ -93,8 +94,12 @@ runCommand' iocp = do
     Json actionFile -> do
       script <- parseScriptFileAeson actionFile
       runScript emptyEnv script envConsts >>= handleError . fst
-    JsonHL nixSvcOptsFile nodeConfigOverwrite cardanoTracerOverwrite -> do
-      opts <- parseJSONFile fromJSON nixSvcOptsFile
+    JsonHL configFile maybeTestnetConfig nodeConfigOverwrite cardanoTracerOverwrite -> do
+      opts <- case maybeTestnetConfig of
+        Nothing -> parseJSONFile fromJSON configFile
+        Just tc -> do
+          userConfig <- parseJSONFile pure configFile
+          discoverTestnetConfig tc userConfig
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       let consts = envConsts { LogTypes.envNixSvcOpts = Just finalOpts }
 
@@ -231,8 +236,15 @@ commandParser
 
   jsonHLCmd :: Parser Command
   jsonHLCmd = JsonHL <$> filePath "benchmarking options"
+                     <*> optional testnetConfigOpt
                      <*> nodeConfigOpt
                      <*> tracerConfigOpt
+
+  testnetConfigOpt :: Parser TestnetConfig
+  testnetConfigOpt = TestnetConfig
+    <$> strOption (long "testnet-config-dir" <> metavar "DIR"
+          <> help "cardano-testnet output directory; discovered infrastructure overrides config file")
+
   compileCmd :: Parser Command
   compileCmd = Compile <$> filePath "benchmarking options"
 
@@ -242,7 +254,7 @@ commandParser
   nodeConfigOpt = option (Just <$> str)
     ( long "nodeConfig"
       <> short 'n'
-      <> metavar "FILENAME"
+      <> metavar "FILEPATH"
       <> value Nothing
       <> help "the node configfile"
     )
