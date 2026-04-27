@@ -877,11 +877,13 @@ deploy-genesis-nomadcloud() {
   # TODO: These files are link to file that don't exist!
   rm "${dir}"/genesis/profile.json
   rm "${dir}"/genesis/stake-delegator-keys
-  find -L "${dir}"/genesis -printf "%P\n"         \
-    | tar --create --zstd                         \
-      --dereference --hard-dereference            \
-      --file="${dir}"/"${genesis_file_name}"      \
-      --owner=65534 --group=65534 --mode="u=rwx"  \
+  find -L "${dir}"/genesis                              \
+    -not -name cache-entry -not -path "*/cache-entry/*" \
+    -printf "%P\n"                                      \
+    | tar --create --zstd                               \
+      --dereference --hard-dereference                  \
+      --file="${dir}"/"${genesis_file_name}"            \
+      --owner=65534 --group=65534 --mode="u=rwx"        \
       --directory="${dir}"/genesis --files-from=-
 
   # Upload genesis tar file
