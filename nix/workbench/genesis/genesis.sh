@@ -234,6 +234,8 @@ case "$op" in
         ln -s "$cache_entry"/pools                "$outdir"
         ln -s "$cache_entry"/stake-delegator-keys "$outdir"
         ln -s "$cache_entry"/utxo-keys            "$outdir"
+        [[ -d "$cache_entry"/stake-delegators ]] && ln -s "$cache_entry"/stake-delegators "$outdir"
+        [[ -d "$cache_entry"/drep-keys ]]        && ln -s "$cache_entry"/drep-keys        "$outdir"
 
         ## genesis
         cp    "$cache_entry"/genesis*.json        "$outdir"
