@@ -351,8 +351,7 @@ instance Semigroup PartialTraceSelection where
 
 instance FromJSON PartialTraceSelection where
   parseJSON = withObject "PartialTraceSelection" $ \v -> do
-    PartialTraceSelection
-      <$> Last <$> v .:? "TracingVerbosity"
+    (PartialTraceSelection . Last <$> (v .:? "TracingVerbosity"))
       <*> parseTracer (Proxy @TraceAcceptPolicy) v
       <*> parseTracer (Proxy @TraceBlockchainTime) v
       <*> parseTracer (Proxy @TraceBlockFetchClient) v
