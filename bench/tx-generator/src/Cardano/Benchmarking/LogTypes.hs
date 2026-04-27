@@ -37,7 +37,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 import           Cardano.TxGenerator.Types (TPSRate)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
+import qualified Cardano.Ledger.TxIn as SL (TxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -147,7 +147,7 @@ data NodeToNodeSubmissionTrace
   | EndOfProtocol
   deriving stock (Show, Generic)
 
-type SendRecvTxSubmission2 = TraceSendRecv (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
+type SendRecvTxSubmission2 = TraceSendRecv (TxSubmission2 SL.TxId (GenTx CardanoBlock))
 
 type SendRecvConnect = Mux.WithBearer
                          RemoteConnectionId
