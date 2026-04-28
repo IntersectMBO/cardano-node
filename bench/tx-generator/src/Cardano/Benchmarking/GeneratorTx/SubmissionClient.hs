@@ -35,17 +35,20 @@ import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import qualified Cardano.Ledger.TxIn as SL (TxId)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
+import qualified Ouroboros.Consensus.Cardano.Block as Block
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                    ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
                    NumTxIdsToAck (..), NumTxIdsToReq (..), SingBlockingStyle (..))
 import           Ouroboros.Network.SizeInBytes
 
-import           Prelude (fail)
+import           Prelude (error, fail)
 
 import           Control.Arrow ((&&&))
 import qualified Data.List as L
@@ -90,7 +93,7 @@ txSubmissionClient
   -> Trace m (TraceBenchTxSubmit TxId)
   -> TxSource era
   -> EndOfProtocolCallback m
-  -> TxSubmissionClient SL.TxId (GenTx CardanoBlock) m ()
+  -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
 txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   TxSubmissionClient $
     pure $ client (initialTxSource, UnAcked [], SubmissionThreadStats 0 0 0)
@@ -110,7 +113,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   queueNewTxs newTxs (txSource, UnAcked unAcked, stats)
     = (txSource, UnAcked (newTxs <> unAcked), stats)
 
-  client :: LocalState era -> ClientStIdle SL.TxId (GenTx CardanoBlock) m ()
+  client :: LocalState era -> ClientStIdle (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
 
   client localState = ClientStIdle
     { recvMsgRequestTxIds = requestTxIds localState
@@ -122,7 +125,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     -> SingBlockingStyle blocking
     -> NumTxIdsToAck
     -> NumTxIdsToReq
-    -> m (ClientStTxIds blocking SL.TxId (GenTx CardanoBlock) m ())
+    -> m (ClientStTxIds blocking (GenTxId CardanoBlock) (GenTx CardanoBlock) m ())
   requestTxIds state blocking (NumTxIdsToAck ackNum) (NumTxIdsToReq reqNum) = do
     let ack = Ack $ fromIntegral ackNum
         req = Req $ fromIntegral reqNum
@@ -150,11 +153,11 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
 
   requestTxs ::
        LocalState era
-    -> [SL.TxId]
-    -> m (ClientStTxs SL.TxId (GenTx CardanoBlock) m ())
+    -> [GenTxId CardanoBlock]
+    -> m (ClientStTxs (GenTxId CardanoBlock) (GenTx CardanoBlock) m ())
   requestTxs (txSource, unAcked, stats) txIds = do
     let  reqTxIds :: [TxId]
-         reqTxIds = fmap fromShelleyTxId txIds
+         reqTxIds = fmap fromGenTxId txIds
     traceWith tr $ ReqTxs (length reqTxIds)
     let UnAcked ua = unAcked
         uaIds = getTxId . getTxBody <$> ua
@@ -173,8 +176,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
               , stsUnavailable =
                 stsUnavailable stats + Unav (length missIds)}))
 
-  txToIdSize :: Tx era -> (SL.TxId, SizeInBytes)
-  txToIdSize = (Mempool.toRawTxIdHash . Mempool.txId . toGenTx) &&& (SizeInBytes . fromInteger . getTxSize)
+  txToIdSize :: Tx era -> (GenTxId CardanoBlock, SizeInBytes)
+  txToIdSize = (Mempool.txId . toGenTx) &&& (SizeInBytes . fromInteger . getTxSize)
     where
       getTxSize :: Tx era -> Integer
       getTxSize (ShelleyTx sbe tx) =
@@ -182,6 +185,15 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
 
   toGenTx :: Tx era -> GenTx CardanoBlock
   toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx
+
+  fromGenTxId :: GenTxId CardanoBlock -> TxId
+  fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdAllegra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdMary    (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId _ = error "TODO: fix incomplete match"
 
   tokIsBlocking :: SingBlockingStyle a -> Bool
   tokIsBlocking = \case

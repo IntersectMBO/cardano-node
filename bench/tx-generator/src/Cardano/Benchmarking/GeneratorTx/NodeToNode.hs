@@ -23,7 +23,7 @@ import           Cardano.TxGenerator.Setup.NixService (defaultKeepaliveTimeout, 
 import           Ouroboros.Consensus.Block.Abstract
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
-import qualified Cardano.Ledger.TxIn as SL (TxId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Network.NodeToNode (Codecs (..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
@@ -67,7 +67,7 @@ import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
-type ConnectClient = AddrInfo -> TxSubmissionClient SL.TxId (GenTx CardanoBlock) IO () -> IO ()
+type ConnectClient = AddrInfo -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) IO () -> IO ()
 
 benchmarkConnectTxSubmit
   :: forall blk. (blk ~ CardanoBlock, RunNode blk )
@@ -78,7 +78,7 @@ benchmarkConnectTxSubmit
   -> NetworkMagic
   -> AddrInfo
   -- ^ remote address information
-  -> TxSubmissionClient SL.TxId (GenTx blk) IO ()
+  -> TxSubmissionClient (GenTxId blk) (GenTx blk) IO ()
   -- ^ the particular txSubmission peer
   -> IO ()
 
