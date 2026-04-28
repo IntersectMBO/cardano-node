@@ -87,11 +87,7 @@ instance All (Compose ToObject GenTx) xs => ToObject (GenTx (HardForkBlock xs)) 
         . getHardForkGenTx
 
 instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBlock xs))) where
-    toJSON =
-          hcollapse
-        . hcmap (Proxy @(ToJSON `Compose` WrapGenTxId)) (K . toJSON)
-        . getOneEraGenTxId
-        . getHardForkGenTxId
+    toJSON (HardForkGenTxId txid _) = toJSON txid
 
 instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
     toJSON = toJSON . unwrapGenTxId
@@ -396,6 +392,7 @@ instance ( ToJSON (BlockNodeToClientVersion x)
 
 instance ToJSON HardForkSpecificNodeToClientVersion where
     toJSON HardForkSpecificNodeToClientVersion3 = String "HardForkSpecificNodeToClientVersion3"
+    toJSON HardForkSpecificNodeToClientVersion4 = String "HardForkSpecificNodeToClientVersion4"
 
 instance (ToJSON (BlockNodeToClientVersion blk)) => ToJSON (EraNodeToClientVersion blk) where
     toJSON EraNodeToClientDisabled = String "EraNodeToClientDisabled"
@@ -424,6 +421,7 @@ instance ( ToJSON (BlockNodeToNodeVersion x)
 
 instance ToJSON HardForkSpecificNodeToNodeVersion where
     toJSON HardForkSpecificNodeToNodeVersion1 = "HardForkSpecificNodeToNodeVersion1"
+    toJSON HardForkSpecificNodeToNodeVersion2 = "HardForkSpecificNodeToNodeVersion2"
 
 instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
     toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion

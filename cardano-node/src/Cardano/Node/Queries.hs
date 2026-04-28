@@ -107,11 +107,8 @@ instance ConvertTxId (ShelleyBlock protocol c) where
 
 instance All ConvertTxId xs
       => ConvertTxId (HardForkBlock xs) where
-  txIdToRawBytes =
-    hcollapse
-      . hcmap (Proxy @ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
-      . getOneEraGenTxId
-      . getHardForkGenTxId
+  txIdToRawBytes (HardForkGenTxId txId _) =
+    Crypto.hashToBytes . Ledger.extractHash . Ledger.unTxId $ txId
 
 --
 -- * KES

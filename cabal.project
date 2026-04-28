@@ -103,6 +103,8 @@ source-repository-package
         cardano-diffusion
         ouroboros-network
 
+
+
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
   source-repository-package
@@ -123,3 +125,11 @@ if impl(ghc >= 9.12)
       proto-lens-tests-dep
       proto-lens-tests
       proto-lens
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-api
+    tag: cc58312f6bc692969dad089c7ecfbe1b2d67555f
+    --sha256: sha256-KidqAEjEvndpGE67dI3/1MAjgZyjvUImuBn36r+fNVA=
+    subdir:
+        cardano-api
