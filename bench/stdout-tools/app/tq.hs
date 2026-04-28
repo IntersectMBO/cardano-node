@@ -66,21 +66,23 @@ data CliOpts = CliOpts
 
 cliFunctionReader :: String -> Either String FilterReduce.FilterReduce
 cliFunctionReader str = case str of
-  "count-lines"  -> Right   FilterReduce.countLinesFR
-  "count-traces" -> Right   FilterReduce.countTracesFR
-  "2s-silences"  -> Right $ FilterReduce.silencesFR  2
-  "5s-silences"  -> Right $ FilterReduce.silencesFR  5
-  "10s-silences" -> Right $ FilterReduce.silencesFR 10
-  "count-FLSLCP" -> Right $ FilterReduce.countNamespaceFR "Forge.Loop.StartLeadershipCheckPlus"
-  "missed-slots" -> Right   FilterReduce.missedSlotsFR
-  "slot-pauses"  -> Right $ FilterReduce.slotPausesFR 1.75
-  "utxo-size"    -> Right   FilterReduce.utxoSizeFR
-  "heap-changes" -> Right   FilterReduce.heapChangesFR
-  "live-changes" -> Right   FilterReduce.liveChangesFR
-  "rss-changes"  -> Right   FilterReduce.rssChangesFR
-  "fsrd-changes" -> Right   FilterReduce.fsRdChangesFR
-  "fswr-changes" -> Right   FilterReduce.fsWrChangesFR
-  "cpu-ticks"    -> Right   FilterReduce.cpuTicksFR
+  "count-lines"   -> Right   FilterReduce.countLinesFR
+  "count-traces"  -> Right   FilterReduce.countTracesFR
+  "2s-silences"   -> Right $ FilterReduce.silencesFR  2
+  "5s-silences"   -> Right $ FilterReduce.silencesFR  5
+  "10s-silences"  -> Right $ FilterReduce.silencesFR 10
+  "count-FLSLCP"  -> Right $ FilterReduce.countNamespaceFR "Forge.Loop.StartLeadershipCheckPlus"
+  "missed-slots"  -> Right   FilterReduce.missedSlotsFR
+  "slot-pauses"   -> Right $ FilterReduce.slotPausesFR 1.75
+  "utxo-size"     -> Right   FilterReduce.utxoSizeFR
+  "mempool-bytes" -> Right   FilterReduce.mempoolBytesFR
+  "mempool-txs"   -> Right   FilterReduce.mempoolTxsFR
+  "heap-changes"  -> Right   FilterReduce.heapChangesFR
+  "live-changes"  -> Right   FilterReduce.liveChangesFR
+  "rss-changes"   -> Right   FilterReduce.rssChangesFR
+  "fsrd-changes"  -> Right   FilterReduce.fsRdChangesFR
+  "fswr-changes"  -> Right   FilterReduce.fsWrChangesFR
+  "cpu-ticks"     -> Right   FilterReduce.cpuTicksFR
   _ -> Left str
 
 main :: IO ()

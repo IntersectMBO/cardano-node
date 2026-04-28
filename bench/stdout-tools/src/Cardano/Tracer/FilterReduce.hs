@@ -21,6 +21,8 @@ module Cardano.Tracer.FilterReduce
   , missedSlots, missedSlotsFR, slotPauses, slotPausesFR
 
   , utxoSize, utxoSizeFR
+  , mempoolBytes, mempoolBytesFR
+  , mempoolTxs, mempoolTxsFR
   , heapChanges, heapChangesFR
   , liveChanges, liveChangesFR
   , rssChanges, rssChangesFR
@@ -213,6 +215,87 @@ utxoSize = (,)
 
 utxoSizeFR :: FilterReduce
 utxoSizeFR = uncurry MkFilterReduce utxoSize
+
+-- mempoolSize [ bytes, numTxs ]
+-- {"at":"2026-03-04T14:15:33.365175641Z","ns":"Mempool.AddedTx","data":{"kind":"TraceMempoolAddedTx","mempoolSize":{"bytes":129000,"numTxs":645},"tx":{"txid":"e018c503"}},"sev":"Info","thread":"78","host":"node-0"}
+-- {"at":"2026-03-04T14:05:26.109341343Z","ns":"Mempool.RemoveTxs","data":{"kind":"TraceMempoolRemoveTxs","mempoolSize":{"bytes":64600,"numTxs":323},"txs":[...
+-- {"at":"2026-04-27T04:30:33.501751084Z","ns":"Mempool.RejectedTx","data":{"kind":"TraceMempoolRejectedTx","mempoolSize":{"bytes":4812632,"numTxs":12868},"tx":{"txid":"9b40db50"}},"sev":"Info","thread":"203","host":"node-0"}
+
+mempoolBytes :: ( Filter.Compose
+                    (Filter.Compose
+                      (Filter.Compose
+                        (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                        (Filter.Or
+                          Filter.Namespace
+                          (Filter.Or
+                            Filter.Namespace
+                            Filter.Namespace
+                          )
+                        )
+                      )
+                      Filter.RightAt
+                    )
+                    (Filter.AesonWithAt (Trace.Remainder Trace.DataWithMempoolSize))
+                , Reducer.Changes (Trace.Remainder Trace.DataWithMempoolSize)
+                )
+mempoolBytes = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Or
+      (Filter.Namespace "Mempool.AddedTx")
+      (Filter.Or
+        (Filter.Namespace "Mempool.RemoveTxs")
+        (Filter.Namespace "Mempool.RejectedTx")
+      )
+    Filter.<->
+    Filter.RightAt
+    Filter.<->
+    (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataWithMempoolSize))
+  )
+  (Reducer.Changes (Trace.bytes . Trace.mempoolSize . Trace.remainderData))
+
+mempoolBytesFR :: FilterReduce
+mempoolBytesFR = uncurry MkFilterReduce mempoolBytes
+
+mempoolTxs :: ( Filter.Compose
+                  (Filter.Compose
+                    (Filter.Compose
+                      (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                      (Filter.Or
+                        Filter.Namespace
+                        (Filter.Or
+                          Filter.Namespace
+                          Filter.Namespace
+                        )
+                      )
+                    )
+                    Filter.RightAt
+                  )
+                  (Filter.AesonWithAt (Trace.Remainder Trace.DataWithMempoolSize))
+              , Reducer.Changes (Trace.Remainder Trace.DataWithMempoolSize)
+              )
+mempoolTxs = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Or
+      (Filter.Namespace "Mempool.AddedTx")
+      (Filter.Or
+        (Filter.Namespace "Mempool.RemoveTxs")
+        (Filter.Namespace "Mempool.RejectedTx")
+      )
+    Filter.<->
+    Filter.RightAt
+    Filter.<->
+    (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataWithMempoolSize))
+  )
+  (Reducer.Changes (Trace.numTxs . Trace.mempoolSize . Trace.remainderData))
+
+mempoolTxsFR :: FilterReduce
+mempoolTxsFR = uncurry MkFilterReduce mempoolTxs
 
 heapChanges :: ( Filter.Compose
                    (Filter.Compose

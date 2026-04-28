@@ -12,6 +12,7 @@ module Cardano.Tracer.Trace
 
   , Remainder (remainderData, sev, thread, host)
   , DataWithSlot (slot), DataWithUtxoSize (utxoSize)
+  , MempoolSize (bytes, numTxs), DataWithMempoolSize (mempoolSize)
   , DataResources (..)
   ) where
 
@@ -129,6 +130,26 @@ newtype DataWithUtxoSize = DataWithUtxoSize
 instance Aeson.ToJSON DataWithUtxoSize where
 
 instance Aeson.FromJSON DataWithUtxoSize where
+
+-- Helper for mempool size (bytes and numTxs).
+-- { at:..., ns:"Mempool.*", data:{ ..., mempoolSize:{ bytes:0, numTxs:0 }, ... } }
+data MempoolSize = MempoolSize
+  { bytes  :: Integer
+  , numTxs :: Integer
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON MempoolSize where
+
+instance Aeson.FromJSON MempoolSize where
+
+newtype DataWithMempoolSize = DataWithMempoolSize
+  { mempoolSize :: MempoolSize }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON DataWithMempoolSize where
+
+instance Aeson.FromJSON DataWithMempoolSize where
 
 --------------------------------------------------------------------------------
 
