@@ -500,6 +500,11 @@ instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
               , "ebHash" .= ebHash
               ]
 
+    LN.MsgLeiosVotes votes ->
+      mconcat [ "kind" .= String "MsgLeiosVotes"
+              , "votes" .= votes
+              ]
+
     LN.MsgDone ->
       mconcat [ "kind" .= String "MsgDone"
               ]
@@ -516,6 +521,7 @@ instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
       LN.MsgLeiosBlockAnnouncement {} -> Namespace [] ["BlockAnnouncement"]
       LN.MsgLeiosBlockOffer {} -> Namespace [] ["BlockOffer"]
       LN.MsgLeiosBlockTxsOffer {} -> Namespace [] ["BlockTxsOffer"]
+      LN.MsgLeiosVotes {} -> Namespace [] ["Votes"]
       LN.MsgDone -> Namespace [] ["Done"]
 
     severityFor _ _ = Just Debug
@@ -527,6 +533,7 @@ instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
       , Namespace [] ["BlockAnnouncement"]
       , Namespace [] ["BlockOffer"]
       , Namespace [] ["BlockTxsOffer"]
+      , Namespace [] ["Votes"]
       , Namespace [] ["Done"]
       ]
 
