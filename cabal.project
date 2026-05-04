@@ -91,3 +91,18 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/hermod-tracing.git
+  tag: 47f0cc791ea5fb58e95276add4e609e2d171aba9
+  --sha256: sha256-sf0WDX7Mik59USzAi4BgaWlQHuRA5ASR6KdguPQpMs0=
+  subdir:
+    trace-dispatcher
+
+source-repository-package
+  type: git
+  location: https://github.com/avieth/contra-tracer
+  tag: 481650fae22e629e211dd0c8b801d1cfcd1b1c89
+  --sha256: sha256-UGJq9cl7deLJbSyN8IgdHc/Tq5RpAm75zPv4+CmMImo=
+  subdir:
+    .
