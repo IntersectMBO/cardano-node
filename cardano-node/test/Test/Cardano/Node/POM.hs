@@ -14,6 +14,7 @@ import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedg
 import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Cardano.Node.Configuration.LedgerDB
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -182,6 +183,7 @@ testPartialYamlConfig =
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
+    , pncLeiosDbConfig = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -238,6 +240,7 @@ testPartialCliConfig =
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
+    , pncLeiosDbConfig = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -301,6 +304,7 @@ eExpectedConfig = do
     , ncRpcConfig
     , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
+    , ncLeiosDbConfig = LeiosDbSQLite "leios.db"
     }
 
 -- -----------------------------------------------------------------------------

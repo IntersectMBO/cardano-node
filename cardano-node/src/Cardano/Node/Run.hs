@@ -47,6 +47,7 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
@@ -180,6 +181,8 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
+
+import           LeiosDemoDb (newLeiosDBInMemory, newLeiosDBSQLite)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -451,6 +454,10 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
                          $ Proxy @blk
                          ))
 
+  leiosDB <- case ncLeiosDbConfig nc of
+    LeiosDbInMemory -> newLeiosDBInMemory
+    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite leiosDbPath
+
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
@@ -516,6 +523,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
           , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
           , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
           , rnFeatureFlags = mempty -- TODO(10.7) forward this to CLI options?
+          , rnLeiosDb = leiosDB
           }
 #ifdef UNIX
     -- initial `SIGHUP` handler, which rereads the topology file and the RPC config from the main configuration file

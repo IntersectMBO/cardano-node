@@ -149,6 +149,7 @@ nodeRunParser = do
            , pncRpcConfig
            , pncTxSubmissionLogicVersion = mempty
            , pncTxSubmissionInitDelay = mempty
+           , pncLeiosDbConfig = mempty
            }
 
 parseSocketPath :: Text -- ^ option name

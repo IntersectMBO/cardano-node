@@ -33,6 +33,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConse
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -209,6 +210,9 @@ data NodeConfiguration
 
        , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
        , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
+
+       -- Leios
+       , ncLeiosDbConfig :: LeiosDbConfig
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -316,6 +320,9 @@ data PartialNodeConfiguration
 
          -- gRPC
        , pncRpcConfig :: !PartialRpcConfig
+
+       -- Leios
+       , pncLeiosDbConfig :: !(Last LeiosDbConfig)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -443,6 +450,9 @@ instance FromJSON PartialNodeConfiguration where
             maybe (pncTxSubmissionInitDelay defaultPartialNodeConfiguration) (fmap TxSubmissionInitDelay)
               <$> v .:? "TxSubmissionInitDelay"
       pncTxSubmissionInitDelay <- parseInitDelay
+
+      pncLeiosDbConfig <- Last <$> v .:? "LeiosDbConfig"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -493,6 +503,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncRpcConfig
            , pncTxSubmissionLogicVersion = txSubmissionLogicVersion
            , pncTxSubmissionInitDelay
+           , pncLeiosDbConfig
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -762,6 +773,8 @@ defaultPartialNodeConfiguration =
 
     , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1
     , pncTxSubmissionInitDelay = Last $ Just defaultTxSubmissionInitDelay
+
+    , pncLeiosDbConfig = Last (Just (LeiosDbSQLite "leios.db"))
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -918,6 +931,10 @@ makeNodeConfiguration pnc = do
 
   ncRpcConfig <- makeRpcConfig $ (pncRpcConfig pnc){nodeSocketPath=ncSocketPath socketConfig}
 
+  ncLeiosDbConfig <-
+    lastToEither "Missing LeiosDbConfig"
+    $ pncLeiosDbConfig pnc
+
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -969,6 +986,7 @@ makeNodeConfiguration pnc = do
              , ncRpcConfig
              , ncTxSubmissionLogicVersion
              , ncTxSubmissionInitDelay
+             , ncLeiosDbConfig
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
