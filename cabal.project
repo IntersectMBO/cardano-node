@@ -80,6 +80,14 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , cardano-diffusion:trace-dispatcher
+  , dmq-node:trace-dispatcher
+  , ouroboros-network:trace-dispatcher
+  , cardano-crypto-class:contra-tracer
+  , kes-agent:contra-tracer
+  , kes-agent-crypto:contra-tracer
+  , network-mux:contra-tracer
+  , ouroboros-consensus:contra-tracer
 
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
