@@ -114,7 +114,7 @@ library
                     , mtl
                     , text
                     , directory
-                    , trace-dispatcher ^>= 2.12
+                    , trace-dispatcher ^>= 2.13
                     , serialise
                     , bytestring
                     , time
@@ -152,7 +152,7 @@ executable cardano-recon
       , text
       , containers
       , cardano-recon-framework
-      , trace-dispatcher ^>= 2.12
+      , trace-dispatcher ^>= 2.13
       , aeson
       , streaming
       , async
@@ -161,7 +161,7 @@ executable cardano-recon
       , ekg-core
       , network
       , hostname
-      , contra-tracer ^>=0.1.0
+      , contra-tracer
 
 
     -- Directories containing source files.

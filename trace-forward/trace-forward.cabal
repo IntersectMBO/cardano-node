@@ -76,7 +76,7 @@ library
                       , serialise
                       , stm
                       , text
-                      , trace-dispatcher ^>= 2.12
+                      , trace-dispatcher ^>= 2.13
                       , typed-protocols:{typed-protocols, cborg} ^>= 1.2
 
 test-suite test
