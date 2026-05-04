@@ -44,6 +44,7 @@ import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo' (..),
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
@@ -169,7 +170,7 @@ import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
 
-import           LeiosDemoDb (newLeiosDBSQLiteFromEnv)
+import           LeiosDemoDb (newLeiosDBInMemory, newLeiosDBSQLite)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -472,7 +473,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                          $ Proxy @blk
                          ))
 
-  leiosDB <- newLeiosDBSQLiteFromEnv
+  leiosDB <- case ncLeiosDbConfig nc of
+    LeiosDbInMemory -> newLeiosDBInMemory
+    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite leiosDbPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
     case p2pMode of
