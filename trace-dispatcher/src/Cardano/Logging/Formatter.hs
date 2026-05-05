@@ -39,7 +39,7 @@ import           Network.HostName
 import           System.IO.Unsafe (unsafePerformIO)
 
 
-data I a = I a
+newtype I a = I a
 instance Functor I where fmap f (I x) = I (f x)
 
 encodingToText :: AE.Encoding -> Text
@@ -107,7 +107,7 @@ preFormatted withForHuman =
                 Nothing -> I Nothing
                 Just (AE.Number tm') -> I $ Just $ AE.String $ timeFormattedT $ tmf $ toRational tm'
                 Just x -> I $ Just x
-            machineFormatted = AE.toEncoding $ obj'
+            machineFormatted = AE.toEncoding obj'
 
         pure (lc, Right (PreFormatted
                           { pfForHuman = if withForHuman then condForHuman else Nothing
