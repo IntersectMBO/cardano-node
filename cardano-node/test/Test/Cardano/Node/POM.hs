@@ -34,6 +34,7 @@ import           Data.Text (Text)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
+import Cardano.Node.Configuration.Leios (LeiosDbConfig(LeiosDbSQLite))
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -170,6 +171,7 @@ testPartialYamlConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncLeiosDbConfig = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -221,6 +223,7 @@ testPartialCliConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncLeiosDbConfig = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -278,6 +281,7 @@ eExpectedConfig = do
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncLeiosDbConfig = LeiosDbSQLite "leios.db"
     }
 
 -- -----------------------------------------------------------------------------

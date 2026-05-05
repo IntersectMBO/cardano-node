@@ -108,6 +108,7 @@ test-suite test
                       , tasty-quickcheck
                       , typed-protocols
                       , text
+                      , si-timers
 
   ghc-options:          -rtsopts
                         -threaded

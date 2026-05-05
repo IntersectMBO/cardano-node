@@ -13,6 +13,7 @@ import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
+import           Control.Monad.Class.MonadTime.SI (MonadMonotonicTime)
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
@@ -112,6 +113,7 @@ prop_channel
   :: ( MonadST    m
      , MonadAsync m
      , MonadCatch m
+     , MonadMonotonicTime m
      )
   => (Int -> Int)
   -> Int
