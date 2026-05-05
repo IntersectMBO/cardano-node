@@ -146,22 +146,22 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
     H.assertWith outputAmounts $ elem (inject amount)
 
     -------------------------------------------
-    -- Test 2: payment credential predicate
+    -- Test 2: exact address + payment credential predicate
     -------------------------------------------
     H.note_ "Test 2: Verify exact address + payment credential predicate matches same UTxOs"
-    paymentCredBytes <- case address1 of
-      AddressInEra ShelleyAddressInEra{} (ShelleyAddress _ payCred _) ->
-        pure $ serialisePaymentCredential $ fromShelleyPaymentCredential payCred
-      _ -> do
-        H.note_ "Expected a Shelley address"
-        H.failure
-    let paymentPredicate :: Proto UtxoRpc.UtxoPredicate
+    let paymentCredBytes :: ByteString
+        paymentCredBytes = case address1 of
+          AddressInEra ShelleyAddressInEra{} (ShelleyAddress _ payCred _) ->
+            serialisePaymentCredential $ fromShelleyPaymentCredential payCred
+          _ -> error "Expected a Shelley address"
+        paymentPredicate :: Proto UtxoRpc.UtxoPredicate
         paymentPredicate =
           def
             & U5c.match
               .~ ( def
                      & U5c.cardano
-                       .~ (def & U5c.address .~ (def & U5c.paymentPart .~ paymentCredBytes))
+                       .~ (def & U5c.address .~ (def & U5c.exactAddress .~ serialiseToRawBytes address1
+                                                     & U5c.paymentPart .~ paymentCredBytes))
                  )
     payCredSearch <- H.noteShowM . H.evalIO $
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
@@ -193,11 +193,12 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
         H.failure
 
     -------------------------------------------
-    -- Test 4: search without predicate returns all UTxOs
+    -- Test 4: combined address predicate returns UTxOs from both addresses
     -------------------------------------------
-    H.note_ "Test 4: Verify search without predicate returns all UTxOs"
+    H.note_ "Test 4: Verify anyOf predicate with both addresses returns all UTxOs"
     allUtxosSearch <- H.noteShowM . H.evalIO $
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) def
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
+        def & U5c.predicate .~ (def & U5c.anyOf .~ [addressPredicate address0, addressPredicate address1])
 
     H.assertWith (allUtxosSearch ^. U5c.items) $ \xs -> length xs > 2
 
