@@ -7,12 +7,14 @@
 module Cardano.Tracer.Handlers.Metrics.TimeseriesServer(runTimeseriesServer) where
 import           Cardano.Timeseries.AsText
 import           Cardano.Timeseries.Component
+import           Cardano.Timeseries.JSON ()
 import           Cardano.Tracer.Configuration (Certificate (..), Endpoint, TracerConfig (..),
                    epForceSSL, setEndpoint)
-import           Cardano.Tracer.Handlers.Metrics.Utils (contentHdrUtf8Text)
+import           Cardano.Tracer.Handlers.Metrics.Utils (contentHdrJSON, contentHdrUtf8Text)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Time (getTimeMs)
 
+import           Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
@@ -70,7 +72,7 @@ timeseriesApp inputSanCfg handle request send = case request.pathInfo of
     execute handle (fromIntegral at) query >>= \case
       Left err -> send $
         responseLBS status400 contentHdrUtf8Text (encodeUtf8 (asText err))
-      Right v -> send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
+      Right v -> send $ responseLBS status200 contentHdrJSON (encode v)
   ["timeseries", "prune"] | request.requestMethod == methodPost -> do
     prune handle
     send ok

@@ -600,6 +600,7 @@ data Tracer = Tracer
   { rtview :: Bool
   , ekg :: Bool
   , withresources :: Bool
+  , timeseries :: Bool
   }
   deriving (Eq, Show, Generic)
 

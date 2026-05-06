@@ -86,6 +86,7 @@ library
       , Cardano.Timeseries.Interp.Expr
       , Cardano.Timeseries.Interp.Types
       , Cardano.Timeseries.Interp.Value
+      , Cardano.Timeseries.JSON
 
       , Cardano.Timeseries.Store
       , Cardano.Timeseries.Store.Flat

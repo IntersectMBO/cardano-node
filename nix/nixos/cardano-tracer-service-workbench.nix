@@ -57,6 +57,10 @@ let serviceConfigToJSON =
       } // pkgs.lib.optionalAttrs ((cfg.RTView or {}) != {})
       {
         hasRTView = cfg.RTView;
+      }
+      // pkgs.lib.optionalAttrs ((cfg.timeseries or {}) != {})
+      {
+        hasTimeseries = cfg.timeseries;
       };
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -80,6 +84,7 @@ in pkgs.commonLib.defServiceModule
         logRoot         = opt    str null      "Log storage root directory.";
         rotation        = opt    attrs {}      "Log rotation overrides: see cardano-tracer documentation.";
         RTView          = opt    attrs {}      "RTView config overrides: see cardano-tracer documentation.";
+        timeseries      = opt    attrs {}      "Timeseries config: {epHost, epPort}. Enables the POST /timeseries/query endpoint.";
         ekgPortBase     = opt    int 3100      "EKG port base.";
         ekgRequestFreq  = opt    int 1         "EKG request frequency";
         prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";

@@ -315,14 +315,15 @@
   "tracer": {
     "rtview": false,
     "ekg": false,
-    "withresources": false
+    "withresources": false,
+    "timeseries": false
   },
   "cluster": null,
   "desc": "Miniature dataset, CI-friendly duration, test scale",
   "name": "ci-test-dense10-coay",
   "overlay": {},
   "derived": {
-    "supply_delegated": 1e+16,
+    "supply_delegated": 1E+16,
     "supply_total": 10010000000000000,
     "utxo_delegated": 0,
     "utxo_generated": 18000,

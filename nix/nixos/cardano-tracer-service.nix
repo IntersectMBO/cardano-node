@@ -79,6 +79,12 @@ with builtins; let
         epPort = cfg.rtviewPort;
       };
     }
+    // optionalAttrs cfg.timeseriesEnable {
+      hasTimeseries = {
+        epHost = cfg.timeseriesHost;
+        epPort = cfg.timeseriesPort;
+      };
+    }
     // cfg.extraConfig;
 
   prettyConfig =
@@ -705,6 +711,31 @@ in {
         default = 3300;
         description = ''
           The port to listen on if RTView is enabled.
+        '';
+      };
+
+      timeseriesEnable = mkOption {
+        type = bool;
+        default = false;
+        description = ''
+          Whether to enable the timeseries HTTP server, which exposes
+          POST /timeseries/query for querying stored metric history.
+        '';
+      };
+
+      timeseriesHost = mkOption {
+        type = str;
+        default = "127.0.0.1";
+        description = ''
+          The host to bind if the timeseries server is enabled.
+        '';
+      };
+
+      timeseriesPort = mkOption {
+        type = port;
+        default = 12818;
+        description = ''
+          The port to listen on if the timeseries server is enabled.
         '';
       };
 

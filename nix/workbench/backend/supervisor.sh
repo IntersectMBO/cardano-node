@@ -21,8 +21,7 @@ case "$op" in
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}
         test "$(sleep 0.5s
-                netstat -pltn 2>/dev/null |
-                grep ':9001 '             |
+                lsof -nP -iTCP:9001 -sTCP:LISTEN 2>/dev/null |
                 wc -l)" = "0" ||
             echo 'supervisord'
         # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
