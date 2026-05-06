@@ -15,6 +15,7 @@ module Cardano.Node.Testnet.Paths
   , defaultSocketPath
   , defaultConfigFile
   , defaultPortFile
+  , defaultNodeEnvFile
   ) where
 
 import           System.FilePath ((</>))
@@ -62,3 +63,7 @@ defaultConfigFile = "configuration.yaml"
 -- | Relative path to a node's port file: @defaultNodeDataDir n </> "port"@
 defaultPortFile :: Int -> FilePath
 defaultPortFile n = defaultNodeDataDir n </> "port"
+
+-- | Relative path to a node's env file: @defaultNodeDataDir n </> "env"@
+defaultNodeEnvFile :: Int -> FilePath
+defaultNodeEnvFile n = defaultNodeDataDir n </> "env"

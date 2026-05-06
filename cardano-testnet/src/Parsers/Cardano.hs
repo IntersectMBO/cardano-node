@@ -13,6 +13,7 @@ import           Cardano.Prelude (readMaybe)
 import           Prelude
 
 import           Control.Applicative (optional, (<|>))
+import           Control.Monad (unless)
 import           Data.Default.Class (def)
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty ((:|)))
@@ -107,25 +108,72 @@ pKesSource = OA.flag UseKesKeyFile UseKesSocket
 
 pTestnetNodeOptions :: Parser TestnetNodeOptions
 pTestnetNodeOptions =
-  fmap (maybe cardanoDefaultTestnetNodeOptions mkPoolNodes) <$>
-    optional $ OA.option ensureAtLeastOne
-      (   OA.long "num-pool-nodes"
-      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
-      <>  OA.metavar "COUNT"
-      )
+  pNodes <|> pNumPoolNodes <|> pure cardanoDefaultTestnetNodeOptions
   where
-    defaultSpoOption = NodeOptions []
-
-    mkPoolNodes num = TestnetNodeOptions
-      { optSpoNodes = defaultSpoOption :| L.replicate (num - 1) defaultSpoOption
-      , optRelayNodes = []
-      }
+    pNumPoolNodes :: Parser TestnetNodeOptions
+    pNumPoolNodes =
+      (\num -> TestnetNodeOptions { optSpoNodes = defaultSpoOption :| L.replicate (num - 1) defaultSpoOption, optRelayNodes = [] }) <$>
+        OA.option ensureAtLeastOne
+          (   OA.long "num-pool-nodes"
+          <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+          <>  OA.metavar "COUNT"
+          )
+    defaultSpoOption = NodeOptions Nothing []
 
     ensureAtLeastOne :: OA.ReadM Int
     ensureAtLeastOne = readerAsk >>= \arg ->
       case readMaybe arg of
         Just n | n >= 1 -> pure n
         _ -> fail "Need at least one SPO node to produce blocks, but got none."
+
+    pNodes :: Parser TestnetNodeOptions
+    pNodes = OA.option readNodeSpecs
+      (   OA.long "nodes"
+      <>  OA.help "Comma-separated node specifications. SPO nodes must come before relay nodes. \
+                   \Each spec is a role (spo or relay) optionally followed by key=value pairs \
+                   \separated by colons. \
+                   \Example: --nodes spo,spo:node-bin=/path/to/bin,relay,relay"
+      <>  OA.metavar "SPEC[,SPEC...]"
+      )
+
+    readNodeSpecs :: OA.ReadM TestnetNodeOptions
+    readNodeSpecs = readerAsk >>= \arg ->
+      case mapM parseNodeSpec (splitOnChar ',' arg) of
+        Right specs -> do
+          let (spos, relays) = span (\(role, _) -> role == "spo") specs
+          unless (all (\(role, _) -> role == "relay") relays) $
+            fail "SPO nodes must come before relay nodes. \
+                 \Example: --nodes spo,spo,relay,relay"
+          case spos of
+            [] -> fail "Need at least one SPO node to produce blocks."
+            ((_,s):ss) -> pure $ TestnetNodeOptions
+              { optSpoNodes = s :| map snd ss
+              , optRelayNodes = map snd relays
+              }
+        Left err -> fail err
+
+    parseNodeSpec :: String -> Either String (String, NodeOptions)
+    parseNodeSpec spec = case splitOnChar ':' spec of
+      [] -> Left "Empty node specification."
+      (role:kvs) -> do
+        unless (role == "spo" || role == "relay") $
+          Left $ "Unknown node role: '" ++ role ++ "'. Expected 'spo' or 'relay'."
+        bin <- parseKVs kvs
+        Right (role, NodeOptions bin [])
+
+    parseKVs :: [String] -> Either String (Maybe FilePath)
+    parseKVs [] = Right Nothing
+    parseKVs [kv] = case break (== '=') kv of
+      ("node-bin", '=':path) | not (null path) -> Right (Just path)
+      ("node-bin", _) -> Left "node-bin requires a non-empty path, e.g. node-bin=/path/to/binary"
+      (key, _) -> Left $ "Unknown node option: '" ++ key ++ "'. Known options: node-bin"
+    parseKVs _ = Left "Multiple key=value pairs are not yet supported."
+
+    splitOnChar :: Char -> String -> [String]
+    splitOnChar _ [] = [""]
+    splitOnChar sep s = case break (== sep) s of
+      (w, []) -> [w]
+      (w, _:rest) -> w : splitOnChar sep rest
 
 pOnChainParams :: Parser TestnetOnChainParams
 pOnChainParams = fmap (fromMaybe DefaultParams) <$> optional $

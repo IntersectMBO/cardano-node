@@ -52,6 +52,7 @@ import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
+import qualified Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
@@ -67,12 +68,13 @@ import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack
 import qualified System.Directory as IO
+import qualified System.Process as Process
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
-import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultPortFile,
-                   defaultUtxoAddrPath)
+import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
+                   defaultPortFile, defaultUtxoAddrPath)
 import           Testnet.Filepath
 import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
@@ -92,6 +94,7 @@ import           RIO.Orphans (ResourceMap)
 import           RIO.State (put)
 import           UnliftIO.Async
 import           UnliftIO.Exception (stringException)
+
 
 liftToIntegration :: HasCallStack => RIO ResourceMap a -> H.Integration a
 liftToIntegration r =  do
@@ -139,8 +142,8 @@ createTestnetEnv
 
   let portNumbersMap = Map.fromList portNumbers
 
-  -- Create network topology and write port files
-  forM_ nodeIds $ \i -> do
+  -- Create network topology, write port files, and write env files for custom binaries
+  forM_ numberedNodes $ \(i, nodeOption) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
@@ -152,6 +155,16 @@ createTestnetEnv
     producers <- mapM (idToRemoteAddressP2P portNumbersMap) $ NodeId <$> filter (/= i) nodeIds
     let topology = Defaults.defaultP2PTopology producers
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+
+    -- Write env file for nodes with custom binaries
+    case nodeBin nodeOption of
+      Nothing -> pure ()
+      Just bin -> do
+        absBin <- liftIOAnnotated $ IO.makeAbsolute bin
+        version <- getNodeVersion absBin
+        let envFile = tmpAbsPath </> defaultNodeEnvFile i
+            nodeEnv = NodeEnv { node_binary = absBin, node_version = version }
+        liftIOAnnotated $ Yaml.encodeFile envFile nodeEnv
 
 -- | Starts a number of nodes, as given by the first argument. You can either:
 --
@@ -318,41 +331,41 @@ cardanoTestnet
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
         nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
     (mKeys, spoNodeCliArgs) <- if not isSpo then pure (Nothing, []) else do
-          -- depending on testnet configuration, either start a 'kes-agent' or use a key from disk
-          kesSourceCliArg <-
-            case cardanoKESSource of
-              UseKesKeyFile -> pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
-              UseKesSocket -> do
-                -- wait startTimeOffsetSeconds so that the startTime from shelly-genesis.json is not in the future,
-                -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
-                liftIOAnnotated $ threadDelay (startTimeOffsetSeconds * 1_000_000)
-                kesAgent <- runExceptT $
-                  initAndStartKesAgent (TmpAbsolutePath tmpAbsPath) nodeName
-                    TestnetKesAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile
-                                       , tkaaColdVKeyFile = nodePoolKeysDir </> "cold.vkey"
-                                       , tkaaColdSKeyFile = nodePoolKeysDir </> "cold.skey"
-                                       , tkaaKesVKeyFile = nodePoolKeysDir </> "kes.vkey"
-                                       , tkaaOpcertCounterFile = nodePoolKeysDir </> "opcert.counter"
-                                       , tkaaOpcertFile = nodePoolKeysDir </> "opcert.cert"
-                                       }
-                case kesAgent of
-                  Left e -> do
-                    -- TODO: fail if could not start KES agent
-                    liftIOAnnotated . putStrLn $ "Could not start KES agent: " <> show e
-                    pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
-                  Right (TestnetKesAgent{kesAgentServiceSprocket}) ->
-                    pure ["--shelley-kes-agent-socket", sprocketSystemName kesAgentServiceSprocket]
-          let shelleyCliArgs = [ "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
-                               , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
-                               ]
-              byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
-                             , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
-                             ]
-              keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
-          pure (Just keys, kesSourceCliArg <> shelleyCliArgs <> byronCliArgs)
+      -- depending on testnet configuration, either start a 'kes-agent' or use a key from disk
+      kesSourceCliArg <-
+        case cardanoKESSource of
+          UseKesKeyFile -> pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+          UseKesSocket -> do
+            -- wait startTimeOffsetSeconds so that the startTime from shelly-genesis.json is not in the future,
+            -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
+            liftIOAnnotated $ threadDelay (startTimeOffsetSeconds * 1_000_000)
+            kesAgent <- runExceptT $
+              initAndStartKesAgent (TmpAbsolutePath tmpAbsPath) nodeName
+                TestnetKesAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile
+                                   , tkaaColdVKeyFile = nodePoolKeysDir </> "cold.vkey"
+                                   , tkaaColdSKeyFile = nodePoolKeysDir </> "cold.skey"
+                                   , tkaaKesVKeyFile = nodePoolKeysDir </> "kes.vkey"
+                                   , tkaaOpcertCounterFile = nodePoolKeysDir </> "opcert.counter"
+                                   , tkaaOpcertFile = nodePoolKeysDir </> "opcert.cert"
+                                   }
+            case kesAgent of
+              Left e -> do
+                -- TODO: fail if could not start KES agent
+                liftIOAnnotated . putStrLn $ "Could not start KES agent: " <> show e
+                pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+              Right (TestnetKesAgent{kesAgentServiceSprocket}) ->
+                pure ["--shelley-kes-agent-socket", sprocketSystemName kesAgentServiceSprocket]
+      let shelleyCliArgs = [ "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
+                           , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
+                           ]
+          byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
+                         , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
+                         ]
+          keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
+      pure (Just keys, kesSourceCliArg <> shelleyCliArgs <> byronCliArgs)
 
     eRuntime <- runExceptT . retryOnAddressInUseError $
-      startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
+      startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeOptions) $
         [ "run"
         , "--config", nodeConfigFile
         , "--topology", nodeDataDir </> "topology.json"
@@ -517,8 +530,8 @@ readNodeOptionsFromEnv envDir = do
   when (null spoFlags) $
     throwString "No SPO node directories found in environment"
   let nSpos = length spoFlags
-  let spoOpts = map (const (NodeOptions [])) [1 .. nSpos]
-      relayOpts = map (const (NodeOptions [])) [nSpos + 1 .. length nodeNums]
+  spoOpts <- mapM readNodeOpt [1 .. nSpos]
+  relayOpts <- mapM readNodeOpt [nSpos + 1 .. length nodeNums]
   case spoOpts of
     (s:ss) -> pure $ TestnetNodeOptions { optSpoNodes = s :| ss, optRelayNodes = relayOpts }
     [] -> throwString "No SPO node directories found in environment"
@@ -526,3 +539,40 @@ readNodeOptionsFromEnv envDir = do
     parseNodeNum s = do
       rest <- stripPrefix "node" s
       readMaybe rest :: Maybe Int
+    readNodeOpt i = do
+      bin <- readNodeBinFromEnvFile (envDir </> defaultNodeEnvFile i)
+      pure $ NodeOptions bin []
+
+data NodeEnv = NodeEnv
+  { node_binary :: FilePath
+  , node_version :: String
+  } deriving (Eq, Show)
+
+instance FromJSON NodeEnv where
+  parseJSON = withObject "NodeEnv" $ \o ->
+    NodeEnv <$> o .: "node_binary"
+            <*> o .: "node_version"
+
+instance ToJSON NodeEnv where
+  toJSON NodeEnv{node_binary, node_version} =
+    object [ "node_binary" .= node_binary
+           , "node_version" .= node_version
+           ]
+
+readNodeBinFromEnvFile :: MonadIO m => FilePath -> m (Maybe FilePath)
+readNodeBinFromEnvFile envFile = liftIO $ do
+  exists <- IO.doesFileExist envFile
+  if not exists
+    then pure Nothing
+    else do
+      result <- Yaml.decodeFileEither envFile
+      case result of
+        Right NodeEnv{node_binary} -> pure (Just node_binary)
+        Left err -> throwString $ "Failed to parse node env file " <> envFile <> ": " <> show err
+
+getNodeVersion :: MonadIO m => FilePath -> m String
+getNodeVersion bin = liftIO $ do
+  output <- Process.readProcess bin ["--version"] ""
+  case words output of
+    ("cardano-node":version:_) -> pure version
+    _ -> throwString $ "Unexpected output from " <> bin <> " --version (expected 'cardano-node <version> ...'): " <> output

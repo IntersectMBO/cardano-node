@@ -259,8 +259,9 @@ instance Default GenesisOptions where
     }
 
 -- | Configuration specific to each node
-newtype NodeOptions = NodeOptions
-  { nodeExtraCliArgs :: [String] -- ^ Extra CLI arguments passed to @cardano-node run@
+data NodeOptions = NodeOptions
+  { nodeBin :: Maybe FilePath -- ^ Path to the @cardano-node@ binary to use for running this node. 'Nothing' uses the default resolution mechanism.
+  , nodeExtraCliArgs :: [String] -- ^ Extra CLI arguments passed to @cardano-node run@
   } deriving (Eq, Show)
 
 -- | Specifies the nodes to create for the testnet, split by role (SPO and relay).
@@ -282,9 +283,9 @@ instance Default (UserProvidedData a) where
 
 cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
 cardanoDefaultTestnetNodeOptions = TestnetNodeOptions
-  { optSpoNodes = NodeOptions [] :| []
-  , optRelayNodes = [ NodeOptions []
-                    , NodeOptions []
+  { optSpoNodes = NodeOptions Nothing [] :| []
+  , optRelayNodes = [ NodeOptions Nothing []
+                    , NodeOptions Nothing []
                     ]
   }
 
