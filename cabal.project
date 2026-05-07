@@ -91,10 +91,10 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 0317ffbb92952318845b29f23ae6a6a6ab7f62a9
+  tag: aa953f7f1d4a711236b4c76a22d2ca152994cf7f
   subdir:
     ouroboros-network
-  --sha256: sha256-4WOVAbLDKBIBVg6fA9+Q1h9NHIKuQEYZveMDmDoepW0=
+  --sha256: sha256-i5VBMHVLmtEv6EaQtkg6Vg3mmPA9onGgsdYi/TzpXv8=
 
 source-repository-package
   type: git

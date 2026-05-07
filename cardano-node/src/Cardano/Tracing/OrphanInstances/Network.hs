@@ -1247,6 +1247,7 @@ instance ToJSON txid => ToObject (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TxSubmissionProcessed"
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
+      , "score" .= toJSON (ptxcScore processed)
       ]
   toObject _verb TraceTxInboundTerminated =
     mconcat
