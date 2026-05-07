@@ -26,6 +26,7 @@ export type Value =
   | { tag: 'Duration'; value: number } // milliseconds
   | { tag: 'Timestamp'; value: number } // ms since epoch
   | { tag: 'Text'; value: string }
+  | { tag: 'Unit' }
   | { tag: 'Function' };
 
 export interface CardanoTimeseriesQuery extends DataQuery {

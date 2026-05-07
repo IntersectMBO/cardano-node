@@ -1,4 +1,6 @@
 import {
+  DataFrame,
+  DataQueryError,
   DataQueryRequest,
   DataQueryResponse,
   DataSourceApi,
@@ -25,14 +27,20 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
   async query(options: DataQueryRequest<CardanoTimeseriesQuery>): Promise<DataQueryResponse> {
     const active = options.targets.filter((t) => !t.hide && t.queryText?.trim());
 
-    const results = await Promise.all(
-      active.map((target) => {
-        const interpolated = getTemplateSrv().replace(target.queryText, options.scopedVars);
-        return this.runQuery(interpolated);
-      })
-    );
+    const frames: DataFrame[] = [];
+    let error: DataQueryError | undefined;
 
-    return { data: results.flat() };
+    for (const target of active) {
+      const interpolated = getTemplateSrv().replace(target.queryText, options.scopedVars);
+      try {
+        frames.push(...(await this.runQuery(interpolated)));
+      } catch (err: any) {
+        error = err;
+        break;
+      }
+    }
+
+    return { data: frames, error };
   }
 
   private async runQuery(queryText: string) {
@@ -47,9 +55,18 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
           data: queryText,
         }) as any).toPromise() as FetchResponse<Value>;
       return valueToDataFrames(response.data);
-    } catch (err) {
-      console.error('CardanoTimeseries: query failed', err);
-      return [];
+    } catch (err: any) {
+      // The server sends plain UTF-8 text; Grafana's proxy wraps it as { data: { message, ... } }.
+      // `message` is the first line (used in the error banner summary).
+      // `data.response` is shown verbatim in the panel inspector Error tab (pre-wrap, monospace).
+      const fullText = err?.data?.message ?? err?.message ?? 'Query failed';
+      const firstLine = fullText.split('\n')[0];
+      const error: DataQueryError = {
+        message: firstLine,
+        data: { message: firstLine, error: fullText },
+        status: err?.status,
+      };
+      throw error;
     }
   }
 

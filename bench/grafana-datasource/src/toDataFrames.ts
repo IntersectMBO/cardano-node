@@ -115,6 +115,9 @@ export function valueToDataFrames(value: Value): DataFrame[] {
       return [frame];
     }
 
+    case 'Unit':
+      return [];
+
     case 'Function':
       throw new Error('Cannot render a Function value — it has no serialisable representation');
   }
