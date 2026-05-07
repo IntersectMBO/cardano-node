@@ -25,6 +25,8 @@ data Value where
   InstantVector :: InstantVector Value -> Value
   -- | A pair.
   Pair :: Value -> Value -> Value
+  -- | Unit.
+  Unit :: Value
   -- | Truth.
   Truth :: Value
   -- | Falsity.
@@ -45,6 +47,7 @@ instance Show Value where
   show (RangeVector x)   = unpack (asText x)
   show (InstantVector x) = unpack (asText x)
   show (Pair x y)        = "(" <> show x <> ", " <> show y <> ")"
+  show Unit              = "()"
   show Truth             = "true"
   show Falsity           = "false"
   show (Duration d)      = show d <> "ms"

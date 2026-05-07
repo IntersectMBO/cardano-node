@@ -35,6 +35,7 @@ data Expr = Number Double
 
           | True
           | False
+          | Unit
           | And Expr Expr
           | Or Expr Expr
           | Not Expr

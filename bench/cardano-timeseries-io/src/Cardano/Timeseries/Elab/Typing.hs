@@ -33,6 +33,7 @@ data Ty = InstantVector Ty
         | Text
         | Bool
         | Pair Ty Ty
+        | Unit
         | Timestamp
         | Duration
         | Fun Ty Ty
@@ -51,6 +52,7 @@ prettyTy prec (RangeVector typ) = conditionalParens (prec == Tight) $
   "RangeVector " <> prettyTy Tight typ
 prettyTy _prec (Pair typ typ') =
   "(" <> prettyTy Loose typ <> ", " <> prettyTy Loose typ' <> ")"
+prettyTy _prec Unit = "()"
 prettyTy prec (Fun typ typ') = conditionalParens (prec > FunCodomain) $
   prettyTy FunDomain typ <> " -> " <> prettyTy FunCodomain typ'
 prettyTy _ Scalar = "Scalar"

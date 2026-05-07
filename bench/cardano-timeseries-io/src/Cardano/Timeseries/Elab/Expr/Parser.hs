@@ -96,29 +96,23 @@ true = Truth <$> getSourcePos <* string "true"
 false :: Parser Expr
 false = Falsity <$> getSourcePos <* string "false"
 
-continueTight :: Expr -> Parser Expr
-continueTight a = a <$ string ")"
-
-continuePair :: Loc -> Expr -> Parser Expr
-continuePair l a = do
-  void $ string ","
-  space
-  b <- exprUniverse
-  space
-  void $ string ")"
-  pure (MkPair l a b)
-
-tightOrPair :: Parser Expr
-tightOrPair = do
+tuple :: Parser Expr
+tuple = do
   l <- getSourcePos
   void $ string "("
   space
-  a <- exprUniverse
+  inner <- sepBy exprUniverse (try $ space *> string "," *> space)
   space
-  try (continuePair l a) <|> continueTight a
+  void $ string ")"
+  pure $ mk l inner
+  where
+    mk p [] = MkUnit p
+    mk _ [x] = x
+    mk p [x, y] = MkPair p x y
+    mk p (x : y : z : ws) = MkPair p x (mk p (y : z : ws))
 
 exprAtom :: Parser Expr
-exprAtom = tightOrPair
+exprAtom = tuple
        <|> epoch
        <|> true
        <|> false

@@ -25,6 +25,7 @@ A, B, C, T ::= InstantVector T | RangeVector T | Scalar | Bool | Timestamp | Dur
 
 // Terms
 t, f, e, a, b ::= x
+                | ()
                 | (t, t)
                 | \x -> t
                 | let x = t in t
@@ -102,6 +103,9 @@ InstantVector A type
 A type
 --------------------
 RangeVector A type
+
+
+Unit type
 
 
 Scalar type
@@ -182,6 +186,9 @@ x ∈ metric-store
 Γ ⊦ t : (A, B)
 -------------- ✔
 Γ ⊦ snd t : B
+
+
+Γ ⊦ () : Unit ✔
 
 
 Γ ⊦ a : A

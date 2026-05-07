@@ -41,6 +41,7 @@ instance A.ToJSON Value where
   toJSON (RangeVector xs)   = A.object ["tag" A..= ("RangeVector"   :: Text), "value" A..= xs]
   toJSON (InstantVector xs) = A.object ["tag" A..= ("InstantVector" :: Text), "value" A..= xs]
   toJSON (Pair a b)         = A.object ["tag" A..= ("Pair"          :: Text), "fst"   A..= a,  "snd" A..= b]
+  toJSON Unit               = A.object ["tag" A..= ("Unit"          :: Text)]
   toJSON Truth              = A.object ["tag" A..= ("Truth"         :: Text)]
   toJSON Falsity            = A.object ["tag" A..= ("Falsity"       :: Text)]
   toJSON (Duration d)       = A.object ["tag" A..= ("Duration"      :: Text), "value" A..= d]

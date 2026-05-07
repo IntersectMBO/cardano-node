@@ -504,6 +504,10 @@ solveGeneralElabProblem _ (Surface.Number l f) x typ = do
   let u = UnificationProblem l typ Scalar
   modify (updateDefs $ instantiateExpr x (Semantic.Number f))
   pure ([u], [])
+solveGeneralElabProblem _ (Surface.MkUnit l) x typ = do
+  let u = UnificationProblem l typ Ty.Unit
+  modify (updateDefs $ instantiateExpr x Semantic.Unit)
+  pure ([u], [])
 solveGeneralElabProblem _ (Surface.Truth l) x typ = do
   let u = UnificationProblem l typ Bool
   modify (updateDefs $ instantiateExpr x Semantic.True)
