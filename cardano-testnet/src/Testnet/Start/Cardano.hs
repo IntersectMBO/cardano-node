@@ -47,7 +47,8 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Monad (forM, forM_, unless, when)
+import           Control.Monad (forM, forM_, guard, unless, when)
+import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
@@ -157,9 +158,7 @@ createTestnetEnv
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
     -- Write env file for nodes with custom binaries
-    case nodeBin nodeOption of
-      Nothing -> pure ()
-      Just bin -> do
+    forM_ (nodeBin nodeOption) $ \bin -> do
         absBin <- liftIOAnnotated $ IO.makeAbsolute bin
         version <- getNodeVersion absBin
         let envFile = tmpAbsPath </> defaultNodeEnvFile i
@@ -559,19 +558,16 @@ instance ToJSON NodeEnv where
            , "node_version" .= node_version
            ]
 
-readNodeBinFromEnvFile :: MonadIO m => FilePath -> m (Maybe FilePath)
-readNodeBinFromEnvFile envFile = liftIO $ do
-  exists <- IO.doesFileExist envFile
-  if not exists
-    then pure Nothing
-    else do
-      result <- Yaml.decodeFileEither envFile
-      case result of
-        Right NodeEnv{node_binary} -> pure (Just node_binary)
-        Left err -> throwString $ "Failed to parse node env file " <> envFile <> ": " <> show err
+readNodeBinFromEnvFile :: (HasCallStack, MonadIO m) => FilePath -> m (Maybe FilePath)
+readNodeBinFromEnvFile envFile = runMaybeT $ do
+  guard =<< liftIOAnnotated (IO.doesFileExist envFile)
+  NodeEnv{node_binary} <- either failParse pure =<< liftIOAnnotated (Yaml.decodeFileEither envFile)
+  pure node_binary
+  where
+    failParse err = throwString $ "Failed to parse node env file " <> envFile <> ": " <> show err
 
-getNodeVersion :: MonadIO m => FilePath -> m String
-getNodeVersion bin = liftIO $ do
+getNodeVersion :: HasCallStack => MonadIO m => FilePath -> m String
+getNodeVersion bin = liftIOAnnotated $ do
   output <- Process.readProcess bin ["--version"] ""
   case words output of
     ("cardano-node":version:_) -> pure version
