@@ -1,0 +1,25 @@
+name: Dev shell works
+
+on:
+  merge_group:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dev-shell-works:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31.10.6
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - name: Smoke test
+        run: nix develop --command ghc -- --version
