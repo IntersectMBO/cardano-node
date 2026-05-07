@@ -8,7 +8,7 @@ import {
 } from '@grafana/data';
 import { FetchResponse, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 
-import { CardanoTimeseriesQuery, CardanoTimeseriesOptions, Value } from './types';
+import { CardanoTimeseriesQuery, CardanoTimeseriesOptions, QueryResponse } from './types';
 import { valueToDataFrames } from './toDataFrames';
 
 export class CardanoTimeseriesDatasource extends DataSourceApi<
@@ -48,18 +48,17 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
       // `.toPromise()` avoids the rxjs-version conflict that arises when
       // @grafana/data bundles its own rxjs alongside the top-level one.
       const response = await (getBackendSrv()
-        .fetch<Value>({
+        .fetch<QueryResponse>({
           url: `${this.baseUrl}/timeseries/query`,
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          data: queryText,
-        }) as any).toPromise() as FetchResponse<Value>;
-      return valueToDataFrames(response.data);
+          headers: { 'Content-Type': 'application/json' },
+          data: { query: queryText },
+        }) as any).toPromise() as FetchResponse<QueryResponse>;
+      return valueToDataFrames(response.data.data);
     } catch (err: any) {
-      // The server sends plain UTF-8 text; Grafana's proxy wraps it as { data: { message, ... } }.
-      // `message` is the first line (used in the error banner summary).
-      // `data.response` is shown verbatim in the panel inspector Error tab (pre-wrap, monospace).
-      const fullText = err?.data?.message ?? err?.message ?? 'Query failed';
+      // Server returns { status: "error", errorType: "...", error: "..." } as JSON.
+      // Grafana's proxy wraps 4xx bodies as { data: { ... } }.
+      const fullText = err?.data?.error ?? err?.data?.message ?? err?.message ?? 'Query failed';
       const firstLine = fullText.split('\n')[0];
       const error: DataQueryError = {
         message: firstLine,
@@ -76,7 +75,8 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
       await (getBackendSrv().fetch({
         url: `${this.baseUrl}/timeseries/query`,
         method: 'POST',
-        data: '',
+        headers: { 'Content-Type': 'application/json' },
+        data: { query: '' },
       }) as any).toPromise();
       return { status: 'success', message: 'Connected to Cardano Timeseries server' };
     } catch (err: any) {

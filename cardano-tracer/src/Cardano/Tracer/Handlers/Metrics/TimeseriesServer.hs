@@ -5,6 +5,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Tracer.Handlers.Metrics.TimeseriesServer(runTimeseriesServer) where
+import           Cardano.Timeseries.API (ExecutionError (..))
 import           Cardano.Timeseries.AsText
 import           Cardano.Timeseries.Component
 import           Cardano.Timeseries.JSON ()
@@ -14,12 +15,11 @@ import           Cardano.Tracer.Handlers.Metrics.Utils (contentHdrJSON, contentH
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Time (getTimeMs)
 
-import           Data.Aeson (encode)
+import           Data.Aeson (FromJSON (..), eitherDecode, encode, object, withObject, (.:), (.:?), (.=))
 import qualified Data.ByteString.Lazy as BL
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
-import           Data.Text.Encoding (decodeUtf8Lenient)
 import qualified Data.Text.Encoding as T
 import           Data.Text.Read (decimal)
 import           Data.Word (Word64)
@@ -28,6 +28,20 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp hiding (run)
 import           Network.Wai.Handler.WarpTLS
 import           System.Time.Extra (sleep)
+
+data QueryRequest = QueryRequest
+  { qrQuery :: Text
+  , qrTime  :: Maybe Double  -- Unix seconds; absent means "now"
+  }
+
+instance FromJSON QueryRequest where
+  parseJSON = withObject "QueryRequest" $ \o ->
+    QueryRequest <$> o .: "query" <*> o .:? "time"
+
+errorType :: ExecutionError -> Text
+errorType ParsingErrorWhileExecuting{} = "parse"
+errorType ElabErrorWhileExecuting{}    = "bad_data"
+errorType InterpErrorWhileExecuting{}  = "execution"
 
 ok :: Response
 ok = responseLBS status200 [] ""
@@ -67,12 +81,24 @@ timeseriesApp :: InputSanitationConfig -> TimeseriesHandle -> Application
 timeseriesApp inputSanCfg handle request send = case request.pathInfo of
   ["timeseries", "query"] | request.requestMethod == methodPost -> do
     bs <- consumeRequestBodyStrict request
-    let query = decodeUtf8Lenient (BL.toStrict bs)
-    at <- getTimeMs
-    execute handle (fromIntegral at) query >>= \case
-      Left err -> send $
-        responseLBS status400 contentHdrUtf8Text (encodeUtf8 (asText err))
-      Right v -> send $ responseLBS status200 contentHdrJSON (encode v)
+    case eitherDecode bs of
+      Left parseErr -> send $ responseLBS status400 contentHdrJSON $ encode $ object
+        [ "status"    .= ("error" :: Text)
+        , "errorType" .= ("bad_data" :: Text)
+        , "error"     .= ("Invalid request body: " <> parseErr)
+        ]
+      Right QueryRequest{..} -> do
+        at <- maybe getTimeMs (\t -> pure (round (t * 1000))) qrTime
+        execute handle (fromIntegral at) qrQuery >>= \case
+          Left err -> send $ responseLBS status400 contentHdrJSON $ encode $ object
+            [ "status"    .= ("error"   :: Text)
+            , "errorType" .= errorType err
+            , "error"     .= asText err
+            ]
+          Right v -> send $ responseLBS status200 contentHdrJSON $ encode $ object
+            [ "status" .= ("success" :: Text)
+            , "data"   .= v
+            ]
   ["timeseries", "prune"] | request.requestMethod == methodPost -> do
     prune handle
     send ok

@@ -37,5 +37,10 @@ export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
   queryText: '',
 };
 
+export interface QueryResponse {
+  status: 'success';
+  data: Value;
+}
+
 // No custom jsonData fields — the server URL is the standard Grafana datasource URL field.
 export type CardanoTimeseriesOptions = DataSourceJsonData;
