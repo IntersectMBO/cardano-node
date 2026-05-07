@@ -3,6 +3,7 @@
 module Parsers.Cardano
   ( cmdCardano
   , cmdCreateEnv
+  , parseNodeSpecs
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (..))
@@ -22,6 +23,9 @@ import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
 import           Options.Applicative.Types (readerAsk)
+import           Text.Parsec (char, many1, noneOf,
+                     sepBy1, string, try, (<?>), parse, eof, notFollowedBy)
+import qualified Text.Parsec as Parsec
 
 import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
@@ -130,50 +134,60 @@ pTestnetNodeOptions =
     pNodes = OA.option readNodeSpecs
       (   OA.long "nodes"
       <>  OA.help "Comma-separated node specifications. SPO nodes must come before relay nodes. \
-                   \Each spec is a role (spo or relay) optionally followed by key=value pairs \
-                   \separated by colons. \
-                   \Example: --nodes spo,spo:node-bin=/path/to/bin,relay,relay"
+                   \Each spec is a role (spo or relay) optionally followed by :node-bin=<path>. \
+                   \If the path contains commas, colons, double quotes, or backslashes, wrap it \
+                   \in double quotes and escape any literal double quotes as \\\" and backslashes \
+                   \as \\\\ within. To prevent bash from consuming the double quotes, enclose the \
+                   \whole argument in single quotes. \
+                   \Examples: --nodes spo,spo:node-bin=/path/to/bin,relay,relay | \
+                   \--nodes 'spo:node-bin=\"/path,with:commas\",relay'"
       <>  OA.metavar "SPEC[,SPEC...]"
       )
 
     readNodeSpecs :: OA.ReadM TestnetNodeOptions
-    readNodeSpecs = readerAsk >>= \arg ->
-      case mapM parseNodeSpec (splitOnChar ',' arg) of
-        Right specs -> do
-          let (spos, relays) = span (\(role, _) -> role == "spo") specs
-          unless (all (\(role, _) -> role == "relay") relays) $
-            fail "SPO nodes must come before relay nodes. \
-                 \Example: --nodes spo,spo,relay,relay"
-          case spos of
-            [] -> fail "Need at least one SPO node to produce blocks."
-            ((_,s):ss) -> pure $ TestnetNodeOptions
-              { optSpoNodes = s :| map snd ss
-              , optRelayNodes = map snd relays
-              }
-        Left err -> fail err
+    readNodeSpecs = readerAsk >>= either (fail . show) pure . parseNodeSpecs
 
-    parseNodeSpec :: String -> Either String (String, NodeOptions)
-    parseNodeSpec spec = case splitOnChar ':' spec of
-      [] -> Left "Empty node specification."
-      (role:kvs) -> do
-        unless (role == "spo" || role == "relay") $
-          Left $ "Unknown node role: '" ++ role ++ "'. Expected 'spo' or 'relay'."
-        bin <- parseKVs kvs
-        Right (role, NodeOptions bin [])
+-- | Parse a @--nodes@ argument string into 'TestnetNodeOptions'.
+parseNodeSpecs :: String -> Either Parsec.ParseError TestnetNodeOptions
+parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specifications"
+  where
+    nodeSpecsParser :: Parsec.Parsec String () TestnetNodeOptions
+    nodeSpecsParser = do
+      specs <- nodeSpec `sepBy1` char ','
+      let (spos, relays) = span (\(role, _) -> role == Spo) specs
+      unless (all (\(role, _) -> role == Relay) relays) $
+        fail "SPO nodes must come before relay nodes. Example: --nodes spo,spo,relay,relay"
+      case map snd spos of
+        [] -> fail "Need at least one SPO node to produce blocks."
+        (s:ss) -> pure $ TestnetNodeOptions
+          { optSpoNodes = s :| ss
+          , optRelayNodes = map snd relays
+          }
 
-    parseKVs :: [String] -> Either String (Maybe FilePath)
-    parseKVs [] = Right Nothing
-    parseKVs [kv] = case break (== '=') kv of
-      ("node-bin", '=':path) | not (null path) -> Right (Just path)
-      ("node-bin", _) -> Left "node-bin requires a non-empty path, e.g. node-bin=/path/to/binary"
-      (key, _) -> Left $ "Unknown node option: '" ++ key ++ "'. Known options: node-bin"
-    parseKVs _ = Left "Multiple key=value pairs are not yet supported."
+    nodeSpec :: Parsec.Parsec String () (NodeRole, NodeOptions)
+    nodeSpec = do
+      role <- nodeRole
+      bin <- optional $ char ':' *> nodeBinKV
+      pure (role, NodeOptions bin [])
 
-    splitOnChar :: Char -> String -> [String]
-    splitOnChar _ [] = [""]
-    splitOnChar sep s = case break (== sep) s of
-      (w, []) -> [w]
-      (w, _:rest) -> w : splitOnChar sep rest
+    nodeRole :: Parsec.Parsec String () NodeRole
+    nodeRole =
+          Spo <$ try (string "spo" <* notFollowedBy (noneOf ",:\"\\"))
+      <|> Relay <$ try (string "relay" <* notFollowedBy (noneOf ",:\"\\"))
+      <?> "node role (\"spo\" or \"relay\")"
+
+    nodeBinKV :: Parsec.Parsec String () FilePath
+    nodeBinKV = string "node-bin=" *> (quotedPath <|> unquotedPath) <?> "\"node-bin=<path>\", where <path> is the path to the node binary, optionally quoted if it contains special characters"
+
+    quotedPath :: Parsec.Parsec String () FilePath
+    quotedPath = char '"' *> Parsec.many quotedChar <* char '"'
+      where
+        quotedChar = try (char '\\' *> (char '"' <|> char '\\')) <|> noneOf "\""
+
+    unquotedPath :: Parsec.Parsec String () FilePath
+    unquotedPath = many1 (noneOf ",:\"\\")
+
+data NodeRole = Spo | Relay deriving Eq
 
 pOnChainParams :: Parser TestnetOnChainParams
 pOnChainParams = fmap (fromMaybe DefaultParams) <$> optional $

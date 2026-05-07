@@ -84,6 +84,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
+                      , parsec
                       , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion} ^>= 1.0
                       , prettyprinter
