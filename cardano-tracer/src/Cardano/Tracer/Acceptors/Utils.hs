@@ -45,6 +45,9 @@ import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsL
 
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
 import qualified Data.Text.Read as Text
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import qualified Data.Text as T
+import Control.Arrow (first)
 
 prepareDataPointRequestor
   :: Show addr
@@ -123,7 +126,7 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
   storeMetrics resp ekgStore localStore
   for_ (teTimeseriesHandle tracerEnv) $ \h -> do
     ts <- getTimeMs
-    Timeseries.insert h "node_id" nodeId (fromIntegral ts) (mapMaybe parseMetric ms)
+    Timeseries.insert h "node_id" nodeId (fromIntegral ts) (map (first sanitiseMetricName) $ mapMaybe parseMetric ms)
 
   where
     numeralOnly :: MetricValue -> Maybe Double
@@ -137,3 +140,9 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
     parseMetric (k, numeralOnly -> Just v) = Just (k, v)
     parseMetric _ = Nothing
 
+    sanitiseMetricName :: MetricName -> MetricName
+    sanitiseMetricName =
+        T.filter (\c -> isAsciiLower c || isAsciiUpper c || isDigit c || c == '_')
+      . T.replace " " "_"
+      . T.replace "-" "_"
+      . T.replace "." "_"

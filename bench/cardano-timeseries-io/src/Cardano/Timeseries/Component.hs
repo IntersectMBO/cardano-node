@@ -109,7 +109,7 @@ readConfig handle = readTVarIO handle.config
 writeConfig :: TimeseriesHandle -> Maybe TimeseriesConfig -> IO ()
 writeConfig handle k = modifyConfig handle (const k)
 
--- | Insert a batch on metric data into the store at the given timestamp.
+-- | Insert a batch of metric data into the store at the given timestamp.
 insert :: TimeseriesHandle -> Text -> Text -> Timestamp -> [(MetricIdentifier, Double)] -> IO ()
 insert TimeseriesHandle{..} originKey originValue t batch = do
   atomically $ modifyTVar' store $ \st -> foldl' f st batch
