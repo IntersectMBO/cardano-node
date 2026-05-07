@@ -49,6 +49,7 @@ import           Prelude hiding (lines)
 import           Control.Concurrent (threadDelay)
 import           Control.Monad (forM, forM_, guard, unless, when)
 import           Control.Monad.Trans.Maybe (runMaybeT)
+import           Control.Exception (IOException)
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
@@ -569,6 +570,8 @@ readNodeBinFromEnvFile envFile = runMaybeT $ do
 getNodeVersion :: HasCallStack => MonadIO m => FilePath -> m String
 getNodeVersion bin = liftIOAnnotated $ do
   output <- Process.readProcess bin ["--version"] ""
+    `catch` \(e :: IOException) ->
+      throwString $ "Failed to run " <> bin <> " --version: " <> displayException e
   case words output of
     ("cardano-node":version:_) -> pure version
     _ -> throwString $ "Unexpected output from " <> bin <> " --version (expected 'cardano-node <version> ...'): " <> output
