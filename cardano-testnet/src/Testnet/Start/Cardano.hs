@@ -162,7 +162,7 @@ createTestnetEnv
         absBin <- liftIOAnnotated $ IO.makeAbsolute bin
         version <- getNodeVersion absBin
         let envFile = tmpAbsPath </> defaultNodeEnvFile i
-            nodeEnv = NodeEnv { node_binary = absBin, node_version = version }
+            nodeEnv = NodeEnv { nodeBinary = absBin, nodeVersion = version }
         liftIOAnnotated $ Yaml.encodeFile envFile nodeEnv
 
 -- | Starts a number of nodes, as given by the first argument. You can either:
@@ -543,8 +543,8 @@ readNodeOptionsFromEnv envDir = do
       pure $ NodeOptions bin []
 
 data NodeEnv = NodeEnv
-  { node_binary :: FilePath
-  , node_version :: String
+  { nodeBinary :: FilePath
+  , nodeVersion :: String
   } deriving (Eq, Show)
 
 instance FromJSON NodeEnv where
@@ -553,16 +553,16 @@ instance FromJSON NodeEnv where
             <*> o .: "node_version"
 
 instance ToJSON NodeEnv where
-  toJSON NodeEnv{node_binary, node_version} =
-    object [ "node_binary" .= node_binary
-           , "node_version" .= node_version
+  toJSON NodeEnv{nodeBinary, nodeVersion} =
+    object [ "node_binary" .= nodeBinary
+           , "node_version" .= nodeVersion
            ]
 
 readNodeBinFromEnvFile :: (HasCallStack, MonadIO m) => FilePath -> m (Maybe FilePath)
 readNodeBinFromEnvFile envFile = runMaybeT $ do
   guard =<< liftIOAnnotated (IO.doesFileExist envFile)
-  NodeEnv{node_binary} <- either failParse pure =<< liftIOAnnotated (Yaml.decodeFileEither envFile)
-  pure node_binary
+  NodeEnv{nodeBinary} <- either failParse pure =<< liftIOAnnotated (Yaml.decodeFileEither envFile)
+  pure nodeBinary
   where
     failParse err = throwString $ "Failed to parse node env file " <> envFile <> ": " <> show err
 
