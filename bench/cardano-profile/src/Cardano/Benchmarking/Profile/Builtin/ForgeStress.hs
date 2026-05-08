@@ -75,6 +75,9 @@ timescaleChain =
 valueChain :: Types.Profile -> Types.Profile
 valueChain = V.valueBase . P.tps 100
 
+valueInOut :: Integer -> Types.Profile -> Types.Profile
+valueInOut x = P.txIn x . P.txOut x . P.txFee 1000000 . P.tps 15
+
 --------------------------------------------------------------------------------
 
 profilesNoEraForgeStress :: [Types.Profile]
@@ -94,10 +97,11 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-solo-xs"      . V.valueLocal . n1 . V.datasetOct2021 . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo"         . V.valueLocal . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo-xl"      . V.valueLocal . n1 . V.datasetOct2021 . durationXL . P.traceForwardingOn
-  , fs & P.name "forge-stress-pre-plutus-solo"  . V.plutusLoop . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
+  , fs & P.name "forge-stress-pre-plutus-solo"  . V.plutusLoop . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- chain creation
   , fs & P.name "fschain-768k-xs"               . valueChain   . n1 . V.datasetOct2021 . durationChain  . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
   , fs & P.name "fschain-768k"                  . valueChain   . n1 . V.datasetOct2021 . durationChainM . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
+  , fs & P.name "fschain-8io"                   . valueInOut 8 . n1 . V.datasetOct2021 . durationXL     . P.traceForwardingOn
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"         . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
