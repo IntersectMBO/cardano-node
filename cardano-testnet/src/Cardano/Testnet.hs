@@ -14,9 +14,9 @@ module Cardano.Testnet (
   TestnetRuntimeOptions(..),
   TestnetEnvOptions(..),
   RpcSupport(..),
-  TestnetNodeOptions(..),
-  NodeOptions(..),
-  cardanoDefaultTestnetNodeOptions,
+  TestnetNodesWithOptions(..),
+  NodeWithOptions(..),
+  cardanoDefaultTestnetNodesWithOptions,
   getDefaultAlonzoGenesis,
   getDefaultShelleyGenesis,
 

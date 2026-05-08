@@ -17,9 +17,9 @@ module Testnet.Start.Cardano
   , TestnetCreationOptions(..)
   , TestnetRuntimeOptions(..)
   , TestnetEnvOptions(..)
-  , TestnetNodeOptions(..)
-  , NodeOptions(..)
-  , cardanoDefaultTestnetNodeOptions
+  , TestnetNodesWithOptions(..)
+  , NodeWithOptions(..)
+  , cardanoDefaultTestnetNodesWithOptions
 
   , TestnetRuntime (..)
 
@@ -28,7 +28,7 @@ module Testnet.Start.Cardano
   , createTestnetEnv
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
-  , readNodeOptionsFromEnv
+  , readNodesWithOptionsFromEnv
   , retryOnAddressInUseError
 
   , liftToIntegration
@@ -114,7 +114,7 @@ createTestnetEnv :: ()
 createTestnetEnv
   creationOptions@TestnetCreationOptions
     { creationEra=asbe
-    , creationNodes=TestnetNodeOptions{optSpoNodes, optRelayNodes}
+    , creationNodes=TestnetNodesWithOptions{optSpoNodes, optRelayNodes}
     }
   Conf
     { genesisHashesPolicy
@@ -237,12 +237,12 @@ cardanoTestnet
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => TestnetNodeOptions -- ^ The nodes to start
+  => TestnetNodesWithOptions -- ^ The nodes to start
   -> TestnetRuntimeOptions -- ^ Runtime options
   -> Conf -- ^ Path to the test sandbox
   -> m TestnetRuntime
 cardanoTestnet
-  TestnetNodeOptions{optSpoNodes=cardanoSpoNodes, optRelayNodes=cardanoRelayNodes}
+  TestnetNodesWithOptions{optSpoNodes=cardanoSpoNodes, optRelayNodes=cardanoRelayNodes}
   TestnetRuntimeOptions
     { runtimeEnableNewEpochStateLogging=enableNewEpochStateLogging
     , runtimeEnableRpc=cardanoEnableRpc
@@ -323,7 +323,7 @@ cardanoTestnet
 
   let portNumbersMap = Map.fromList portNumbers
 
-  eTestnetNodes <- forConcurrently (zip [1..] allNodes) $ \(i, (isSpo, nodeOptions)) -> do
+  eTestnetNodes <- forConcurrently (zip [1..] allNodes) $ \(i, (isSpo, nodeWithOptions)) -> do
     port <- case Map.lookup i portNumbersMap of
       Just p -> pure p
       Nothing -> throwString $ "Port not found for node " <> show i
@@ -365,14 +365,14 @@ cardanoTestnet
       pure (Just keys, kesSourceCliArg <> shelleyCliArgs <> byronCliArgs)
 
     eRuntime <- runExceptT . retryOnAddressInUseError $
-      startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeOptions) $
+      startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeWithOptions) $
         [ "run"
         , "--config", nodeConfigFile
         , "--topology", nodeDataDir </> "topology.json"
         , "--database-path", nodeDataDir </> "db"
         ]
         <> spoNodeCliArgs
-        <> nodeExtraCliArgs nodeOptions
+        <> nodeExtraCliArgs nodeWithOptions
         <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
@@ -514,8 +514,8 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
 -- and checks @pools-keys/@ to classify each as SPO or relay.
 -- Validates that nodes are consecutively numbered starting from 1,
 -- and that all SPO nodes come before relay nodes.
-readNodeOptionsFromEnv :: HasCallStack => MonadIO m => FilePath -> m TestnetNodeOptions
-readNodeOptionsFromEnv envDir = do
+readNodesWithOptionsFromEnv :: HasCallStack => MonadIO m => FilePath -> m TestnetNodesWithOptions
+readNodesWithOptionsFromEnv envDir = do
   entries <- liftIO $ IO.listDirectory (envDir </> "node-data")
   let nodeNums = sort $ mapMaybe parseNodeNum entries
   when (null nodeNums) $
@@ -533,7 +533,7 @@ readNodeOptionsFromEnv envDir = do
   spoOpts <- mapM readNodeOpt [1 .. nSpos]
   relayOpts <- mapM readNodeOpt [nSpos + 1 .. length nodeNums]
   case spoOpts of
-    (s:ss) -> pure $ TestnetNodeOptions { optSpoNodes = s :| ss, optRelayNodes = relayOpts }
+    (s:ss) -> pure $ TestnetNodesWithOptions { optSpoNodes = s :| ss, optRelayNodes = relayOpts }
     [] -> throwString "No SPO node directories found in environment"
   where
     parseNodeNum s = do
@@ -541,7 +541,7 @@ readNodeOptionsFromEnv envDir = do
       readMaybe rest :: Maybe Int
     readNodeOpt i = do
       bin <- readNodeBinFromEnvFile (envDir </> defaultNodeEnvFile i)
-      pure $ NodeOptions bin []
+      pure $ NodeWithOptions bin []
 
 data NodeEnv = NodeEnv
   { nodeBinary :: FilePath

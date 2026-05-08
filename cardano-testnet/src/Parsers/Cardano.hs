@@ -60,7 +60,7 @@ pFromEnv = TestnetEnvOptions
 
 pCreationOptions :: Parser TestnetCreationOptions
 pCreationOptions = TestnetCreationOptions
-  <$> pTestnetNodeOptions
+  <$> pTestnetNodesWithOptions
   <*> pure (AnyShelleyBasedEra defaultEra)
   <*> pMaxLovelaceSupply
   <*> pNumDReps
@@ -110,19 +110,19 @@ pKesSource = OA.flag UseKesKeyFile UseKesSocket
   <>  OA.showDefault
   )
 
-pTestnetNodeOptions :: Parser TestnetNodeOptions
-pTestnetNodeOptions =
-  pNodes <|> pNumPoolNodes <|> pure cardanoDefaultTestnetNodeOptions
+pTestnetNodesWithOptions :: Parser TestnetNodesWithOptions
+pTestnetNodesWithOptions =
+  pNodes <|> pNumPoolNodes <|> pure cardanoDefaultTestnetNodesWithOptions
   where
-    pNumPoolNodes :: Parser TestnetNodeOptions
+    pNumPoolNodes :: Parser TestnetNodesWithOptions
     pNumPoolNodes =
-      (\num -> TestnetNodeOptions { optSpoNodes = defaultSpoOption :| L.replicate (num - 1) defaultSpoOption, optRelayNodes = [] }) <$>
+      (\num -> TestnetNodesWithOptions { optSpoNodes = defaultSpoOption :| L.replicate (num - 1) defaultSpoOption, optRelayNodes = [] }) <$>
         OA.option ensureAtLeastOne
           (   OA.long "num-pool-nodes"
           <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
           <>  OA.metavar "COUNT"
           )
-    defaultSpoOption = NodeOptions Nothing []
+    defaultSpoOption = NodeWithOptions Nothing []
 
     ensureAtLeastOne :: OA.ReadM Int
     ensureAtLeastOne = readerAsk >>= \arg ->
@@ -130,7 +130,7 @@ pTestnetNodeOptions =
         Just n | n >= 1 -> pure n
         _ -> fail "Need at least one SPO node to produce blocks, but got none."
 
-    pNodes :: Parser TestnetNodeOptions
+    pNodes :: Parser TestnetNodesWithOptions
     pNodes = OA.option readNodeSpecs
       (   OA.long "nodes"
       <>  OA.help "Comma-separated node specifications. SPO nodes must come before relay nodes. \
@@ -144,14 +144,14 @@ pTestnetNodeOptions =
       <>  OA.metavar "SPEC[,SPEC...]"
       )
 
-    readNodeSpecs :: OA.ReadM TestnetNodeOptions
+    readNodeSpecs :: OA.ReadM TestnetNodesWithOptions
     readNodeSpecs = readerAsk >>= either (fail . show) pure . parseNodeSpecs
 
--- | Parse a @--nodes@ argument string into 'TestnetNodeOptions'.
-parseNodeSpecs :: String -> Either Parsec.ParseError TestnetNodeOptions
+-- | Parse a @--nodes@ argument string into 'TestnetNodesWithOptions'.
+parseNodeSpecs :: String -> Either Parsec.ParseError TestnetNodesWithOptions
 parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specifications"
   where
-    nodeSpecsParser :: Parsec.Parsec String () TestnetNodeOptions
+    nodeSpecsParser :: Parsec.Parsec String () TestnetNodesWithOptions
     nodeSpecsParser = do
       specs <- nodeSpec `sepBy1` char ','
       let (spos, relays) = span (\(role, _) -> role == Spo) specs
@@ -159,16 +159,16 @@ parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specificatio
         fail "SPO nodes must come before relay nodes. Example: --nodes spo,spo,relay,relay"
       case map snd spos of
         [] -> fail "Need at least one SPO node to produce blocks."
-        (s:ss) -> pure $ TestnetNodeOptions
+        (s:ss) -> pure $ TestnetNodesWithOptions
           { optSpoNodes = s :| ss
           , optRelayNodes = map snd relays
           }
 
-    nodeSpec :: Parsec.Parsec String () (NodeRole, NodeOptions)
+    nodeSpec :: Parsec.Parsec String () (NodeRole, NodeWithOptions)
     nodeSpec = do
       role <- nodeRole
       bin <- optional $ char ':' *> nodeBinKV
-      pure (role, NodeOptions bin [])
+      pure (role, NodeWithOptions bin [])
 
     nodeRole :: Parsec.Parsec String () NodeRole
     nodeRole =

@@ -19,7 +19,7 @@ hprop_chairman :: H.Property
 hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> H.runWithDefaultWatchdog_ $ do
   conf <- mkConf tempAbsPath'
 
-  let creationOptions = def{ creationNodes = cardanoDefaultTestnetNodeOptions }
+  let creationOptions = def{ creationNodes = cardanoDefaultTestnetNodesWithOptions }
   allNodes <- testnetNodes <$> createAndRunTestnet creationOptions def conf
 
   chairmanOver 120 50 conf allNodes

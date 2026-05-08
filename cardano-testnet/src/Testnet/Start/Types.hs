@@ -31,9 +31,9 @@ module Testnet.Start.Types
   , UpdateTimestamps(..)
   , TestnetOnChainParams(..)
   , mainnetParamsRequest
-  , TestnetNodeOptions(..)
-  , NodeOptions(..)
-  , cardanoDefaultTestnetNodeOptions
+  , TestnetNodesWithOptions(..)
+  , NodeWithOptions(..)
+  , cardanoDefaultTestnetNodesWithOptions
   , GenesisOptions(..)
   , UserProvidedData(..)
   , UserProvidedGeneses(..)
@@ -176,7 +176,7 @@ data RpcSupport
 -- 'Testnet.Start.Cardano.createAndRunTestnet' in tests.
 data TestnetCreationOptions = TestnetCreationOptions
   { -- | Options controlling how many nodes to create and of which type.
-    creationNodes :: TestnetNodeOptions
+    creationNodes :: TestnetNodesWithOptions
   , creationEra :: AnyShelleyBasedEra -- ^ The era to start at
   , creationMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                 -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
@@ -187,7 +187,7 @@ data TestnetCreationOptions = TestnetCreationOptions
 
 instance Default TestnetCreationOptions where
   def = TestnetCreationOptions
-    { creationNodes = cardanoDefaultTestnetNodeOptions
+    { creationNodes = cardanoDefaultTestnetNodesWithOptions
     , creationEra = AnyShelleyBasedEra ShelleyBasedEraConway
     , creationMaxSupply = 100_000_020_000_000
     , creationNumDReps = 3
@@ -259,16 +259,16 @@ instance Default GenesisOptions where
     }
 
 -- | Configuration specific to each node
-data NodeOptions = NodeOptions
+data NodeWithOptions = NodeWithOptions
   { nodeBin :: Maybe FilePath -- ^ Path to the @cardano-node@ binary to use for running this node. 'Nothing' uses the default resolution mechanism.
   , nodeExtraCliArgs :: [String] -- ^ Extra CLI arguments passed to @cardano-node run@
   } deriving (Eq, Show)
 
 -- | Specifies the nodes to create for the testnet, split by role (SPO and relay).
 -- SPO nodes participate in block production. Relay nodes only forward blocks.
-data TestnetNodeOptions = TestnetNodeOptions
-  { optSpoNodes :: NonEmpty NodeOptions -- ^ SPO (stake pool operator) nodes. Must have at least one.
-  , optRelayNodes :: [NodeOptions] -- ^ Relay (non-producing) nodes
+data TestnetNodesWithOptions = TestnetNodesWithOptions
+  { optSpoNodes :: NonEmpty NodeWithOptions -- ^ SPO (stake pool operator) nodes. Must have at least one.
+  , optRelayNodes :: [NodeWithOptions] -- ^ Relay (non-producing) nodes
   } deriving (Eq, Show)
 
 -- | Type used to track whether the user is providing its data (node configuration file path, genesis file, etc.)
@@ -281,11 +281,11 @@ data UserProvidedData a =
 instance Default (UserProvidedData a) where
   def = NoUserProvidedData
 
-cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
-cardanoDefaultTestnetNodeOptions = TestnetNodeOptions
-  { optSpoNodes = NodeOptions Nothing [] :| []
-  , optRelayNodes = [ NodeOptions Nothing []
-                    , NodeOptions Nothing []
+cardanoDefaultTestnetNodesWithOptions :: TestnetNodesWithOptions
+cardanoDefaultTestnetNodesWithOptions = TestnetNodesWithOptions
+  { optSpoNodes = NodeWithOptions Nothing [] :| []
+  , optRelayNodes = [ NodeWithOptions Nothing []
+                    , NodeWithOptions Nothing []
                     ]
   }
 
