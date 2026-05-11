@@ -456,16 +456,40 @@ solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArith
   pure $ Just ([UnificationProblem loc rhsTy Duration, UnificationProblem loc typ Timestamp],
     [BinaryArithmeticOp $
       BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp])
+-- | ? - Duration : ? ~> Timestamp - Duration : Timestamp
+-- Only Timestamp - Duration exists, so lhs must be Timestamp.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Sub rhs Duration hole typ = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Timestamp, UnificationProblem loc typ Timestamp]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole typ = do
   pure $ Just ([UnificationProblem loc typ Duration],
     [BinaryArithmeticOp $
       BinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole Duration])
+-- | ? + ? : Duration ~> Duration + Duration : Duration
+-- Only Duration + Duration produces Duration.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Add rhs rhsTy hole Duration = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Duration, UnificationProblem loc rhsTy Duration]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole Duration]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (InstantVector Scalar) hole typ = do
   pure (Just ([UnificationProblem loc typ (InstantVector Scalar)], [BinaryArithmeticOp $
     BinaryArithmeticOpElabProblem gam loc rhs (InstantVector Scalar) op lhs Scalar hole (InstantVector Scalar)]))
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (RangeVector Scalar) hole typ = do
   pure (Just ([UnificationProblem loc typ (RangeVector Scalar)], [BinaryArithmeticOp $
     BinaryArithmeticOpElabProblem gam loc rhs (RangeVector Scalar) op lhs Scalar hole (RangeVector Scalar)]))
+-- | ? - ? : Timestamp ~> Timestamp - Duration : Timestamp
+-- Only Timestamp - Duration produces Timestamp via Sub.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Sub rhs rhsTy hole Timestamp = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Timestamp, UnificationProblem loc rhsTy Duration]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs _ hole Scalar = do
   pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc lhsTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
