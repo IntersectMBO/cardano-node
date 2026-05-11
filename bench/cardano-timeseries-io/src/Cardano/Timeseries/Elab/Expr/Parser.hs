@@ -88,7 +88,7 @@ now :: Parser Expr
 now = Now <$> getSourcePos <* string "now"
 
 epoch :: Parser Expr
-epoch = Now <$> getSourcePos <* string "epoch"
+epoch = Epoch <$> getSourcePos <* string "epoch"
 
 true :: Parser Expr
 true = Truth <$> getSourcePos <* string "true"
