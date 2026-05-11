@@ -15,14 +15,17 @@ import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo 
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
-                   GetHeader, HasHeader, Header)
+                   GetHeader, HasHeader, Header, HeaderHash)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..),
+                   TxMeasure)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints)
+import           Ouroboros.Consensus.Node.Tracers (ForgedBlock)
+import           Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson)
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Network.Block (Serialised)
@@ -58,7 +61,6 @@ type TraceConstraints blk =
 
     , ToJSON (BlockNodeToClientVersion blk)
     , ToJSON (BlockNodeToNodeVersion blk)
-
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
     , LogFormatting (Header blk)
@@ -72,4 +74,7 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (Set (Credential 'Staking))
     , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
+
+    , ConsensusJson (HeaderHash blk)
+    , ConsensusJson (TxMeasure blk)
     )

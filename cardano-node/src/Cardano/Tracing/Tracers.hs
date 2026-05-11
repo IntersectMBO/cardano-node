@@ -21,11 +21,11 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
-#if __GLASGOW_HASKELL__ < 904
--- Pattern synonym record fields with GHC-8.10 is issuing the `-Wname-shadowing`
--- warning.
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
+
+
+
+
+
 
 
 module Cardano.Tracing.Tracers
@@ -43,6 +43,7 @@ import           Cardano.BM.Data.Transformers
 import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -61,6 +62,9 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
 import           Cardano.Tracing.Shutdown ()
 import           Cardano.Tracing.Startup ()
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header,
                    realPointHash, realPointSlot)
@@ -71,8 +75,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxs, LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -82,17 +86,12 @@ import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson)
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
-
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
-
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
                    StandardHash, blockNo, pointSlot, unBlockNo)
@@ -113,8 +112,8 @@ import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
-import           Ouroboros.Network.PeerSelection.Governor (
-                   PeerSelectionCounters, PeerSelectionView (..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters,
+                   PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
@@ -351,7 +350,8 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 mkTracers
   :: forall blk p2p .
      ( Consensus.RunNode blk
-     , TraceConstraints blk
+     , TraceConstraints blk,
+       ConsensusJson (Consensus.ForgedBlock blk)
      )
   => BlockConfig blk
   -> TraceOptions
@@ -556,6 +556,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
       , Consensus.dbfTracer = nullTracer
+      , Consensus.leiosKernelTracer = nullTracer
+      , Consensus.leiosPeerTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -571,6 +573,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
+      , NodeToNode.tLeiosNotifyTracer = nullTracer
+      , NodeToNode.tLeiosFetchTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -599,7 +603,7 @@ teeTraceChainTip
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.SelectView (BlockProtocol blk))
      )
   => BlockConfig blk
   -> ForgingStats
@@ -623,7 +627,7 @@ teeTraceChainTipElide
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
-     , ToObject (SelectView (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.SelectView (BlockProtocol blk))
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -778,11 +782,11 @@ mkConsensusTracers
      , ToObject (GenTx blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
-     , HasKESInfo blk
+     , HasKESInfo blk, ConsensusJson (Consensus.ForgedBlock blk)
      )
   => Maybe EKGDirect
   -> TraceSelection
@@ -862,6 +866,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
+    , Consensus.leiosKernelTracer = tracerOnOff (traceLeiosKernel trSel) verb "LeiosKernel" tr
+    , Consensus.leiosPeerTracer = tracerOnOff (traceLeiosPeer trSel) verb "LeiosPeer" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1120,8 +1126,8 @@ teeForge ::
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
-     , ToObject (ForgeStateUpdateError blk)
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
+     , ToObject (ForgeStateUpdateError blk), ConsensusJson (Consensus.ForgedBlock blk)
      )
   => ForgeTracers
   -> TracingVerbosity
@@ -1190,7 +1196,7 @@ teeForge' tr =
           LogValue "forgeTickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgingMempoolSnapshot slot _prevPt _mpHash _mpSlotNo ->
           LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgedBlock slot _ _ _ ->
+        Consensus.TraceForgedBlock slot _forgedBlock ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
           LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
@@ -1207,9 +1213,9 @@ forgeTracer
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
-     , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (Ouroboros.Consensus.Protocol.Abstract.ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
-     , HasKESInfo blk
+     , HasKESInfo blk, ConsensusJson (Consensus.ForgedBlock blk)
      )
   => TracingVerbosity
   -> Trace IO Text
@@ -1513,6 +1519,12 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
+  , NodeToNode.tLeiosNotifyTracer =
+      tracerOnOff (traceLeiosNotifyProtocol trSel)
+                  verb "LeiosNotifyPrototocol" tr
+  , NodeToNode.tLeiosFetchTracer =
+      tracerOnOff (traceLeiosFetchProtocol trSel)
+                  verb "LeiosFetchPrototocol" tr
   }
 
 -- TODO @ouroboros-network

@@ -26,16 +26,21 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
+import qualified Data.Aeson.KeyMap as AE
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, intercalate, null, pack)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
-import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
+import           Data.Time (UTCTime, addUTCTime, defaultTimeLocale, formatTime, getCurrentTime)
+import           GHC.Clock (getMonotonicTime)
 import           Network.HostName
 import           System.IO.Unsafe (unsafePerformIO)
 
+
+data I a = I a
+instance Functor I where fmap f (I x) = I (f x)
 
 encodingToText :: AE.Encoding -> Text
 {-# INLINE encodingToText #-}
@@ -44,6 +49,10 @@ encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
 timeFormatted :: UTCTime -> Text
 {-# INLINE timeFormatted #-}
 timeFormatted = pack . formatTime defaultTimeLocale "%F %H:%M:%S%4QZ"
+
+timeFormattedT :: UTCTime -> Text
+{-# INLINE timeFormattedT #-}
+timeFormattedT = pack . formatTime defaultTimeLocale "%FT%H:%M:%S%8QZ"
 
 -- If the hostname in the logs should be anything different from the system reported hostname,
 -- a new field would need to be added to PreFormatted to carry a new hostname argument to preFormatted.
@@ -84,13 +93,21 @@ preFormatted withForHuman =
   flip contramapM
     (\case
       (lc, Right msg) -> do
+        tm       <- liftIO getMonotonicTime
         time     <- liftIO getCurrentTime
+        let tmf tm' = flip addUTCTime time $ fromRational $ tm' - toRational tm
         threadId <- liftIO myThreadId
         let ns' = lcNSPrefix lc ++ lcNSInner lc
             threadTextShortened = T.pack $ drop 9 $ show threadId       -- drop "ThreadId " prefix
             details = fromMaybe DNormal (lcDetails lc)
             condForHuman = let txt = forHuman msg in if T.null txt then Nothing else Just txt
-            machineFormatted = AE.toEncoding $ forMachine details msg
+            obj = forMachine details msg
+            -- nasty special case for a numeric "mux_tm" field
+            I obj' = (\f -> AE.alterF f "mux_at" obj) $ \case
+                Nothing -> I Nothing
+                Just (AE.Number tm') -> I $ Just $ AE.String $ timeFormattedT $ tmf $ toRational tm'
+                Just x -> I $ Just x
+            machineFormatted = AE.toEncoding $ obj'
 
         pure (lc, Right (PreFormatted
                           { pfForHuman = if withForHuman then condForHuman else Nothing
