@@ -101,9 +101,10 @@ import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 
-import           LeiosDemoTypes (LeiosPoint, LeiosEb, LeiosTx, TraceLeiosKernel, TraceLeiosPeer)
 import           LeiosDemoOnlyTestFetch (LeiosFetch)
 import           LeiosDemoOnlyTestNotify (LeiosNotify)
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 
 -- | Check the configuration in the given file.
 -- If there is no configuration in the file check the standard configuration
@@ -273,7 +274,7 @@ getAllNamespaces =
                              (allNamespaces :: [Namespace
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
-                                      (LeiosNotify LeiosPoint ())))])
+                                      (LeiosNotify LeiosPoint () LeiosVote)))])
 
         leiosFetchNS = map (nsGetTuple . nsReplacePrefix ["LeiosFetch", "Remote"])
                              (allNamespaces :: [Namespace

@@ -37,8 +37,8 @@ import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx,
-                   messageLeiosFetchToObject, prettyEbHash)
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, LeiosVote,
+                   messageLeiosFetchToObject, messageLeiosNotifyToObject, prettyEbHash)
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -476,33 +476,11 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
 
 instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
 
-instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
   forHuman = showT
 
-  forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
-
-    LN.MsgLeiosNotificationRequestNext ->
-      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
-              ]
-
-    LN.MsgLeiosBlockAnnouncement () ->
-      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
-              ]
-    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
-      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              , "ebBytesSize" .= ebBytesSize
-              ]
-    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
-      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              ]
-
-    LN.MsgDone ->
-      mconcat [ "kind" .= String "MsgDone"
-              ]
+  forMachine _dtal (AnyMessageAndAgency _stok msg) =
+    messageLeiosNotifyToObject msg
 
 instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
   forHuman = showT
@@ -510,12 +488,13 @@ instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) w
   forMachine _dtal (AnyMessageAndAgency _stok msg) =
     messageLeiosFetchToObject msg
 
-instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
     namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
       LN.MsgLeiosNotificationRequestNext {} -> Namespace [] ["RequestNext"]
       LN.MsgLeiosBlockAnnouncement {} -> Namespace [] ["BlockAnnouncement"]
       LN.MsgLeiosBlockOffer {} -> Namespace [] ["BlockOffer"]
       LN.MsgLeiosBlockTxsOffer {} -> Namespace [] ["BlockTxsOffer"]
+      LN.MsgLeiosVotes {} -> Namespace [] ["Votes"]
       LN.MsgDone -> Namespace [] ["Done"]
 
     severityFor _ _ = Just Debug
@@ -527,6 +506,7 @@ instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
       , Namespace [] ["BlockAnnouncement"]
       , Namespace [] ["BlockOffer"]
       , Namespace [] ["BlockTxsOffer"]
+      , Namespace [] ["Votes"]
       , Namespace [] ["Done"]
       ]
 
