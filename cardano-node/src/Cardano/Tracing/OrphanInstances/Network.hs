@@ -141,9 +141,10 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, TraceLeiosKernel,
-                   TraceLeiosPeer, messageLeiosFetchToObject, prettyEbHash,
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, LeiosVote,
+                   TraceLeiosKernel, TraceLeiosPeer, messageLeiosFetchToObject,
+                   messageLeiosNotifyToObject, prettyEbHash, traceLeiosKernelToObject,
+                   traceLeiosPeerToObject)
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
@@ -2882,38 +2883,12 @@ instance ToJSON PeerTrustable where
 instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
 
 instance ToObject peer
-     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LN.LeiosNotify LeiosPoint ()))) where
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LN.LeiosNotify LeiosPoint () LeiosVote))) where
   trTransformer = trStructured
 
-instance ToObject (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
-  toObject _verb (AnyMessageAndAgency _stok msg) = case msg of
-
-    LN.MsgLeiosNotificationRequestNext ->
-      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
-              ]
-
-    LN.MsgLeiosBlockAnnouncement () ->
-      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
-              ]
-    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
-      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              , "ebBytesSize" .= ebBytesSize
-              ]
-    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
-      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
-              , "ebSlot" .= ebSlot
-              , "ebHash" .= ebHash
-              ]
-
-    LN.MsgDone ->
-      mconcat [ "kind" .= String "MsgDone"
-              ]
-
---    where
---      agency :: Aeson.Object
---      agency = "agency" .= show stok
+instance ToObject (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
+  toObject _verb (AnyMessageAndAgency _stok msg) =
+    messageLeiosNotifyToObject msg
 
 instance ToObject peer
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))) where
