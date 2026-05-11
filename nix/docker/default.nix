@@ -118,7 +118,7 @@ let
         done
 
         # Adjust genesis file, config refs
-        for i in config config-legacy db-sync-config; do
+        for i in config db-sync-config; do
           if [ -f "$out/config/$ENV/$i.json" ]; then
             sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
           fi

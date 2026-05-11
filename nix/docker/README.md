@@ -232,26 +232,6 @@ otherwise ledger replay from genesis will re-occur.
 
 For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardano.intersectmbo.org/docs/references/miscellaneous/utxo-hd/migrating/).
 
-## Legacy Tracing System
-Cardano-node now defaults to using the new tracing system.  The legacy tracing
-system is deprecated and will be removed in a future node version.  While still
-available, the legacy tracing system can be used by following the example
-above in "custom" mode whereby config is passed, and in this case, the config
-passed is the legacy style configuration.
-
-Legacy default configuration files are also available within the image at paths:
-`/opt/cardano/config/$NETWORK/config-legacy.json`
-
-An example of legacy tracing system usage is:
-```
-docker run \
-  -v preprod-data:/data \
-  -e CARDANO_CONFIG="/opt/cardano/config/preprod/config-legacy.json" \
-  -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
-  ghcr.io/intersectmbo/cardano-node:dev \
-  run
-```
-
 
 # Cardano Submit API Image Operation
 ## Scripts Mode
