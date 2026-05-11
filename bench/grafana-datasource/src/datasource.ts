@@ -30,8 +30,17 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     const frames: DataFrame[] = [];
     let error: DataQueryError | undefined;
 
+    // Grafana expands $__from/$__to to raw ms integers (Scalar in our type system, not Timestamp).
+    // Replace them ourselves before getTemplateSrv() sees them so they become valid timestamp
+    // expressions: epoch + Nms.
+    const from = options.range.from.valueOf();
+    const to = options.range.to.valueOf();
+
     for (const target of active) {
-      const interpolated = getTemplateSrv().replace(target.queryText, options.scopedVars);
+      const preProcessed = target.queryText
+        .replace(/\$__from/g, `epoch + ${from}ms`)
+        .replace(/\$__to/g,   `epoch + ${to}ms`);
+      const interpolated = getTemplateSrv().replace(preProcessed, options.scopedVars);
       try {
         frames.push(...(await this.runQuery(interpolated)));
       } catch (err: any) {
