@@ -5,7 +5,6 @@
 
 module Cardano.Timeseries.Elab(initialSt, St(..), ElabM, elab) where
 import           Cardano.Timeseries.AsText
-import           Cardano.Timeseries.Domain.Identifier (Identifier)
 import           Cardano.Timeseries.Elab.Expr (Loc, getLoc)
 import qualified Cardano.Timeseries.Elab.Expr as Surface
 import           Cardano.Timeseries.Elab.Resolve
@@ -23,14 +22,14 @@ import qualified Cardano.Timeseries.Interp.BinaryRelation as BinaryRelation
 import           Cardano.Timeseries.Interp.Expr (HoleIdentifier)
 import qualified Cardano.Timeseries.Interp.Expr as Semantic
 
-import           Control.Monad (forM_)
+import           Control.Monad ()
 import           Control.Monad.Except (ExceptT, liftEither, runExceptT, throwError)
 import           Control.Monad.State.Strict (State, get, modify, put, runState)
 import           Data.Foldable as Foldable (toList)
 import           Data.List (find)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence as Seq (Seq (..), fromList, singleton, (><), (|>))
-import           Data.Text (Text, pack)
+import           Data.Sequence as Seq (Seq (..), fromList, reverse, singleton, (><), (|>))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 
@@ -244,11 +243,6 @@ mbBinaryArithmeticOp (Surface.Sub l a b) = Just (l, a, BinaryArithmeticOp.Sub, b
 mbBinaryArithmeticOp (Surface.Mul l a b) = Just (l, a, BinaryArithmeticOp.Mul, b)
 mbBinaryArithmeticOp (Surface.Div l a b) = Just (l, a, BinaryArithmeticOp.Div, b)
 mbBinaryArithmeticOp _                   = Nothing
-
-checkFresh :: Context -> Identifier -> ElabM ()
-checkFresh ctx v =
-  forM_ (find (\b -> Types.identifier b == v) ctx) $ \found ->
-    throwError $ pack $ "Reused variable name: " <> show (Types.identifier found)
 
 -- | Γ ⊦ to_scalar (t : T) ~> ?
 -- Assumes that `Ty` is normal w.r.t. hole substitution.
@@ -750,7 +744,6 @@ solveGeneralElabProblem gam (Surface.MkPair l a b) x typ = do
 solveGeneralElabProblem gam (Surface.Lambda l v scope) x typ = do
   tyah <- freshTyHole
   tybh <- freshTyHole
-  checkFresh gam v
   let u = UnificationProblem l typ (Fun (Hole tyah) (Hole tybh))
   scopeh <- freshExprHole (Hole tybh)
   let e = General $ GeneralElabProblem (gam |> LambdaBinding v (Hole tyah)) scope scopeh (Hole tybh)
@@ -763,7 +756,6 @@ solveGeneralElabProblem gam (Surface.Lambda l v scope) x typ = do
 solveGeneralElabProblem gam (Surface.Let l v rhs scope) x typ = do
   tyah <- freshTyHole
   tybh <- freshTyHole
-  checkFresh gam v
   let u = UnificationProblem l typ (Hole tybh)
   rhsh <- freshExprHole (Hole tyah)
   scopeh <- freshExprHole (Hole tybh)
@@ -786,7 +778,7 @@ solveGeneralElabProblem gam (mbBinaryArithmeticOp -> Just (loc, left, op, right)
   let e3 = BinaryArithmeticOp $
        BinaryArithmeticOpElabProblem gam loc (Semantic.Hole lefth) (Hole tyah) op (Semantic.Hole righth) (Hole tybh) x typ
   pure ([], [e1, e2, e3])
-solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) gam = do
+solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) (Seq.reverse gam) = do
   modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
   pure ([UnificationProblem l typ (Types.ty b)], [])
 -- Assumes that all variables into the store (= metrics) have type (Timestamp -> Scalar)

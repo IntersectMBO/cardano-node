@@ -267,6 +267,7 @@ letLambdaTests :: TestTree
 letLambdaTests = testGroup "Let and lambda"
   [ testCase "let x = 2 in x * 3 = 6"   $ assertScalar 6 (run "let x = 2 in x * 3")
   , testCase "nested let"                $ assertScalar 3 (run "let x = 1 in let y = 2 in x + y")
+  , testCase "let shadowing"             $ assertScalar 2 (run "let x = 1 in let x = 2 in x")
   , testCase "let with lambda rhs"       $ assertScalar 3 (run "let f = \\x -> x + 1 in f 2")
   , testCase "lambda identity"           $ assertScalar 7 (run "(\\x -> x) 7")
   , testCase "lambda arithmetic"         $ assertScalar 5 (run "(\\x -> x + 1) 4")
