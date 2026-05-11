@@ -41,11 +41,6 @@ let
         (builtins.toJSON
           (env.nodeConfig // genesisAttrs));
 
-      nodeConfigLegacy= pkgs.writeText
-        "config-legacy.json"
-        (builtins.toJSON
-          (env.nodeConfigLegacy // genesisAttrs));
-
       submitApiConfig = pkgs.writeText
         "submit-api-config.json"
         (builtins.toJSON env.submitApiConfig);
@@ -68,7 +63,6 @@ let
       ''
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
-        jq . < "${nodeConfigLegacy}" > share/${name}/config-legacy.json
         jq . < "${submitApiConfig}" > share/${name}/submit-api-config.json
         jq . < "${tracerConfig}" > share/${name}/tracer-config.json
         jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
