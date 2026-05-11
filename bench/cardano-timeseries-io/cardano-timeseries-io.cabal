@@ -158,6 +158,7 @@ test-suite cardano-timeseries-test
   build-depends:
       base
     , cardano-timeseries-io
+    , containers
     , megaparsec
     , mtl
     , tasty

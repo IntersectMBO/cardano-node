@@ -658,7 +658,7 @@ solveGeneralElabProblem gam (Surface.SumOverTime l r) x typ = do
   rh <- freshExprHole (RangeVector Scalar)
   let e1 = General $ GeneralElabProblem gam r rh (RangeVector Scalar)
   modify $ updateDefs $
-    instantiateExpr x $ Semantic.AvgOverTime (Semantic.Hole rh)
+    instantiateExpr x $ Semantic.SumOverTime (Semantic.Hole rh)
   pure ([u], [e1])
 solveGeneralElabProblem gam (Surface.QuantileOverTime l k r) x typ = do
   let u = UnificationProblem l typ (InstantVector Scalar)
