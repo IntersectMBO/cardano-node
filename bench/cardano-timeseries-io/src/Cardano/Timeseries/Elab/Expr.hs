@@ -111,7 +111,7 @@ import           Text.Megaparsec (SourcePos, sourcePosPretty)
 --            | t{> comp} > t{> comp} | t{> comp} >= t{> comp}
 -- t{and} ::= t{> and} &̅&̅ ̅t̅{̅>̅ ̅a̅n̅d̅}̅
 -- t{or}  ::= t{> or} |̅|̅ ̅t̅{̅>̅ ̅o̅r̅}̅
--- t{universe} ::= let x = t{> universe} in t{≥ universe} | \x -> t{≥ universe}
+-- t{universe} ::= let x = t{≥ universe} in t{≥ universe} | \x -> t{≥ universe}
 
 -- | Source location.
 type Loc = SourcePos

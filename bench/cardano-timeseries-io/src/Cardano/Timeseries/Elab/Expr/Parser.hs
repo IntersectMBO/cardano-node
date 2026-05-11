@@ -344,7 +344,7 @@ exprLet = do
   space
   void $ string "="
   space
-  rhs <- exprOr
+  rhs <- exprUniverse
   space
   void $ string "in"
   space1
