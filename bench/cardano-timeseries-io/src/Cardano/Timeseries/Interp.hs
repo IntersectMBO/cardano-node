@@ -118,6 +118,27 @@ interpIncrease v = liftEither $ do
     let x = max.value - min.value in
     Instant min.labels max.timestamp x
 
+-- | (v `op` s) applies the scalar operation pointwise to each data point value
+-- | where v : RangeVector Scalar
+-- |       s : Scalar
+interpBinaryArithmeticOpRangeVectorScalar :: Store s Double
+                                          => Config
+                                          -> s
+                                          -> Map Identifier Value
+                                          -> Expr
+                                          -> BinaryArithmeticOp
+                                          -> Expr
+                                          -> Timestamp
+                                          -> InterpM Value
+interpBinaryArithmeticOpRangeVectorScalar cfg store env v op k now = do
+  vv <- interp cfg store env v now >>= expectRangeVector
+  vk <- interp cfg store env k now >>= expectScalar
+  let applyOp (Value.Scalar x) = pure $ Value.Scalar (BinaryArithmeticOp.materializeScalar op x vk)
+      applyOp other             = throwInterpError $
+        "Expected Scalar values in RangeVector for arithmetic, got: " <> showT other
+  tss <- mapM (traverse applyOp) vv
+  pure $ Value.RangeVector tss
+
 -- | (v `op` s) ≡ map (\x -> x `op` s) v
 -- | where v : InstantVector Scalar
 -- |       s : Scalar
@@ -171,7 +192,8 @@ interpFilterBinaryRelation cfg store env v rel k now = do
     now
 
 -- | Given a metric store, an assignment of values to local variables, a query expression and a timestamp "now",
---    interpret the `Expr` into a `Value`.
+--   interpret the `Expr` into a `Value`.
+--   Precondition: the expression must be well-typed in the given variable context.
 interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> InterpM Value
 interp _ store _ Expr.Metrics _ = do
   pure $ foldr Value.Cons Value.Nil $ map Value.Text $ Set.toList $ metrics store
@@ -249,6 +271,8 @@ interp _ _ _ (Milliseconds t) _ = pure $ Duration t
 interp _ _ _ (Seconds t) _ = pure $ Duration (1000 * t)
 interp _ _ _ (Minutes t) _ = pure $ Duration (60 * 1000 * t)
 interp _ _ _ (Hours t) _ = pure $ Duration (60 * 60 * 1000 * t)
+interp cfg store env (BinaryArithmeticOp.mbBinaryArithmeticOpRangeVectorScalar -> Just (v, op, k)) now =
+  interpBinaryArithmeticOpRangeVectorScalar cfg store env v op k now
 interp cfg store env (BinaryArithmeticOp.mbBinaryArithmeticOpInstantVectorScalar -> Just (v, op, k)) now = do
   interpBinaryArithmeticOp cfg store env v op k now
 interp cfg store env (Quantile k_ expr) now = do

@@ -18,7 +18,7 @@ c ::= l = s | l != s
 c̄ ::= {c, ..., c}
 
 // Types
-A, B, C, T ::= InstantVector T | RangeVector T | Scalar | Bool | Timestamp | Duration | (T, T) | T -> T | Text
+A, B, C, T ::= InstantVector T | RangeVector T | List T | Scalar | Bool | Timestamp | Duration | (T, T) | T -> T | Text
 
 // Contexts
 Γ ::= ε | Γ (x ≔ t : T) | Γ (x : T)
@@ -64,7 +64,7 @@ t, f, e, a, b ::= x
                 | abs t
                 | range t t t
                 | range t t t t
-                | filter_by_label t c̄
+                | filter_by_label c̄ t
                 | max t
                 | min t
                 | avg t
@@ -92,6 +92,10 @@ t, f, e, a, b ::= x
                 | metrics
                 | Nil
                 | Cons t t
+                | add_range_vector_scalar t t
+                | sub_range_vector_scalar t t
+                | mul_range_vector_scalar t t
+                | div_range_vector_scalar t t
 
 ┌──────┐
 │A type│
@@ -128,8 +132,8 @@ B type
 
 A type
 B type
-------
-A -> B
+----------
+A -> B type
 
 
 Timestamp type
@@ -175,7 +179,7 @@ x ∈ metric-store
 Γ ⊦ x : Timestamp -> InstantVector Scalar
 
 
-Γ (x := t : A) ⊦ e : B
+Γ (x ≔ t : A) ⊦ e : B
 ---------------------- ✔
 Γ ⊦ let x = t in e : B
 
@@ -343,7 +347,7 @@ n integer // integer literal
 
 
 n integer // integer literal
-          // Syntax hugar: <int>h ✗
+          // Syntax sugar: <int>h ✗
 -----------------------------------  ✔
 Γ ⊦ hours n : Duration
 
@@ -430,7 +434,7 @@ n integer // integer literal
 Γ ⊦ f : A -> B
 Γ ⊦ v : InstantVector A
 ----------------------------- ✔
-Γ ⊦ map f u : InstantVector B
+Γ ⊦ map f v : InstantVector B
 
 
 Γ ⊦ t : Scalar
@@ -464,7 +468,7 @@ n integer // integer literal
 
 
 Γ ⊦ q : Scalar // must be in range of [0; 1]
-Γ ⊦ r : RangeVector
+Γ ⊦ r : RangeVector Scalar
 ------------------------------------------------- ✔
 Γ ⊦ quantile_over_time q r : InstantVector Scalar
 
@@ -479,9 +483,49 @@ n integer // integer literal
 // meta-level abbreviation
 Γ ⊦ a : InstantVector Scalar
 Γ ⊦ s : Scalar
------------------------------------------------------------- ✔
+--------------------------------------------------------------- ✔
+Γ ⊦ eq_instant_vector_scalar a s : InstantVector Scalar
+    eq_instant_vector_scalar a s ≡ filter (\v -> v == s) a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+--------------------------------------------------------------- ✔
+Γ ⊦ not_eq_instant_vector_scalar a s : InstantVector Scalar
+    not_eq_instant_vector_scalar a s ≡ filter (\v -> v /= s) a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+--------------------------------------------------------------- ✔
+Γ ⊦ lt_instant_vector_scalar a s : InstantVector Scalar
+    lt_instant_vector_scalar a s ≡ filter (\v -> v < s) a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+--------------------------------------------------------------- ✔
 Γ ⊦ lte_instant_vector_scalar a s : InstantVector Scalar
-    lte_instant_vector_scalar a s ≡ filter (\v -> v <= s) a   // same rule holds for other binary relations
+    lte_instant_vector_scalar a s ≡ filter (\v -> v <= s) a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+--------------------------------------------------------------- ✔
+Γ ⊦ gt_instant_vector_scalar a s : InstantVector Scalar
+    gt_instant_vector_scalar a s ≡ filter (\v -> v > s) a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+--------------------------------------------------------------- ✔
+Γ ⊦ gte_instant_vector_scalar a s : InstantVector Scalar
+    gte_instant_vector_scalar a s ≡ filter (\v -> v >= s) a
 
 
 // meta-level abbreviation
@@ -509,8 +553,8 @@ v <= bool s ≡ (\x -> x <= s) v
 // meta-level definition (define via map)
 Γ ⊦ v : InstantVector Scalar
 Γ ⊦ s : Scalar
----------------------------------------------------- ✔
-Γ ⊦ mul_instant_vector_scalar : InstantVector Scalar
+-------------------------------------------------------- ✔
+Γ ⊦ mul_instant_vector_scalar v s : InstantVector Scalar
 
 
 // meta-level definition (define via map)
@@ -518,6 +562,30 @@ v <= bool s ≡ (\x -> x <= s) v
 Γ ⊦ s : Scalar
 -------------------------------------------------------- ✔
 Γ ⊦ div_instant_vector_scalar v s : InstantVector Scalar
+
+
+Γ ⊦ v : RangeVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------------------------- ✔
+Γ ⊦ add_range_vector_scalar v s : RangeVector Scalar
+
+
+Γ ⊦ v : RangeVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------------------------- ✔
+Γ ⊦ sub_range_vector_scalar v s : RangeVector Scalar
+
+
+Γ ⊦ v : RangeVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------------------------- ✔
+Γ ⊦ mul_range_vector_scalar v s : RangeVector Scalar
+
+
+Γ ⊦ v : RangeVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------------------------- ✔
+Γ ⊦ div_range_vector_scalar v s : RangeVector Scalar
 
 
 // meta-level definition (define via map)
@@ -532,5 +600,5 @@ v <= bool s ≡ (\x -> x <= s) v
 Γ ⊦ quantile_by q v l̄ : InstantVector Scalar
 
 Γ ctx
------------------- ✔
-Γ ⊦ metrics : Text
+----------------------- ✔
+Γ ⊦ metrics : List Text

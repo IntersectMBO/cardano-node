@@ -26,6 +26,10 @@ data Expr = Number Double
           | SubInstantVectorScalar Expr Expr
           | MulInstantVectorScalar Expr Expr
           | DivInstantVectorScalar Expr Expr
+          | AddRangeVectorScalar Expr Expr
+          | SubRangeVectorScalar Expr Expr
+          | MulRangeVectorScalar Expr Expr
+          | DivRangeVectorScalar Expr Expr
           | EqInstantVectorScalar Expr Expr
           | LtInstantVectorScalar Expr Expr
           | LteInstantVectorScalar Expr Expr

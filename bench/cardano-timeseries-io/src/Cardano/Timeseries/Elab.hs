@@ -398,6 +398,13 @@ solveCanonicalBinaryArithmeticOpElabProblem _ _ lhs (InstantVector Scalar)
     instantiateExpr hole
       (BinaryArithmeticOp.embedInstantVectorScalar op lhs rhs)
   pure $ Just ([], [])
+-- | Σ Γ ⊦ RangeVector Scalar `op` Scalar ~> ? : RangeVector Scalar
+solveCanonicalBinaryArithmeticOpElabProblem _ _ lhs (RangeVector Scalar)
+  op rhs Scalar hole (RangeVector Scalar) = do
+  modify $ updateDefs $
+    instantiateExpr hole
+      (BinaryArithmeticOp.embedRangeVectorScalar op lhs rhs)
+  pure $ Just ([], [])
 solveCanonicalBinaryArithmeticOpElabProblem _ _ _ _ _ _ _ _ _ = pure Nothing
 
 solveNoncanonicalBinaryArithmeticOpElabProblem ::
@@ -429,12 +436,33 @@ solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArith
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (InstantVector Scalar) hole typ = do
   pure (Just ([UnificationProblem loc typ (InstantVector Scalar)], [BinaryArithmeticOp $
     BinaryArithmeticOpElabProblem gam loc rhs (InstantVector Scalar) op lhs Scalar hole (InstantVector Scalar)]))
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (RangeVector Scalar) hole typ = do
+  pure (Just ([UnificationProblem loc typ (RangeVector Scalar)], [BinaryArithmeticOp $
+    BinaryArithmeticOpElabProblem gam loc rhs (RangeVector Scalar) op lhs Scalar hole (RangeVector Scalar)]))
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs _ hole Scalar = do
   pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc lhsTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole holeTy = do
   pure $ Just ([UnificationProblem loc holeTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy
+  | lhsTy == RangeVector Scalar || rhsTy == RangeVector Scalar =
+  pure $ Just
+    (
+     [UnificationProblem loc holeTy (RangeVector Scalar)],
+     [BinaryArithmeticOp $
+       BinaryArithmeticOpElabProblem
+         gam
+         loc
+         lhs
+         lhsTy
+         op
+         rhs
+         rhsTy
+         hole
+         (RangeVector Scalar)
+     ]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy
   | lhsTy == InstantVector Scalar || rhsTy == InstantVector Scalar =
   pure $ Just
