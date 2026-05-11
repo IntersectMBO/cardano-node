@@ -7,7 +7,6 @@ module Cardano.Benchmarking.OuroborosImports
   (
     CardanoBlock
   , LocalSubmitTx
-  , LoggingLayer
   , PaymentKey
   , ShelleyGenesis
   , SigningKey
@@ -27,7 +26,6 @@ import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlo
 
 import           Cardano.CLI.Type.Common (SigningKeyFile)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
-import           Cardano.Node.Configuration.Logging (LoggingLayer)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Cardano as Consensus

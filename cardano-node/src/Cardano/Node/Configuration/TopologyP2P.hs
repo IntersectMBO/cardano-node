@@ -22,14 +22,22 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology,
                    isValidTrustedPeerConfiguration)
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.Diffusion.Topology (NetworkTopology (..))
+import           Ouroboros.Network.Diffusion.Topology
+                   (LocalRootPeersGroup (..), LocalRootPeersGroups (..), LocalRoots (..),
+                   RootConfig (..))
+import           Ouroboros.Network.DiffusionMode (DiffusionMode (..))
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.OrphanInstances ()
+import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   LedgerPeersKind (..), isLedgerPeersEnabled)
+                   LedgerPeersKind (..), UseLedgerPeers (..), isLedgerPeersEnabled)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
 
 import           Control.Exception.Safe (Exception (..), IOException, try)
 import           Control.Monad
@@ -47,6 +55,48 @@ import           System.FilePath (takeDirectory, (</>))
 instance AdjustFilePaths CardanoNetworkTopology where
   adjustFilePaths f nt@NetworkTopology{peerSnapshotPath} =
     nt{peerSnapshotPath = f <$> peerSnapshotPath}
+
+instance FromJSON PeerTrustable where
+  parseJSON = withBool "PeerTrustable" $ \b ->
+    pure $ if b then IsTrustable else IsNotTrustable
+
+instance FromJSON UseBootstrapPeers where
+  parseJSON Null = pure DontUseBootstrapPeers
+  parseJSON v = UseBootstrapPeers <$> parseJSON v
+
+instance FromJSON (LocalRootPeersGroups PeerTrustable) where
+  parseJSON v = LocalRootPeersGroups <$> parseJSON v
+
+instance FromJSON (LocalRootPeersGroup PeerTrustable) where
+  parseJSON = withObject "LocalRootPeersGroup" $ \v -> do
+    accessPoints <- v .: "accessPoints"
+    advertise <- peerAdvertiseFromBool <$> v .:? "advertise" .!= False
+    trustable <- peerTrustableFromBool <$> v .:? "trustable" .!= False
+    valency <- v .: "valency"
+    pure $
+      LocalRootPeersGroup
+        (LocalRoots (RootConfig accessPoints advertise) Outbound)
+        (HotValency valency)
+        (WarmValency valency)
+        InitiatorAndResponderDiffusionMode
+        trustable
+
+instance FromJSON (NetworkTopology UseBootstrapPeers PeerTrustable) where
+  parseJSON = withObject "NetworkTopology" $ \v ->
+    NetworkTopology
+      <$> v .: "localRoots"
+      <*> v .: "publicRoots"
+      <*> v .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers
+      <*> v .:? "peerSnapshotFile"
+      <*> v .:? "bootstrapPeers" .!= DontUseBootstrapPeers
+
+peerAdvertiseFromBool :: Bool -> PeerAdvertise
+peerAdvertiseFromBool True = DoAdvertisePeer
+peerAdvertiseFromBool False = DoNotAdvertisePeer
+
+peerTrustableFromBool :: Bool -> PeerTrustable
+peerTrustableFromBool True = IsTrustable
+peerTrustableFromBool False = IsNotTrustable
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 readTopologyFile :: ()

@@ -129,23 +129,21 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
 --
 data ConsensusNetworkVersionTuple a b = ConsensusNetworkVersionTuple a b
 
-instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
     toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
-      Aeson.object [ "nodeToClientVersion" .= nodeToClientVersion
-                   , "blockVersion" .= blockVersion
+      Aeson.object [ "nodeToClientVersion" .= String (pack $ show nodeToClientVersion)
+                   , "blockVersion" .= String (pack $ show blockVersion)
                    ]
 
-instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
     toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
-      Aeson.object [ "nodeToNodeVersion" .= nodeToClientVersion
-                   , "blockVersion" .= blockVersion
+      Aeson.object [ "nodeToNodeVersion" .= String (pack $ show nodeToClientVersion)
+                   , "blockVersion" .= String (pack $ show blockVersion)
                    ]
 
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
-         , ToJSON (BlockNodeToNodeVersion blk)
-         , ToJSON (BlockNodeToClientVersion blk)
          )
         => LogFormatting (StartupTrace blk) where
   forHuman = ppStartupInfoTrace
@@ -233,9 +231,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "message" .= String msg ]
   forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFileMaybe) =
       mconcat [ "kind" .= String "NetworkConfig"
-               , "localRoots" .= toJSON localRoots
-               , "publicRoots" .= toJSON publicRoots
-               , "useLedgerAfter" .= useLedgerPeers
+               , "localRoots" .= String (showT localRoots)
+               , "publicRoots" .= String (showT publicRoots)
+               , "useLedgerAfter" .= String (showT useLedgerPeers)
                , "peerSnapshotFile" .=
                    case peerSnapshotFileMaybe of
                      Nothing -> Null

@@ -78,9 +78,6 @@ package bitvec
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
-allow-newer:
-  , katip:Win32
-
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
 allow-newer:
@@ -90,4 +87,3 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-

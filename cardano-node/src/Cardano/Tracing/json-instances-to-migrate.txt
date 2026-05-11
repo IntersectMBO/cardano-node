@@ -1,0 +1,264 @@
+This is a temporary migration scratch file. It is intentionally not Haskell source and must never be added to cardano-node.cabal.
+It contains JSON instances copied from cardano-node/src/Cardano/Tracing before deleting the legacy tracing modules.
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Byron.hs:122
+instance ToJSON (TxId (GenTx ByronBlock)) where
+  toJSON = String . Text.take 8 . renderTxId
+
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Byron.hs:217
+instance ToJSON ByronNodeToClientVersion where
+  toJSON ByronNodeToClientVersion1 = String "ByronNodeToClientVersion1"
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Byron.hs:220
+instance ToJSON ByronNodeToNodeVersion where
+  toJSON ByronNodeToNodeVersion1 = String "ByronNodeToNodeVersion1"
+  toJSON ByronNodeToNodeVersion2 = String "ByronNodeToNodeVersion2"
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Common.hs:63
+instance FromJSON PortNumber where
+  parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of
+    Just port -> pure port
+    Nothing -> fail $ show portNum <> " is not a valid port number."
+  parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
+                            <> "Encountered: " <> show invalid
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs:133
+instance ToJSON SanityCheckIssue where
+  toJSON = Aeson.String . pack . show
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs:398
+instance ToJSON t => ToJSON (Enclosing' t)
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:89
+instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBlock xs))) where
+    toJSON =
+          hcollapse
+        . hcmap (Proxy @(ToJSON `Compose` WrapGenTxId)) (K . toJSON)
+        . getOneEraGenTxId
+        . getHardForkGenTxId
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:96
+instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
+    toJSON = toJSON . unwrapGenTxId
+
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:208
+deriving instance ToJSON SafeZone
+
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:379
+instance ( ToJSON (BlockNodeToClientVersion x)
+         , All (ToJSON `Compose` EraNodeToClientVersion) (x ': xs)
+         ) => ToJSON (HardForkNodeToClientVersion (x ': xs)) where
+  toJSON (HardForkNodeToClientDisabled blockNodeToClientVersion) =
+      object [ "tag"      .= String "HardForkNodeToClientDisabled"
+             , "contents" .= toJSON blockNodeToClientVersion
+             ]
+  toJSON (HardForkNodeToClientEnabled hfNodeToClientVersion eraNodeToClientVersions) =
+      object [ "tag"                                 .= String "HardForkNodeToClientEnabled"
+             , "hardForkSpecificNodeToClientVersion" .= toJSON hfNodeToClientVersion
+             , "eraNodeToClientVersions"             .= hcollapse eraNodeToClientVersionsAsJSON
+             ]
+    where
+      eraNodeToClientVersionsAsJSON :: NP (K Value) (x ': xs)
+      eraNodeToClientVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` EraNodeToClientVersion))
+                                            (K . toJSON)
+                                            eraNodeToClientVersions
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:397
+instance ToJSON HardForkSpecificNodeToClientVersion where
+    toJSON HardForkSpecificNodeToClientVersion3 = String "HardForkSpecificNodeToClientVersion3"
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:400
+instance (ToJSON (BlockNodeToClientVersion blk)) => ToJSON (EraNodeToClientVersion blk) where
+    toJSON EraNodeToClientDisabled = String "EraNodeToClientDisabled"
+    toJSON (EraNodeToClientEnabled blockNodeToClientVersion) = toJSON blockNodeToClientVersion
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:407
+instance ( ToJSON (BlockNodeToNodeVersion x)
+         , All (ToJSON `Compose` WrapNodeToNodeVersion) (x ': xs)
+         ) => ToJSON (HardForkNodeToNodeVersion (x ': xs)) where
+    toJSON (HardForkNodeToNodeDisabled blockNodeToNodeVersion) =
+        object [ "tag" .= String "HardForkNodeToNodeDisabled"
+               , "contents" .= toJSON blockNodeToNodeVersion
+               ]
+    toJSON (HardForkNodeToNodeEnabled hfNodeToNodeVersion eraNodeToNodeVersions) =
+        object [ "tag"                               .= String "HardForkNodeToNodeEnabled"
+               , "hardForkSpecificNodeToNodeVersion" .= toJSON hfNodeToNodeVersion
+               , "eraNodeToNodeVersions"             .= hcollapse eraNodeToNodeVersionsAsJSON
+               ]
+      where
+        eraNodeToNodeVersionsAsJSON :: NP (K Value) (x ': xs)
+        eraNodeToNodeVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` WrapNodeToNodeVersion))
+                                            (K . toJSON)
+                                            eraNodeToNodeVersions
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:425
+instance ToJSON HardForkSpecificNodeToNodeVersion where
+    toJSON HardForkSpecificNodeToNodeVersion1 = "HardForkSpecificNodeToNodeVersion1"
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/HardFork.hs:428
+instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
+    toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs:1091
+instance ConvertRawHash header
+      => ToJSON (Verbose (Point header)) where
+  toJSON (Verbose GenesisPoint) = String "GenesisPoint"
+  toJSON (Verbose (BlockPoint (SlotNo slotNo) hash)) =
+    -- it is unlikely that there will be two short hashes in the same slot
+    String $ renderHeaderHashForVerbosity
+               (Proxy @header)
+                MaximalVerbosity
+                hash
+          <> "@"
+          <> pack (show slotNo)
+
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs:1197
+instance (ToJSON peer, ToJSON (Verbose point))
+    => ToJSON (Verbose (TraceLabelPeer peer (FetchDecision [point]))) where
+              toJSON (Verbose (TraceLabelPeer peer decision)) =
+                Aeson.object
+                [ "peer" .= toJSON peer
+                , "decision" .= toJSON (FetchDecisionToJSON $ map Verbose <$> decision)
+                ]
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs:1208
+instance ToJSON point
+      => ToJSON (FetchDecisionToJSON point) where
+  toJSON (FetchDecisionToJSON (Left decline)) =
+    Aeson.object [ "declined" .= String (pack . show $ decline) ]
+  toJSON (FetchDecisionToJSON (Right points)) =
+    toJSON points
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs:1458
+instance ToJSON IP where
+  toJSON ip = String (pack . show $ ip)
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs:102
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era))) where
+  toJSON = String . Text.take 8 . renderTxId
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs:1359
+instance ToJSON ShelleyNodeToNodeVersion where
+  toJSON ShelleyNodeToNodeVersion1 = String "ShelleyNodeToNodeVersion1"
+
+
+-- source: cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs:1362
+instance ToJSON ShelleyNodeToClientVersion where
+  toJSON ShelleyNodeToClientVersion8 = String "ShelleyNodeToClientVersion8"
+  toJSON ShelleyNodeToClientVersion9 = String "ShelleyNodeToClientVersion9"
+  toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
+  toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
+  toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
+  toJSON ShelleyNodeToClientVersion13 = String "ShelleyNodeToClientVersion13"
+  toJSON ShelleyNodeToClientVersion14 = String "ShelleyNodeToClientVersion14"
+  toJSON ShelleyNodeToClientVersion15 = String "ShelleyNodeToClientVersion15"
+
+
+-- source: cardano-node/src/Cardano/Tracing/Config.hs:205
+instance FromJSON (OnOff a) where
+    parseJSON (Data.Aeson.Bool b)= return $ OnOff b
+    parseJSON _ = mzero
+
+
+-- source: cardano-node/src/Cardano/Tracing/Config.hs:372
+instance FromJSON PartialTraceSelection where
+  parseJSON = withObject "PartialTraceSelection" $ \v -> do
+    PartialTraceSelection
+      <$> Last <$> v .:? "TracingVerbosity"
+      <*> parseTracer (Proxy @TraceAcceptPolicy) v
+      <*> parseTracer (Proxy @TraceBlockchainTime) v
+      <*> parseTracer (Proxy @TraceBlockFetchClient) v
+      <*> parseTracer (Proxy @TraceBlockFetchDecisions) v
+      <*> parseTracer (Proxy @TraceBlockFetchProtocol) v
+      <*> parseTracer (Proxy @TraceBlockFetchProtocolSerialised) v
+      <*> parseTracer (Proxy @TraceBlockFetchServer) v
+      <*> parseTracer (Proxy @TraceChainDB) v
+      <*> parseTracer (Proxy @TraceChainSyncBlockServer) v
+      <*> parseTracer (Proxy @TraceChainSyncClient) v
+      <*> parseTracer (Proxy @TraceChainSyncHeaderServer) v
+      <*> parseTracer (Proxy @TraceChainSyncProtocol) v
+      <*> parseTracer (Proxy @TraceConnectionManager) v
+      <*> parseTracer (Proxy @TraceConnectionManagerCounters) v
+      <*> parseTracer (Proxy @TraceConnectionManagerTransitions) v
+      <*> parseTracer (Proxy @DebugPeerSelectionInitiator) v
+      <*> parseTracer (Proxy @TraceDiffusionInitialization) v
+      <*> parseTracer (Proxy @DebugPeerSelectionInitiatorResponder) v
+      <*> parseTracer (Proxy @TraceDnsResolver) v
+      <*> parseTracer (Proxy @TraceDnsSubscription) v
+      <*> parseTracer (Proxy @TraceErrorPolicy) v
+      <*> parseTracer (Proxy @TraceForge) v
+      <*> parseTracer (Proxy @TraceForgeStateInfo) v
+      <*> parseTracer (Proxy @TraceGDD) v
+      <*> parseTracer (Proxy @TraceHandshake) v
+      <*> parseTracer (Proxy @TraceInboundGovernor) v
+      <*> parseTracer (Proxy @TraceInboundGovernorCounters) v
+      <*> parseTracer (Proxy @TraceInboundGovernorTransitions) v
+      <*> parseTracer (Proxy @TraceIpSubscription) v
+      <*> parseTracer (Proxy @TraceKeepAliveClient) v
+      <*> parseTracer (Proxy @TraceLedgerPeers) v
+      <*> parseTracer (Proxy @TraceLocalChainSyncProtocol) v
+      <*> parseTracer (Proxy @TraceLocalConnectionManager) v
+      <*> parseTracer (Proxy @TraceLocalErrorPolicy) v
+      <*> parseTracer (Proxy @TraceLocalHandshake) v
+      <*> parseTracer (Proxy @TraceLocalInboundGovernor) v
+      <*> parseTracer (Proxy @TraceLocalMux) v
+      <*> parseTracer (Proxy @TraceLocalMuxBearer) v
+      <*> parseTracer (Proxy @TraceLocalMuxChannel) v
+      <*> parseTracer (Proxy @TraceLocalRootPeers) v
+      <*> parseTracer (Proxy @TraceLocalServer) v
+      <*> parseTracer (Proxy @TraceLocalStateQueryProtocol) v
+      <*> parseTracer (Proxy @TraceLocalTxMonitorProtocol) v
+      <*> parseTracer (Proxy @TraceLocalTxSubmissionProtocol) v
+      <*> parseTracer (Proxy @TraceLocalTxSubmissionServer) v
+      <*> parseTracer (Proxy @TraceMempool) v
+      <*> parseTracer (Proxy @TraceBackingStore) v
+      <*> parseTracer (Proxy @TraceMux) v
+      <*> parseTracer (Proxy @TraceMuxBearer) v
+      <*> parseTracer (Proxy @TraceMuxChannel) v
+      <*> parseTracer (Proxy @TracePeerSelection) v
+      <*> parseTracer (Proxy @TracePeerSelectionCounters) v
+      <*> parseTracer (Proxy @TracePeerSelectionActions) v
+      <*> parseTracer (Proxy @TracePublicRootPeers) v
+      <*> parseTracer (Proxy @TraceSanityCheckIssue) v
+      <*> parseTracer (Proxy @TraceServer) v
+      <*> parseTracer (Proxy @TraceTxInbound) v
+      <*> parseTracer (Proxy @TraceTxOutbound) v
+      <*> parseTracer (Proxy @TraceTxSubmissionProtocol) v
+      <*> parseTracer (Proxy @TraceTxSubmission2Protocol) v
+      <*> parseTracer (Proxy @TraceKeepAliveProtocol) v
+      <*> parseTracer (Proxy @TracePeerSharingProtocol) v
+      <*> parseTracer (Proxy @TraceGsm) v
+      <*> parseTracer (Proxy @TraceCsj) v
+      <*> parseTracer (Proxy @TraceDevotedBlockFetch) v
+      <*> parseTracer (Proxy @TraceChurnMode) v
+      <*> parseTracer (Proxy @TraceDNS) v
+      <*> parseTracer (Proxy @TraceKesAgent) v
+      <*> parseTracer (Proxy @TraceTxLogic) v
+      <*> parseTracer (Proxy @TraceTxCounters) v
+
+
+

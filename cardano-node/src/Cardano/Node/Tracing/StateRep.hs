@@ -27,7 +27,6 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
-import           Cardano.Tracing.OrphanInstances.Network ()
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -38,7 +37,9 @@ import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
 import           Data.Aeson hiding (Result (..))
+import           Data.Aeson.Types (Parser)
 import           Data.Text as T (Text, pack)
+import qualified Data.Text as Text
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
@@ -48,6 +49,24 @@ deriving instance FromJSON ChunkNo
 deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
+
+instance ToJSON NPV.NodeToNodeVersion where
+  toJSON = String . pack . show
+
+instance FromJSON NPV.NodeToNodeVersion where
+  parseJSON = parseBoundedEnum "NodeToNodeVersion"
+
+instance ToJSON NPV.NodeToClientVersion where
+  toJSON = String . pack . show
+
+instance FromJSON NPV.NodeToClientVersion where
+  parseJSON = parseBoundedEnum "NodeToClientVersion"
+
+parseBoundedEnum :: (Bounded a, Enum a, Show a) => String -> Value -> Parser a
+parseBoundedEnum name = withText name $ \value ->
+  case filter ((== value) . Text.pack . show) [minBound .. maxBound] of
+    [version] -> pure version
+    _ -> fail $ "Invalid " <> name <> ": " <> Text.unpack value
 
 deriving instance Generic  TracePrometheusSimple
 deriving instance FromJSON TracePrometheusSimple

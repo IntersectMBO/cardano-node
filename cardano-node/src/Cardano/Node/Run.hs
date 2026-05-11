@@ -29,14 +29,8 @@ import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
-import           Cardano.BM.Data.LogItem (LogObject (..))
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
-import           Cardano.BM.Data.Transformers (setHostname)
-import           Cardano.BM.Trace
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
-                   nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), TimeoutOverride (..),
@@ -59,6 +53,7 @@ import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
+import           Cardano.Node.Tracing (Tracers (..))
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
@@ -66,8 +61,6 @@ import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
-import           Cardano.Tracing.Tracers
 import           Cardano.Logging.Types (LogFormatting)
 import           Cardano.Logging.Utils (showT)
 
@@ -154,18 +147,14 @@ import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import           Data.SOP.Dict
-import           Data.Text (Text, breakOn, pack)
+import           Data.Text (Text, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import           Data.Version (showVersion)
 import           Network.DNS (Resolver)
-import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.Environment (lookupEnv)
 import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
@@ -176,7 +165,6 @@ import           System.Posix.Types (FileMode)
 #else
 import           System.Win32.File
 #endif
-import           Paths_cardano_node (version)
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
@@ -256,84 +244,32 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
-  let ProtocolInfo { pInfoConfig = cfg } = fst $ Api.protocolInfo @IO runP
   let fp = maybe  "No file path found!"
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
-  case ncTraceConfig nc of
-    TraceDispatcher{} -> do
-      blockForging <- snd (Api.protocolInfo runP) nullTracer
-      tracers <-
-        initTraceDispatcher
-          nc
-          p
-          networkMagic
-          nodeKernelData
-          (null blockForging)
+  blockForging <- snd (Api.protocolInfo runP) nullTracer
+  tracers <-
+    initTraceDispatcher
+      nc
+      p
+      networkMagic
+      nodeKernelData
+      (null blockForging)
 
-      startupInfo <- getStartupInfo nc p fp
-      mapM_ (traceWith $ startupTracer tracers) startupInfo
-      traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
-      -- sends initial BlockForgingUpdate
-      let isNonProducing = ncStartAsNonProducingNode nc
-      traceWith (startupTracer tracers)
-                (BlockForgingUpdate (if isNonProducing || null blockForging
-                                      then DisabledBlockForging
-                                      else EnabledBlockForging))
+  startupInfo <- getStartupInfo nc p fp
+  mapM_ (traceWith $ startupTracer tracers) startupInfo
+  traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
+  -- sends initial BlockForgingUpdate
+  let isNonProducing = ncStartAsNonProducingNode nc
+  traceWith (startupTracer tracers)
+            (BlockForgingUpdate (if isNonProducing || null blockForging
+                                  then DisabledBlockForging
+                                  else EnabledBlockForging))
 
-      handleSimpleNode blockType runP tracers nc networkMagic
-        (\nk -> do
-            setNodeKernel nodeKernelData nk
-            traceWith (nodeStateTracer tracers) NodeKernelOnline)
-
-    _ -> do
-      eLoggingLayer <- runExceptT $ createLoggingLayer
-        (Text.pack (showVersion version))
-        nc
-        p
-
-      loggingLayer <- case eLoggingLayer of
-        Left err  -> Exception.throwIO err
-        Right res -> return res
-      !trace <- setupTrace loggingLayer
-      let tracer = contramap pack $ toLogObject trace
-      logTracingVerbosity nc tracer
-
-      -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
-      startTime <- getCurrentTime
-      traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
-      nbi <- nodeBasicInfo nc p startTime
-      forM_ nbi $ \(LogObject nm mt content) ->
-        traceNamedObject (appendName nm trace) (mt, content)
-
-      tracers <-
-        mkTracers
-          (Consensus.configBlock cfg)
-          (ncTraceConfig nc)
-          trace
-          nodeKernelData
-          (llEKGDirect loggingLayer)
-
-      getStartupInfo nc p fp
-        >>= mapM_ (traceWith $ startupTracer tracers)
-
-      traceWith (nodeVersionTracer tracers) getNodeVersion
-      let isNonProducing = ncStartAsNonProducingNode nc
-      blockForging <- snd (Api.protocolInfo runP) nullTracer
-      traceWith (startupTracer tracers)
-                (BlockForgingUpdate (if isNonProducing || null blockForging
-                                      then DisabledBlockForging
-                                      else EnabledBlockForging))
-
-      -- We ignore peer logging thread if it dies, but it will be killed
-      -- when 'handleSimpleNode' terminates.
-      handleSimpleNode blockType runP tracers nc networkMagic
-        (\nk -> do
-            setNodeKernel nodeKernelData nk
-            traceWith (nodeStateTracer tracers) NodeKernelOnline)
-        `finally` do
-          forM_ eLoggingLayer
-            shutdownLoggingLayer
+  handleSimpleNode blockType runP tracers nc networkMagic
+    (\nk -> do
+        setNodeKernel nodeKernelData nk
+        traceWith (nodeStateTracer tracers) NodeKernelOnline)
 
 -- | Currently, we trace only 'ShelleyBased'-info which will be asked
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
@@ -346,36 +282,6 @@ traceNodeStartupInfo t startupTrace =
     BIShelley (BasicInfoShelleyBased era _ sl el spkp) ->
       traceWith t $ NodeStartupInfo era sl el spkp
     _ -> return ()
-
-logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
-logTracingVerbosity nc tracer =
-  case ncTraceConfig nc of
-    TracingOff -> return ()
-    TracingOnLegacy traceConf ->
-      case traceVerbosity traceConf of
-        NormalVerbosity -> traceWith tracer "tracing verbosity = normal verbosity "
-        MinimalVerbosity -> traceWith tracer "tracing verbosity = minimal verbosity "
-        MaximalVerbosity -> traceWith tracer "tracing verbosity = maximal verbosity "
-    TraceDispatcher _traceConf ->
-      pure ()
--- | Add the application name and unqualified hostname to the logging
--- layer basic trace.
---
--- If the @CARDANO_NODE_LOGGING_HOSTNAME@ environment variable is set,
--- it overrides the system hostname. This is useful when running a
--- local test cluster with all nodes on the same host.
-setupTrace
-  :: LoggingLayer
-  -> IO (Trace IO Text)
-setupTrace loggingLayer = do
-    hn <- maybe hostname (pure . pack) =<< lookupEnv "CARDANO_NODE_LOGGING_HOSTNAME"
-    return $
-        setHostname hn $
-        llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-  where
-    hostname = do
-      hn0 <- pack <$> getHostName
-      return $ Text.take 8 $ fst $ breakOn "." hn0
 
 {-
 -- TODO: needs to be finished (issue #4362)

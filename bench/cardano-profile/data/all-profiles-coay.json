@@ -8143,7 +8143,7 @@
       "shutdown_on_slot_synced": 38901589,
       "ssd_directory": null,
       "tracer": false,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -9325,7 +9325,7 @@
       "shutdown_on_slot_synced": 237599,
       "ssd_directory": null,
       "tracer": false,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -12124,7 +12124,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": false,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -19952,7 +19952,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -26303,7 +26303,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -47106,7 +47106,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -47531,7 +47531,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -76327,7 +76327,7 @@
       "shutdown_on_slot_synced": null,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {
@@ -83423,7 +83423,7 @@
       "shutdown_on_slot_synced": 64000,
       "ssd_directory": null,
       "tracer": true,
-      "tracing_backend": "iohk-monitoring",
+      "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "utxo_lsmt": false,
       "verbatim": {

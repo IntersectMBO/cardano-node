@@ -115,7 +115,6 @@ nodeRunParser = do
            , pncMaxConcurrencyDeadline = mempty
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
-           , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
            , pncLedgerDbConfig = mempty

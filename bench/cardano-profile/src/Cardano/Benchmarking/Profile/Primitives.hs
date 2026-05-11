@@ -623,7 +623,7 @@ oldTracing = node
   (\n ->
     if Types.tracing_backend n /= ""
     then error "oldTracing: `tracing_backend` already set (not empty)."
-    else n {Types.tracing_backend = "iohk-monitoring"}
+    else n {Types.tracing_backend = "trace-dispatcher"}
   )
 
 -- "--shutdown-on-*".

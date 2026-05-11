@@ -88,7 +88,6 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Tracing.Config
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -106,9 +105,7 @@ import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
-import           Data.Bifunctor (bimap)
 import qualified Data.Default.Class as DefaultClass
-import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
 import           Data.Text (Text)
@@ -207,7 +204,6 @@ defaultEra = ShelleyBasedEraConway
 defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
-    <> tracers
     <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
@@ -281,46 +277,6 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
                 ]
                 )
-  -- | Various tracers we can turn on or off
-  tracers :: Aeson.KeyMap Aeson.Value
-  tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
-    [ (proxyName (Proxy @TraceBlockFetchClient), False)
-    , (proxyName (Proxy @TraceBlockFetchDecisions), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocol), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocolSerialised), False)
-    , (proxyName (Proxy @TraceBlockFetchServer), False)
-    , (proxyName (Proxy @TraceBlockchainTime), True)
-    , (proxyName (Proxy @TraceChainDB), True)
-    , (proxyName (Proxy @TraceChainSyncClient), False)
-    , (proxyName (Proxy @TraceChainSyncBlockServer), False)
-    , (proxyName (Proxy @TraceChainSyncHeaderServer), False)
-    , (proxyName (Proxy @TraceChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceDnsResolver), True)
-    , (proxyName (Proxy @TraceDnsSubscription), True)
-    , (proxyName (Proxy @TraceErrorPolicy), True)
-    , (proxyName (Proxy @TraceLocalErrorPolicy), True)
-    , (proxyName (Proxy @TraceForge), True)
-    , (proxyName (Proxy @TraceHandshake), False)
-    , (proxyName (Proxy @TraceIpSubscription), True)
-    , (proxyName (Proxy @TraceLocalRootPeers), True)
-    , (proxyName (Proxy @TracePublicRootPeers), True)
-    , (proxyName (Proxy @TracePeerSelection), True)
-    , (proxyName (Proxy @TracePeerSelectionActions), True)
-    , (proxyName (Proxy @TraceConnectionManager), True)
-    , (proxyName (Proxy @TraceServer), True)
-    , (proxyName (Proxy @TraceLocalConnectionManager), False)
-    , (proxyName (Proxy @TraceLocalServer), False)
-    , (proxyName (Proxy @TraceLocalChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceLocalHandshake), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionProtocol), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionServer), False)
-    , (proxyName (Proxy @TraceMempool), True)
-    , (proxyName (Proxy @TraceMux), False)
-    , (proxyName (Proxy @TraceTxInbound), False)
-    , (proxyName (Proxy @TraceTxOutbound), False)
-    , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
-    ]
-
   traceOptions = Aeson.Object mempty
   -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
   -- N.B. Every testnet node will start trying to listen on PrometheusSimple endpoint

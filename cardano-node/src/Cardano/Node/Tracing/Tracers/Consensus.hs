@@ -35,7 +35,6 @@ import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -73,7 +72,7 @@ import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
-import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
 import           Data.Int (Int64)
@@ -84,6 +83,10 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+
+enclosingValue :: ToJSON a => Enclosing' a -> Value
+enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]
+enclosingValue (FallingEdgeWith a) = object [ "edge" .= toJSON a ]
 
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
@@ -231,7 +234,7 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceDownloadedHeader h ->
       mconcat
         [ "kind" .= String "DownloadedHeader"
-        , tipToObject (tipFromHeader h)
+        , "header" .= String (showT $ headerPoint h)
         ]
     TraceRolledBack tip ->
       mconcat
@@ -658,15 +661,13 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk, ToJSON (HeaderHash blk))
+instance (Show peer, ToJSON peer, LogFormatting peer, HasHeader blk)
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
-  forMachine dtal (PeersFetch xs) =
+  forMachine _dtal (PeersFetch xs) =
     mconcat [ "kind" .= String "PeerFetch"
-            , "decisions" .= if dtal >= DMaximum
-                               then toJSON (Verbose <$> xs)
-                               else toJSON xs
+            , "decisions" .= List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs
             ]
   forMachine _dtal (PeerStarvedUs peer) =
     mconcat [ "kind" .= String "PeerStarvedUs"
@@ -760,7 +761,7 @@ instance MetaTrace (FetchDecision [Point header]) where
 -- BlockFetchClientState Tracer
 --------------------------------------------------------------------------------
 
-instance (HasHeader header, ConvertRawHash header) =>
+instance HasHeader header =>
   LogFormatting (BlockFetch.TraceFetchClientState header) where
     forMachine _dtal BlockFetch.AddedFetchRequest {} =
       mconcat [ "kind" .= String "AddedFetchRequest" ]
@@ -769,12 +770,9 @@ instance (HasHeader header, ConvertRawHash header) =>
     forMachine dtal (BlockFetch.SendFetchRequest af gsv) =
       mconcat $
               [ "kind" .= String "SendFetchRequest"
-              , "head" .= String (renderChainHash
-                                  (renderHeaderHash (Proxy @header))
-                                  (AF.headHash af))
               , "length" .= toJSON (fragmentLength' af)]
               ++
-              [ "deltaq" .= toJSON gsv | dtal >= DDetailed ]
+              [ "deltaq" .= String (Text.pack $ show gsv) | dtal >= DDetailed ]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
@@ -792,7 +790,7 @@ instance (HasHeader header, ConvertRawHash header) =>
               , "block" .= String
                 (case pt of
                   GenesisPoint -> "Genesis"
-                  BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+                  BlockPoint slot _ -> "slot-" <> showT slot)
               ]
     forMachine _dtal BlockFetch.CompletedFetchBatch {} =
       mconcat [ "kind" .= String "CompletedFetchBatch" ]
@@ -1102,7 +1100,7 @@ impliesMempoolTimeoutSoft = \case
 instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
-  , ToJSON (GenTxId blk)
+  , Show (GenTxId blk)
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
   ) => LogFormatting (TraceEventMempool blk) where
@@ -1141,7 +1139,7 @@ instance
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsRemoved" .= txs0
+      , "txsRemoved" .= map (String . Text.pack . show) (toList txs0)
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
@@ -1159,7 +1157,7 @@ instance
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
-      , "enclosingTime" .= et
+      , "enclosingTime" .= enclosingValue et
       ]
   forMachine _dtal TraceMempoolTipMovedBetweenSTMBlocks =
     mconcat

@@ -7,6 +7,11 @@ cfg:
 
 with lib;
 let
+  selectedTracingBackend =
+    if tracing_backend == "iohk-monitoring"
+    then "trace-dispatcher"
+    else tracing_backend;
+
   trace-dispatcher =
     recursiveUpdate
     (removeAttrs (removeLegacyTracingOptions cfg) ["TraceOptionForwarder"])
@@ -115,39 +120,6 @@ let
 
 
 
-  iohk-monitoring =
-    recursiveUpdate
-    (removeAttrs cfg
-      [ "setupScribes" ])
-  {
-    defaultScribes = [
-      [ "StdoutSK" "stdout" ]
-    ];
-    setupScribes =
-      [{
-        scKind   = "StdoutSK";
-        scName   = "stdout";
-        scFormat = "ScJson";
-      }];
-    minSeverity                 = "Debug";
-    TraceMempool                = true;
-    TraceTxInbound              = true;
-    TraceBlockFetchClient       = true;
-    TraceBlockFetchServer       = true;
-    TraceChainSyncHeaderServer  = true;
-    TraceChainSyncClient        = true;
-    TraceGsm                    = true;
-
-    ## needs to be explicit when new tracing is the node's default
-    UseTraceDispatcher          = false;
-
-    options = {
-      mapBackends = {
-        "cardano.node.resources" = [ "KatipBK" ];
-      };
-    };
-  };
-
   ##
   ## removeLegacyTracingOptions :: NodeConfig -> NodeConfig
   ##
@@ -220,5 +192,5 @@ let
     ];
 in
 {
-  inherit trace-dispatcher iohk-monitoring;
-}.${tracing_backend}
+  inherit trace-dispatcher;
+}.${selectedTracingBackend}

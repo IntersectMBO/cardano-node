@@ -96,27 +96,14 @@ let
             ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
-          ( if !cfg.useLegacyTracing
-            then baseConfig //
-                 { ## XXX: remove once legacy tracing is dropped
-                   minSeverity = "Critical";
-                   setupScribes = [];
-                   setupBackends = [];
-                   defaultScribes = [];
-                   defaultBackends = [];
-                   options = {};
-                 }
-            else baseConfig //
-                 {
-                   UseTraceDispatcher = false;
-                 } //
-                 (optionalAttrs (baseConfig ? hasEKG) {
-                    hasEKG = baseConfig.hasEKG + i;
-                 }) //
-                 (optionalAttrs (baseConfig ? hasPrometheus) {
-                   hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
-                 })
-            )
+          (baseConfig //
+           { minSeverity = "Critical";
+             setupScribes = [];
+             setupBackends = [];
+             defaultScribes = [];
+             defaultBackends = [];
+             options = {};
+           })
             // optionalAttrs (cfg.withUtxoHdLsmt i){
               LedgerDB = {
                 Backend = "V2LSM";
@@ -684,7 +671,8 @@ in {
         type = bool;
         default = false;
         description = ''
-          Use the legacy tracing, based on iohk-monitoring-framework.
+          Deprecated compatibility option. Legacy tracing has been removed; this
+          option is still accepted, but has no effect.
         '';
       };
 

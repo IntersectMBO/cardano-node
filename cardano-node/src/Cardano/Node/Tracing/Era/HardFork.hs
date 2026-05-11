@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -17,7 +19,6 @@ module Cardano.Node.Tracing.Era.HardFork ()
 
 import           Cardano.Logging
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError, PerasWeight (..))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
@@ -30,7 +31,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History
-                   (EraParams (eraEpochSize, eraSafeZone, eraSlotLength))
+                   (EraParams (eraEpochSize, eraSafeZone, eraSlotLength), SafeZone)
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (EraParams))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
@@ -179,7 +180,7 @@ instance LogFormatting EraParams where
         , "safeZone"   .= eraSafeZone
         ]
 
--- deriving instance ToJSON SafeZone
+deriving instance ToJSON SafeZone
 
 
 --
