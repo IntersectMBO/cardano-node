@@ -543,9 +543,11 @@ readNodesWithOptionsFromEnv envDir = do
       bin <- readNodeBinFromEnvFile (envDir </> defaultNodeEnvFile i)
       pure $ NodeWithOptions bin []
 
+-- | Environment file contents for a node, serialized as YAML.
+-- Written during testnet creation and read back when starting from an existing environment.
 data NodeEnv = NodeEnv
-  { nodeBinary :: FilePath
-  , nodeVersion :: String
+  { nodeBinary :: FilePath -- ^ Absolute path to the @cardano-node@ binary
+  , nodeVersion :: String -- ^ Version string (e.g. @"10.4.1"@), extracted from @cardano-node --version@ output
   } deriving (Eq, Show)
 
 instance FromJSON NodeEnv where
