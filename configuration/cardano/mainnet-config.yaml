@@ -96,9 +96,8 @@ LedgerDB:
 
 ##### Version Information #####
 
-# Min is currently 10.7.0 due to change of config bundled peer-snapshot
-# version.
-MinNodeVersion: "10.7.0"
+# Min is currently 11.1.0 due to removal of legacy tracing system.
+MinNodeVersion: "11.1.0"
 
 ##### Logging configuration #####
 
