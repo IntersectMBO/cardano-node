@@ -28,7 +28,8 @@ import           Control.Monad ()
 import           Control.Monad.Except (ExceptT, liftEither, runExceptT, throwError)
 import           Control.Monad.State.Strict (State, get, modify, put, runState)
 import           Data.Foldable as Foldable (toList)
-import           Data.List (find)
+import           Data.List (find, nub, sortOn)
+import qualified Text.EditDistance as EditDistance
 import qualified Data.Map.Strict as Map
 import           Data.Sequence as Seq (Seq (..), fromList, reverse, singleton, (><), (|>))
 import           Data.Set (Set)
@@ -204,6 +205,26 @@ updateNextHoleIdentifier f (St ds x ms) = St ds (f x) ms
 
 getAvailableMetrics :: ElabM (Set MetricIdentifier)
 getAvailableMetrics = (.availableMetrics) <$> get
+
+didYouMean :: Identifier -> Context -> Set MetricIdentifier -> Text
+didYouMean v gam ms =
+  let nameStr    = Text.unpack (asText v)
+      nameLen    = length nameStr
+      threshold  = max 1 (nameLen `div` 3)
+      candidates = nub $
+                     [ Text.unpack (asText (Types.identifier b)) | b <- Foldable.toList gam ] ++
+                     map Text.unpack (Set.toList ms)
+      close      = take 5
+                 $ map snd
+                 $ sortOn fst
+                   [ (d, Text.pack c)
+                   | c <- candidates
+                   , let d = EditDistance.levenshteinDistance EditDistance.defaultEditCosts nameStr c
+                   , d <= threshold
+                   ]
+  in if null close
+       then ""
+       else "\n  Did you mean: " <> Text.intercalate ", " close
 
 runUnifyM :: UnifyM a -> ElabM a
 runUnifyM f = do
@@ -789,13 +810,13 @@ solveGeneralElabProblem gam (mbBinaryArithmeticOp -> Just (loc, left, op, right)
 solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) (Seq.reverse gam) = do
   modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
   pure ([UnificationProblem l typ (Types.ty b)], [])
-solveGeneralElabProblem _ (Surface.Variable l v) x typ = do
+solveGeneralElabProblem gam (Surface.Variable l v) x typ = do
   ms <- getAvailableMetrics
   case v of
     User u | Set.member u ms -> do
       modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
       pure ([UnificationProblem l typ (Fun Timestamp (InstantVector Scalar))], [])
-    _ -> throwError $ "Undefined name: " <> asText v <> "\n  @ " <> asText l
+    _ -> throwError $ "Undefined name: " <> asText v <> didYouMean v gam ms <> "\n  @ " <> asText l
 solveGeneralElabProblem gam (Surface.Filter l f v) h hty = do
   argTy <- freshTyHole
   fh <- freshExprHole (Fun (Hole argTy) Bool)
