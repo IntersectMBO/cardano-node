@@ -14,3 +14,5 @@ services:
       - ./dist:/var/lib/grafana/plugins/iog-cardanotimeseries-datasource
       # Provision the datasource automatically (edit provisioning/datasource.yaml to set URL)
       - ./provisioning:/etc/grafana/provisioning
+      # Provisioned dashboards
+      - ./dashboards:/var/lib/grafana/dashboards

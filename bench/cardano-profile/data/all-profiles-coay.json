@@ -16928,7 +16928,7 @@
     "scenario": "fixed-loaded",
     "tracer": {
       "ekg": false,
-      "rtview": false,
+      "rtview": true,
       "timeseries": true,
       "withresources": false
     },

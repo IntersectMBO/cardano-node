@@ -92,7 +92,7 @@ profilesNoEraMiniature =
   , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lmdb . P.ssdDirectory "/tmp"
   , ciBench02Value    & P.name "ci-bench-lsmt"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lsmt . P.ssdDirectory "/tmp"
   , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview
-  , ciTimeseries02Value & P.name "ci-bench-timeseries"           . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerTimeseries
+  , ciTimeseries02Value & P.name "ci-bench-timeseries"           . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview . P.tracerTimeseries
   , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
   , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn  . P.newTracing
   , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing

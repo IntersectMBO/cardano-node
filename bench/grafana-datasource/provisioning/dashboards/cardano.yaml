@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: Cardano
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
