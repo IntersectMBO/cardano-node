@@ -136,7 +136,8 @@ library
                         Testnet.TestQueryCmds
                         Testnet.Types
 
-  other-modules:        Parsers.Cardano
+  exposed-modules:      Parsers.Cardano
+  other-modules:
                         Parsers.Help
                         Parsers.Version
                         Testnet.TestEnumGenerator
@@ -241,6 +242,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.MainnetParams
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet
@@ -288,6 +290,7 @@ test-suite cardano-testnet-test
                       , regex-compat
                       , rio
                       , tasty ^>= 1.5
+                      , tasty-hedgehog
                       , text
                       , time
                       , transformers

@@ -34,6 +34,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
+import qualified Cardano.Testnet.Test.Parser
 import qualified Cardano.Testnet.Test.Rpc.Query
 import qualified Cardano.Testnet.Test.Rpc.Transaction
 import qualified Cardano.Testnet.Test.RunTestnet
@@ -44,6 +45,7 @@ import qualified Cardano.Testnet.Test.UpdateTimeStamps
 
 import           Prelude
 
+import           Data.String (fromString)
 import qualified System.Environment as E
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
@@ -51,6 +53,7 @@ import           Testnet.Property.Run (ignoreOnMacAndWindows, ignoreOnWindows)
 
 import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)
+import qualified Test.Tasty.Hedgehog as H
 
 -- import qualified Cardano.Testnet.Test.Cli.LeadershipSchedule
 -- import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
@@ -145,6 +148,18 @@ tests = do
     , T.testGroup "RPC"
         [ ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
+        ]
+    , T.testGroup "NodesWithOptions parser"
+        [ H.testPropertyNamed "Roundtrip" (fromString "prop_parseNodeSpecs_roundtrip")
+            Cardano.Testnet.Test.Parser.prop_parseNodeSpecs_roundtrip
+        , H.testPropertyNamed "Counts" (fromString "prop_parseNodeSpecs_counts")
+            Cardano.Testnet.Test.Parser.prop_parseNodeSpecs_counts
+        , H.testPropertyNamed "Relay before SPO rejected" (fromString "prop_relay_before_spo_rejected")
+            Cardano.Testnet.Test.Parser.prop_relay_before_spo_rejected
+        , H.testPropertyNamed "Valid mixed specs" (fromString "unit_valid_mixed_specs")
+            Cardano.Testnet.Test.Parser.unit_valid_mixed_specs
+        , H.testPropertyNamed "Quoted paths" (fromString "unit_quoted_paths")
+            Cardano.Testnet.Test.Parser.unit_quoted_paths
         ]
     ]
 
