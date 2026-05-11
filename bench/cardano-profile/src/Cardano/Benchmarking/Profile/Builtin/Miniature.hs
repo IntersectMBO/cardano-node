@@ -28,6 +28,7 @@ base =
   . P.initCooldown 5
   . P.analysisStandard
 
+
 benchDuration :: Types.Profile -> Types.Profile
 benchDuration =
     V.timescaleCompressed
@@ -73,13 +74,7 @@ profilesNoEraMiniature =
       ciBench02PlutusV3 = ciBench02 & V.genesisVariantVoltaire
       ciBench10Value    = ciBench10 & V.genesisVariant300
       ciBench10Plutus   = ciBench10 & V.genesisVariant300
-      -- No-shutdown variant for interactive/timeseries use.
-      ciTimeseries02Value =
-          P.empty & base
-        . P.desc "Miniature dataset, no shutdown, bench scale"
-        . P.uniCircle . P.loopback
-        . V.timescaleCompressed . P.generatorEpochs 100000
-        & V.hosts 2 & V.genesisVariant300
+
       loop     = V.plutusSaturation           . V.plutusTypeLoop     . P.analysisSizeSmall
       loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024 . P.analysisSizeSmall
       ecdsa    = V.plutusDoublePlusSaturation . V.plutusTypeECDSA    . P.analysisSizeModerate
@@ -92,7 +87,7 @@ profilesNoEraMiniature =
   , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lmdb . P.ssdDirectory "/tmp"
   , ciBench02Value    & P.name "ci-bench-lsmt"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lsmt . P.ssdDirectory "/tmp"
   , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview
-  , ciTimeseries02Value & P.name "ci-bench-timeseries"           . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview . P.tracerTimeseries
+
   , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
   , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn  . P.newTracing
   , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
@@ -123,7 +118,8 @@ profilesNoEraMiniature =
     dense & P.name "6-dense"            . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing
   , dense & P.name "6-dense-rtsprof"    . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
   , dense & P.name "6-dense-1h"         . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing
-  , dense & P.name "6-dense-1h-rtsprof" . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
+  , dense & P.name "6-dense-1h-rtsprof"      . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
+  , dense & P.name "6-dense-timeseries-1h"   . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing . P.tracerRtview . P.tracerTimeseries
   , dense & P.name "6-dense-4h"         . V.valueCloud . duration240 . P.traceForwardingOn . P.newTracing
   , dense & P.name "6-dense-4h-rtsprof" . V.valueCloud . duration240 . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
   ]

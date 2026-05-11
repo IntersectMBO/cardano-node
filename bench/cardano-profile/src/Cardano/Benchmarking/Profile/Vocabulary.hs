@@ -125,6 +125,7 @@ fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoK
 fundsVoting :: Types.Profile -> Types.Profile
 fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
 
+
 -- Definition vocabulary: composition.
 --------------------------------------
 
