@@ -118,6 +118,26 @@ export function valueToDataFrames(value: Value): DataFrame[] {
     case 'Unit':
       return [];
 
+    case 'Nil':
+      return [];
+
+    case 'Cons': {
+      // Collect the spine into an array, then render as a table frame.
+      const items: Value[] = [];
+      let cur: Value = value;
+      while (cur.tag === 'Cons') { items.push(cur.head); cur = cur.tail; }
+      // cur is now the tail terminator (expected Nil; any other tag is an improper list)
+      const frame = new MutableDataFrame({
+        name: 'list',
+        fields: [{ name: 'Value', type: FieldType.string }],
+      });
+      for (const item of items) {
+        const display = item.tag === 'Text' ? item.value : (extractScalar(item)?.toString() ?? item.tag);
+        frame.add({ Value: display });
+      }
+      return [frame];
+    }
+
     case 'Function':
       throw new Error('Cannot render a Function value — it has no serialisable representation');
   }

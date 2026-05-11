@@ -115,6 +115,8 @@ resolveExpr' defs (Quantile a b) = Quantile (resolveExpr' defs a) (resolveExpr' 
 resolveExpr' defs (Range a b c d) =
   Range (resolveExpr' defs a) (resolveExpr' defs b) (resolveExpr' defs c) (resolveExpr' defs <$> d)
 resolveExpr' defs (QuantileBy a b c) = QuantileBy a (resolveExpr' defs b) (resolveExpr' defs c)
+resolveExpr' _ Expr.Nil           = Expr.Nil
+resolveExpr' defs (Expr.Cons a b) = Expr.Cons (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (Expr.Hole idx) =
   case Map.lookup idx defs of
     Just (ExprHoleInst rhs _) -> resolveExpr' defs rhs

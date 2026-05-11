@@ -170,14 +170,11 @@ interpFilterBinaryRelation cfg store env v rel k now = do
     )
     now
 
-mkTuple :: [Value] -> Value
-mkTuple = foldr Value.Pair Value.Unit
-
 -- | Given a metric store, an assignment of values to local variables, a query expression and a timestamp "now",
 --    interpret the `Expr` into a `Value`.
 interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> InterpM Value
 interp _ store _ Expr.Metrics _ = do
-  pure $ mkTuple $ map Value.Text $ Set.toList $ metrics store
+  pure $ foldr Value.Cons Value.Nil $ map Value.Text $ Set.toList $ metrics store
 interp _ _ _ (Expr.Number x) _ = do
   pure (Value.Scalar x)
 interp _ store env (Expr.Variable x) _ =
@@ -295,6 +292,12 @@ interp cfg store env (MkPair a b) now = do
   va <- interp cfg store env a now
   vb <- interp cfg store env b now
   pure $ Value.Pair va vb
+interp _ _ _ Expr.Nil _ = do
+  pure Value.Nil
+interp cfg store env (Expr.Cons a b) now = do
+  va <- interp cfg store env a now
+  vb <- interp cfg store env b now
+  pure $ Value.Cons va vb
 interp _ _ _ Expr.Unit _ = do
   pure Value.Unit
 interp cfg store env (Fst t) now = do

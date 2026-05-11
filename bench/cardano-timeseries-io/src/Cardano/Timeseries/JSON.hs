@@ -48,3 +48,5 @@ instance A.ToJSON Value where
   toJSON (Timestamp t)      = A.object ["tag" A..= ("Timestamp"     :: Text), "value" A..= t]
   toJSON (Text t)           = A.object ["tag" A..= ("Text"          :: Text), "value" A..= t]
   toJSON (Function _)       = A.object ["tag" A..= ("Function"      :: Text)]
+  toJSON Nil                = A.object ["tag" A..= ("Nil"           :: Text)]
+  toJSON (Cons h t)         = A.object ["tag" A..= ("Cons"          :: Text), "head" A..= h, "tail" A..= t]

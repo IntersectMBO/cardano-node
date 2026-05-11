@@ -37,6 +37,10 @@ data Value where
   Timestamp :: Word64 -> Value
   -- | Function
   Function :: FunctionValue -> Value
+  -- Empty list.
+  Nil :: Value
+  -- Non-empty list.
+  Cons :: Value -> Value -> Value
   -- | Text
   Text :: Text -> Value deriving Generic
 
@@ -53,6 +57,8 @@ instance Show Value where
   show (Duration d)      = show d <> "ms"
   show (Timestamp t)     = show t
   show (Function _)      = "<function>"
+  show Nil               = "[]"
+  show (Cons h t)        = "[" <> show h <> "|" <> show t <> "]"
   show (Text t)          = show t
 
 fromBool :: Bool -> Value

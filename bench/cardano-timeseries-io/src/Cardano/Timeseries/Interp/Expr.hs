@@ -77,6 +77,9 @@ data Expr = Number Double
           | Fst Expr
           | Snd Expr
 
+          | Nil
+          | Cons Expr Expr
+
           | AvgOverTime Expr
           | SumOverTime Expr
           | Avg Expr

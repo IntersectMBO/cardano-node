@@ -90,6 +90,8 @@ t, f, e, a, b ::= x
                 | instant_vector_to_scalar t
                 | quantile_by t t
                 | metrics
+                | Nil
+                | Cons t t
 
 ┌──────┐
 │A type│
@@ -103,6 +105,11 @@ InstantVector A type
 A type
 --------------------
 RangeVector A type
+
+
+A type
+-------------------- // Used only for typing "metrics"
+List A type
 
 
 Unit type
@@ -189,6 +196,16 @@ x ∈ metric-store
 
 
 Γ ⊦ () : Unit ✔
+
+
+---------------- ✔
+Γ ⊦ Nil : List A
+
+
+Γ ⊦ t : A
+Γ ⊦ t' : List A
+---------------------- ✔
+Γ ⊦ Cons t t' : List A
 
 
 Γ ⊦ a : A
