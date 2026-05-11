@@ -456,6 +456,10 @@ solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArith
   pure $ Just ([UnificationProblem loc rhsTy Duration, UnificationProblem loc typ Timestamp],
     [BinaryArithmeticOp $
       BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp])
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole typ = do
+  pure $ Just ([UnificationProblem loc typ Duration],
+    [BinaryArithmeticOp $
+      BinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole Duration])
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (InstantVector Scalar) hole typ = do
   pure (Just ([UnificationProblem loc typ (InstantVector Scalar)], [BinaryArithmeticOp $
     BinaryArithmeticOpElabProblem gam loc rhs (InstantVector Scalar) op lhs Scalar hole (InstantVector Scalar)]))

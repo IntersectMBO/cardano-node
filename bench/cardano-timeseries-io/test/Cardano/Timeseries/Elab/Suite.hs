@@ -110,7 +110,7 @@ elabTests = testGroup "Elaboration"
           , testCase "Timestamp + Duration"          $ ok "now + 1s"
           , testCase "Duration + Timestamp"          $ ok "1s + now"
           , testCase "Timestamp - Duration"          $ ok "now - 1h"
-          , testCase "Duration + Duration (in context)" $ ok "now + (1s + 2s)"
+          , testCase "Duration + Duration"           $ ok "1s + 2s"
           , testCase "InstantVector Scalar + Scalar" $ okWith m1 "m now + 1"
           , testCase "Scalar + InstantVector Scalar" $ okWith m1 "1 + m now"
           ]
