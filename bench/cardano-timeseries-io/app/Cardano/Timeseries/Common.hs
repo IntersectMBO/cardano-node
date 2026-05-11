@@ -57,7 +57,7 @@ repl store interpCfg now = forever $ do
  case parse (expr <* space <* eof) "input" queryString of
    Left err -> putStrLn (errorBundlePretty err)
    Right surfaceQuery -> do
-     case evalState (runExceptT (elab surfaceQuery)) initialSt of
+     case evalState (runExceptT (elab surfaceQuery)) (initialSt (metrics store)) of
        Left err   -> Text.putStrLn err
        Right query -> do
          Text.putStrLn (showT query)

@@ -5,6 +5,8 @@
 
 module Cardano.Timeseries.Elab(initialSt, St(..), ElabM, elab) where
 import           Cardano.Timeseries.AsText
+import           Cardano.Timeseries.Domain.Identifier (Identifier (..))
+import           Cardano.Timeseries.Domain.Types      (MetricIdentifier)
 import           Cardano.Timeseries.Elab.Expr (Loc, getLoc)
 import qualified Cardano.Timeseries.Elab.Expr as Surface
 import           Cardano.Timeseries.Elab.Resolve
@@ -29,6 +31,8 @@ import           Data.Foldable as Foldable (toList)
 import           Data.List (find)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence as Seq (Seq (..), fromList, reverse, singleton, (><), (|>))
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -179,14 +183,15 @@ evalElabProblem defs (ToScalar p) = ToScalar (evalToScalarElabProblem defs p)
 
 data St = St {
   defs               :: Defs,
-  nextHoleIdentifier :: HoleIdentifier
+  nextHoleIdentifier :: HoleIdentifier,
+  availableMetrics   :: Set MetricIdentifier
 }
 
-initialSt :: St
-initialSt = St mempty 0
+initialSt :: Set MetricIdentifier -> St
+initialSt ms = St mempty 0 ms
 
 updateDefs :: (Defs -> Defs) -> St -> St
-updateDefs f (St ds x) = St (f ds) x
+updateDefs f (St ds x ms) = St (f ds) x ms
 
 getDefs :: St -> Defs
 getDefs = defs
@@ -195,7 +200,10 @@ setDefs :: Defs -> St -> St
 setDefs v = updateDefs (const v)
 
 updateNextHoleIdentifier :: (HoleIdentifier -> HoleIdentifier) -> St -> St
-updateNextHoleIdentifier f (St ds x) = St ds (f x)
+updateNextHoleIdentifier f (St ds x ms) = St ds (f x) ms
+
+getAvailableMetrics :: ElabM (Set MetricIdentifier)
+getAvailableMetrics = (.availableMetrics) <$> get
 
 runUnifyM :: UnifyM a -> ElabM a
 runUnifyM f = do
@@ -781,10 +789,13 @@ solveGeneralElabProblem gam (mbBinaryArithmeticOp -> Just (loc, left, op, right)
 solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) (Seq.reverse gam) = do
   modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
   pure ([UnificationProblem l typ (Types.ty b)], [])
--- Assumes that all variables into the store (= metrics) have type (Timestamp -> Scalar)
 solveGeneralElabProblem _ (Surface.Variable l v) x typ = do
-  modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
-  pure ([UnificationProblem l typ (Fun Timestamp (InstantVector Scalar))], [])
+  ms <- getAvailableMetrics
+  case v of
+    User u | Set.member u ms -> do
+      modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
+      pure ([UnificationProblem l typ (Fun Timestamp (InstantVector Scalar))], [])
+    _ -> throwError $ "Undefined name: " <> asText v <> "\n  @ " <> asText l
 solveGeneralElabProblem gam (Surface.Filter l f v) h hty = do
   argTy <- freshTyHole
   fh <- freshExprHole (Fun (Hole argTy) Bool)

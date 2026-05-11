@@ -1,6 +1,6 @@
 module Cardano.Timeseries.Interp.Suite (interpTests) where
 
-import           Cardano.Timeseries.API           (Config (..), ExecutionError, execute)
+import           Cardano.Timeseries.API           (Config (..), ExecutionError (..), execute)
 import           Cardano.Timeseries.Domain.Instant (Instant (..))
 import           Cardano.Timeseries.Interp.Value  (Value (..))
 import           Cardano.Timeseries.Store.Flat    (Flat, Point (..))
@@ -8,6 +8,7 @@ import           Cardano.Timeseries.Store.Flat    (Flat, Point (..))
 import           Data.List                        (sort)
 import qualified Data.Set                         as Set
 import           Data.Text                        (Text)
+import qualified Data.Text                        as Text
 import           Data.Word                        (Word64)
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -110,6 +111,7 @@ interpTests = testGroup "Interpretation"
   , instantVectorScalarRelTests
   , rangeVectorTests
   , metricsTests
+  , errorCaseTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -423,4 +425,17 @@ metricsTests = testGroup "metrics"
       case runAt simpleStore 0 "metrics" of
         Right (Cons (Text "m") Nil) -> pure ()
         other                       -> assertFailure $ "Expected Cons (Text \"m\") Nil, got: " <> show other
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Error cases
+-- ---------------------------------------------------------------------------
+
+errorCaseTests :: TestTree
+errorCaseTests = testGroup "Error cases"
+  [ testCase "undefined name gives Undefined-name elab error" $
+      case run "no_such_metric now" of
+        Left (ElabErrorWhileExecuting msg) ->
+          assertBool "error message mentions the name" ("Undefined name" `Text.isInfixOf` msg)
+        other -> assertFailure $ "Expected ElabErrorWhileExecuting, got: " <> show other
   ]
