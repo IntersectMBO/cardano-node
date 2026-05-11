@@ -260,7 +260,12 @@ instance Default GenesisOptions where
 
 -- | Configuration specific to each node
 data NodeWithOptions = NodeWithOptions
-  { nodeBin :: Maybe FilePath -- ^ Path to the @cardano-node@ binary to use for running this node. 'Nothing' uses the default resolution mechanism.
+  { nodeBin :: Maybe FilePath
+    -- ^ Path to the @cardano-node@ binary to use for running this node.
+    -- This allows testing different node versions side by side in the same testnet
+    -- (e.g. to verify compatibility across upgrades).
+    -- 'Nothing' uses the default resolution: the @CARDANO_NODE@ environment variable
+    -- if set, otherwise the binary path from cabal's @plan.json@.
   , nodeExtraCliArgs :: [String] -- ^ Extra CLI arguments passed to @cardano-node run@
   } deriving (Eq, Show)
 
