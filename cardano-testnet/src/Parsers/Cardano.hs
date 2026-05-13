@@ -26,6 +26,7 @@ import           Options.Applicative.Types (readerAsk)
 import           Text.Parsec (char, many1, noneOf,
                      sepBy1, string, try, (<?>), parse, eof, notFollowedBy)
 import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.String as Parsec
 
 import           Testnet.Defaults (defaultEra)
 import           Testnet.Start.Cardano
@@ -151,7 +152,7 @@ pTestnetNodesWithOptions =
 parseNodeSpecs :: String -> Either Parsec.ParseError TestnetNodesWithOptions
 parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specifications"
   where
-    nodeSpecsParser :: Parsec.Parsec String () TestnetNodesWithOptions
+    nodeSpecsParser :: Parsec.Parser TestnetNodesWithOptions
     nodeSpecsParser = do
       specs <- nodeSpec `sepBy1` char ','
       let (spos, relays) = span (\(role, _) -> role == Spo) specs
@@ -164,27 +165,27 @@ parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specificatio
           , optRelayNodes = map snd relays
           }
 
-    nodeSpec :: Parsec.Parsec String () (NodeRole, NodeWithOptions)
+    nodeSpec :: Parsec.Parser (NodeRole, NodeWithOptions)
     nodeSpec = do
       role <- nodeRole
       bin <- optional $ char ':' *> nodeBinKV
       pure (role, NodeWithOptions bin [])
 
-    nodeRole :: Parsec.Parsec String () NodeRole
+    nodeRole :: Parsec.Parser NodeRole
     nodeRole =
           Spo <$ try (string "spo" <* notFollowedBy (noneOf ",:\"\\"))
       <|> Relay <$ try (string "relay" <* notFollowedBy (noneOf ",:\"\\"))
       <?> "node role (\"spo\" or \"relay\")"
 
-    nodeBinKV :: Parsec.Parsec String () FilePath
+    nodeBinKV :: Parsec.Parser FilePath
     nodeBinKV = string "node-bin=" *> (quotedPath <|> unquotedPath) <?> "\"node-bin=<path>\", where <path> is the path to the node binary, optionally quoted if it contains special characters"
 
-    quotedPath :: Parsec.Parsec String () FilePath
+    quotedPath :: Parsec.Parser FilePath
     quotedPath = char '"' *> Parsec.many quotedChar <* char '"'
       where
         quotedChar = try (char '\\' *> (char '"' <|> char '\\')) <|> noneOf "\""
 
-    unquotedPath :: Parsec.Parsec String () FilePath
+    unquotedPath :: Parsec.Parser FilePath
     unquotedPath = many1 (noneOf ",:\"\\")
 
 data NodeRole = Spo | Relay deriving Eq
