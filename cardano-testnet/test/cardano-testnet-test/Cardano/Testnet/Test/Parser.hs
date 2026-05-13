@@ -19,6 +19,95 @@ import qualified Hedgehog.Range as Range
 import           Parsers.Cardano (parseNodeSpecs)
 import           Testnet.Start.Types (NodeWithOptions (..), TestnetNodesWithOptions (..))
 
+prop_parseNodeSpecs_roundtrip :: H.Property
+prop_parseNodeSpecs_roundtrip = H.property $ do
+  specs <- H.forAll genValidSpecs
+  let input = encodeSpecs specs
+      (spoSpecs, relaySpecs) = span isSpo specs
+  case parseNodeSpecs input of
+    Left err -> do
+      H.footnote $ "Parse error: " ++ show err
+      H.footnote $ "Input: " ++ input
+      H.failure
+    Right result -> do
+      H.footnote $ "Input: " ++ input
+      map nodeBin (NEL.toList (optSpoNodes result)) H.=== map specPath spoSpecs
+      map nodeBin (optRelayNodes result) H.=== map specPath relaySpecs
+
+prop_parseNodeSpecs_counts :: H.Property
+prop_parseNodeSpecs_counts = H.property $ do
+  specs <- H.forAll genValidSpecs
+  let input = encodeSpecs specs
+      nSpos = length $ filter isSpo specs
+      nRelays = length $ filter (not . isSpo) specs
+  case parseNodeSpecs input of
+    Left err -> do
+      H.footnote $ "Parse error: " ++ show err
+      H.footnote $ "Input: " ++ input
+      H.failure
+    Right result -> do
+      H.footnote $ "Input: " ++ input
+      length (NEL.toList (optSpoNodes result)) H.=== nSpos
+      length (optRelayNodes result) H.=== nRelays
+
+prop_relay_before_spo_rejected :: H.Property
+prop_relay_before_spo_rejected = H.property $ do
+  specs <- H.forAll genBadOrderSpecs
+  let input = encodeSpecs specs
+  H.footnote $ "Input: " ++ input
+  H.assert $ isLeft $ parseNodeSpecs input
+
+-- | Valid mixed specs parse correctly.
+unit_valid_mixed_specs :: H.Property
+unit_valid_mixed_specs = H.withTests 1 . H.property $ do
+  case parseNodeSpecs "spo,spo,relay,relay" of
+    Left err -> do
+      H.footnote $ show err
+      H.failure
+    Right result -> do
+      length (NEL.toList (optSpoNodes result)) H.=== 2
+      length (optRelayNodes result) H.=== 2
+
+  case parseNodeSpecs "spo" of
+    Left err -> do
+      H.footnote $ show err
+      H.failure
+    Right result -> do
+      length (NEL.toList (optSpoNodes result)) H.=== 1
+      length (optRelayNodes result) H.=== 0
+
+  case parseNodeSpecs "spo:node-bin=/usr/bin/cardano-node,relay" of
+    Left err -> do
+      H.footnote $ show err
+      H.failure
+    Right result -> do
+      nodeBin (NEL.head (optSpoNodes result)) H.=== Just "/usr/bin/cardano-node"
+      length (optRelayNodes result) H.=== 1
+
+-- | Quoted paths with commas, colons, backslashes, and quotes parse correctly.
+unit_quoted_paths :: H.Property
+unit_quoted_paths = H.withTests 1 . H.property $ do
+  case parseNodeSpecs "spo:node-bin=\"/path,with,commas\"" of
+    Left err -> do { H.footnote $ show err; H.failure }
+    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path,with,commas"
+
+  case parseNodeSpecs "spo:node-bin=\"/path:with:colons\"" of
+    Left err -> do { H.footnote $ show err; H.failure }
+    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path:with:colons"
+
+  case parseNodeSpecs "spo:node-bin=\"/path\\\\with\\\\backslashes\"" of
+    Left err -> do { H.footnote $ show err; H.failure }
+    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path\\with\\backslashes"
+
+  case parseNodeSpecs "spo:node-bin=\"/path\\\"with\\\"quotes\"" of
+    Left err -> do { H.footnote $ show err; H.failure }
+    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path\"with\"quotes"
+
+  -- Misplaced quotes must fail
+  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=\"/unclosed"       -- opening quote, no close
+  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=/closed\""         -- no opening, quote at end
+  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=/mid\"dle"         -- quote in the middle
+
 -- Adversarial substrings that could confuse the parser
 adversarialFragments :: [String]
 adversarialFragments =
@@ -90,37 +179,6 @@ isSpo :: Spec -> Bool
 isSpo (Spec RSpo _) = True
 isSpo _ = False
 
-prop_parseNodeSpecs_roundtrip :: H.Property
-prop_parseNodeSpecs_roundtrip = H.property $ do
-  specs <- H.forAll genValidSpecs
-  let input = encodeSpecs specs
-      (spoSpecs, relaySpecs) = span isSpo specs
-  case parseNodeSpecs input of
-    Left err -> do
-      H.footnote $ "Parse error: " ++ show err
-      H.footnote $ "Input: " ++ input
-      H.failure
-    Right result -> do
-      H.footnote $ "Input: " ++ input
-      map nodeBin (NEL.toList (optSpoNodes result)) H.=== map specPath spoSpecs
-      map nodeBin (optRelayNodes result) H.=== map specPath relaySpecs
-
-prop_parseNodeSpecs_counts :: H.Property
-prop_parseNodeSpecs_counts = H.property $ do
-  specs <- H.forAll genValidSpecs
-  let input = encodeSpecs specs
-      nSpos = length $ filter isSpo specs
-      nRelays = length $ filter (not . isSpo) specs
-  case parseNodeSpecs input of
-    Left err -> do
-      H.footnote $ "Parse error: " ++ show err
-      H.footnote $ "Input: " ++ input
-      H.failure
-    Right result -> do
-      H.footnote $ "Input: " ++ input
-      length (NEL.toList (optSpoNodes result)) H.=== nSpos
-      length (optRelayNodes result) H.=== nRelays
-
 -- | Generate specs matching: spo*, relay+, (relay|spo)*, spo+
 -- i.e. at least one relay appears before at least one spo.
 genBadOrderSpecs :: H.Gen [Spec]
@@ -130,61 +188,3 @@ genBadOrderSpecs = do
   middle <- Gen.list (Range.linear 0 10) (genSpec =<< Gen.element [RSpo, RRelay])
   after <- genSpec RSpo
   pure $ before ++ [relay] ++ middle ++ [after]
-
-prop_relay_before_spo_rejected :: H.Property
-prop_relay_before_spo_rejected = H.property $ do
-  specs <- H.forAll genBadOrderSpecs
-  let input = encodeSpecs specs
-  H.footnote $ "Input: " ++ input
-  H.assert $ isLeft $ parseNodeSpecs input
-
--- | Valid mixed specs parse correctly.
-unit_valid_mixed_specs :: H.Property
-unit_valid_mixed_specs = H.withTests 1 . H.property $ do
-  case parseNodeSpecs "spo,spo,relay,relay" of
-    Left err -> do
-      H.footnote $ show err
-      H.failure
-    Right result -> do
-      length (NEL.toList (optSpoNodes result)) H.=== 2
-      length (optRelayNodes result) H.=== 2
-
-  case parseNodeSpecs "spo" of
-    Left err -> do
-      H.footnote $ show err
-      H.failure
-    Right result -> do
-      length (NEL.toList (optSpoNodes result)) H.=== 1
-      length (optRelayNodes result) H.=== 0
-
-  case parseNodeSpecs "spo:node-bin=/usr/bin/cardano-node,relay" of
-    Left err -> do
-      H.footnote $ show err
-      H.failure
-    Right result -> do
-      nodeBin (NEL.head (optSpoNodes result)) H.=== Just "/usr/bin/cardano-node"
-      length (optRelayNodes result) H.=== 1
-
--- | Quoted paths with commas, colons, backslashes, and quotes parse correctly.
-unit_quoted_paths :: H.Property
-unit_quoted_paths = H.withTests 1 . H.property $ do
-  case parseNodeSpecs "spo:node-bin=\"/path,with,commas\"" of
-    Left err -> do { H.footnote $ show err; H.failure }
-    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path,with,commas"
-
-  case parseNodeSpecs "spo:node-bin=\"/path:with:colons\"" of
-    Left err -> do { H.footnote $ show err; H.failure }
-    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path:with:colons"
-
-  case parseNodeSpecs "spo:node-bin=\"/path\\\\with\\\\backslashes\"" of
-    Left err -> do { H.footnote $ show err; H.failure }
-    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path\\with\\backslashes"
-
-  case parseNodeSpecs "spo:node-bin=\"/path\\\"with\\\"quotes\"" of
-    Left err -> do { H.footnote $ show err; H.failure }
-    Right r -> nodeBin (NEL.head (optSpoNodes r)) H.=== Just "/path\"with\"quotes"
-
-  -- Misplaced quotes must fail
-  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=\"/unclosed"       -- opening quote, no close
-  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=/closed\""         -- no opening, quote at end
-  H.assert $ isLeft $ parseNodeSpecs "spo:node-bin=/mid\"dle"         -- quote in the middle
