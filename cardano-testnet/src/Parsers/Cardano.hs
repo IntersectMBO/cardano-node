@@ -149,6 +149,20 @@ pTestnetNodesWithOptions =
     readNodeSpecs = readerAsk >>= either (fail . show) pure . parseNodeSpecs
 
 -- | Parse a @--nodes@ argument string into 'TestnetNodesWithOptions'.
+--
+-- SPO nodes are required to appear before relay nodes because:
+--
+-- 1. The testnet configuration assigns node directories by position (node-spo1,
+--    node-spo2, …, relay1, relay2, …). Allowing arbitrary ordering would require
+--    maintaining a separate mapping between pool indices and node positions, which
+--    much of the existing code does not expect.
+--
+-- 2. Silently reordering (e.g. turning @relay,spo@ into @spo,relay@) would
+--    violate the user's expectations about which node gets which configuration.
+--
+-- 3. Requiring SPOs first lets us represent the result directly as a 'NonEmpty'
+--    list of SPO nodes (guaranteeing at least one) plus a plain list of relays,
+--    so the type itself makes an invalid configuration unrepresentable.
 parseNodeSpecs :: String -> Either Parsec.ParseError TestnetNodesWithOptions
 parseNodeSpecs = parse (nodeSpecsParser <* eof) "Error parsing node specifications"
   where
