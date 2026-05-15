@@ -1,7 +1,7 @@
 cabal-version:      3.4
 name:               cardano-timeseries-io
 description:        Cardano Timeseries Input/Output for realtime metric storage & query.
-version:            1.0.0
+version:            1.1.0
 category:           Cardano
                     Metrics
 copyright:          2026 Intersect.

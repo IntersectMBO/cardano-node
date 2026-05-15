@@ -2,6 +2,26 @@
 
 ## NEXT
 
+## 0.5.0 (May 2026)
+
+* Timeseries query endpoint: `POST /timeseries/query` now expects an
+  `application/x-www-form-urlencoded` body (Prometheus wire format).
+* Timeseries query endpoint: `GET /timeseries/query` added alongside `POST`,
+  accepting the same parameters as URL query string.
+* Timeseries query endpoint: optional `time=<unix_s>` parameter sets the
+  evaluation instant; defaults to server time when omitted.
+* New timeseries endpoints:
+  - `GET /timeseries/nodes` — list connected node IDs.
+  - `GET /timeseries/node/{id}/info` — node info (name, protocol, version,
+    commit, start time, system start time) plus `uptimeSeconds`.
+  - `GET /timeseries/node/{id}/startup` — node startup info.
+  - `GET /timeseries/node/{id}/state` — sync progress (RTView build only).
+* Metric names stored in the timeseries are sanitised: `.`, `-`, and spaces
+  are replaced with `_`; all other non-alphanumeric, non-underscore characters
+  are stripped. This aligns stored names with Prometheus label conventions.
+* JSON wire format of query responses aligned with Prometheus conventions
+  (see `cardano-timeseries-io` 1.1.0 changelog for details).
+
 ## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
   since Node 10.6.2; fixes the RTView-enabled build.
