@@ -4,32 +4,32 @@ import { DataSourceJsonData, DataQuery } from '@grafana/data';
 export type SeriesIdentifier = Record<string, string>;
 
 export interface TimeseriesItem {
-  labels: SeriesIdentifier;
-  // Each element is a 2-element JSON array [timestamp_ms, Value]
-  data: [number, Value][];
+  metric: SeriesIdentifier;
+  // Each element is a 2-element array [timestamp_s, value_str] — Prometheus wire format
+  values: [number, string][];
 }
 
 export interface InstantItem {
-  labels: SeriesIdentifier;
-  timestamp: number; // ms since epoch
-  value: Value;
+  metric: SeriesIdentifier;
+  // [timestamp_s, value_str] — Prometheus wire format
+  value: [number, string];
 }
 
 // Tagged union mirroring the Haskell Value GADT
 export type Value =
-  | { tag: 'Scalar'; value: number }
-  | { tag: 'RangeVector'; value: TimeseriesItem[] }
-  | { tag: 'InstantVector'; value: InstantItem[] }
-  | { tag: 'Pair'; fst: Value; snd: Value }
-  | { tag: 'Truth' }
-  | { tag: 'Falsity' }
-  | { tag: 'Duration'; value: number } // milliseconds
-  | { tag: 'Timestamp'; value: number } // ms since epoch
-  | { tag: 'Text'; value: string }
-  | { tag: 'Unit' }
-  | { tag: 'Nil' }
-  | { tag: 'Cons'; head: Value; tail: Value }
-  | { tag: 'Function' };
+  | { resultType: 'scalar';    result: number }
+  | { resultType: 'matrix';    result: TimeseriesItem[] }
+  | { resultType: 'vector';    result: InstantItem[] }
+  | { resultType: 'pair';      fst: Value; snd: Value }
+  | { resultType: 'truth' }
+  | { resultType: 'falsity' }
+  | { resultType: 'duration';  result: number } // seconds
+  | { resultType: 'timestamp'; result: number } // seconds since epoch
+  | { resultType: 'text';      result: string }
+  | { resultType: 'unit' }
+  | { resultType: 'nil' }
+  | { resultType: 'cons'; head: Value; tail: Value }
+  | { resultType: 'function' };
 
 export interface CardanoTimeseriesQuery extends DataQuery {
   queryText: string;

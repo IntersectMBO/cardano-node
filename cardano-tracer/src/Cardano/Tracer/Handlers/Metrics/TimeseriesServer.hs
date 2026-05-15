@@ -15,28 +15,20 @@ import           Cardano.Tracer.Handlers.Metrics.Utils (contentHdrJSON, contentH
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Time (getTimeMs)
 
-import           Data.Aeson (FromJSON (..), eitherDecode, encode, object, withObject, (.:), (.:?), (.=))
+import           Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy as BL
 import           Data.Foldable
+import           Control.Monad (join)
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as T
-import           Data.Text.Read (decimal)
+import           Data.Text.Read (decimal, double)
 import           Data.Word (Word64)
 import           Network.HTTP.Types
 import           Network.Wai
 import           Network.Wai.Handler.Warp hiding (run)
 import           Network.Wai.Handler.WarpTLS
 import           System.Time.Extra (sleep)
-
-data QueryRequest = QueryRequest
-  { qrQuery :: Text
-  , qrTime  :: Maybe Double  -- Unix seconds; absent means "now"
-  }
-
-instance FromJSON QueryRequest where
-  parseJSON = withObject "QueryRequest" $ \o ->
-    QueryRequest <$> o .: "query" <*> o .:? "time"
 
 errorType :: ExecutionError -> Text
 errorType ParsingErrorWhileExecuting{} = "parse"
@@ -78,52 +70,56 @@ data InputSanitationConfig = InputSanitationConfig {
 }
 
 timeseriesApp :: InputSanitationConfig -> TimeseriesHandle -> Application
-timeseriesApp inputSanCfg handle request send = case request.pathInfo of
-  ["timeseries", "query"] | request.requestMethod == methodPost -> do
-    bs <- consumeRequestBodyStrict request
-    case eitherDecode bs of
-      Left parseErr -> send $ responseLBS status400 contentHdrJSON $ encode $ object
-        [ "status"    .= ("error" :: Text)
-        , "errorType" .= ("bad_data" :: Text)
-        , "error"     .= ("Invalid request body: " <> parseErr)
-        ]
-      Right QueryRequest{..} -> do
-        at <- maybe getTimeMs (\t -> pure (round (t * 1000))) qrTime
-        execute handle (fromIntegral at) qrQuery >>= \case
-          Left err -> send $ responseLBS status400 contentHdrJSON $ encode $ object
-            [ "status"    .= ("error"   :: Text)
-            , "errorType" .= errorType err
-            , "error"     .= asText err
-            ]
-          Right v -> send $ responseLBS status200 contentHdrJSON $ encode $ object
-            [ "status" .= ("success" :: Text)
-            , "data"   .= v
-            ]
-  ["timeseries", "prune"] | request.requestMethod == methodPost -> do
-    prune handle
-    send ok
-  ["timeseries", "config", "retention"]
-    | request.requestMethod == methodPost, Just v <- oneDurationQueryItem request ->
-      if v >= inputSanCfg.minimumRetentionMillis then do
-        modifyConfig handle (\cfg -> Just cfg{retentionMillis = v})
-        send ok
-      else
-        send malformed
-    | request.requestMethod == methodGet -> do
-      v <- (.retentionMillis) <$> readConfig handle
-      send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
-  ["timeseries", "config", "pruning"]
-    | request.requestMethod == methodPost ->
-      let v = oneDurationQueryItem request in
-      if maybe True (>= inputSanCfg.minimumPruningPeriodMillis) v then do
-        modifyConfig handle (\cfg -> Just cfg{pruningPeriodMillis = v})
-        send ok
-      else
-        send malformed
-    | request.requestMethod == methodGet -> do
-      v <- (.pruningPeriodMillis) <$> readConfig handle
-      send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
-  _ -> send notFound
+timeseriesApp inputSanCfg handle request send = do
+  let handleQuery params = case join (lookup "query" params) of
+        Nothing -> send malformed
+        Just q  -> do
+          let mbTime = do
+                t <- join (lookup "time" params)
+                case double t of { Right (v, "") -> Just v; _ -> Nothing }
+          at <- maybe getTimeMs (\t -> pure (round (t * 1000))) mbTime
+          execute handle (fromIntegral at) q >>= \case
+            Left err -> send $ responseLBS status400 contentHdrJSON $ encode $ object
+              [ "status"    .= ("error"   :: Text)
+              , "errorType" .= errorType err
+              , "error"     .= asText err
+              ]
+            Right v -> send $ responseLBS status200 contentHdrJSON $ encode $ object
+              [ "status" .= ("success" :: Text)
+              , "data"   .= v
+              ]
+  case request.pathInfo of
+    ["timeseries", "query"]
+      | request.requestMethod == methodPost -> do
+          bs <- consumeRequestBodyStrict request
+          handleQuery (queryToQueryText (parseQuery (BL.toStrict bs)))
+      | request.requestMethod == methodGet ->
+          handleQuery (queryToQueryText request.queryString)
+    ["timeseries", "prune"] | request.requestMethod == methodPost -> do
+      prune handle
+      send ok
+    ["timeseries", "config", "retention"]
+      | request.requestMethod == methodPost, Just v <- oneDurationQueryItem request ->
+        if v >= inputSanCfg.minimumRetentionMillis then do
+          modifyConfig handle (\cfg -> Just cfg{retentionMillis = v})
+          send ok
+        else
+          send malformed
+      | request.requestMethod == methodGet -> do
+        v <- (.retentionMillis) <$> readConfig handle
+        send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
+    ["timeseries", "config", "pruning"]
+      | request.requestMethod == methodPost ->
+        let v = oneDurationQueryItem request in
+        if maybe True (>= inputSanCfg.minimumPruningPeriodMillis) v then do
+          modifyConfig handle (\cfg -> Just cfg{pruningPeriodMillis = v})
+          send ok
+        else
+          send malformed
+      | request.requestMethod == methodGet -> do
+        v <- (.pruningPeriodMillis) <$> readConfig handle
+        send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
+    _ -> send notFound
 
 runTimeseriesServer :: Trace IO TracerTrace -> TracerConfig -> Endpoint -> TimeseriesHandle -> IO ()
 runTimeseriesServer tr tracerConfig endpoint handle = do

@@ -60,8 +60,8 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
         .fetch<QueryResponse>({
           url: `${this.baseUrl}/timeseries/query`,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          data: { query: queryText },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          data: new URLSearchParams({ query: queryText }).toString(),
         }) as any).toPromise() as FetchResponse<QueryResponse>;
       return valueToDataFrames(response.data.data);
     } catch (err: any) {
@@ -84,8 +84,8 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
       await (getBackendSrv().fetch({
         url: `${this.baseUrl}/timeseries/query`,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: { query: '' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        data: 'query=',
       }) as any).toPromise();
       return { status: 'success', message: 'Connected to Cardano Timeseries server' };
     } catch (err: any) {

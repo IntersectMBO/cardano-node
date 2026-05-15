@@ -12,26 +12,26 @@ function seriesName(labels: SeriesIdentifier): string {
 // Best-effort: extract a numeric value from any Value constructor.
 // Returns null for non-scalar values — Grafana renders null as a gap.
 function extractScalar(v: Value): number | null {
-  switch (v.tag) {
-    case 'Scalar':    return v.value;
-    case 'Duration':  return v.value;
-    case 'Timestamp': return v.value;
-    case 'Truth':     return 1;
-    case 'Falsity':   return 0;
+  switch (v.resultType) {
+    case 'scalar':    return v.result;
+    case 'duration':  return v.result;
+    case 'timestamp': return v.result * 1000;
+    case 'truth':     return 1;
+    case 'falsity':   return 0;
     default:          return null;
   }
 }
 
 function rangeToFrame(ts: TimeseriesItem): DataFrame {
   const frame = new MutableDataFrame({
-    name: seriesName(ts.labels),
+    name: seriesName(ts.metric),
     fields: [
       { name: 'Time', type: FieldType.time },
       { name: 'Value', type: FieldType.number },
     ],
   });
-  for (const [t, v] of ts.data) {
-    frame.add({ Time: t, Value: extractScalar(v) });
+  for (const [t, v] of ts.values) {
+    frame.add({ Time: t * 1000, Value: parseFloat(v) });
   }
   return frame;
 }
@@ -47,98 +47,98 @@ function instantVectorToFrame(instants: InstantItem[]): DataFrame {
   });
   for (const inst of instants) {
     frame.add({
-      Time: inst.timestamp,
-      Labels: seriesName(inst.labels),
-      Value: extractScalar(inst.value),
+      Time: inst.value[0] * 1000,
+      Labels: seriesName(inst.metric),
+      Value: parseFloat(inst.value[1]),
     });
   }
   return frame;
 }
 
 export function valueToDataFrames(value: Value): DataFrame[] {
-  switch (value.tag) {
-    case 'Scalar': {
+  switch (value.resultType) {
+    case 'scalar': {
       const frame = new MutableDataFrame({
         name: 'scalar',
         fields: [{ name: 'Value', type: FieldType.number }],
       });
-      frame.add({ Value: value.value });
+      frame.add({ Value: value.result });
       return [frame];
     }
 
-    case 'RangeVector':
-      return value.value.map(rangeToFrame);
+    case 'matrix':
+      return value.result.map(rangeToFrame);
 
-    case 'InstantVector':
-      return [instantVectorToFrame(value.value)];
+    case 'vector':
+      return [instantVectorToFrame(value.result)];
 
-    case 'Pair': {
+    case 'pair': {
       const fst = valueToDataFrames(value.fst).map((f, i) => ({ ...f, name: `pair.fst[${i}]` }));
       const snd = valueToDataFrames(value.snd).map((f, i) => ({ ...f, name: `pair.snd[${i}]` }));
       return [...fst, ...snd];
     }
 
-    case 'Truth':
-    case 'Falsity': {
+    case 'truth':
+    case 'falsity': {
       const frame = new MutableDataFrame({
         name: 'bool',
         fields: [{ name: 'Value', type: FieldType.boolean }],
       });
-      frame.add({ Value: value.tag === 'Truth' });
+      frame.add({ Value: value.resultType === 'truth' });
       return [frame];
     }
 
-    case 'Duration': {
+    case 'duration': {
       const frame = new MutableDataFrame({
-        name: 'duration_ms',
+        name: 'duration_s',
         fields: [{ name: 'Value', type: FieldType.number }],
       });
-      frame.add({ Value: value.value });
+      frame.add({ Value: value.result });
       return [frame];
     }
 
-    case 'Timestamp': {
+    case 'timestamp': {
       const frame = new MutableDataFrame({
-        name: 'timestamp_ms',
+        name: 'timestamp_s',
         fields: [{ name: 'Value', type: FieldType.time }],
       });
-      frame.add({ Value: value.value });
+      frame.add({ Value: value.result * 1000 });
       return [frame];
     }
 
-    case 'Text': {
+    case 'text': {
       const frame = new MutableDataFrame({
         name: 'text',
         fields: [{ name: 'Value', type: FieldType.string }],
       });
-      frame.add({ Value: value.value });
+      frame.add({ Value: value.result });
       return [frame];
     }
 
-    case 'Unit':
+    case 'unit':
       return [];
 
-    case 'Nil':
+    case 'nil':
       return [];
 
-    case 'Cons': {
+    case 'cons': {
       // Collect the spine into an array, then render as a table frame.
       const items: Value[] = [];
       let cur: Value = value;
-      while (cur.tag === 'Cons') { items.push(cur.head); cur = cur.tail; }
-      // cur is now the tail terminator (expected Nil; any other tag is an improper list)
+      while (cur.resultType === 'cons') { items.push(cur.head); cur = cur.tail; }
+      // cur is now the tail terminator (expected nil; any other tag is an improper list)
       const frame = new MutableDataFrame({
         name: 'list',
         fields: [{ name: 'Value', type: FieldType.string }],
       });
       for (const item of items) {
-        const display = item.tag === 'Text' ? item.value : (extractScalar(item)?.toString() ?? item.tag);
+        const display = item.resultType === 'text' ? item.result : (extractScalar(item)?.toString() ?? item.resultType);
         frame.add({ Value: display });
       }
       return [frame];
     }
 
-    case 'Function':
+    case 'function':
       throw new Error('Cannot render a Function value — it has no serialisable representation');
   }
 }
