@@ -441,6 +441,10 @@ instance ( LogFormatting (Header blk)
       "Added request to queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.PoppedReprocessLoEBlocksFromQueue =
       "Poppped request from queue to reprocess blocks postponed by LoE."
+  forHuman (ChainDB.AddedReprocessBlockToQueue _h) =
+      "Added request to queue to reprocess a CertRB whose EB closure arrived."
+  forHuman (ChainDB.PoppedReprocessBlockFromQueue _h) =
+      "Popped request from queue to reprocess a CertRB whose EB closure arrived."
   forHuman ChainDB.ChainSelectionLoEDebug{} =
       "ChainDB LoE debug event"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
@@ -560,6 +564,10 @@ instance ( LogFormatting (Header blk)
       mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
   forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+  forMachine _dtal (ChainDB.AddedReprocessBlockToQueue _h) =
+      mconcat [ "kind" .= String "AddedReprocessBlockToQueue" ]
+  forMachine _dtal (ChainDB.PoppedReprocessBlockFromQueue _h) =
+      mconcat [ "kind" .= String "PoppedReprocessBlockFromQueue" ]
   forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
       case loeFrag of
         ChainDB.LoEEnabled loeF ->
@@ -651,6 +659,10 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["AddedReprocessLoEBlocksToQueue"]
   namespaceFor ChainDB.PoppedReprocessLoEBlocksFromQueue =
     Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+  namespaceFor ChainDB.AddedReprocessBlockToQueue {} =
+    Namespace [] ["AddedReprocessBlockToQueue"]
+  namespaceFor ChainDB.PoppedReprocessBlockFromQueue {} =
+    Namespace [] ["PoppedReprocessBlockFromQueue"]
   namespaceFor ChainDB.ChainSelectionLoEDebug {} =
     Namespace [] ["ChainSelectionLoEDebug"]
 
@@ -683,6 +695,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     severityFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk)) Nothing
   severityFor (Namespace _ ["AddedReprocessLoEBlocksToQueue"]) _ = Just Debug
   severityFor (Namespace _ ["PoppedReprocessLoEBlocksFromQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["AddedReprocessBlockToQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["PoppedReprocessBlockFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["ChainSelectionLoEDebug"]) _ = Just Debug
   severityFor _ _ = Nothing
 
@@ -828,6 +842,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["SwitchedToAFork"]
     , Namespace [] ["AddedReprocessLoEBlocksToQueue"]
     , Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+    , Namespace [] ["AddedReprocessBlockToQueue"]
+    , Namespace [] ["PoppedReprocessBlockFromQueue"]
     , Namespace [] ["ChainSelectionLoEDebug"]
     ]
     ++ map (nsPrependInner "PipeliningEvent")

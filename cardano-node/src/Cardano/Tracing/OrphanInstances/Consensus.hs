@@ -169,6 +169,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.PipeliningEvent {} -> Debug
     ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
     ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
+    ChainDB.AddedReprocessBlockToQueue {} -> Debug
+    ChainDB.PoppedReprocessBlockFromQueue {} -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
 
@@ -546,6 +548,10 @@ instance ( ConvertRawHash blk
           "Added request to queue to reprocess blocks postponed by LoE."
         ChainDB.PoppedReprocessLoEBlocksFromQueue ->
           "Poppped request from queue to reprocess blocks postponed by LoE."
+        ChainDB.AddedReprocessBlockToQueue _h ->
+          "Added request to queue to reprocess a CertRB whose EB closure arrived."
+        ChainDB.PoppedReprocessBlockFromQueue _h ->
+          "Popped request from queue to reprocess a CertRB whose EB closure arrived."
         ChainDB.ChainSelectionLoEDebug {} ->
           "ChainDB LoE debug event"
 
@@ -1033,6 +1039,10 @@ instance ( ConvertRawHash blk
        mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+    ChainDB.AddedReprocessBlockToQueue _h ->
+       mconcat [ "kind" .= String "AddedReprocessBlockToQueue" ]
+    ChainDB.PoppedReprocessBlockFromQueue _h ->
+       mconcat [ "kind" .= String "PoppedReprocessBlockFromQueue" ]
     ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
       case loeFrag of
         ChainDB.LoEEnabled loeF ->
