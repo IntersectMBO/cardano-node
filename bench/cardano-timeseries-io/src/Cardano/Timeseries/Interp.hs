@@ -196,7 +196,7 @@ interpFilterBinaryRelation cfg store env v rel k now = do
 --   Precondition: the expression must be well-typed in the given variable context.
 interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> InterpM Value
 interp _ store _ Expr.Metrics _ = do
-  pure $ foldr Value.Cons Value.Nil $ map Value.Text $ Set.toList $ metrics store
+  pure $ foldr (Value.Cons . Value.Text) Value.Nil (Set.toList $ metrics store)
 interp _ _ _ (Expr.Number x) _ = do
   pure (Value.Scalar x)
 interp _ store env (Expr.Variable x) _ =

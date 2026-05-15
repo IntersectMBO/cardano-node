@@ -243,58 +243,58 @@ operatorPrecedenceTests :: TestTree
 operatorPrecedenceTests = testGroup "Operator precedence"
   [ testCase "mul binds tighter than add (rhs)" $
       parsesTo "1 + 2 * 3" $ \case
-        Add _ _ (Mul _ _ _) -> True
-        _                   -> False
+        Add _ _ (Mul {}) -> True
+        _                -> False
 
   , testCase "mul binds tighter than add (lhs)" $
       parsesTo "1 * 2 + 3" $ \case
-        Add _ (Mul _ _ _) _ -> True
-        _                   -> False
+        Add _ (Mul {}) _ -> True
+        _                -> False
 
   , testCase "add is left-associative" $
       parsesTo "1 + 2 + 3" $ \case
-        Add _ (Add _ _ _) _ -> True
-        _                   -> False
+        Add _ (Add {}) _ -> True
+        _                -> False
 
   , testCase "mul is left-associative" $
       parsesTo "2 * 3 * 4" $ \case
-        Mul _ (Mul _ _ _) _ -> True
-        _                   -> False
+        Mul _ (Mul {}) _ -> True
+        _                -> False
 
   , testCase "sub is left-associative" $
       parsesTo "5 - 2 - 1" $ \case
-        Sub _ (Sub _ _ _) _ -> True
-        _                   -> False
+        Sub _ (Sub {}) _ -> True
+        _                -> False
 
   , testCase "and binds tighter than or" $
       parsesTo "true && false || true" $ \case
-        Or _ (And _ _ _) _ -> True
-        _                  -> False
+        Or _ (And {}) _ -> True
+        _               -> False
 
   , testCase "comp binds tighter than and" $
       parsesTo "1 < 2 && 3 > 4" $ \case
-        And _ (Lt _ _ _) (Gt _ _ _) -> True
-        _                            -> False
+        And _ (Lt {}) (Gt {}) -> True
+        _                     -> False
 
   , testCase "add binds tighter than comp" $
       parsesTo "1 + 2 < 3 + 4" $ \case
-        Lt _ (Add _ _ _) (Add _ _ _) -> True
-        _                             -> False
+        Lt _ (Add {}) (Add {}) -> True
+        _                      -> False
 
   , testCase "parentheses override mul/add" $
       parsesTo "(1 + 2) * 3" $ \case
-        Mul _ (Add _ _ _) _ -> True
-        _                   -> False
+        Mul _ (Add {}) _ -> True
+        _                -> False
 
   , testCase "let body extends as far as possible" $
       parsesTo "let x = 1 in x + 2" $ \case
-        Let _ _ _ (Add _ _ _) -> True
-        _                     -> False
+        Let _ _ _ (Add {}) -> True
+        _                  -> False
 
   , testCase "lambda body extends as far as possible" $
       parsesTo "\\x -> x + 1" $ \case
-        Lambda _ _ (Add _ _ _) -> True
-        _                      -> False
+        Lambda _ _ (Add {}) -> True
+        _                   -> False
   ]
 
 -- ---------------------------------------------------------------------------

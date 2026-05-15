@@ -53,7 +53,7 @@ run :: Text -> Either ExecutionError Value
 run = execute emptyStore defaultCfg 0
 
 runAt :: Flat Double -> Word64 -> Text -> Either ExecutionError Value
-runAt store t = execute store defaultCfg t
+runAt store = execute store defaultCfg
 
 assertScalar :: Double -> Either ExecutionError Value -> Assertion
 assertScalar expected (Right (Scalar actual)) = actual @?= expected

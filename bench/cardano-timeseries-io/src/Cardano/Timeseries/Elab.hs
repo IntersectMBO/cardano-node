@@ -189,7 +189,7 @@ data St = St {
 }
 
 initialSt :: Set MetricIdentifier -> St
-initialSt ms = St mempty 0 ms
+initialSt = St mempty 0
 
 updateDefs :: (Defs -> Defs) -> St -> St
 updateDefs f (St ds x ms) = St (f ds) x ms
