@@ -125,8 +125,8 @@ prettyBinaryArithmeticOpElabProblem (BinaryArithmeticOpElabProblem gam loc _ lhs
     <> "\n  @ "
     <> asText loc
 
-evalBinaryArithmethicOpElabProblem :: Defs -> BinaryArithmeticOpElabProblem -> BinaryArithmeticOpElabProblem
-evalBinaryArithmethicOpElabProblem defs (BinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy) =
+evalBinaryArithmeticOpElabProblem :: Defs -> BinaryArithmeticOpElabProblem -> BinaryArithmeticOpElabProblem
+evalBinaryArithmeticOpElabProblem defs (BinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy) =
   BinaryArithmeticOpElabProblem
     (resolveContext defs gam)
     loc
@@ -178,7 +178,7 @@ instance AsText ElabProblem where
 evalElabProblem :: Defs -> ElabProblem -> ElabProblem
 evalElabProblem defs (General p) = General (evalGeneralElabProblem defs p)
 evalElabProblem defs (BinaryRelation p) = BinaryRelation (evalBinaryRelationElabProblem defs p)
-evalElabProblem defs (BinaryArithmeticOp p) = BinaryArithmeticOp (evalBinaryArithmethicOpElabProblem defs p)
+evalElabProblem defs (BinaryArithmeticOp p) = BinaryArithmeticOp (evalBinaryArithmeticOpElabProblem defs p)
 evalElabProblem defs (ToScalar p) = ToScalar (evalToScalarElabProblem defs p)
 
 
@@ -490,8 +490,8 @@ solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeti
     , [BinaryArithmeticOp $
         BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp]
     )
-solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs _ hole Scalar = do
-  pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc lhsTy Scalar],
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole Scalar = do
+  pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc rhsTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole holeTy = do
   pure $ Just ([UnificationProblem loc holeTy Scalar],
@@ -576,7 +576,7 @@ solveGeneralElabProblem gam (mbBinaryRelation -> Just (l, a, r, b)) x typ = do
           typ
   pure ([], [e1, e2, e3])
 solveGeneralElabProblem _ (Surface.Metrics l) x typ = do
-  let u = UnificationProblem l typ Types.Text
+  let u = UnificationProblem l typ (Types.List Types.Text)
   modify (updateDefs $ instantiateExpr x Semantic.Metrics)
   pure ([u], [])
 solveGeneralElabProblem _ (Surface.Number l f) x typ = do
@@ -921,6 +921,10 @@ solveGeneralElabProblem gam (Surface.ToScalar l t) h hty = do
         ,
          ToScalar $ ToScalarElabProblem gam l (Semantic.Hole th) (Hole tTy) h
         ])
+solveGeneralElabProblem _ (Surface.Str l s) x typ = do
+  let u = UnificationProblem l typ Types.Text
+  modify (updateDefs $ instantiateExpr x (Semantic.Str (Text.unpack s)))
+  pure ([u], [])
 solveGeneralElabProblem _ s _ _ = throwError $
   "Do not know how to elaborate: " <> showT s
 

@@ -31,6 +31,7 @@ data Ty = InstantVector Ty
         | RangeVector Ty
         | Scalar
         | Text
+        | List Ty
         | Bool
         | Pair Ty Ty
         | Unit
@@ -60,6 +61,8 @@ prettyTy _ Bool = "Bool"
 prettyTy _ Timestamp = "Timestamp"
 prettyTy _ Duration = "Duration"
 prettyTy _ Text = "Text"
+prettyTy prec (List typ) = conditionalParens (prec == Tight) $
+  "List " <> prettyTy Tight typ
 prettyTy _ (Hole idx) = "?" <> showT idx
 
 -- | A context entry of a typing context.

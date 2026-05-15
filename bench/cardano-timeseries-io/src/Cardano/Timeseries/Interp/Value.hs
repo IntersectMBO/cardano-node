@@ -12,6 +12,7 @@ import           Control.DeepSeq (NFData)
 import           Data.Text (unpack, Text)
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
+import           Numeric (showFFloat)
 
 type FunctionValue = Value -> InterpM Value
 
@@ -47,7 +48,7 @@ data Value where
 instance NFData Value
 
 instance Show Value where
-  show (Scalar x)        = show x
+  show (Scalar x)        = showFFloat Nothing x ""
   show (RangeVector x)   = unpack (asText x)
   show (InstantVector x) = unpack (asText x)
   show (Pair x y)        = "(" <> show x <> ", " <> show y <> ")"

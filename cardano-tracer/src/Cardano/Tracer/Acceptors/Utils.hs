@@ -43,11 +43,11 @@ import           System.Metrics.ReqResp
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore,
                    storeMetrics)
 
-import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
-import qualified Data.Text.Read as Text
-import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
-import qualified Data.Text as T
-import Control.Arrow (first)
+import           Control.Arrow                  (first)
+import           Data.Char                      (isAsciiLower, isAsciiUpper, isDigit)
+import qualified Data.Text                      as T
+import qualified Data.Text.Read                 as Text
+import           Trace.Forward.Utils.DataPoint  (DataPointRequestor, initDataPointRequestor)
 
 prepareDataPointRequestor
   :: Show addr

@@ -44,6 +44,7 @@ import           Data.Maybe (fromMaybe)
 import           Data.Set (Set, isSubsetOf, member)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word (Word64)
 
 import           Statistics.Function (minMax)
@@ -98,14 +99,17 @@ interpMap f = traverse (traverse f)
 
 interpRate :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpRate v = do
-  min <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachOldest v)
-  max <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachNewest v)
-  pure $ zipWith compute min max where
+  mins <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachOldest v)
+  maxs <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachNewest v)
+  traverse (uncurry compute) (zip mins maxs) where
 
-  compute :: Instant Double -> Instant Double -> Instant Double
-  compute min max =
-    let x = (max.value - min.value) / fromIntegral (max.timestamp - min.timestamp) in
-    Instant min.labels max.timestamp x
+  compute :: Instant Double -> Instant Double -> InterpM (Instant Double)
+  compute minI maxI
+    | minI.timestamp == maxI.timestamp =
+        throwInterpError "rate: single-point timeseries has undefined rate (zero time span)"
+    | otherwise =
+        let x = (maxI.value - minI.value) / fromIntegral (maxI.timestamp - minI.timestamp)
+        in pure $ Instant minI.labels maxI.timestamp x
 
 interpIncrease :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpIncrease v = liftEither $ do
@@ -299,13 +303,19 @@ interp cfg store env (Increase r_) now = do
   pure (Value.InstantVector (fmap (fmap Value.Scalar) r'))
 interp cfg store env (Avg expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ mean (Instant.toVector v)
+  if null v
+    then throwInterpError "avg: empty instant vector"
+    else pure $ Value.Scalar $ mean (Instant.toVector v)
 interp cfg store env (Max expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ snd $ minMax (Instant.toVector v)
+  if null v
+    then throwInterpError "max: empty instant vector"
+    else pure $ Value.Scalar $ snd $ minMax (Instant.toVector v)
 interp cfg store env (Min expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ fst $ minMax (Instant.toVector v)
+  if null v
+    then throwInterpError "min: empty instant vector"
+    else pure $ Value.Scalar $ fst $ minMax (Instant.toVector v)
 interp cfg store env (AvgOverTime expr) now = do
   v <- interp cfg store env expr now >>= expectRangeVectorScalar
   pure $ Value.InstantVector (fmap Value.Scalar <$> avgOverTime now v)
@@ -393,4 +403,5 @@ interp cfg store env (Expr.AddDuration a_ b_) now = do
   pure (Value.Duration (a + b))
 interp cfg store env (mbBinaryRelationInstantVector -> Just (v, rel, k)) now =
   interpFilterBinaryRelation cfg store env v rel k now
+interp _ _ _ (Expr.Str s) _ = pure (Value.Text (Text.pack s))
 interp _ _ _ expr _ = throwInterpError $ "Can't interpret expression: " <> showT expr

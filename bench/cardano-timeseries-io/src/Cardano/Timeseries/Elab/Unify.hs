@@ -80,6 +80,7 @@ occursNu _ Bool               = pure False
 occursNu _ Timestamp          = pure False
 occursNu _ Duration           = pure False
 occursNu _ Text               = pure False
+occursNu x (List ty)          = occursNu x ty
 occursNu x (Hole x')          = pure (x == x')
 
 unify :: Loc -> Ty -> Ty -> UnifyM [UnificationProblem]

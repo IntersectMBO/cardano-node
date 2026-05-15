@@ -13,9 +13,8 @@ import qualified Data.Map.Strict    as Map
 import qualified Data.Set           as Set
 import qualified Data.Vector        as V
 
-import           Cardano.Timeseries.AsText (showT)
-
 import           Data.Text          (Text)
+import qualified Data.Text          as Text
 
 import           Cardano.Timeseries.Domain.Types        (SeriesIdentifier)
 import           Cardano.Timeseries.Domain.Instant      (Instant (..))
@@ -31,13 +30,13 @@ labelsJson si = A.toJSON (Map.fromList (Set.toList si))
 instance (A.ToJSON a, Show a) => A.ToJSON (Instant a) where
   toJSON (Instant ls ts val) = A.object
     [ "metric" A..= labelsJson ls
-    , "value"  A..= A.Array (V.fromList [A.toJSON (fromIntegral ts / 1000.0 :: Double), A.String (showT val)])
+    , "value"  A..= A.Array (V.fromList [A.toJSON (fromIntegral ts / 1000.0 :: Double), A.String (Text.pack (show val))])
     ]
 
 instance (A.ToJSON a, Show a) => A.ToJSON (Timeseries a) where
   toJSON (Timeseries ls ps) = A.object
     [ "metric" A..= labelsJson ls
-    , "values" A..= map (\(t, v) -> A.Array (V.fromList [A.toJSON (fromIntegral t / 1000.0 :: Double), A.String (showT v)])) ps
+    , "values" A..= map (\(t, v) -> A.Array (V.fromList [A.toJSON (fromIntegral t / 1000.0 :: Double), A.String (Text.pack (show v))])) ps
     ]
 
 instance A.ToJSON Value where

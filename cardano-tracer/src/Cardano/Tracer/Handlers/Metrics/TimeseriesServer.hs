@@ -177,7 +177,7 @@ runTimeseriesServer :: TracerEnv -> Endpoint -> TimeseriesHandle -> IO ()
 runTimeseriesServer tracerEnv endpoint handle = do
 
   -- Pause to prevent collision between "Listening"-notifications from servers.
-  sleep 0.1
+  sleep 0.2
 
   traceWith tracerEnv.teTracer TracerStartedTimeseries
     { ttTimeseriesEndpoint = endpoint
@@ -192,7 +192,7 @@ runTimeseriesServer tracerEnv endpoint handle = do
       tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
 
     inputSanCfg = InputSanitationConfig {
-        minimumRetentionMillis = truncate (fromMaybe 1000 tracerEnv.teConfig.ekgRequestFreq)
+        minimumRetentionMillis = round (fromMaybe 1.0 tracerEnv.teConfig.ekgRequestFreq * 1000)
       , minimumPruningPeriodMillis = 1
     }
 

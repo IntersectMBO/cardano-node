@@ -24,6 +24,7 @@ resolveTy _ Timestamp = Timestamp
 resolveTy _ Duration = Duration
 resolveTy _ Bool = Bool
 resolveTy _ Text = Text
+resolveTy defs (List typ) = List (resolveTy defs typ)
 
 -- | Computes the head-normal form of `Binding` w.r.t. hole resolution
 --   (i.e. unfolds holes recursively up to the head expression in type of the binding).
