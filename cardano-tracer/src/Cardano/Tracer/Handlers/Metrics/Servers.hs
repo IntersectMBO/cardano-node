@@ -45,11 +45,10 @@ runMetricsServers tracerEnv = do
   servers = catMaybes
     [ runPrometheusServer tracerEnv <$> hasPrometheus
     , runMonitoringServer tracerEnv <$> hasEKG
-    , const <$> (runTimeseriesServer teTracer cfg <$> hasTimeseries <*> teTimeseriesHandle)
+    , const <$> (runTimeseriesServer tracerEnv <$> hasTimeseries <*> teTimeseriesHandle)
     ]
 
   TracerEnv
-    { teConfig = cfg@TracerConfig { hasPrometheus, hasEKG, hasTimeseries },
-      teTracer,
+    { teConfig = TracerConfig { hasPrometheus, hasEKG, hasTimeseries },
       teTimeseriesHandle
     } = tracerEnv
