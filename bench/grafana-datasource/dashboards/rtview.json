@@ -897,10 +897,14 @@
         },
         "query": "nodes",
         "refresh": 2,
-        "multi": false,
-        "includeAll": false,
+        "multi": true,
+        "includeAll": true,
         "sort": 0,
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "options": [],
         "hide": 0,
         "skipUrlSync": false
