@@ -463,7 +463,7 @@ EOF
            local service_pid=$(supervisorctl pid $node)
            if   test $service_pid = '0'
            then continue
-           elif test -z "$(ps h --ppid $service_pid)" ## Any children?
+           elif test -z "$(pgrep -P $service_pid)" ## Any children?
            then local pid=$service_pid ## <-=^^^ none, in case we're running executables directly.
                 ## ..otherwise, it's a chain of children, e.g.: time -> cabal -> cardano-node
            else local pid=$(grep -e "[=-] $(printf %05d $service_pid) " -A5 "$pstree" |
