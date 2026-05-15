@@ -31,18 +31,48 @@ export type Value =
   | { resultType: 'cons'; head: Value; tail: Value }
   | { resultType: 'function' };
 
-export interface CardanoTimeseriesQuery extends DataQuery {
-  queryText: string;
-}
-
-export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
-  queryText: '',
-};
-
 export interface QueryResponse {
   status: 'success';
   data: Value;
 }
+
+// NodeInfo JSON shape — field names match Haskell record selectors
+export interface NodeInfoResponse {
+  niName: string;
+  niProtocol: string;
+  niVersion: string;
+  niCommit: string;
+  niStartTime: string;       // ISO8601
+  niSystemStartTime: string; // ISO8601
+  uptimeSeconds: number;
+}
+
+// NodeStartupInfo JSON shape
+export interface NodeStartupInfoResponse {
+  suiEra: string;
+  suiSlotLength: number;       // seconds
+  suiEpochLength: number;
+  suiSlotsPerKESPeriod: number;
+}
+
+// /timeseries/node/{id}/state response
+export interface NodeStateResponse {
+  syncProgress: number; // percentage 0–100
+}
+
+export type QueryType = 'timeseries' | 'nodes' | 'node-info' | 'node-startup' | 'node-state';
+
+export interface CardanoTimeseriesQuery extends DataQuery {
+  queryType: QueryType;
+  queryText: string;
+  nodeId: string;
+}
+
+export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
+  queryType: 'timeseries',
+  queryText: '',
+  nodeId: '',
+};
 
 // No custom jsonData fields — the server URL is the standard Grafana datasource URL field.
 export type CardanoTimeseriesOptions = DataSourceJsonData;

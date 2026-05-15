@@ -5,10 +5,20 @@ import {
   DataQueryResponse,
   DataSourceApi,
   DataSourceInstanceSettings,
+  FieldType,
+  MetricFindValue,
+  toDataFrame,
 } from '@grafana/data';
 import { FetchResponse, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 
-import { CardanoTimeseriesQuery, CardanoTimeseriesOptions, QueryResponse } from './types';
+import {
+  CardanoTimeseriesQuery,
+  CardanoTimeseriesOptions,
+  NodeInfoResponse,
+  NodeStartupInfoResponse,
+  NodeStateResponse,
+  QueryResponse,
+} from './types';
 import { valueToDataFrames } from './toDataFrames';
 
 export class CardanoTimeseriesDatasource extends DataSourceApi<
@@ -25,7 +35,7 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
   }
 
   async query(options: DataQueryRequest<CardanoTimeseriesQuery>): Promise<DataQueryResponse> {
-    const active = options.targets.filter((t) => !t.hide && t.queryText?.trim());
+    const active = options.targets.filter((t) => !t.hide);
 
     const frames: DataFrame[] = [];
     let error: DataQueryError | undefined;
@@ -37,12 +47,37 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     const to = options.range.to.valueOf();
 
     for (const target of active) {
-      const preProcessed = target.queryText
-        .replace(/\$__from/g, `epoch + ${from}ms`)
-        .replace(/\$__to/g,   `epoch + ${to}ms`);
-      const interpolated = getTemplateSrv().replace(preProcessed, options.scopedVars);
+      const queryType = target.queryType ?? 'timeseries';
       try {
-        frames.push(...(await this.runQuery(interpolated)));
+        switch (queryType) {
+          case 'timeseries': {
+            if (!target.queryText?.trim()) { continue; }
+            const preProcessed = target.queryText
+              .replace(/\$__from/g, `epoch + ${from}ms`)
+              .replace(/\$__to/g,   `epoch + ${to}ms`);
+            const interpolated = getTemplateSrv().replace(preProcessed, options.scopedVars);
+            frames.push(...(await this.runQuery(interpolated)));
+            break;
+          }
+          case 'nodes':
+            frames.push(...(await this.fetchNodes()));
+            break;
+          case 'node-info': {
+            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeInfo(nid)));
+            break;
+          }
+          case 'node-startup': {
+            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeStartup(nid)));
+            break;
+          }
+          case 'node-state': {
+            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeState(nid)));
+            break;
+          }
+        }
       } catch (err: any) {
         error = err;
         break;
@@ -76,6 +111,82 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
       };
       throw error;
     }
+  }
+
+  // Generic GET helper. Returns null on 404, throws DataQueryError for other failures.
+  private async fetchJson<T>(path: string): Promise<T | null> {
+    try {
+      const response = await (getBackendSrv()
+        .fetch<T>({ url: `${this.baseUrl}${path}`, method: 'GET' }) as any
+      ).toPromise() as FetchResponse<T>;
+      return response.data;
+    } catch (err: any) {
+      if (err?.status === 404) { return null; }
+      const msg = err?.data?.message ?? err?.message ?? 'Request failed';
+      const error: DataQueryError = { message: msg, status: err?.status };
+      throw error;
+    }
+  }
+
+  private async fetchNodes(): Promise<DataFrame[]> {
+    const nodeIds = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
+    return [toDataFrame({
+      name: 'nodes',
+      fields: [{ name: 'Node ID', type: FieldType.string, values: nodeIds }],
+    })];
+  }
+
+  private async fetchNodeInfo(nodeId: string): Promise<DataFrame[]> {
+    const ni = await this.fetchJson<NodeInfoResponse>(
+      `/timeseries/node/${encodeURIComponent(nodeId)}/info`
+    );
+    if (!ni) { return []; }
+    return [toDataFrame({
+      name: 'node-info',
+      fields: [
+        { name: 'Name',              type: FieldType.string, values: [ni.niName] },
+        { name: 'Protocol',          type: FieldType.string, values: [ni.niProtocol] },
+        { name: 'Version',           type: FieldType.string, values: [ni.niVersion] },
+        { name: 'Commit',            type: FieldType.string, values: [ni.niCommit.slice(0, 7)] },
+        { name: 'Start Time',        type: FieldType.string, values: [ni.niStartTime] },
+        { name: 'System Start Time', type: FieldType.string, values: [ni.niSystemStartTime] },
+        { name: 'Uptime',            type: FieldType.number, values: [ni.uptimeSeconds] },
+      ],
+    })];
+  }
+
+  private async fetchNodeStartup(nodeId: string): Promise<DataFrame[]> {
+    const nsi = await this.fetchJson<NodeStartupInfoResponse>(
+      `/timeseries/node/${encodeURIComponent(nodeId)}/startup`
+    );
+    if (!nsi) { return []; }
+    return [toDataFrame({
+      name: 'node-startup',
+      fields: [
+        { name: 'Era',               type: FieldType.string, values: [nsi.suiEra] },
+        { name: 'Slot Length (s)',   type: FieldType.number, values: [nsi.suiSlotLength] },
+        { name: 'Epoch Length',      type: FieldType.number, values: [nsi.suiEpochLength] },
+        { name: 'KES Period Length', type: FieldType.number, values: [nsi.suiSlotsPerKESPeriod] },
+      ],
+    })];
+  }
+
+  private async fetchNodeState(nodeId: string): Promise<DataFrame[]> {
+    const ns = await this.fetchJson<NodeStateResponse>(
+      `/timeseries/node/${encodeURIComponent(nodeId)}/state`
+    );
+    if (!ns) { return []; }
+    return [toDataFrame({
+      name: 'node-state',
+      fields: [
+        { name: 'Sync Progress (%)', type: FieldType.number, values: [ns.syncProgress] },
+      ],
+    })];
+  }
+
+  async metricFindQuery(_query: string): Promise<MetricFindValue[]> {
+    const nodeIds = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
+    return nodeIds.map((id) => ({ text: id, value: id }));
   }
 
   async testDatasource() {

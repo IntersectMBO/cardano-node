@@ -4,159 +4,907 @@
   "schemaVersion": 38,
   "version": 1,
   "refresh": "15s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "panels": [
-
-    { "id": 1, "type": "row", "title": "Resources",
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Node",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 101,
+      "type": "table",
+      "title": "Connected Nodes",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 9
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "nodes",
+          "queryText": "",
+          "nodeId": "",
+          "datasource": {
+            "type": "iog-cardanotimeseries-datasource",
+            "uid": "cardano-timeseries"
+          }
+        }
+      ],
+      "options": {
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 102,
+      "type": "table",
+      "title": "Node Info \u2014 $node_id",
+      "repeat": "node_id",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 10,
+        "h": 4
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "node-info",
+          "queryText": "",
+          "nodeId": "$node_id",
+          "datasource": {
+            "type": "iog-cardanotimeseries-datasource",
+            "uid": "cardano-timeseries"
+          }
+        }
+      ],
+      "options": {
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 103,
+      "type": "table",
+      "title": "Startup \u2014 $node_id",
+      "repeat": "node_id",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "gridPos": {
+        "x": 4,
+        "y": 5,
+        "w": 10,
+        "h": 4
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "node-startup",
+          "queryText": "",
+          "nodeId": "$node_id",
+          "datasource": {
+            "type": "iog-cardanotimeseries-datasource",
+            "uid": "cardano-timeseries"
+          }
+        }
+      ],
+      "options": {
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Sync \u2014 $node_id",
+      "repeat": "node_id",
+      "repeatDirection": "h",
+      "maxPerRow": 6,
+      "gridPos": {
+        "x": 4,
+        "y": 9,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "node-state",
+          "queryText": "",
+          "nodeId": "$node_id",
+          "datasource": {
+            "type": "iog-cardanotimeseries-datasource",
+            "uid": "cardano-timeseries"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Resources",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
-
-    { "id": 2, "type": "timeseries", "title": "Memory — resident",
-      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Mem_resident_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "bytes" } } },
-
-    { "id": 3, "type": "timeseries", "title": "CPU usage — process ticks",
-      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Stat_cputicks_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 4, "type": "timeseries", "title": "RTS threads",
-      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_threads_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 5, "type": "timeseries", "title": "GC — live bytes in heap",
-      "gridPos": { "x": 0, "y": 9, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_gcLiveBytes_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "bytes" } } },
-
-    { "id": 6, "type": "timeseries", "title": "GC — major collections",
-      "gridPos": { "x": 8, "y": 9, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_gcMajorNum_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 7, "type": "timeseries", "title": "GC — minor collections",
-      "gridPos": { "x": 16, "y": 9, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_gcMinorNum_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 8, "type": "timeseries", "title": "CPU ticks — GC",
-      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_gcticks_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 9, "type": "timeseries", "title": "CPU ticks — mutator (app)",
-      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_RTS_mutticks_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-
-    { "id": 10, "type": "row", "title": "Blockchain",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Memory \u2014 resident",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Mem_resident_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "CPU usage \u2014 process ticks",
+      "gridPos": {
+        "x": 8,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Stat_cputicks_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "RTS threads",
+      "gridPos": {
+        "x": 16,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_threads_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "GC \u2014 live bytes in heap",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_gcLiveBytes_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "GC \u2014 major collections",
+      "gridPos": {
+        "x": 8,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_gcMajorNum_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "GC \u2014 minor collections",
+      "gridPos": {
+        "x": 16,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_gcMinorNum_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "CPU ticks \u2014 GC",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_gcticks_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "CPU ticks \u2014 mutator (app)",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_RTS_mutticks_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Blockchain",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 1 } },
-
-    { "id": 11, "type": "timeseries", "title": "Chain density",
-      "gridPos": { "x": 0, "y": 26, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_density_real[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "percentunit" } } },
-
-    { "id": 12, "type": "timeseries", "title": "Slot height",
-      "gridPos": { "x": 8, "y": 26, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_slotNum_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 13, "type": "timeseries", "title": "Block height",
-      "gridPos": { "x": 16, "y": 26, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_blockNum_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 14, "type": "timeseries", "title": "Slot in epoch",
-      "gridPos": { "x": 0, "y": 34, "w": 12, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_slotInEpoch_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 15, "type": "timeseries", "title": "Epoch",
-      "gridPos": { "x": 12, "y": 34, "w": 12, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_epoch_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-
-    { "id": 16, "type": "row", "title": "Leadership",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Chain density",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_density_real[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Slot height",
+      "gridPos": {
+        "x": 8,
+        "y": 30,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_slotNum_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Block height",
+      "gridPos": {
+        "x": 16,
+        "y": 30,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_blockNum_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Slot in epoch",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_slotInEpoch_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Epoch",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_epoch_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Leadership",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 42, "w": 24, "h": 1 } },
-
-    { "id": 17, "type": "timeseries", "title": "Node is leader (counter)",
-      "gridPos": { "x": 0, "y": 43, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Forge_node_is_leader_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 18, "type": "timeseries", "title": "Node not leader (counter)",
-      "gridPos": { "x": 8, "y": 43, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Forge_node_not_leader_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 19, "type": "timeseries", "title": "About to lead (counter)",
-      "gridPos": { "x": 16, "y": 43, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Forge_about_to_lead_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 20, "type": "timeseries", "title": "Blocks forged (counter)",
-      "gridPos": { "x": 0, "y": 51, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Forge_forged_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 21, "type": "timeseries", "title": "Blocks adopted (counter)",
-      "gridPos": { "x": 8, "y": 51, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_Forge_adopted_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 22, "type": "timeseries", "title": "Cannot forge (gauge)",
-      "gridPos": { "x": 16, "y": 51, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_nodeCannotForge_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-
-    { "id": 23, "type": "row", "title": "Transactions",
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Node is leader (counter)",
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Forge_node_is_leader_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Node not leader (counter)",
+      "gridPos": {
+        "x": 8,
+        "y": 47,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Forge_node_not_leader_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "About to lead (counter)",
+      "gridPos": {
+        "x": 16,
+        "y": 47,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Forge_about_to_lead_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Blocks forged (counter)",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Forge_forged_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Blocks adopted (counter)",
+      "gridPos": {
+        "x": 8,
+        "y": 55,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_Forge_adopted_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Cannot forge (gauge)",
+      "gridPos": {
+        "x": 16,
+        "y": 55,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_nodeCannotForge_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "row",
+      "title": "Transactions",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 59, "w": 24, "h": 1 } },
-
-    { "id": 24, "type": "timeseries", "title": "Txs in mempool",
-      "gridPos": { "x": 0, "y": 60, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_txsInMempool_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } },
-
-    { "id": 25, "type": "timeseries", "title": "Mempool size",
-      "gridPos": { "x": 8, "y": 60, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_mempoolBytes_int[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "bytes" } } },
-
-    { "id": 26, "type": "timeseries", "title": "Processed txs (counter)",
-      "gridPos": { "x": 16, "y": 60, "w": 8, "h": 8 },
-      "datasource": { "type": "iog-cardanotimeseries-datasource", "uid": "cardano-timeseries" },
-      "targets": [{ "refId": "A", "queryText": "cardano_node_metrics_txsProcessedNum_counter[$__from; $__to : $__interval]" }],
-      "fieldConfig": { "defaults": { "unit": "short" } } }
-
-  ]
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Txs in mempool",
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_txsInMempool_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Mempool size",
+      "gridPos": {
+        "x": 8,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_mempoolBytes_int[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Processed txs (counter)",
+      "gridPos": {
+        "x": 16,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "cardano_node_metrics_txsProcessedNum_counter[$__from; $__to : $__interval]"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Uptime \u2014 $node_id",
+      "repeat": "node_id",
+      "repeatDirection": "h",
+      "maxPerRow": 6,
+      "gridPos": {
+        "x": 4,
+        "y": 12,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "type": "iog-cardanotimeseries-datasource",
+        "uid": "cardano-timeseries"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "node-info",
+          "queryText": "",
+          "nodeId": "$node_id",
+          "datasource": {
+            "type": "iog-cardanotimeseries-datasource",
+            "uid": "cardano-timeseries"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Uptime$/",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "node_id",
+        "label": "Node",
+        "type": "query",
+        "datasource": {
+          "type": "iog-cardanotimeseries-datasource",
+          "uid": "cardano-timeseries"
+        },
+        "query": "nodes",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false,
+        "sort": 0,
+        "current": {},
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  }
 }
