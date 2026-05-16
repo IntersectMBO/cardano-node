@@ -31,6 +31,7 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..))
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -203,6 +204,9 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+       -- Leios
+       , ncLeiosDbConfig :: LeiosDbConfig
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -301,6 +305,9 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+       -- Leios
+       , pncLeiosDbConfig :: !(Last LeiosDbConfig)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -420,6 +427,8 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncLeiosDbConfig <- Last <$> v .:? "LeiosDbConfig"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -465,6 +474,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncLeiosDbConfig
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -701,6 +711,7 @@ defaultPartialNodeConfiguration =
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+    , pncLeiosDbConfig = Last (Just (LeiosDbSQLite "leios.db"))
     }
   where
     PeerSelectionTargets {
@@ -860,6 +871,11 @@ makeNodeConfiguration pnc = do
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
       pncExperimentalProtocolsEnabled pnc
+
+  ncLeiosDbConfig <-
+    lastToEither "Missing LeiosDbConfig"
+    $ pncLeiosDbConfig pnc
+
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -908,6 +924,7 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncLeiosDbConfig
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
