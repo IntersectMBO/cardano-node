@@ -35,6 +35,10 @@ instance LogFormatting TraceRpc where
                   [ "queryName" .= String "ReadUtxos"
                   , spanToObject s
                   ]
+                TraceRpcQuerySearchUtxosSpan s ->
+                  [ "queryName" .= String "SearchUtxos"
+                  , spanToObject s
+                  ]
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
@@ -63,6 +67,7 @@ instance MetaTrace TraceRpc where
           : case queryTrace of
             TraceRpcQueryParamsSpan _ -> ["ReadParams", "Span"]
             TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
+            TraceRpcQuerySearchUtxosSpan _ -> ["SearchUtxos", "Span"]
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of

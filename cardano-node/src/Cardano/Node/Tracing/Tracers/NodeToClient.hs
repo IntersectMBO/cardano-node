@@ -17,6 +17,8 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Tracing ()
+import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (ObjectDiffusion)
+import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as OD
 
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (Text, pack)
@@ -464,5 +466,74 @@ instance MetaTrace (Stateful.AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))
       , Namespace [] ["Result"]
       , Namespace [] ["Release"]
       , Namespace [] ["ReAcquire"]
+      , Namespace [] ["Done"]
+      ]
+
+-- --------------------------------------------------------------------------------
+-- -- TObjectDiffusion Tracer
+-- --------------------------------------------------------------------------------
+
+instance LogFormatting (Simple.AnyMessage (ObjectDiffusion objectId object)) where
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgInit {}) =
+     mconcat [ "kind" .= String "MsgInit"
+              , "agency" .= String (pack $ show stok)
+              ]
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgRequestObjectIds {}) =
+     mconcat [ "kind" .= String "MsgRequestObjectIds"
+              , "agency" .= String (pack $ show stok)
+              ]
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgReplyObjectIds {}) =
+     mconcat [ "kind" .= String "MsgReplyObjectIds"
+              , "agency" .= String (pack $ show stok)
+              ]
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgRequestObjects {}) =
+     mconcat [ "kind" .= String "MsgRequestObjects"
+              , "agency" .= String (pack $ show stok)
+              ]
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgReplyObjects {}) =
+     mconcat [ "kind" .= String "MsgReplyObjects"
+              , "agency" .= String (pack $ show stok)
+              ]
+   forMachine _dtal (Simple.AnyMessageAndAgency stok OD.MsgDone {}) =
+     mconcat [ "kind" .= String "MsgDone"
+              , "agency" .= String (pack $ show stok)
+              ]
+
+instance MetaTrace (Simple.AnyMessage (ObjectDiffusion objectId object)) where
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgInit {}) =
+      Namespace [] ["Init"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgRequestObjectIds {}) =
+      Namespace [] ["RequestObjectIds"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgReplyObjectIds {}) =
+      Namespace [] ["ReplyObjectIds"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgRequestObjects {}) =
+      Namespace [] ["RequestObjects"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgReplyObjects {}) =
+      Namespace [] ["ReplyObjects"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency OD.MsgDone {}) =
+      Namespace [] ["Done"]
+
+    severityFor (Namespace [] ["Init"]) _ = Just Info
+    severityFor (Namespace [] ["RequestObjectIds"]) _ = Just Info
+    severityFor (Namespace [] ["ReplyObjectIds"]) _ = Just Info
+    severityFor (Namespace [] ["RequestObjects"]) _ = Just Info
+    severityFor (Namespace [] ["ReplyObjects"]) _ = Just Info
+    severityFor (Namespace [] ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace [] ["Init"]) = Just ""
+    documentFor (Namespace [] ["RequestObjectIds"]) = Just ""
+    documentFor (Namespace [] ["ReplyObjectIds"]) = Just ""
+    documentFor (Namespace [] ["RequestObjects"]) = Just ""
+    documentFor (Namespace [] ["ReplyObjects"]) = Just ""
+    documentFor (Namespace [] ["Done"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces =
+      [ Namespace [] ["Init"]
+      , Namespace [] ["RequestObjectIds"]
+      , Namespace [] ["ReplyObjectIds"]
+      , Namespace [] ["RequestObjects"]
+      , Namespace [] ["ReplyObjects"]
       , Namespace [] ["Done"]
       ]

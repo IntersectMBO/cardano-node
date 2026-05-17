@@ -99,6 +99,8 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (TraceObjectDiffusionInbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound (..))
 
 
 {- HLINT ignore "Use const" -}
@@ -145,6 +147,75 @@ instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
   hashSize :: proxy (HeaderWithTime blk) -> Word32
   hashSize _ = hashSize (Proxy @blk)
 
+instance HasPrivacyAnnotation (TraceObjectDiffusionInbound objectId object)
+instance HasSeverityAnnotation (TraceObjectDiffusionInbound objectId object) where
+  getSeverityAnnotation _ = Info
+
+instance ToObject (TraceObjectDiffusionInbound objectId object) where
+  toObject _ (TraceObjectDiffusionInboundCollectedObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCollectedObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionInboundAddedObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundAddedObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionInboundRecvControlMessage payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundRecvControlMessage"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionInboundCanRequestMoreObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCanRequestMoreObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionInboundCannotRequestMoreObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCannotRequestMoreObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+
+instance (ToObject peer, ToObject (TraceObjectDiffusionInbound objectId object))
+    => Transformable Text IO (TraceLabelPeer peer (TraceObjectDiffusionInbound objectId object)) where
+  trTransformer = trStructured
+
+instance HasPrivacyAnnotation (TraceObjectDiffusionOutbound objectId object)
+instance HasSeverityAnnotation (TraceObjectDiffusionOutbound objectId object) where
+  getSeverityAnnotation _ = Info
+
+instance (Show objectId, Show object) => ToObject (TraceObjectDiffusionOutbound objectId object) where
+  toObject _ (TraceObjectDiffusionOutboundRecvMsgRequestObjectIds payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionOutboundSendMsgReplyObjectIds payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjectIds"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionOutboundRecvMsgRequestObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionOutboundSendMsgReplyObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjects"
+      , "payload" .= String (pack . show $ payload)
+      ]
+  toObject _ (TraceObjectDiffusionOutboundTerminated) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundTerminated"
+      ]
+
+instance (ToObject peer, ToObject (TraceObjectDiffusionOutbound objectId object))
+    => Transformable Text IO (TraceLabelPeer peer (TraceObjectDiffusionOutbound objectId object)) where
+  trTransformer = trStructured
+
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
 --
@@ -181,6 +252,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
       LedgerDB.TookSnapshot {} -> Info
       LedgerDB.DeletedSnapshot {} -> Debug
+      LedgerDB.SnapshotRequestDelayed {} -> Debug
+      LedgerDB.SnapshotRequestCompleted {} -> Info
       LedgerDB.InvalidSnapshot _ invalidWhy -> case invalidWhy of
         LedgerDB.InitFailureRead (LedgerDB.ReadMetadataError _ LedgerDB.MetadataBackendMismatch) -> Warning
         LedgerDB.InitFailureRead (LedgerDB.ReadMetadataError _ LedgerDB.MetadataFileDoesNotExist) -> Warning
@@ -255,6 +328,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
 
   getSeverityAnnotation ChainDB.TracePerasCertDbEvent{} = Info
+  getSeverityAnnotation ChainDB.TracePerasVoteDbEvent{} = Info
   getSeverityAnnotation ChainDB.TraceAddPerasCertEvent{} = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
@@ -602,6 +676,8 @@ instance ( ConvertRawHash blk
 
       ChainDB.TraceLedgerDBEvent ev -> case ev of
         LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
+          LedgerDB.SnapshotRequestDelayed {} -> "SnapshotRequestDelayed"
+          LedgerDB.SnapshotRequestCompleted {} -> "SnapshotRequestCompleted"
           LedgerDB.InvalidSnapshot snap failure ->
             "Invalid snapshot " <> showT snap <> showT failure <> context
             where
@@ -795,6 +871,7 @@ instance ( ConvertRawHash blk
         ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
         ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
       ChainDB.TracePerasCertDbEvent ev -> showT ev
+      ChainDB.TracePerasVoteDbEvent ev -> showT ev
       ChainDB.TraceAddPerasCertEvent ev -> showT ev
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
@@ -1083,6 +1160,10 @@ instance ( ConvertRawHash blk
     mconcat [ "kind" .= String "TracePerasCertDbEvent"
             , "event" .= show ev
             ]
+  toObject _verb (ChainDB.TracePerasVoteDbEvent ev) =
+    mconcat [ "kind" .= String "TracePerasVoteDbEvent"
+            , "event" .= show ev
+            ]
   toObject _verb (ChainDB.TraceAddPerasCertEvent ev) =
     mconcat [ "kind" .= String "TraceAddPerasCertEvent"
             , "event" .= show ev
@@ -1091,6 +1172,10 @@ instance ( ConvertRawHash blk
   toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
     LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
+      LedgerDB.SnapshotRequestDelayed {} ->
+        "kind" .= String "TraceSnapshotEvent.SnapshotRequestDelayed"
+      LedgerDB.SnapshotRequestCompleted ->
+        "kind" .= String "TraceSnapshotEvent.SnapshotRequestCompleted"
       LedgerDB.TookSnapshot snap pt enclosedTiming ->
         mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                  , "snapshot" .= toObject verb snap

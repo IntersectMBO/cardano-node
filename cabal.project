@@ -51,6 +51,16 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-resources
   trace-forward
+  ouroboros-consensus
+  ouroboros-network/ouroboros-network
+  ouroboros-network/cardano-diffusion
+  ouroboros-network/cardano-ping
+  ouroboros-network/monoidal-synchronisation
+  ouroboros-network/network-mux
+  ekg-forward
+  hermod-tracing/trace-dispatcher
+  cardano-api/cardano-api
+  cardano-api/cardano-rpc
 
 -- Needed when cross compiling
 extra-packages: alex, dmq-node >= 0.4.2.0

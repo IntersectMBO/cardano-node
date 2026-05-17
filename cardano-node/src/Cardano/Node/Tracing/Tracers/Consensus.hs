@@ -84,6 +84,8 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (TraceObjectDiffusionInbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound (..))
 
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
@@ -1038,6 +1040,7 @@ instance ( HasHeader blk
 instance MetaTrace SanityCheckIssue where
 
   namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
+  namespaceFor _ = Namespace [] ["SanityCheckIssue"]
 
   severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
   severityFor _ _ = Nothing
@@ -1052,8 +1055,12 @@ instance LogFormatting SanityCheckIssue where
     mconcat [ "kind" .= String "InconsistentSecurityParam"
             , "error" .= String (Text.pack $ show e)
             ]
+  forMachine _ _ =
+    mconcat [ "kind" .= String "SnapshotIssue"
+            ]
   forHuman (InconsistentSecurityParam e) =
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
+  forHuman _ = "SnapshotIssue"
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
@@ -2305,3 +2312,128 @@ instance MetaTrace KESAgentClientTrace where
   allNamespaces =
     Namespace [] ["KESAgentClientException"] :
     fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])
+
+--------------------------------------------------------------------------------
+-- Peras
+--------------------------------------------------------------------------------
+
+-- TODO: Move this to a proper place. A lot of this is duplicated in the
+--       ToObject instance. This is likely in an incorrect place. Fix
+--       duplication.
+instance LogFormatting (TraceObjectDiffusionInbound objectId object) where
+  forMachine _ (TraceObjectDiffusionInboundCollectedObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCollectedObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionInboundAddedObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundAddedObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionInboundRecvControlMessage payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundRecvControlMessage"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionInboundCanRequestMoreObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCanRequestMoreObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionInboundCannotRequestMoreObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCannotRequestMoreObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+
+instance MetaTrace (TraceObjectDiffusionInbound objectId object) where
+  namespaceFor (TraceObjectDiffusionInboundCollectedObjects _) =
+    Namespace [] ["TraceObjectDiffusionInboundCollectedObjects"]
+  namespaceFor (TraceObjectDiffusionInboundAddedObjects _) =
+    Namespace [] ["TraceObjectDiffusionInboundAddedObjects"]
+  namespaceFor (TraceObjectDiffusionInboundRecvControlMessage _) =
+    Namespace [] ["TraceObjectDiffusionInboundRecvControlMessage"]
+  namespaceFor (TraceObjectDiffusionInboundCanRequestMoreObjects _) =
+    Namespace [] ["TraceObjectDiffusionInboundCanRequestMoreObjects"]
+  namespaceFor (TraceObjectDiffusionInboundCannotRequestMoreObjects _) =
+    Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
+
+  severityFor (Namespace [] ["TraceObjectDiffusionInboundCollectedObjects"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionInboundAddedObjects"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionInboundRecvControlMessage"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionInboundCanRequestMoreObjects"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["TraceObjectDiffusionInboundCollectedObjects"]
+    , Namespace [] ["TraceObjectDiffusionInboundAddedObjects"]
+    , Namespace [] ["TraceObjectDiffusionInboundRecvControlMessage"]
+    , Namespace [] ["TraceObjectDiffusionInboundCanRequestMoreObjects"]
+    , Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
+    ]
+
+instance
+  ( Show objectId
+  , Show object
+  ) =>
+  LogFormatting (TraceObjectDiffusionOutbound objectId object)
+  where
+  forMachine _ (TraceObjectDiffusionOutboundRecvMsgRequestObjectIds payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionOutboundSendMsgReplyObjectIds payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjectIds"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionOutboundRecvMsgRequestObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ (TraceObjectDiffusionOutboundSendMsgReplyObjects payload) =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  forMachine _ TraceObjectDiffusionOutboundTerminated =
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundTerminated"
+      ]
+
+
+instance MetaTrace (TraceObjectDiffusionOutbound objectId object) where
+  namespaceFor (TraceObjectDiffusionOutboundRecvMsgRequestObjectIds _) =
+    Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"]
+  namespaceFor (TraceObjectDiffusionOutboundSendMsgReplyObjectIds _) =
+    Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"]
+  namespaceFor (TraceObjectDiffusionOutboundRecvMsgRequestObjects _) =
+    Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"]
+  namespaceFor (TraceObjectDiffusionOutboundSendMsgReplyObjects _) =
+    Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjects"]
+  namespaceFor TraceObjectDiffusionOutboundTerminated =
+    Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
+
+
+  severityFor (Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjects"]) _ = Just Info
+  severityFor (Namespace [] ["TraceObjectDiffusionOutboundTerminated"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"]
+    , Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"]
+    , Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"]
+    , Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjects"]
+    , Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
+    ]

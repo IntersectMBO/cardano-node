@@ -505,6 +505,10 @@ mkTracers _ _ _ _ _ =
       , Consensus.kesAgentTracer = nullTracer
       , Consensus.txLogicTracer = nullTracer
       , Consensus.txCountersTracer = nullTracer
+      , Consensus.perasCertDiffusionInboundTracer = nullTracer
+      , Consensus.perasCertDiffusionOutboundTracer = nullTracer
+      , Consensus.perasVoteDiffusionInboundTracer = nullTracer
+      , Consensus.perasVoteDiffusionOutboundTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -521,6 +525,8 @@ mkTracers _ _ _ _ _ =
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
       , NodeToNode.tTxLogicTracer = nullTracer
+      , NodeToNode.tPerasCertDiffusionTracer = nullTracer
+      , NodeToNode.tPerasVoteDiffusionTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , churnModeTracer = nullTracer
@@ -769,7 +775,7 @@ mkConsensusTracers
      , ToObject (ApplyTxErr blk)
      , ToObject (CannotForge blk)
      , ToObject (GenTx blk)
-     , ToObject (LedgerErr (LedgerState blk))
+     , ToObject (LedgerErr LedgerState blk)
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
@@ -802,7 +808,15 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF5s <- STM.newTVarIO $ CdfCounter 0
   pure Consensus.Tracers
-    { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
+    { Consensus.perasCertDiffusionInboundTracer =
+        annotateSeverity . toLogObject' verb $ appendName "PerasCertDiffusionInbound" tr
+    , Consensus.perasCertDiffusionOutboundTracer =
+        annotateSeverity . toLogObject' verb $ appendName "perasCertDiffusionOutbound" tr
+    , Consensus.perasVoteDiffusionInboundTracer =
+        annotateSeverity . toLogObject' verb $ appendName "PerasVoteDiffusionInbound" tr
+    , Consensus.perasVoteDiffusionOutboundTracer =
+        annotateSeverity . toLogObject' verb $ appendName "perasVoteDiffusionOutbound" tr
+    , Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
            tracerOnOff' (traceChainSyncHeaderServer trSel)
                         (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
@@ -1118,7 +1132,7 @@ teeForge ::
   forall blk
   . ( Consensus.RunNode blk
      , ToObject (CannotForge blk)
-     , ToObject (LedgerErr (LedgerState blk))
+     , ToObject (LedgerErr LedgerState blk)
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
@@ -1205,7 +1219,7 @@ forgeTracer
   :: forall blk.
      ( Consensus.RunNode blk
      , ToObject (CannotForge blk)
-     , ToObject (LedgerErr (LedgerState blk))
+     , ToObject (LedgerErr LedgerState blk)
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
@@ -1496,6 +1510,7 @@ nodeToClientTracers' trSel verb tr =
 -- NodeToNode Tracers
 --------------------------------------------------------------------------------
 
+-- TODO: Guard Peras tracers with a flag
 nodeToNodeTracers'
   :: ( Consensus.RunNode blk
      , ConvertTxId blk
@@ -1510,7 +1525,11 @@ nodeToNodeTracers'
   -> NodeToNode.Tracers IO addr blk DeserialiseFailure
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer =
+  { NodeToNode.tPerasCertDiffusionTracer =
+      annotateSeverity . toLogObject' verb $ appendName "PerasCertDiffusion" tr
+  , NodeToNode.tPerasVoteDiffusionTracer =
+      annotateSeverity . toLogObject' verb $ appendName "PerasVoteDiffusion" tr
+  , NodeToNode.tChainSyncTracer =
       tracerOnOff (traceChainSyncProtocol trSel)
                   verb "ChainSyncProtocol" tr
   , NodeToNode.tChainSyncSerialisedTracer =
