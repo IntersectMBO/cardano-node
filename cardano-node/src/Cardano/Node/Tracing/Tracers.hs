@@ -354,6 +354,13 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !txCountersTracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["txCounters", "Remote"]
+
+    !txPerasCertIn <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Inbound"]
+    !txPerasCertOut <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Outbound"]
+    !txPerasVoteIn <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Inbound"]
+    !txPerasVoteOut <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Outbound"]
+
+
     configureTracers configReflection trConfig [txCountersTracer]
 
     pure $ Consensus.Tracers
@@ -408,6 +415,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = Tracer $
           traceWith txCountersTracer
+      , Consensus.perasCertDiffusionInboundTracer = Tracer $ traceWith txPerasCertIn
+      , Consensus.perasCertDiffusionOutboundTracer = Tracer $ traceWith txPerasCertOut
+      , Consensus.perasVoteDiffusionInboundTracer = Tracer $ traceWith txPerasVoteIn
+      , Consensus.perasVoteDiffusionOutboundTracer = Tracer $ traceWith txPerasVoteOut
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -505,6 +516,10 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
     !txLogicTracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["txLogic", "Remote"]
+
+    !txPerasCertDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Inbound"]
+    !txPerasVoteDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Inbound"]
+
     configureTracers configReflection trConfig [txLogicTracer]
 
     pure $ NtN.Tracers
@@ -524,6 +539,10 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith peerSharingTracer
       , NtN.tTxLogicTracer = Tracer $
           traceWith txLogicTracer
+      , NtN.tPerasCertDiffusionTracer = Tracer $
+          traceWith txPerasCertDiffusion
+      , NtN.tPerasVoteDiffusionTracer = Tracer $
+          traceWith txPerasVoteDiffusion
       }
 
 mkDiffusionTracers ::

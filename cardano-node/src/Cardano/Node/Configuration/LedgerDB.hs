@@ -31,6 +31,8 @@ import           Data.Proxy
 import           System.FilePath
 import           System.Random (StdGen)
 
+import Ouroboros.Consensus.Ledger.Basics (LedgerState)
+
 -- | Choose the LedgerDB Backend
 --
 -- As of UTxO-HD, the LedgerDB now uses either an in-memory backend or LMDB to
@@ -73,8 +75,7 @@ noDeprecatedOptions = DeprecatedOptions []
 
 data LedgerDbConfiguration =
     LedgerDbConfiguration
-      NumOfDiskSnapshots
-      SnapshotInterval
+      SnapshotPolicyArgs
       QueryBatchSize
       LedgerDbSelectorFlag
       DeprecatedOptions
@@ -139,10 +140,16 @@ defaultLMDBLimits = LMDB.LMDBLimits {
 defaultLMDBPath :: FilePath -> FilePath
 defaultLMDBPath = (</> "lmdb")
 
-selectorToArgs :: forall blk. (LedgerSupportsProtocol blk, LedgerSupportsLedgerDB blk) => LedgerDbSelectorFlag -> FilePath -> StdGen -> (LedgerDbBackendArgs IO blk, StdGen)
+selectorToArgs ::
+    forall blk.
+    ( LedgerSupportsProtocol blk
+    , LedgerDbSerialiseConstraints blk
+    , CanUpgradeLedgerTables LedgerState blk
+    ) => LedgerDbSelectorFlag -> FilePath -> StdGen -> (LedgerDbBackendArgs IO blk, StdGen)
 selectorToArgs V2InMemory _ = InMemory.mkInMemoryArgs
 selectorToArgs (V1LMDB ff fp l mxReaders) fastStoragePath =
     LMDB.mkLMDBArgs
+        (Proxy @blk)
         ff
         (fromMaybe (defaultLMDBPath fastStoragePath) fp)
         ( maybe id (\overrideMaxReaders lim -> lim{LMDB.lmdbMaxReaders = overrideMaxReaders}) mxReaders $

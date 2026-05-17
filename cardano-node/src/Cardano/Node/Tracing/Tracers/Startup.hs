@@ -512,6 +512,7 @@ nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
   NodeToNodeV_14 -> 14
   NodeToNodeV_15 -> 15
+  NodeToNodeV_16 -> 16
 
 -- | Pretty print 'StartupInfoTrace'
 --
