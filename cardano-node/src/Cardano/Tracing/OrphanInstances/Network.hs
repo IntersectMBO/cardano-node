@@ -89,6 +89,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.Tx (HasRawTxId)
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (ProcessedTxCount (..),
                    TraceTxLogic (..), TraceTxSubmissionInbound (..),
                    TxSubmissionCounters (..))
@@ -682,10 +683,10 @@ instance Show addr
       => HasTextFormatter (Server.RemoteTransitionTrace addr) where
   formatText a _ = pack (show a)
 
-instance (Show txid, Show tx, Show addr)
+instance (Show txid, Show tx, Show addr, HasRawTxId tx)
       => Transformable Text IO (TraceTxLogic txid tx addr) where
   trTransformer = trStructuredText
-instance (Show txid, Show tx)
+instance (Show txid, Show tx, HasRawTxId tx)
       => HasTextFormatter (TraceTxLogic txid tx addr) where
   formatText a _ = pack (show a)
 
@@ -694,10 +695,10 @@ instance Transformable Text IO TxSubmissionCounters where
 instance HasTextFormatter TxSubmissionCounters where
   formatText a _ = pack (show a)
 
-instance (Show txid, Show tx, Show addr, Show peer, ToObject peer)
+instance (Show txid, Show tx, Show addr, Show peer, ToObject peer, HasRawTxId tx)
       => Transformable Text IO (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
   trTransformer = trStructuredText
-instance (Show txid, Show tx, Show peer)
+instance (Show txid, Show tx, Show peer, HasRawTxId tx)
       => HasTextFormatter (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
   formatText a _ = pack (show a)
 
@@ -2344,7 +2345,7 @@ instance ToObject DNSTrace where
 instance HasPrivacyAnnotation (TraceTxLogic txid tx addr) where
 instance HasSeverityAnnotation (TraceTxLogic txid tx addr) where
   getSeverityAnnotation _ = Debug
-instance (Show txid, Show tx, Show addr) => ToObject (TraceTxLogic txid tx addr) where
+instance (Show txid, Show tx, Show addr, HasRawTxId tx) => ToObject (TraceTxLogic txid tx addr) where
 
 instance HasPrivacyAnnotation TxSubmissionCounters where
 instance HasSeverityAnnotation TxSubmissionCounters where

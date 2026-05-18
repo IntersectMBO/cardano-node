@@ -91,16 +91,16 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: d6bf4515a78bef29d865ee2d4d203fbb9844e5c3
+  tag: fdbd89bb050e39887137f8fa729ebf9200145da4
   subdir:
     ouroboros-network
-  --sha256: sha256-d3rIiwGX7vPJaE8KoX3DIzu/IrwB7DmDwxyhEFK3F0w=
+  --sha256: sha256-obh+Qc+ftuiHMw/ZLsBwyXb/wEKv9pcEE8LL6bzxHAE=
 
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-consensus.git
-  tag: 425b43f6a12dadf7c3ea25798f0ec0eb34cf5913
-  --sha256: sha256-Ps0z3Lq2lD9WiJta8SLsF/4fcBSFu//cBboYF6UlXRQ=
+  tag: 5220fc777bc74fc8ee004b36d61ae35c8ee592a0
+  --sha256: sha256-kVz+cTlhkog6iAu5juXEsTQZmq1BogtQWqx1vkLmGAs=
 
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
