@@ -110,9 +110,11 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
+  -- Codecs gained two type params for LeiosNotify (bLN) and LeiosFetch (bLF)
+  -- via the Leios chunks; they are unused on the tx-generator initiator path.
   myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-                ByteString
+                ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
@@ -170,14 +172,14 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     => NodeToNodeVersion
     -> remotePeer
     -> Channel IO ByteString
-    -> IO ((), Maybe ByteString)
+    -> IO ((), Maybe (Mux.Reception ByteString))
   kaClient _version them channel = do
     keepAliveRng <- newStdGen
     peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
     runPeerWithLimits
       mempty
       (cKeepAliveCodec myCodecs)
-      (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
+      byteLimitsKeepAlive
       timeLimitsKeepAlive
       channel
       $ keepAliveClientPeer
