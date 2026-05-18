@@ -97,6 +97,12 @@ import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
+                   TraceLeiosKernel, TraceLeiosPeer)
+import           Network.TypedProtocol.Codec (AnyMessage)
+
 import qualified Codec.CBOR.Term as CBOR
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
@@ -207,6 +213,10 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
         dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DevotedBlockFetch"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
+        leiosKernelNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "LeiosKernel"])
+                        (allNamespaces :: [Namespace TraceLeiosKernel])
+        leiosPeerNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "LeiosPeer"])
+                        (allNamespaces :: [Namespace TraceLeiosPeer])
 
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
@@ -263,6 +273,14 @@ getAllNamespaces =
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
                                       (TxSubmission2 (GenTxId blk) (GenTx blk))))])
+        leiosNotifyNS = map (nsGetTuple . nsReplacePrefix
+                                        ["LeiosNotify", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote))])
+        leiosFetchNS = map (nsGetTuple . nsReplacePrefix
+                                        ["LeiosFetch", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))])
 
 -- Diffusion
 
@@ -414,6 +432,8 @@ getAllNamespaces =
             <> gsmNS
             <> csjNS
             <> dbfNS
+            <> leiosKernelNS
+            <> leiosPeerNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS
@@ -426,6 +446,8 @@ getAllNamespaces =
             <> blockFetchNS
             <> blockFetchSerialisedNS
             <> txSubmission2NS
+            <> leiosNotifyNS
+            <> leiosFetchNS
 -- Diffusion
             <> dtMuxNS
             <> dtMuxBearerNS

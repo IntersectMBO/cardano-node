@@ -505,6 +505,8 @@ mkTracers _ _ _ _ _ =
       , Consensus.kesAgentTracer = nullTracer
       , Consensus.txLogicTracer = nullTracer
       , Consensus.txCountersTracer = nullTracer
+      , Consensus.leiosKernelTracer = nullTracer
+      , Consensus.leiosPeerTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -521,6 +523,8 @@ mkTracers _ _ _ _ _ =
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
       , NodeToNode.tTxLogicTracer = nullTracer
+      , NodeToNode.tLeiosNotifyTracer = nullTracer
+      , NodeToNode.tLeiosFetchTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , churnModeTracer = nullTracer
@@ -862,6 +866,10 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.kesAgentTracer = tracerOnOff (traceKesAgent trSel) verb "kesAgent" tr
     , Consensus.txLogicTracer = tracerOnOff (traceTxLogic trSel) verb "txLogic" tr
     , Consensus.txCountersTracer = tracerOnOff (traceTxCounters trSel) verb "txCounters" tr
+    -- TODO: 'Transformable Text IO TraceLeiosKernel' / 'TraceLeiosPeer' not yet
+    -- ported to the old-style tracing path. Wire as real tracers once available.
+    , Consensus.leiosKernelTracer = nullTracer
+    , Consensus.leiosPeerTracer = nullTracer
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1534,6 +1542,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tTxLogicTracer =
       tracerOnOff (traceTxLogic trSel)
                   verb "TxLogicTracer" tr
+  -- TODO: old-style tracing for LeiosNotify/LeiosFetch protocols not yet ported.
+  , NodeToNode.tLeiosNotifyTracer = nullTracer
+  , NodeToNode.tLeiosFetchTracer = nullTracer
   }
 
 -- TODO @ouroboros-network
