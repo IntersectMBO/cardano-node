@@ -103,7 +103,6 @@ import           Control.Exception (Exception (..))
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Default.Class as DefaultClass
 import           Data.Ratio

@@ -12,6 +12,7 @@ import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
+import           Cardano.Node.Tracing.Tracers.HasIssuer (HasIssuer)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
 import           Cardano.Protocol.Crypto (StandardCrypto)
@@ -43,6 +44,7 @@ type TraceConstraints blk =
     , HasKESInfo blk
     , GetKESInfo blk
     , RunNode blk
+    , HasIssuer blk
 
     , ToJSON (HeaderHash blk)
 

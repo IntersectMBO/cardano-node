@@ -33,6 +33,7 @@ import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicR
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -41,6 +42,7 @@ import           Cardano.Node.Tracing.NodeInfo ()
 import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
+import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
@@ -57,6 +59,7 @@ import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
@@ -70,6 +73,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.GSM (TraceGsmEvent)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -172,10 +176,6 @@ parseTraceDocumentationCmd =
 instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
 
-instance ToJSON PeerTrustable where
-  toJSON IsTrustable = Bool True
-  toJSON IsNotTrustable = Bool False
-
 instance ToJSON (PublicRootPeers extraPeers addr) where
   toJSON _ = String "PublicRootPeers"
 
@@ -268,6 +268,14 @@ docTracersFirstPhase condConfigFileName = do
                 ["Shutdown"]
     configureTracers configReflection trConfig  [shutdownTr]
     shutdownTrDoc <- documentTracer (shutdownTr :: Logging.Trace IO ShutdownTrace)
+
+    chainDBTr <- mkCardanoTracer'
+                trBase trForward mbTrEKG
+                ["ChainDB"]
+                withAddedToCurrentChainEmptyLimited
+    configureTracers configReflection trConfig [chainDBTr]
+    chainDBTrDoc <- documentTracer (chainDBTr ::
+                      Logging.Trace IO (ChainDB.TraceEvent blk))
 
     replayBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -407,6 +415,13 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [consensusStartupErrorTr]
     consensusStartupErrorTrDoc <- documentTracer (consensusStartupErrorTr ::
       Logging.Trace IO ConsensusStartupException)
+
+    consensusGddTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [consensusGddTr]
+    consensusGddTrDoc <- documentTracer (consensusGddTr ::
+      Logging.Trace IO (TraceGDDEvent peer blk))
 
     consensusGsmTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -702,6 +717,7 @@ docTracersFirstPhase condConfigFileName = do
             <> startupTrDoc
             <> shutdownTrDoc
             <> nodeVersionDoc
+            <> chainDBTrDoc
             <> replayBlockTrDoc
 -- Consensus
             <> chainSyncClientTrDoc
@@ -721,6 +737,7 @@ docTracersFirstPhase condConfigFileName = do
             <> blockchainTimeTrDoc
             <> consensusSanityCheckTrDoc
             <> consensusStartupErrorTrDoc
+            <> consensusGddTrDoc
             <> consensusGsmTrDoc
             <> consensusCsjTrDoc
             <> consensusDbfTrDoc

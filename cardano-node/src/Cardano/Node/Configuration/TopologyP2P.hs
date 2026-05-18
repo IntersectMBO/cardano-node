@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
@@ -32,7 +33,7 @@ import           Ouroboros.Network.Diffusion.Topology
                    RootConfig (..))
 import           Ouroboros.Network.DiffusionMode (DiffusionMode (..))
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
-import           Ouroboros.Network.OrphanInstances ()
+import           Ouroboros.Network.OrphanInstances (networkTopologyToJSON)
 import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    LedgerPeersKind (..), UseLedgerPeers (..), isLedgerPeersEnabled)
@@ -89,6 +90,19 @@ instance FromJSON (NetworkTopology UseBootstrapPeers PeerTrustable) where
       <*> v .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers
       <*> v .:? "peerSnapshotFile"
       <*> v .:? "bootstrapPeers" .!= DontUseBootstrapPeers
+
+instance ToJSON PeerTrustable where
+  toJSON IsTrustable    = Bool True
+  toJSON IsNotTrustable = Bool False
+
+instance ToJSON (NetworkTopology UseBootstrapPeers PeerTrustable) where
+  toJSON = networkTopologyToJSON
+    (\case
+      DontUseBootstrapPeers   -> Nothing
+      UseBootstrapPeers peers -> Just ("bootstrapPeers", toJSON peers))
+    (\case
+      IsTrustable    -> Just ("trustable", Bool True)
+      IsNotTrustable -> Nothing)
 
 peerAdvertiseFromBool :: Bool -> PeerAdvertise
 peerAdvertiseFromBool True = DoAdvertisePeer

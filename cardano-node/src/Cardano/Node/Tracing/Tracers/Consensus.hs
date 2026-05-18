@@ -155,7 +155,7 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
 -- ChainSyncClient Tracer
 --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
   forHuman = \case
     TraceDownloadedHeader pt ->
@@ -234,7 +234,7 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceDownloadedHeader h ->
       mconcat
         [ "kind" .= String "DownloadedHeader"
-        , "header" .= String (showT $ headerPoint h)
+        , tipToObject (tipFromHeader h)
         ]
     TraceRolledBack tip ->
       mconcat
@@ -761,7 +761,7 @@ instance MetaTrace (FetchDecision [Point header]) where
 -- BlockFetchClientState Tracer
 --------------------------------------------------------------------------------
 
-instance HasHeader header =>
+instance (HasHeader header, ConvertRawHash header) =>
   LogFormatting (BlockFetch.TraceFetchClientState header) where
     forMachine _dtal BlockFetch.AddedFetchRequest {} =
       mconcat [ "kind" .= String "AddedFetchRequest" ]
@@ -770,6 +770,9 @@ instance HasHeader header =>
     forMachine dtal (BlockFetch.SendFetchRequest af gsv) =
       mconcat $
               [ "kind" .= String "SendFetchRequest"
+              , "head" .= String (renderChainHash
+                                  (renderHeaderHash (Proxy @header))
+                                  (AF.headHash af))
               , "length" .= toJSON (fragmentLength' af)]
               ++
               [ "deltaq" .= String (Text.pack $ show gsv) | dtal >= DDetailed ]
@@ -790,7 +793,7 @@ instance HasHeader header =>
               , "block" .= String
                 (case pt of
                   GenesisPoint -> "Genesis"
-                  BlockPoint slot _ -> "slot-" <> showT slot)
+                  BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
               ]
     forMachine _dtal BlockFetch.CompletedFetchBatch {} =
       mconcat [ "kind" .= String "CompletedFetchBatch" ]

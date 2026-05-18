@@ -41,6 +41,7 @@ import qualified Cardano.Api.Byron as Byron
 
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
+import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 

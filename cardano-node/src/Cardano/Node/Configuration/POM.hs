@@ -118,9 +118,6 @@ data NodeConfiguration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
 
-         -- Logging parameters:
-       , ncLoggingSwitch  :: !Bool
-       , ncLogMetrics     :: !Bool
        , ncTraceForwardSocket :: !(Maybe (HowToConnect, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
@@ -249,9 +246,6 @@ data PartialNodeConfiguration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
        , pncMaxConcurrencyDeadline :: !(Last MaxConcurrencyDeadline)
 
-         -- Logging parameters:
-       , pncLoggingSwitch  :: !(Last Bool)
-       , pncLogMetrics     :: !(Last Bool)
        , pncTraceForwardSocket :: !(Last (HowToConnect, ForwarderMode))
 
          -- Configuration for testing purposes
@@ -347,11 +341,6 @@ instance FromJSON PartialNodeConfiguration where
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
       pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
 
-      -- Logging parameters
-      pncLoggingSwitch'  <-                 v .:? "TurnOnLogging" .!= True
-      pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
-      _useTraceDispatcher :: Maybe Bool <- v .:? "UseTraceDispatcher"
-
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
@@ -438,8 +427,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics
            , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
@@ -680,7 +667,6 @@ defaultPartialNodeConfiguration =
   PartialNodeConfiguration
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
-    , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
@@ -692,7 +678,6 @@ defaultPartialNodeConfiguration =
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
-    , pncLogMetrics = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -786,8 +771,6 @@ makeNodeConfiguration pnc = do
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
-  loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
-  logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -941,8 +924,6 @@ makeNodeConfiguration pnc = do
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
-             , ncLoggingSwitch = loggingSwitch
-             , ncLogMetrics = logMetrics
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncLedgerDbConfig

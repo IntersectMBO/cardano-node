@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -11,7 +12,7 @@ module Cardano.Node.Tracing.Formatting
 
 import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
-import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint, realPointHash,
+import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, RealPoint, realPointHash,
                    realPointSlot)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -19,6 +20,13 @@ import           Ouroboros.Network.Block
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
+
+-- | Derives ConvertRawHash for Header blk from ConvertRawHash blk.
+-- Safe because HeaderHash (Header blk) = HeaderHash blk.
+instance ConvertRawHash blk => ConvertRawHash (Header blk) where
+  toShortRawHash   _ = toShortRawHash   (Proxy @blk)
+  fromShortRawHash _ = fromShortRawHash (Proxy @blk)
+  hashSize         _ = hashSize         (Proxy @blk)
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are
