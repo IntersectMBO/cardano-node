@@ -199,6 +199,10 @@ type TraceChurnMode = ("TraceChurnMode" :: Symbol)
 type TraceDNS = ("TraceDNS" :: Symbol)
 type TraceTxLogic = ("TraceTxLogic" :: Symbol)
 type TraceTxCounters = ("TraceTxCounters" :: Symbol)
+type TraceLeiosKernel = ("TraceLeiosKernel" :: Symbol)
+type TraceLeiosPeer = ("TraceLeiosPeer" :: Symbol)
+type TraceLeiosNotifyProtocol = ("TraceLeiosNotifyProtocol" :: Symbol)
+type TraceLeiosFetchProtocol = ("TraceLeiosFetchProtocol" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -284,6 +288,10 @@ data TraceSelection
   , traceDNS :: OnOff TraceDNS
   , traceTxLogic :: OnOff TraceTxLogic
   , traceTxCounters :: OnOff TraceTxCounters
+  , traceLeiosKernel :: OnOff TraceLeiosKernel
+  , traceLeiosPeer :: OnOff TraceLeiosPeer
+  , traceLeiosNotifyProtocol :: OnOff TraceLeiosNotifyProtocol
+  , traceLeiosFetchProtocol :: OnOff TraceLeiosFetchProtocol
   } deriving (Eq, Show)
 
 
@@ -363,6 +371,10 @@ data PartialTraceSelection
       , pTraceKesAgent :: Last (OnOff TraceKesAgent)
       , pTraceTxLogic :: Last (OnOff TraceTxLogic)
       , pTraceTxCounters :: Last (OnOff TraceTxCounters)
+      , pTraceLeiosKernel :: Last (OnOff TraceLeiosKernel)
+      , pTraceLeiosPeer :: Last (OnOff TraceLeiosPeer)
+      , pTraceLeiosNotifyProtocol :: Last (OnOff TraceLeiosNotifyProtocol)
+      , pTraceLeiosFetchProtocol :: Last (OnOff TraceLeiosFetchProtocol)
       } deriving (Eq, Generic, Show)
 
 
@@ -443,6 +455,10 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceKesAgent) v
       <*> parseTracer (Proxy @TraceTxLogic) v
       <*> parseTracer (Proxy @TraceTxCounters) v
+      <*> parseTracer (Proxy @TraceLeiosKernel) v
+      <*> parseTracer (Proxy @TraceLeiosPeer) v
+      <*> parseTracer (Proxy @TraceLeiosNotifyProtocol) v
+      <*> parseTracer (Proxy @TraceLeiosFetchProtocol) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -520,6 +536,10 @@ defaultPartialTraceConfiguration =
     , pTraceKesAgent = pure $ OnOff False
     , pTraceTxLogic = pure $ OnOff False
     , pTraceTxCounters = pure $ OnOff False
+    , pTraceLeiosKernel = pure $ OnOff False
+    , pTraceLeiosPeer = pure $ OnOff False
+    , pTraceLeiosNotifyProtocol = pure $ OnOff False
+    , pTraceLeiosFetchProtocol = pure $ OnOff False
     }
 
 
@@ -599,6 +619,10 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
    traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
    traceTxCounters <- proxyLastToEither (Proxy @TraceTxCounters) pTraceTxCounters
+   traceLeiosKernel <- proxyLastToEither (Proxy @TraceLeiosKernel) pTraceLeiosKernel
+   traceLeiosPeer <- proxyLastToEither (Proxy @TraceLeiosPeer) pTraceLeiosPeer
+   traceLeiosNotifyProtocol <- proxyLastToEither (Proxy @TraceLeiosNotifyProtocol) pTraceLeiosNotifyProtocol
+   traceLeiosFetchProtocol <- proxyLastToEither (Proxy @TraceLeiosFetchProtocol) pTraceLeiosFetchProtocol
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -671,6 +695,10 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceKesAgent = traceKesAgent
              , traceTxLogic
              , traceTxCounters
+             , traceLeiosKernel
+             , traceLeiosPeer
+             , traceLeiosNotifyProtocol
+             , traceLeiosFetchProtocol
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -747,6 +775,10 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceDNS <- proxyLastToEither (Proxy @TraceDNS) pTraceDNS
   traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
   traceTxCounters <- proxyLastToEither (Proxy @TraceTxCounters) pTraceTxCounters
+  traceLeiosKernel <- proxyLastToEither (Proxy @TraceLeiosKernel) pTraceLeiosKernel
+  traceLeiosPeer <- proxyLastToEither (Proxy @TraceLeiosPeer) pTraceLeiosPeer
+  traceLeiosNotifyProtocol <- proxyLastToEither (Proxy @TraceLeiosNotifyProtocol) pTraceLeiosNotifyProtocol
+  traceLeiosFetchProtocol <- proxyLastToEither (Proxy @TraceLeiosFetchProtocol) pTraceLeiosFetchProtocol
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -819,6 +851,10 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceKesAgent = traceKesAgent
             , traceTxLogic
             , traceTxCounters
+            , traceLeiosKernel
+            , traceLeiosPeer
+            , traceLeiosNotifyProtocol
+            , traceLeiosFetchProtocol
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)

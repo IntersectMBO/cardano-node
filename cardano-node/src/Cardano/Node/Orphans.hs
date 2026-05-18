@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -16,9 +17,19 @@ import           Cardano.Api (FromCBOR (..), HasTextEnvelope (..), HasTypeProxy 
 import qualified Cardano.Crypto.KES.Class as Crypto
 import           Cardano.Protocol.Crypto (KES, StandardCrypto)
 import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock)
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
+import           Ouroboros.Consensus.Protocol.Praos (Praos)
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCredentialsSource (..))
+import           Ouroboros.Consensus.Protocol.TPraos (TPraos)
+import           Ouroboros.Consensus.Shelley.HFEras ()
+import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
+import           Ouroboros.Consensus.Storage.LedgerDB.Forker (ResolveLeiosBlock)
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag (..))
+import           Cardano.Ledger.Api.Era
+                   (AllegraEra, AlonzoEra, BabbageEra, ConwayEra,
+                   MaryEra, ShelleyEra)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson.Types
@@ -83,3 +94,14 @@ instance HasTextEnvelope (PraosCredentialsSource StandardCrypto) where
   textEnvelopeType _ =
     "PraosCredentialsSource_"
       <> fromString (Crypto.algorithmNameKES (Proxy @(KES StandardCrypto)))
+
+-- 'ResolveLeiosBlock' instances for the HFC-wrapped 'ByronBlock' and per-era
+-- 'ShelleyBlockHFC'. These use the class default (no-op resolution), since
+-- only the Cardano 'HardForkBlock' carries the Dijkstra-era EB closure splice.
+instance ResolveLeiosBlock (HardForkBlock '[ByronBlock])
+instance ResolveLeiosBlock (ShelleyBlockHFC (TPraos c) ShelleyEra)
+instance ResolveLeiosBlock (ShelleyBlockHFC (TPraos c) AllegraEra)
+instance ResolveLeiosBlock (ShelleyBlockHFC (TPraos c) MaryEra)
+instance ResolveLeiosBlock (ShelleyBlockHFC (TPraos c) AlonzoEra)
+instance ResolveLeiosBlock (ShelleyBlockHFC (Praos c) BabbageEra)
+instance ResolveLeiosBlock (ShelleyBlockHFC (Praos c) ConwayEra)

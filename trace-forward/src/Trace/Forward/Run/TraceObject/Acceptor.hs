@@ -68,7 +68,6 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
           acceptorTracer
           (Acceptor.codecTraceObjectForward CBOR.encode CBOR.decode
                                             CBOR.encode CBOR.decode)
-          (fromIntegral . LBS.length)
           channel
           (Acceptor.traceObjectAcceptorPeer $ acceptorActions config (loHandler ctx))
         `finally` peerErrorHandler ctx

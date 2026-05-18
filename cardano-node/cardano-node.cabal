@@ -138,7 +138,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.0
+                      , cardano-api ^>= 11.0 || ^>= 11.1
                       , cardano-data
                       , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
@@ -186,8 +186,8 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 3.0.1
-                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.1
+                      , ouroboros-consensus:{ouroboros-consensus, lmdb, lsm, cardano, diffusion, protocol} ^>= 3.0.1
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, framework-tracing, protocols, tracing} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion, orphan-instances, tracing} ^>=1.0
                       , prettyprinter
                       , prettyprinter-ansi-terminal

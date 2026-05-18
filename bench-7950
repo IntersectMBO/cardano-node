@@ -1,0 +1,511 @@
+Config file path source is default config file.
+Config file not found: /home/ch1bo/.config/cabal/config
+Writing default configuration to /home/ch1bo/.config/cabal/config
+Cloning into '/home/ch1bo/code/iog/cardano-node/dist-newstyle/src/ouroboros_-bc2ac5ad23a0916f'...
+HEAD is now at ed637941f Trace more information about EBs
+Cloning into '/home/ch1bo/code/iog/cardano-node/dist-newstyle/src/ouroboros_-88b17958106bd768'...
+HEAD is now at 479f0d0d8 leiosdemo202511: introduce BearerBytes class
+Warning: Caught exception during _mirrors lookup:DnsHostNotFound
+Warning: No mirrors found for https://chap.intersectmbo.org/
+Warning: The package list for 'hackage.haskell.org' does not exist. Run 'cabal
+update' to download it.
+Warning: Requested index-state 2025-06-03T08:07:10Z is newer than
+'hackage.haskell.org'! Falling back to older state ().
+Warning: The package list for 'cardano-haskell-packages' does not exist. Run
+'cabal update' to download it.
+Warning: Requested index-state 2025-07-17T12:00:21Z is newer than
+'cardano-haskell-packages'! Falling back to older state ().
+Resolving dependencies...
+Error: cabal: Could not resolve dependencies:
+[__0] unknown package: Cabal (user goal)
+[__0] fail (backjumping, conflict set: Cabal)
+After searching the rest of the dependency tree exhaustively, these were the
+goals I've had most trouble fulfilling: Cabal
+
+Command exited with non-zero status 1
+7.01user 2.35system 0:07.98elapsed 117%CPU (0avgtext+0avgdata 95456maxresident)k
+592inputs+378023outputs (8124major+193516minor)pagefaults 0swaps
+Resolving dependencies...
+Build profile: -w ghc-9.6.5 -O1
+In order, the following will be built (use -v for more details):
+ - cardano-binary-1.7.1.0 (lib) (requires download & build)
+ - monoidal-synchronisation-0.1.0.6 (lib) (requires build)
+ - plutus-core-1.45.0.0 (lib:index-envs) (requires download & build)
+ - plutus-core-1.45.0.0 (lib:satint) (requires download & build)
+ - vector-map-1.1.0.0 (lib) (requires download & build)
+ - cardano-strict-containers-0.1.4.0 (lib) (requires download & build)
+ - cardano-slotting-0.2.0.0 (lib) (requires download & build)
+ - network-mux-0.8.0.2 (lib) (requires build)
+ - vector-map-1.1.0.0 (lib:testlib) (requires download & build)
+ - small-steps-1.1.1.0 (lib) (requires download & build)
+ - fingertree-rm-1.0.0.4 (lib) (requires download & build)
+ - cardano-crypto-class-2.2.2.0 (lib) (requires download & build)
+ - cardano-slotting-0.2.0.0 (lib:testlib) (requires download & build)
+ - ouroboros-network-testing-0.8.1.0 (lib) (requires build)
+ - ouroboros-network-api-0.14.1.0 (lib) (requires build)
+ - plutus-core-1.45.0.0 (lib) (requires download & build)
+ - cardano-crypto-praos-2.2.1.0 (lib) (requires download & build)
+ - ouroboros-network-protocols-0.14.0.2 (lib) (requires build)
+ - ouroboros-network-mock-0.1.1.2 (lib) (requires build)
+ - ouroboros-network-framework-0.18.0.2 (lib) (requires build)
+ - plutus-core-1.45.0.0 (lib:plutus-ir) (requires download & build)
+ - cardano-crypto-tests-2.2.1.0 (lib) (requires download & build)
+ - trace-forward-2.2.11 (lib) (first run)
+ - ouroboros-network-0.21.3.0 (lib) (requires build)
+ - ekg-forward-0.9 (lib) (requires download & build)
+ - plutus-tx-1.45.0.0 (lib) (requires download & build)
+ - plutus-core-1.45.0.0 (lib:plutus-core-testlib) (requires download & build)
+ - trace-dispatcher-2.9.2 (lib) (first run)
+ - plutus-ledger-api-1.45.0.0 (lib) (requires download & build)
+ - trace-resources-0.2.3 (lib) (first run)
+ - plutus-ledger-api-1.45.0.0 (lib:plutus-ledger-api-testlib) (requires download & build)
+ - cardano-ledger-binary-1.6.0.0 (lib) (requires download & build)
+ - cardano-ledger-binary-1.6.0.0 (lib:testlib) (requires download & build)
+ - cardano-data-1.2.4.0 (lib) (requires download & build)
+ - cardano-crypto-wrapper-1.6.0.0 (lib) (requires download & build)
+ - small-steps-1.1.1.0 (lib:testlib) (requires download & build)
+ - set-algebra-1.1.0.3 (lib) (requires download & build)
+ - cardano-ledger-byron-1.1.0.0 (lib) (requires download & build)
+ - cardano-crypto-test-1.6.0.0 (lib) (requires download & build)
+ - byron-spec-ledger-1.1.0.0 (lib) (requires download & build)
+ - cardano-ledger-core-1.17.0.0 (lib) (requires download & build)
+ - byron-spec-chain-1.0.1.0 (lib) (requires download & build)
+ - ouroboros-consensus-0.27.0.0 (lib) (requires build)
+ - cardano-ledger-shelley-1.16.0.0 (lib) (requires download & build)
+ - cardano-ledger-byron-test-1.5.2.1 (lib) (requires download & build)
+ - ouroboros-consensus-diffusion-0.23.0.0 (lib) (requires build)
+ - cardano-ledger-allegra-1.7.0.0 (lib) (requires download & build)
+ - cardano-ledger-core-1.17.0.0 (lib:testlib) (requires download & build)
+ - cardano-ledger-mary-1.8.0.0 (lib) (requires download & build)
+ - cardano-ledger-alonzo-1.13.0.0 (lib) (requires download & build)
+ - cardano-ledger-babbage-1.11.0.0 (lib) (requires download & build)
+ - cardano-ledger-conway-1.19.0.0 (lib) (requires download & build)
+ - cardano-protocol-tpraos-1.4.0.0 (lib) (requires download & build)
+ - cardano-ledger-api-1.11.0.0 (lib) (requires download & build)
+ - ouroboros-consensus-protocol-0.12.0.0 (lib) (requires download & build)
+ - ouroboros-consensus-cardano-0.25.1.0 (lib) (requires build)
+ - cardano-api-10.16.3.0 (lib) (requires download & build)
+ - cardano-node-10.5.1 (lib) (first run)
+ - cardano-node-10.5.1 (exe:cardano-node) (first run)
+Downloading  cardano-binary-1.7.1.0
+Starting     monoidal-synchronisation-0.1.0.6 (lib)
+Downloaded   cardano-binary-1.7.1.0
+Downloading  plutus-core-1.45.0.0
+Starting     cardano-binary-1.7.1.0 (lib)
+Downloaded   plutus-core-1.45.0.0
+Downloading  cardano-slotting-0.2.0.0
+Starting     plutus-core-1.45.0.0 (lib:index-envs)
+Starting     plutus-core-1.45.0.0 (lib:satint)
+Downloaded   cardano-slotting-0.2.0.0
+Downloading  cardano-strict-containers-0.1.4.0
+Downloaded   cardano-strict-containers-0.1.4.0
+Downloading  fingertree-rm-1.0.0.4
+Building     monoidal-synchronisation-0.1.0.6 (lib)
+Downloaded   fingertree-rm-1.0.0.4
+Downloading  small-steps-1.1.1.0
+Building     cardano-binary-1.7.1.0 (lib)
+Downloaded   small-steps-1.1.1.0
+Downloading  vector-map-1.1.0.0
+Downloaded   vector-map-1.1.0.0
+Downloading  ekg-forward-0.9
+Starting     vector-map-1.1.0.0 (lib)
+Building     plutus-core-1.45.0.0 (lib:index-envs)
+Building     plutus-core-1.45.0.0 (lib:satint)
+Installing   monoidal-synchronisation-0.1.0.6 (lib)
+Downloaded   ekg-forward-0.9
+Downloading  cardano-crypto-class-2.2.2.0
+Downloaded   cardano-crypto-class-2.2.2.0
+Downloading  cardano-crypto-praos-2.2.1.0
+Downloaded   cardano-crypto-praos-2.2.1.0
+Downloading  plutus-tx-1.45.0.0
+Completed    monoidal-synchronisation-0.1.0.6 (lib)
+Starting     network-mux-0.8.0.2 (lib)
+Downloaded   plutus-tx-1.45.0.0
+Downloading  plutus-ledger-api-1.45.0.0
+Building     vector-map-1.1.0.0 (lib)
+Downloaded   plutus-ledger-api-1.45.0.0
+Downloading  cardano-crypto-tests-2.2.1.0
+Installing   plutus-core-1.45.0.0 (lib:satint)
+Downloaded   cardano-crypto-tests-2.2.1.0
+Downloading  cardano-ledger-binary-1.6.0.0
+Downloaded   cardano-ledger-binary-1.6.0.0
+Downloading  cardano-crypto-wrapper-1.6.0.0
+Installing   plutus-core-1.45.0.0 (lib:index-envs)
+Completed    plutus-core-1.45.0.0 (lib:satint)
+Downloaded   cardano-crypto-wrapper-1.6.0.0
+Downloading  cardano-data-1.2.4.0
+Building     network-mux-0.8.0.2 (lib)
+Downloaded   cardano-data-1.2.4.0
+Downloading  set-algebra-1.1.0.3
+Completed    plutus-core-1.45.0.0 (lib:index-envs)
+Downloaded   set-algebra-1.1.0.3
+Downloading  cardano-crypto-test-1.6.0.0
+Downloaded   cardano-crypto-test-1.6.0.0
+Downloading  byron-spec-ledger-1.1.0.0
+Downloaded   byron-spec-ledger-1.1.0.0
+Downloading  byron-spec-chain-1.0.1.0
+Downloaded   byron-spec-chain-1.0.1.0
+Downloading  cardano-ledger-byron-1.1.0.0
+Downloaded   cardano-ledger-byron-1.1.0.0
+Downloading  cardano-ledger-byron-test-1.5.2.1
+Downloaded   cardano-ledger-byron-test-1.5.2.1
+Downloading  cardano-ledger-core-1.17.0.0
+Installing   cardano-binary-1.7.1.0 (lib)
+Downloaded   cardano-ledger-core-1.17.0.0
+Downloading  cardano-ledger-shelley-1.16.0.0
+Downloaded   cardano-ledger-shelley-1.16.0.0
+Downloading  cardano-ledger-allegra-1.7.0.0
+Completed    cardano-binary-1.7.1.0 (lib)
+Starting     cardano-strict-containers-0.1.4.0 (lib)
+Starting     cardano-slotting-0.2.0.0 (lib)
+Downloaded   cardano-ledger-allegra-1.7.0.0
+Downloading  cardano-ledger-mary-1.8.0.0
+Downloaded   cardano-ledger-mary-1.8.0.0
+Downloading  cardano-ledger-alonzo-1.13.0.0
+Downloaded   cardano-ledger-alonzo-1.13.0.0
+Downloading  cardano-ledger-babbage-1.11.0.0
+Downloaded   cardano-ledger-babbage-1.11.0.0
+Downloading  cardano-ledger-conway-1.19.0.0
+Building     cardano-strict-containers-0.1.4.0 (lib)
+Building     cardano-slotting-0.2.0.0 (lib)
+Downloaded   cardano-ledger-conway-1.19.0.0
+Downloading  cardano-ledger-api-1.11.0.0
+Downloaded   cardano-ledger-api-1.11.0.0
+Downloading  cardano-protocol-tpraos-1.4.0.0
+Downloaded   cardano-protocol-tpraos-1.4.0.0
+Downloading  ouroboros-consensus-protocol-0.12.0.0
+Downloaded   ouroboros-consensus-protocol-0.12.0.0
+Downloading  cardano-api-10.16.3.0
+Installing   network-mux-0.8.0.2 (lib)
+Downloaded   cardano-api-10.16.3.0
+Completed    network-mux-0.8.0.2 (lib)
+Starting     ouroboros-network-testing-0.8.1.0 (lib)
+Installing   cardano-strict-containers-0.1.4.0 (lib)
+Installing   cardano-slotting-0.2.0.0 (lib)
+Completed    cardano-strict-containers-0.1.4.0 (lib)
+Starting     fingertree-rm-1.0.0.4 (lib)
+Starting     small-steps-1.1.1.0 (lib)
+Starting     cardano-crypto-class-2.2.2.0 (lib)
+Completed    cardano-slotting-0.2.0.0 (lib)
+Starting     cardano-slotting-0.2.0.0 (lib:testlib)
+Starting     ouroboros-network-api-0.14.1.0 (lib)
+Building     ouroboros-network-testing-0.8.1.0 (lib)
+Building     small-steps-1.1.1.0 (lib)
+Building     fingertree-rm-1.0.0.4 (lib)
+Building     cardano-crypto-class-2.2.2.0 (lib)
+Building     cardano-slotting-0.2.0.0 (lib:testlib)
+Building     ouroboros-network-api-0.14.1.0 (lib)
+Installing   cardano-slotting-0.2.0.0 (lib:testlib)
+Installing   fingertree-rm-1.0.0.4 (lib)
+Completed    cardano-slotting-0.2.0.0 (lib:testlib)
+Completed    fingertree-rm-1.0.0.4 (lib)
+Installing   small-steps-1.1.1.0 (lib)
+Completed    small-steps-1.1.1.0 (lib)
+Installing   vector-map-1.1.0.0 (lib)
+Installing   ouroboros-network-testing-0.8.1.0 (lib)
+Completed    vector-map-1.1.0.0 (lib)
+Starting     vector-map-1.1.0.0 (lib:testlib)
+Completed    ouroboros-network-testing-0.8.1.0 (lib)
+Building     vector-map-1.1.0.0 (lib:testlib)
+Installing   vector-map-1.1.0.0 (lib:testlib)
+Completed    vector-map-1.1.0.0 (lib:testlib)
+Installing   ouroboros-network-api-0.14.1.0 (lib)
+Completed    ouroboros-network-api-0.14.1.0 (lib)
+Starting     ouroboros-network-mock-0.1.1.2 (lib)
+Starting     ouroboros-network-protocols-0.14.0.2 (lib)
+Starting     ouroboros-network-framework-0.18.0.2 (lib)
+Building     ouroboros-network-mock-0.1.1.2 (lib)
+Building     ouroboros-network-protocols-0.14.0.2 (lib)
+Building     ouroboros-network-framework-0.18.0.2 (lib)
+Installing   ouroboros-network-mock-0.1.1.2 (lib)
+Completed    ouroboros-network-mock-0.1.1.2 (lib)
+Installing   ouroboros-network-protocols-0.14.0.2 (lib)
+Installing   cardano-crypto-class-2.2.2.0 (lib)
+Completed    ouroboros-network-protocols-0.14.0.2 (lib)
+Completed    cardano-crypto-class-2.2.2.0 (lib)
+Starting     cardano-crypto-praos-2.2.1.0 (lib)
+Starting     plutus-core-1.45.0.0 (lib)
+Building     cardano-crypto-praos-2.2.1.0 (lib)
+Building     plutus-core-1.45.0.0 (lib)
+Installing   cardano-crypto-praos-2.2.1.0 (lib)
+Completed    cardano-crypto-praos-2.2.1.0 (lib)
+Starting     cardano-crypto-tests-2.2.1.0 (lib)
+Building     cardano-crypto-tests-2.2.1.0 (lib)
+Installing   ouroboros-network-framework-0.18.0.2 (lib)
+Completed    ouroboros-network-framework-0.18.0.2 (lib)
+Configuring library for trace-forward-2.2.11..
+Starting     ekg-forward-0.9 (lib)
+Starting     ouroboros-network-0.21.3.0 (lib)
+Building     ekg-forward-0.9 (lib)
+Building     ouroboros-network-0.21.3.0 (lib)
+Preprocessing library for trace-forward-2.2.11..
+Building library for trace-forward-2.2.11..
+[ 1 of 16] Compiling Trace.Forward.Protocol.DataPoint.Type ( src/Trace/Forward/Protocol/DataPoint/Type.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Type.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Type.dyn_o )
+[ 2 of 16] Compiling Trace.Forward.Protocol.DataPoint.Forwarder ( src/Trace/Forward/Protocol/DataPoint/Forwarder.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Forwarder.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Forwarder.dyn_o )
+[ 3 of 16] Compiling Trace.Forward.Protocol.DataPoint.Codec ( src/Trace/Forward/Protocol/DataPoint/Codec.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Codec.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Codec.dyn_o )
+[ 4 of 16] Compiling Trace.Forward.Protocol.DataPoint.Acceptor ( src/Trace/Forward/Protocol/DataPoint/Acceptor.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Acceptor.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/DataPoint/Acceptor.dyn_o )
+[ 5 of 16] Compiling Trace.Forward.Configuration.DataPoint ( src/Trace/Forward/Configuration/DataPoint.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Configuration/DataPoint.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Configuration/DataPoint.dyn_o )
+[ 6 of 16] Compiling Trace.Forward.Protocol.TraceObject.Type ( src/Trace/Forward/Protocol/TraceObject/Type.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Type.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Type.dyn_o )
+[ 7 of 16] Compiling Trace.Forward.Protocol.TraceObject.Forwarder ( src/Trace/Forward/Protocol/TraceObject/Forwarder.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Forwarder.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Forwarder.dyn_o )
+[ 8 of 16] Compiling Trace.Forward.Protocol.TraceObject.Codec ( src/Trace/Forward/Protocol/TraceObject/Codec.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Codec.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Codec.dyn_o )
+[ 9 of 16] Compiling Trace.Forward.Protocol.TraceObject.Acceptor ( src/Trace/Forward/Protocol/TraceObject/Acceptor.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Acceptor.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Protocol/TraceObject/Acceptor.dyn_o )
+[10 of 16] Compiling Trace.Forward.Configuration.TraceObject ( src/Trace/Forward/Configuration/TraceObject.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Configuration/TraceObject.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Configuration/TraceObject.dyn_o )
+[11 of 16] Compiling Trace.Forward.Utils.DataPoint ( src/Trace/Forward/Utils/DataPoint.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Utils/DataPoint.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Utils/DataPoint.dyn_o )
+[12 of 16] Compiling Trace.Forward.Run.DataPoint.Forwarder ( src/Trace/Forward/Run/DataPoint/Forwarder.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/DataPoint/Forwarder.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/DataPoint/Forwarder.dyn_o )
+[13 of 16] Compiling Trace.Forward.Run.DataPoint.Acceptor ( src/Trace/Forward/Run/DataPoint/Acceptor.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/DataPoint/Acceptor.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/DataPoint/Acceptor.dyn_o )
+[14 of 16] Compiling Trace.Forward.Utils.TraceObject ( src/Trace/Forward/Utils/TraceObject.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Utils/TraceObject.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Utils/TraceObject.dyn_o )
+[15 of 16] Compiling Trace.Forward.Run.TraceObject.Forwarder ( src/Trace/Forward/Run/TraceObject/Forwarder.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/TraceObject/Forwarder.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/TraceObject/Forwarder.dyn_o )
+[16 of 16] Compiling Trace.Forward.Run.TraceObject.Acceptor ( src/Trace/Forward/Run/TraceObject/Acceptor.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/TraceObject/Acceptor.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/build/Trace/Forward/Run/TraceObject/Acceptor.dyn_o )
+Installing   ekg-forward-0.9 (lib)
+Completed    ekg-forward-0.9 (lib)
+Installing   cardano-crypto-tests-2.2.1.0 (lib)
+Completed    cardano-crypto-tests-2.2.1.0 (lib)
+Installing   ouroboros-network-0.21.3.0 (lib)
+Completed    ouroboros-network-0.21.3.0 (lib)
+Configuring library for trace-dispatcher-2.9.2..
+Preprocessing library for trace-dispatcher-2.9.2..
+Building library for trace-dispatcher-2.9.2..
+[ 1 of 26] Compiling Cardano.Logging.Prometheus.Exposition ( src/Cardano/Logging/Prometheus/Exposition.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/Exposition.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/Exposition.dyn_o )
+[ 2 of 26] Compiling Cardano.Logging.Types.NodeInfo ( src/Cardano/Logging/Types/NodeInfo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodeInfo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodeInfo.dyn_o )
+[ 3 of 26] Compiling Cardano.Logging.Types.NodePeers ( src/Cardano/Logging/Types/NodePeers.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodePeers.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodePeers.dyn_o )
+[ 4 of 26] Compiling Cardano.Logging.Types.NodeStartupInfo ( src/Cardano/Logging/Types/NodeStartupInfo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodeStartupInfo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types/NodeStartupInfo.dyn_o )
+[ 5 of 26] Compiling Cardano.Logging.Version ( src/Cardano/Logging/Version.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Version.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Version.dyn_o )
+[ 6 of 26] Compiling Control.Tracer.Arrow ( src/Control/Tracer/Arrow.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Control/Tracer/Arrow.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Control/Tracer/Arrow.dyn_o )
+[ 7 of 26] Compiling Control.Tracer   ( src/Control/Tracer.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Control/Tracer.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Control/Tracer.dyn_o )
+[ 8 of 26] Compiling Cardano.Logging.Utils ( src/Cardano/Logging/Utils.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Utils.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Utils.dyn_o )
+[ 9 of 26] Compiling Cardano.Logging.Prometheus.NetworkRun ( src/Cardano/Logging/Prometheus/NetworkRun.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/NetworkRun.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/NetworkRun.dyn_o )
+[10 of 26] Compiling Cardano.Logging.Prometheus.TCPServer ( src/Cardano/Logging/Prometheus/TCPServer.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/TCPServer.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Prometheus/TCPServer.dyn_o )
+[11 of 26] Compiling Cardano.Logging.Types ( src/Cardano/Logging/Types.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Types.dyn_o )
+[12 of 26] Compiling Cardano.Logging.Forwarding ( src/Cardano/Logging/Forwarding.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Forwarding.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Forwarding.dyn_o )
+[13 of 26] Compiling Cardano.Logging.ConfigurationParser ( src/Cardano/Logging/ConfigurationParser.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/ConfigurationParser.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/ConfigurationParser.dyn_o )
+[14 of 26] Compiling Cardano.Logging.TraceDispatcherMessage ( src/Cardano/Logging/TraceDispatcherMessage.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/TraceDispatcherMessage.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/TraceDispatcherMessage.dyn_o )
+[15 of 26] Compiling Cardano.Logging.Consistency ( src/Cardano/Logging/Consistency.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Consistency.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Consistency.dyn_o )
+[16 of 26] Compiling Cardano.Logging.Trace ( src/Cardano/Logging/Trace.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Trace.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Trace.dyn_o )
+[17 of 26] Compiling Cardano.Logging.FrequencyLimiter ( src/Cardano/Logging/FrequencyLimiter.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/FrequencyLimiter.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/FrequencyLimiter.dyn_o )
+[18 of 26] Compiling Cardano.Logging.Formatter ( src/Cardano/Logging/Formatter.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Formatter.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Formatter.dyn_o )
+[19 of 26] Compiling Cardano.Logging.DocuGenerator ( src/Cardano/Logging/DocuGenerator.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/DocuGenerator.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/DocuGenerator.dyn_o )
+[20 of 26] Compiling Cardano.Logging.Tracer.Standard ( src/Cardano/Logging/Tracer/Standard.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Standard.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Standard.dyn_o )
+[21 of 26] Compiling Cardano.Logging.Tracer.Forward ( src/Cardano/Logging/Tracer/Forward.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Forward.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Forward.dyn_o )
+[22 of 26] Compiling Cardano.Logging.Tracer.EKG ( src/Cardano/Logging/Tracer/EKG.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/EKG.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/EKG.dyn_o )
+[23 of 26] Compiling Cardano.Logging.Tracer.DataPoint ( src/Cardano/Logging/Tracer/DataPoint.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/DataPoint.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/DataPoint.dyn_o )
+[24 of 26] Compiling Cardano.Logging.Configuration ( src/Cardano/Logging/Configuration.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Configuration.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Configuration.dyn_o )
+[25 of 26] Compiling Cardano.Logging.Tracer.Composed ( src/Cardano/Logging/Tracer/Composed.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Composed.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging/Tracer/Composed.dyn_o )
+[26 of 26] Compiling Cardano.Logging  ( src/Cardano/Logging.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.2/build/Cardano/Logging.dyn_o )
+Configuring library for trace-resources-0.2.3..
+Preprocessing library for trace-resources-0.2.3..
+Building library for trace-resources-0.2.3..
+[1 of 4] Compiling Cardano.Logging.Resources.Types ( src/Cardano/Logging/Resources/Types.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Types.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Types.dyn_o )
+[2 of 4] Compiling Cardano.Logging.Resources.Linux ( src/Cardano/Logging/Resources/Linux.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Linux.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Linux.dyn_o )
+[3 of 4] Compiling Cardano.Logging.Resources.Dummy ( src/Cardano/Logging/Resources/Dummy.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Dummy.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources/Dummy.dyn_o )
+[4 of 4] Compiling Cardano.Logging.Resources ( src/Cardano/Logging/Resources.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-resources-0.2.3/build/Cardano/Logging/Resources.dyn_o )
+Installing   plutus-core-1.45.0.0 (lib)
+Completed    plutus-core-1.45.0.0 (lib)
+Starting     plutus-core-1.45.0.0 (lib:plutus-ir)
+Building     plutus-core-1.45.0.0 (lib:plutus-ir)
+Installing   plutus-core-1.45.0.0 (lib:plutus-ir)
+Completed    plutus-core-1.45.0.0 (lib:plutus-ir)
+Starting     plutus-tx-1.45.0.0 (lib)
+Starting     plutus-core-1.45.0.0 (lib:plutus-core-testlib)
+Building     plutus-tx-1.45.0.0 (lib)
+Building     plutus-core-1.45.0.0 (lib:plutus-core-testlib)
+Installing   plutus-core-1.45.0.0 (lib:plutus-core-testlib)
+Completed    plutus-core-1.45.0.0 (lib:plutus-core-testlib)
+Installing   plutus-tx-1.45.0.0 (lib)
+Completed    plutus-tx-1.45.0.0 (lib)
+Starting     plutus-ledger-api-1.45.0.0 (lib)
+Building     plutus-ledger-api-1.45.0.0 (lib)
+Installing   plutus-ledger-api-1.45.0.0 (lib)
+Completed    plutus-ledger-api-1.45.0.0 (lib)
+Starting     cardano-ledger-binary-1.6.0.0 (lib)
+Starting     plutus-ledger-api-1.45.0.0 (lib:plutus-ledger-api-testlib)
+Building     cardano-ledger-binary-1.6.0.0 (lib)
+Building     plutus-ledger-api-1.45.0.0 (lib:plutus-ledger-api-testlib)
+Installing   plutus-ledger-api-1.45.0.0 (lib:plutus-ledger-api-testlib)
+Completed    plutus-ledger-api-1.45.0.0 (lib:plutus-ledger-api-testlib)
+Installing   cardano-ledger-binary-1.6.0.0 (lib)
+Completed    cardano-ledger-binary-1.6.0.0 (lib)
+Starting     cardano-data-1.2.4.0 (lib)
+Starting     cardano-ledger-binary-1.6.0.0 (lib:testlib)
+Starting     cardano-crypto-wrapper-1.6.0.0 (lib)
+Building     cardano-data-1.2.4.0 (lib)
+Building     cardano-crypto-wrapper-1.6.0.0 (lib)
+Building     cardano-ledger-binary-1.6.0.0 (lib:testlib)
+Installing   cardano-data-1.2.4.0 (lib)
+Completed    cardano-data-1.2.4.0 (lib)
+Starting     set-algebra-1.1.0.3 (lib)
+Installing   cardano-ledger-binary-1.6.0.0 (lib:testlib)
+Installing   cardano-crypto-wrapper-1.6.0.0 (lib)
+Completed    cardano-ledger-binary-1.6.0.0 (lib:testlib)
+Starting     small-steps-1.1.1.0 (lib:testlib)
+Building     set-algebra-1.1.0.3 (lib)
+Completed    cardano-crypto-wrapper-1.6.0.0 (lib)
+Starting     cardano-crypto-test-1.6.0.0 (lib)
+Starting     cardano-ledger-byron-1.1.0.0 (lib)
+Building     small-steps-1.1.1.0 (lib:testlib)
+Building     cardano-crypto-test-1.6.0.0 (lib)
+Building     cardano-ledger-byron-1.1.0.0 (lib)
+Installing   set-algebra-1.1.0.3 (lib)
+Completed    set-algebra-1.1.0.3 (lib)
+Installing   cardano-crypto-test-1.6.0.0 (lib)
+Installing   small-steps-1.1.1.0 (lib:testlib)
+Completed    cardano-crypto-test-1.6.0.0 (lib)
+Completed    small-steps-1.1.1.0 (lib:testlib)
+Starting     byron-spec-ledger-1.1.0.0 (lib)
+Building     byron-spec-ledger-1.1.0.0 (lib)
+Installing   byron-spec-ledger-1.1.0.0 (lib)
+Completed    byron-spec-ledger-1.1.0.0 (lib)
+Starting     byron-spec-chain-1.0.1.0 (lib)
+Building     byron-spec-chain-1.0.1.0 (lib)
+Installing   cardano-ledger-byron-1.1.0.0 (lib)
+Completed    cardano-ledger-byron-1.1.0.0 (lib)
+Starting     cardano-ledger-core-1.17.0.0 (lib)
+Installing   byron-spec-chain-1.0.1.0 (lib)
+Building     cardano-ledger-core-1.17.0.0 (lib)
+Completed    byron-spec-chain-1.0.1.0 (lib)
+Starting     cardano-ledger-byron-test-1.5.2.1 (lib)
+Building     cardano-ledger-byron-test-1.5.2.1 (lib)
+Installing   cardano-ledger-byron-test-1.5.2.1 (lib)
+Completed    cardano-ledger-byron-test-1.5.2.1 (lib)
+Installing   cardano-ledger-core-1.17.0.0 (lib)
+Completed    cardano-ledger-core-1.17.0.0 (lib)
+Starting     cardano-ledger-shelley-1.16.0.0 (lib)
+Starting     cardano-ledger-core-1.17.0.0 (lib:testlib)
+Starting     ouroboros-consensus-0.27.0.0 (lib)
+Building     cardano-ledger-shelley-1.16.0.0 (lib)
+Building     cardano-ledger-core-1.17.0.0 (lib:testlib)
+Building     ouroboros-consensus-0.27.0.0 (lib)
+Installing   cardano-ledger-core-1.17.0.0 (lib:testlib)
+Completed    cardano-ledger-core-1.17.0.0 (lib:testlib)
+Installing   cardano-ledger-shelley-1.16.0.0 (lib)
+Completed    cardano-ledger-shelley-1.16.0.0 (lib)
+Starting     cardano-ledger-allegra-1.7.0.0 (lib)
+Building     cardano-ledger-allegra-1.7.0.0 (lib)
+Installing   cardano-ledger-allegra-1.7.0.0 (lib)
+Completed    cardano-ledger-allegra-1.7.0.0 (lib)
+Starting     cardano-ledger-mary-1.8.0.0 (lib)
+Building     cardano-ledger-mary-1.8.0.0 (lib)
+Installing   ouroboros-consensus-0.27.0.0 (lib)
+Completed    ouroboros-consensus-0.27.0.0 (lib)
+Starting     ouroboros-consensus-diffusion-0.23.0.0 (lib)
+Installing   cardano-ledger-mary-1.8.0.0 (lib)
+Building     ouroboros-consensus-diffusion-0.23.0.0 (lib)
+Completed    cardano-ledger-mary-1.8.0.0 (lib)
+Starting     cardano-ledger-alonzo-1.13.0.0 (lib)
+Building     cardano-ledger-alonzo-1.13.0.0 (lib)
+Installing   ouroboros-consensus-diffusion-0.23.0.0 (lib)
+Completed    ouroboros-consensus-diffusion-0.23.0.0 (lib)
+Installing   cardano-ledger-alonzo-1.13.0.0 (lib)
+Completed    cardano-ledger-alonzo-1.13.0.0 (lib)
+Starting     cardano-ledger-babbage-1.11.0.0 (lib)
+Building     cardano-ledger-babbage-1.11.0.0 (lib)
+Installing   cardano-ledger-babbage-1.11.0.0 (lib)
+Completed    cardano-ledger-babbage-1.11.0.0 (lib)
+Starting     cardano-ledger-conway-1.19.0.0 (lib)
+Building     cardano-ledger-conway-1.19.0.0 (lib)
+Installing   cardano-ledger-conway-1.19.0.0 (lib)
+Completed    cardano-ledger-conway-1.19.0.0 (lib)
+Starting     cardano-protocol-tpraos-1.4.0.0 (lib)
+Starting     cardano-ledger-api-1.11.0.0 (lib)
+Building     cardano-protocol-tpraos-1.4.0.0 (lib)
+Building     cardano-ledger-api-1.11.0.0 (lib)
+Installing   cardano-ledger-api-1.11.0.0 (lib)
+Installing   cardano-protocol-tpraos-1.4.0.0 (lib)
+Completed    cardano-ledger-api-1.11.0.0 (lib)
+Completed    cardano-protocol-tpraos-1.4.0.0 (lib)
+Starting     ouroboros-consensus-protocol-0.12.0.0 (lib)
+Building     ouroboros-consensus-protocol-0.12.0.0 (lib)
+Installing   ouroboros-consensus-protocol-0.12.0.0 (lib)
+Completed    ouroboros-consensus-protocol-0.12.0.0 (lib)
+Starting     ouroboros-consensus-cardano-0.25.1.0 (lib)
+Building     ouroboros-consensus-cardano-0.25.1.0 (lib)
+Installing   ouroboros-consensus-cardano-0.25.1.0 (lib)
+Completed    ouroboros-consensus-cardano-0.25.1.0 (lib)
+Starting     cardano-api-10.16.3.0 (lib)
+Building     cardano-api-10.16.3.0 (lib)
+Installing   cardano-api-10.16.3.0 (lib)
+Completed    cardano-api-10.16.3.0 (lib)
+Configuring library for cardano-node-10.5.1..
+Preprocessing library for cardano-node-10.5.1..
+Building library for cardano-node-10.5.1..
+[ 1 of 74] Compiling Cardano.Node.Configuration.LedgerDB ( src/Cardano/Node/Configuration/LedgerDB.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/LedgerDB.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/LedgerDB.dyn_o )
+[ 2 of 74] Compiling Cardano.Node.Configuration.NodeAddress ( src/Cardano/Node/Configuration/NodeAddress.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/NodeAddress.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/NodeAddress.dyn_o )
+[ 3 of 74] Compiling Cardano.Node.Configuration.Socket ( src/Cardano/Node/Configuration/Socket.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Socket.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Socket.dyn_o )
+[ 4 of 74] Compiling Cardano.Node.Handlers.Shutdown ( src/Cardano/Node/Handlers/Shutdown.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Handlers/Shutdown.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Handlers/Shutdown.dyn_o )
+[ 5 of 74] Compiling Cardano.Node.Handlers.TopLevel ( src/Cardano/Node/Handlers/TopLevel.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Handlers/TopLevel.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Handlers/TopLevel.dyn_o )
+[ 6 of 74] Compiling Cardano.Node.Orphans ( src/Cardano/Node/Orphans.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Orphans.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Orphans.dyn_o )
+[ 7 of 74] Compiling Cardano.Node.Pretty ( src/Cardano/Node/Pretty.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Pretty.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Pretty.dyn_o )
+[ 8 of 74] Compiling Cardano.Node.Queries ( src/Cardano/Node/Queries.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Queries.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Queries.dyn_o )
+[ 9 of 74] Compiling Cardano.Node.STM ( src/Cardano/Node/STM.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/STM.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/STM.dyn_o )
+[10 of 74] Compiling Cardano.Node.Tracing.Compat ( src/Cardano/Node/Tracing/Compat.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Compat.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Compat.dyn_o )
+[11 of 74] Compiling Cardano.Node.Tracing.DefaultTraceConfig ( src/Cardano/Node/Tracing/DefaultTraceConfig.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/DefaultTraceConfig.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/DefaultTraceConfig.dyn_o )
+[12 of 74] Compiling Cardano.Node.Tracing.NodeInfo ( src/Cardano/Node/Tracing/NodeInfo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/NodeInfo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/NodeInfo.dyn_o )
+[13 of 74] Compiling Cardano.Node.Tracing.NodeStartupInfo ( src/Cardano/Node/Tracing/NodeStartupInfo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/NodeStartupInfo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/NodeStartupInfo.dyn_o )
+[14 of 74] Compiling Cardano.Node.Tracing.Render ( src/Cardano/Node/Tracing/Render.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Render.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Render.dyn_o )
+[15 of 74] Compiling Cardano.Node.Tracing.Formatting ( src/Cardano/Node/Tracing/Formatting.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Formatting.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Formatting.dyn_o )
+[16 of 74] Compiling Cardano.Node.Tracing.Tracers.BlockReplayProgress ( src/Cardano/Node/Tracing/Tracers/BlockReplayProgress.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/BlockReplayProgress.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/BlockReplayProgress.dyn_o )
+[17 of 74] Compiling Cardano.Node.Tracing.Tracers.ConsensusStartupException ( src/Cardano/Node/Tracing/Tracers/ConsensusStartupException.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ConsensusStartupException.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ConsensusStartupException.dyn_o )
+[18 of 74] Compiling Cardano.Node.Tracing.Tracers.ForgingStats ( src/Cardano/Node/Tracing/Tracers/ForgingStats.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ForgingStats.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ForgingStats.dyn_o )
+[19 of 74] Compiling Cardano.Node.Tracing.Tracers.KESInfo ( src/Cardano/Node/Tracing/Tracers/KESInfo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/KESInfo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/KESInfo.dyn_o )
+[20 of 74] Compiling Cardano.Node.Tracing.Tracers.NodeToClient ( src/Cardano/Node/Tracing/Tracers/NodeToClient.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeToClient.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeToClient.dyn_o )
+[21 of 74] Compiling Cardano.Node.Tracing.Tracers.NodeToNode ( src/Cardano/Node/Tracing/Tracers/NodeToNode.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeToNode.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeToNode.dyn_o )
+[22 of 74] Compiling Cardano.Node.Tracing.Tracers.NonP2P ( src/Cardano/Node/Tracing/Tracers/NonP2P.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NonP2P.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NonP2P.dyn_o )
+[23 of 74] Compiling Cardano.Node.Tracing.Tracers.Peer ( src/Cardano/Node/Tracing/Tracers/Peer.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Peer.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Peer.dyn_o )
+[24 of 74] Compiling Cardano.Node.Tracing.Peers ( src/Cardano/Node/Tracing/Peers.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Peers.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Peers.dyn_o )
+[25 of 74] Compiling Cardano.Node.Tracing.Tracers.Resources ( src/Cardano/Node/Tracing/Tracers/Resources.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Resources.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Resources.dyn_o )
+[26 of 74] Compiling Cardano.Node.Tracing.Tracers.Shutdown ( src/Cardano/Node/Tracing/Tracers/Shutdown.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Shutdown.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Shutdown.dyn_o )
+[27 of 74] Compiling Cardano.Node.Types ( src/Cardano/Node/Types.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Types.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Types.dyn_o )
+[28 of 74] Compiling Cardano.Node.Protocol.Checkpoints ( src/Cardano/Node/Protocol/Checkpoints.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Checkpoints.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Checkpoints.dyn_o )
+[29 of 74] Compiling Cardano.Tracing.Config ( src/Cardano/Tracing/Config.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Config.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Config.dyn_o )
+[30 of 74] Compiling Cardano.Tracing.HasIssuer ( src/Cardano/Tracing/HasIssuer.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/HasIssuer.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/HasIssuer.dyn_o )
+[31 of 74] Compiling Cardano.Node.TraceConstraints ( src/Cardano/Node/TraceConstraints.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/TraceConstraints.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/TraceConstraints.dyn_o )
+[32 of 74] Compiling Cardano.Node.Protocol.Types ( src/Cardano/Node/Protocol/Types.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Types.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Types.dyn_o )
+[33 of 74] Compiling Cardano.Tracing.Metrics ( src/Cardano/Tracing/Metrics.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Metrics.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Metrics.dyn_o )
+[34 of 74] Compiling Cardano.Tracing.OrphanInstances.Common ( src/Cardano/Tracing/OrphanInstances/Common.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Common.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Common.dyn_o )
+[35 of 74] Compiling Cardano.Tracing.Peer ( src/Cardano/Tracing/Peer.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Peer.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Peer.dyn_o )
+[36 of 74] Compiling Cardano.Tracing.Render ( src/Cardano/Tracing/Render.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Render.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Render.dyn_o )
+[37 of 74] Compiling Cardano.Tracing.OrphanInstances.Network ( src/Cardano/Tracing/OrphanInstances/Network.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Network.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Network.dyn_o )
+[38 of 74] Compiling Cardano.Node.Configuration.POM ( src/Cardano/Node/Configuration/POM.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/POM.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/POM.dyn_o )
+[39 of 74] Compiling Cardano.Node.Parsers ( src/Cardano/Node/Parsers.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Parsers.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Parsers.dyn_o )
+[40 of 74] Compiling Cardano.Node.Configuration.Topology ( src/Cardano/Node/Configuration/Topology.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Topology.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Topology.dyn_o )
+[41 of 74] Compiling Cardano.Tracing.OrphanInstances.Consensus ( src/Cardano/Tracing/OrphanInstances/Consensus.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Consensus.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Consensus.dyn_o )
+[42 of 74] Compiling Cardano.Tracing.OrphanInstances.Shelley ( src/Cardano/Tracing/OrphanInstances/Shelley.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Shelley.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Shelley.dyn_o )
+[43 of 74] Compiling Cardano.Node.Tracing.Era.Shelley ( src/Cardano/Node/Tracing/Era/Shelley.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/Shelley.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/Shelley.dyn_o )
+[44 of 74] Compiling Cardano.Tracing.OrphanInstances.HardFork ( src/Cardano/Tracing/OrphanInstances/HardFork.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/HardFork.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/HardFork.dyn_o )
+[45 of 74] Compiling Cardano.Node.Tracing.Era.HardFork ( src/Cardano/Node/Tracing/Era/HardFork.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/HardFork.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/HardFork.dyn_o )
+[46 of 74] Compiling Cardano.Tracing.OrphanInstances.Byron ( src/Cardano/Tracing/OrphanInstances/Byron.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Byron.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/OrphanInstances/Byron.dyn_o )
+[47 of 74] Compiling Cardano.Node.Tracing.Era.Byron ( src/Cardano/Node/Tracing/Era/Byron.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/Byron.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Era/Byron.dyn_o )
+[48 of 74] Compiling Cardano.Node.Tracing.Tracers.Consensus ( src/Cardano/Node/Tracing/Tracers/Consensus.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Consensus.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Consensus.dyn_o )
+[49 of 74] Compiling Cardano.Node.Tracing.Tracers.ChainDB ( src/Cardano/Node/Tracing/Tracers/ChainDB.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ChainDB.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/ChainDB.dyn_o )
+[50 of 74] Compiling Cardano.Node.Tracing.Tracers.LedgerMetrics ( src/Cardano/Node/Tracing/Tracers/LedgerMetrics.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/LedgerMetrics.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/LedgerMetrics.dyn_o )
+[51 of 74] Compiling Cardano.Node.Protocol.Shelley ( src/Cardano/Node/Protocol/Shelley.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Shelley.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Shelley.dyn_o )
+[52 of 74] Compiling Cardano.Node.Protocol.Conway ( src/Cardano/Node/Protocol/Conway.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Conway.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Conway.dyn_o )
+[53 of 74] Compiling Cardano.Node.Protocol.Alonzo ( src/Cardano/Node/Protocol/Alonzo.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Alonzo.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Alonzo.dyn_o )
+[54 of 74] Compiling Cardano.Node.Protocol.Byron ( src/Cardano/Node/Protocol/Byron.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Byron.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Byron.dyn_o )
+[55 of 74] Compiling Cardano.Node.Protocol.Cardano ( src/Cardano/Node/Protocol/Cardano.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Cardano.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol/Cardano.dyn_o )
+[56 of 74] Compiling Cardano.Node.Protocol ( src/Cardano/Node/Protocol.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Protocol.dyn_o )
+[57 of 74] Compiling Cardano.Tracing.Shutdown ( src/Cardano/Tracing/Shutdown.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Shutdown.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Shutdown.dyn_o )
+[58 of 74] Compiling Paths_cardano_node ( /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/autogen/Paths_cardano_node.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Paths_cardano_node.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Paths_cardano_node.dyn_o )
+[59 of 74] Compiling Cardano.Node.Tracing.Tracers.NodeVersion ( src/Cardano/Node/Tracing/Tracers/NodeVersion.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeVersion.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/NodeVersion.dyn_o )
+[60 of 74] Compiling Cardano.Node.Startup ( src/Cardano/Node/Startup.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Startup.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Startup.dyn_o )
+[61 of 74] Compiling Cardano.Node.Tracing.Tracers.Startup ( src/Cardano/Node/Tracing/Tracers/Startup.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Startup.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Startup.dyn_o )
+[62 of 74] Compiling Cardano.Tracing.Startup ( src/Cardano/Tracing/Startup.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Startup.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Startup.dyn_o )
+[63 of 74] Compiling Cardano.Node.Tracing.StateRep ( src/Cardano/Node/Tracing/StateRep.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/StateRep.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/StateRep.dyn_o )
+[64 of 74] Compiling Cardano.Node.Tracing ( src/Cardano/Node/Tracing.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing.dyn_o )
+[65 of 74] Compiling Cardano.Node.Configuration.TopologyP2P ( src/Cardano/Node/Configuration/TopologyP2P.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/TopologyP2P.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/TopologyP2P.dyn_o )
+[66 of 74] Compiling Cardano.Node.Tracing.Tracers.P2P ( src/Cardano/Node/Tracing/Tracers/P2P.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/P2P.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/P2P.dyn_o )
+[67 of 74] Compiling Cardano.Node.Tracing.Tracers.Diffusion ( src/Cardano/Node/Tracing/Tracers/Diffusion.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Diffusion.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers/Diffusion.dyn_o )
+[68 of 74] Compiling Cardano.Node.Tracing.Documentation ( src/Cardano/Node/Tracing/Documentation.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Documentation.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Documentation.dyn_o )
+[69 of 74] Compiling Cardano.Node.Tracing.Consistency ( src/Cardano/Node/Tracing/Consistency.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Consistency.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Consistency.dyn_o )
+[70 of 74] Compiling Cardano.Node.Tracing.Tracers ( src/Cardano/Node/Tracing/Tracers.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/Tracers.dyn_o )
+[71 of 74] Compiling Cardano.Node.Tracing.API ( src/Cardano/Node/Tracing/API.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/API.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Tracing/API.dyn_o )
+[72 of 74] Compiling Cardano.Node.Configuration.Logging ( src/Cardano/Node/Configuration/Logging.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Logging.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Configuration/Logging.dyn_o )
+[73 of 74] Compiling Cardano.Tracing.Tracers ( src/Cardano/Tracing/Tracers.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Tracers.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Tracing/Tracers.dyn_o )
+[74 of 74] Compiling Cardano.Node.Run ( src/Cardano/Node/Run.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Run.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/build/Cardano/Node/Run.dyn_o )
+Configuring executable 'cardano-node' for cardano-node-10.5.1..
+Preprocessing executable 'cardano-node' for cardano-node-10.5.1..
+Building executable 'cardano-node' for cardano-node-10.5.1..
+[1 of 2] Compiling Paths_cardano_node ( /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/x/cardano-node/build/cardano-node/autogen/Paths_cardano_node.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/x/cardano-node/build/cardano-node/cardano-node-tmp/Paths_cardano_node.o, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/x/cardano-node/build/cardano-node/cardano-node-tmp/Paths_cardano_node.dyn_o )
+[2 of 2] Compiling Main             ( app/cardano-node.hs, /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/x/cardano-node/build/cardano-node/cardano-node-tmp/Main.o )
+[3 of 3] Linking /home/ch1bo/code/iog/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/cardano-node-10.5.1/x/cardano-node/build/cardano-node/cardano-node
+806.71user 73.77system 9:59.67elapsed 146%CPU (0avgtext+0avgdata 2026024maxresident)k
+462126inputs+8559774outputs (333525major+29595657minor)pagefaults 0swaps

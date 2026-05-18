@@ -351,6 +351,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["txCounters", "Remote"]
     configureTracers configReflection trConfig [txCountersTracer]
 
+    !leiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [leiosKernelTr]
+
+    !leiosPeerTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosPeer"]
+    configureTracers configReflection trConfig [leiosPeerTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -403,6 +413,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = Tracer $
           traceWith txCountersTracer
+      , Consensus.leiosKernelTracer = Tracer $
+          traceWith leiosKernelTr
+      , Consensus.leiosPeerTracer = Tracer $
+          traceWith leiosPeerTr
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -502,6 +516,16 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["txLogic", "Remote"]
     configureTracers configReflection trConfig [txLogicTracer]
 
+    !leiosNotifyTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosNotify", "Remote"]
+    configureTracers configReflection trConfig [leiosNotifyTracer]
+
+    !leiosFetchTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -519,6 +543,10 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith peerSharingTracer
       , NtN.tTxLogicTracer = Tracer $
           traceWith txLogicTracer
+      , NtN.tLeiosNotifyTracer = Tracer $
+          traceWith leiosNotifyTracer
+      , NtN.tLeiosFetchTracer = Tracer $
+          traceWith leiosFetchTracer
       }
 
 mkDiffusionTracers ::
