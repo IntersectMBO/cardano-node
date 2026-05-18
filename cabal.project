@@ -51,7 +51,11 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node >= 0.4.2.0
+extra-packages: alex
+-- dmq-node dropped: the latest CHaP version (0.4.2.0) requires
+-- ouroboros-network:framework-tracing, a sublib that doesn't exist
+-- in the leios-prototype-remake network fork. Re-add once a newer
+-- dmq-node release tracks the post-split network layout.
 
 program-options
   ghc-options: -Werror
@@ -88,6 +92,42 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Pin ouroboros-consensus at the Leios prototype remake branch — five chunks
+-- on top of upstream main: mempool access + forging, diffusion (LeiosNotify +
+-- LeiosFetch + Reception migration), resolving + chain inclusion, voting,
+-- and the ImmDBServer schedule-driven demo.
+-- See IntersectMBO/ouroboros-consensus#2041.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 663412f5546a5913ed8197024f82b11b61d3d3dd
+  --sha256: sha256-UG7hzcE8OoDZNJ/i6XZ5XCiwdTIlAOfUSEtmASQCPO4=
+
+-- Pin cardano-ledger at the Leios prototype remake branch — adds
+-- 'Maybe LeiosCert' on the Dijkstra block body (Dijkstra-only).
+-- See IntersectMBO/cardano-ledger#5839.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: c47305fcf47bd77437b837d0dfb9cb4181bfbc77
+  --sha256: 1db2xc2gs44g5035srqzgqkbv3a2yacmvnwchd1jnjrfkibnxnak
+  subdir:
+    libs/cardano-ledger-core
+    eras/dijkstra/impl
+
+-- Pin ouroboros-network at the Leios prototype remake branch — adds the
+-- 'BearerBytes' class and arrival-time 'Reception' on recv.
+-- See IntersectMBO/ouroboros-network#5370.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 98229666bf4e2fcd365f4cf583c0efeb76e2e1b7
+  --sha256: 1ix6hlrvyrxwy54lq410prjvby31fz8y1hxrkc1np86zc8kan3m4
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
 
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
