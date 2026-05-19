@@ -203,9 +203,9 @@ __toJSON
             }
           ;
           rate_limit =
-            { scope = "shared";
+            { scope = "per_target";
               type = "token_bucket";
-              params = { tps = 108; };
+              params = { tps = 40000.0 / 371 / profile.composition.n_pool_hosts; };
             }
           ;
           max_batch_size = null;
@@ -243,12 +243,12 @@ __toJSON
                         (i:
                           { name = "node-${toString i}";
                             value =
-                              { addr = "127.0.0.1";
-                                port = (30000 + i);
-                              }
-                            #  { addr = "__addr_${toString i}__";
-                            #    port = "__port_${toString i}__";
+                            #  { addr = "127.0.0.1";
+                            #    port = (30000 + i);
                             #  }
+                              { addr = "__addr_${toString i}__";
+                                port = "__port_${toString i}__";
+                              }
                             ;
                           }
                         )
