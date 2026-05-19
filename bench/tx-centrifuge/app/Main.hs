@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 --------------------------------------------------------------------------------
 
@@ -13,6 +14,7 @@ module Main (main) where
 ----------
 -- base --
 ----------
+import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
 import Control.Monad (when)
 import Data.Bifunctor (first)
@@ -271,6 +273,14 @@ main = do
           case result of
             Left err -> die $ Runtime.targetName target ++ ": " ++ err
             Right () -> pure ()
+    -- Cooldown: builders are running and pre-filling payload queues.
+    -- Wait for the cluster to stabilise before opening connections so that
+    -- transmission begins at the target TPS immediately.
+    let cooldownSeconds = 300 :: Int -- 5 minutes
+    hPutStrLn stderr $ "Cooldown: waiting " ++ show cooldownSeconds
+      ++ " seconds (builders pre-filling queues)..."
+    threadDelay (cooldownSeconds * 1_000_000)
+    hPutStrLn stderr "Cooldown complete, connecting to targets."
     -- For each 'Workload'.
     workers <- concat <$> mapM
       (\workload -> runWorkload workload targetWorker)
