@@ -27,7 +27,6 @@ import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
-import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -46,8 +45,9 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
+import           Testnet.Process.RunIO (liftIOAnnotated)
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types (GenesisOptions (..), creationNumPools)
 import           Testnet.Types
 
 import           Hedgehog
@@ -57,7 +57,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Committee Add New/"'@
 hprop_constitutional_committee_add_new :: Property
-hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -73,17 +73,17 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
               -> [(String, Int)] -- ^ [(vote, ordering number)]
       mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
-      nSpos = fromIntegral $ cardanoNumPools fastTestnetOptions
+      nSpos = fromIntegral $ creationNumPools creationOptions
       ceo = ConwayEraOnwardsConway
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = fromIntegral nDrepVotes
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = fromIntegral nDrepVotes
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
-      shelleyOptions = def { genesisEpochLength = 200 }
   H.annotateShow drepVotes
   H.noteShow_ nDrepVotes
 
@@ -92,7 +92,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -109,7 +109,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   updateCommitteeFp <- H.note $ gov </> "update-cc.action"
 
@@ -130,6 +130,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   keyDeposit <- getKeyDeposit epochStateView ceo
   createStakeKeyRegistrationCertificate
     tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -154,13 +155,19 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--out-file", stakeCertTxSignedFp
     ]
 
+  stakeCertTx <- execCli' execConfig
+    ["debug", "transaction"
+    , "view", "--output-json", "--tx-body-file", stakeCertTxBodyFp
+    ]
+
+  H.note_ $ "Stake registration transaction: " <> stakeCertTx
   void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
 
   -- make sure that stake registration cert gets into a block
-  _ <- waitForBlocks epochStateView 1
+  _ <- waitForBlocks epochStateView 15
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
@@ -186,6 +193,20 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   txbodyFp <- H.note $ work </> "tx.body"
   txin1' <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "key-hash"
+    , "--stake-verification-key-file", verificationKeyFp stakeKeys
+    , "--out-file", gov </> "stake-hash.addr"
+    ]
+
+  stakeKeyHash <- H.readFile $ gov </> "stake-hash.addr"
+
+  H.note_ $ "Stake key hash:"  <> stakeKeyHash
+
+
 
   -- Create temporary HTTP server with files required by the call to `cardano-cli`
   -- In this case, the server emulates an IPFS gateway
@@ -227,11 +248,11 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     signTx execConfig cEra work "signed-proposal" (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
   submitTx execConfig cEra signedProposalTx
 
-  governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
+  governanceActionTxId <- H.noteShowM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ L.EpochInterval 1) $
+      maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   dRepVoteFiles <-
     DRep.generateVoteFiles
@@ -275,9 +296,10 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
   length spoVotes === length gaSpoVotes
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
+  retryUntilJustM epochStateView (WaitForEpochs $ L.EpochInterval 1) $
+    committeeIsPresent <$> getEpochStateDetails epochStateView
 
-  -- show proposed committe meembers
+  -- show proposed committee meembers
   H.noteShow_ ccCredentials
 
   newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole)

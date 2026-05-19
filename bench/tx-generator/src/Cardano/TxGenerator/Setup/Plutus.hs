@@ -26,7 +26,6 @@ import           Control.Monad.Writer (runWriter)
 import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScript (..), fromAlonzoExUnits, toPlutusData)
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
@@ -36,11 +35,11 @@ import qualified PlutusTx.AssocMap as AssocMap (empty)
 
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolvedTo (..))
+import           Control.Exception (SomeException (..), try, displayException)
+import           System.FilePath ((<.>), (</>))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
-import           Control.Exception (SomeException (..), try)
-import           System.FilePath ((<.>), (</>))
 
 import           Paths_tx_generator
 
@@ -72,8 +71,8 @@ readPlutusScript (Left s)
     doLoad fp  = second (second (const $ ResolvedToFallback asFileName)) <$> readPlutusScript (Right fp)
 readPlutusScript (Right fp)
   = runExceptT $ do
-    script <- firstExceptT ApiError $
-      readFileScriptInAnyLang fp
+    script <-
+       handleExceptT (\(e :: SomeException) -> ApiError $ displayException e) (readFileScriptInAnyLang fp)
     case script of
       ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)
       ScriptInAnyLang lang _ -> throwE $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang

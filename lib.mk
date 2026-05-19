@@ -11,10 +11,11 @@ ifeq ($(strip $(4)),true)
 $(1): ARGS += --arg 'workbenchDevMode' true
 endif
 ifeq ($(strip $(7)),true)
-$(1): ARGS += --arg 'profiling' '"$(WB_PROFILING)"'
+$(1): ARGS += --arg 'profiledBuild' true
 else
-$(1): ARGS += --arg 'profiling' '"none"'
+$(1): ARGS += --arg 'profiledBuild' false
 endif
+$(1): ARGS += --arg 'profilingType' '"$(WB_PROFILING)"'
 ifeq ($(strip $(5))$(strip $(6)),truetrue)
 $(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID}) $(if ${BATCH},--batch-name ${BATCH}); return
 endif

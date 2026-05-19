@@ -18,6 +18,10 @@
 # The main contents of the image.
 , cardano-cli
 , cardano-node
+, db-analyser
+, db-synthesizer
+, db-truncater
+, snapshot-converter
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -30,7 +34,7 @@
 , curl
 , glibcLocales
 , iana-etc
-, iproute
+, iproute2
 , iputils
 , jq
 , socat
@@ -42,6 +46,7 @@
 }:
 
 let
+  inherit (lib) concatStringsSep escapeShellArgs getAttrs mapAttrsToList;
 
   # Layer of tools which aren't going to change much between versions.
   baseImage = dockerTools.buildImage {
@@ -57,7 +62,7 @@ let
         curl              # CLI tool for transferring files via URLs
         glibcLocales      # Locale information for the GNU C Library
         iana-etc          # IANA protocol and port number assignments
-        iproute           # Utilities for controlling TCP/IP networking
+        iproute2          # Utilities for controlling TCP/IP networking
         iputils           # Useful utilities for Linux networking
         jq                # Lightweight and flexible command-line JSON processor
         socat             # Utility for bidirectional data transfer
@@ -74,7 +79,7 @@ let
   # For "script" mode, generate scripts for iohk-nix networks which can be
   # utilized by setting the environment NETWORK variable to the desired
   # network in the docker command: `-e NETWORK <network>`
-  clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
+  clusterStatements = concatStringsSep "\n" (mapAttrsToList (env: scripts: let
     scriptBin = scripts.${script};
     in ''
       elif [[ "$NETWORK" == "${env}" ]]; then
@@ -93,10 +98,10 @@ let
   '';
 
   # The docker context with static content
-  context = ./context;
+  context = ./context/node;
 
   genCfgs = let
-    environments' = lib.getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
+    environments' = getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
     cardano-deployment = commonLib.mkConfigHtml environments';
   in
     pkgs.runCommand "cardano-html" {} ''
@@ -104,7 +109,7 @@ let
       cp "${cardano-deployment}/index.html" "$out/"
       cp "${cardano-deployment}/rest-config.json" "$out/"
 
-      ENVS=(${lib.escapeShellArgs (builtins.attrNames environments')})
+      ENVS=(${escapeShellArgs (builtins.attrNames environments')})
       for ENV in "''${ENVS[@]}"; do
         # Migrate each env from a flat dir to an ENV subdir
         mkdir -p "$out/config/$ENV"
@@ -112,12 +117,16 @@ let
           cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
         done
 
-        # Adjust genesis file, config and config-bp refs
-        for i in config config-bp db-sync-config; do
+        # Adjust genesis file, config refs
+        for i in config config-legacy db-sync-config; do
           if [ -f "$out/config/$ENV/$i.json" ]; then
             sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
           fi
         done
+
+        # Normalize the topology file peer snapshot ref for per ENV dir placement
+        ${jq}/bin/jq '.peerSnapshotFile = "peer-snapshot.json"' < "$out/config/$ENV/topology.json" > "$ENV-topology.json"
+        mv -v "$ENV-topology.json" "$out/config/$ENV/topology.json"
 
         # Adjust index.html file refs
         sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
@@ -161,6 +170,10 @@ in
       cp -v ${context}/bin/* usr/local/bin
       ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+      ln -sv ${db-analyser}/bin/db-analyser usr/local/bin/db-analyser
+      ln -sv ${db-synthesizer}/bin/db-synthesizer usr/local/bin/db-synthesizer
+      ln -sv ${db-truncater}/bin/db-truncater usr/local/bin/db-truncater
+      ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
       # Create iohk-nix network configs, organized by network directory.
@@ -174,12 +187,6 @@ in
       # caused by broken symlinks as seen from the host.
       cp -R "$SRC"/* "$DST"
       find "$DST" -mindepth 1 -type d -exec bash -c "chmod 0755 {}" \;
-
-      # Preserve legacy oci config and topo path for backwards compatibility.
-      pushd opt/cardano/config
-      ln -sv mainnet/config.json mainnet-config.json
-      ln -sv mainnet/topology.json mainnet-topology.json
-      popd
     '';
 
     config = {

@@ -25,7 +25,7 @@ tests = do
             [ ( []
               -- This file name should reference the current standard config with new tracing
               , configSubdir
-              , "mainnet-config-new-tracing.json"
+              , "mainnet-config.json"
               )
               ,
               (  []
@@ -33,8 +33,7 @@ tests = do
               , "goodConfig.yaml"
               )
             , (  [ "Config namespace error: Illegal namespace ChainDB.CopyToImmutableDBEvent2.CopiedBlockToImmutableDB"
-                  , "Config namespace error: Illegal namespace SubscriptionDNS"
-                  ]
+                 ]
               , testSubdir
               , "badConfig.yaml"
               )

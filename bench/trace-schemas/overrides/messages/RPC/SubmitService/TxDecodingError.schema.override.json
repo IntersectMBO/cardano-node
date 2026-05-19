@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot map nested TraceRpcSubmit constructors to the shared TraceRpc payload."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reason"
+      ],
+      "type": "object"
+    }
+  }
+}

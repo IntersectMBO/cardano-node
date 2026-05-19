@@ -11,9 +11,9 @@ module Cardano.Tracing.HasIssuer
   , HasIssuer (..)
   ) where
 
-import           Cardano.Api (serialiseToRawBytes, verificationKeyHash)
+import           Cardano.Api (VerificationKey (StakePoolVerificationKey), serialiseToRawBytes,
+                   verificationKeyHash)
 import           Cardano.Api.Byron (VerificationKey (ByronVerificationKey))
-import           Cardano.Api.Shelley (VerificationKey (StakePoolVerificationKey))
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Ledger.Shelley.API as Shelley
@@ -69,8 +69,8 @@ instance
       -- We don't support a "block issuer" key role in @cardano-api@, so we'll
       -- just convert it to a stake pool key.
       toStakePoolKey
-        :: Shelley.VKey 'Shelley.BlockIssuer
-        -> Shelley.VKey 'Shelley.StakePool
+        :: Shelley.VKey Shelley.BlockIssuer
+        -> Shelley.VKey Shelley.StakePool
       toStakePoolKey vk = Shelley.VKey (Shelley.unVKey vk)
 
       issuer = pHeaderIssuer (shelleyHeaderRaw shelleyBlkHdr)

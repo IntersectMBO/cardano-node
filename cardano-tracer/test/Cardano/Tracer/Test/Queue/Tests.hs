@@ -4,6 +4,7 @@ module Cardano.Tracer.Test.Queue.Tests
   ( tests
   ) where
 
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -25,7 +26,7 @@ tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Queue"
   ]
 
 propQueue :: TestSetup Identity -> FilePath -> FilePath -> IO Property
-propQueue ts rootDir localSock = do
+propQueue ts rootDir localSocket = do
   -- Temporarily switch stdout to a temp file.
   (tmpPath, tmpHdl) <- openTempFile rootDir "cardano-tracer-tmp-stdout"
   putStrLn $ "Queue tmp file: " <> tmpPath
@@ -36,8 +37,8 @@ propQueue ts rootDir localSock = do
   -- Run the forwarder only. It imitates the case when the acceptor is
   -- misconfigured and cannot be launched, so the connection cannot be established.
   -- In this case, the forwarder should collect trace items in its internal
-  -- "flexible queue" and periodically flush them to stdout.
-  withAsyncBound (launchForwardersSimple ts Responder localSock connSize disconnSize) . const $
+  -- fixed-capacity queue and periodically flush them to stdout.
+  withAsyncBound (launchForwardersSimple ts Responder (Net.LocalPipe localSocket) queueSize) . const $
     -- Wait till the queue will be redirected to stdout.
     sleep 7.0
   -- Return the normal stdout.
@@ -47,8 +48,8 @@ propQueue ts rootDir localSock = do
   content <- TIO.readFile tmpPath
   removeFile tmpPath
   let flushedTraceObjectsNum = T.count "TraceObject" content
-  return $ flushedTraceObjectsNum === fromIntegral disconnSize
+  return $ flushedTraceObjectsNum === fromIntegral queueSize
 
-connSize, disconnSize :: Word
-connSize = 50
-disconnSize = 100
+queueSize :: Word
+queueSize = 100
+

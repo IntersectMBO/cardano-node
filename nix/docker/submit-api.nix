@@ -26,7 +26,7 @@
 , curl
 , glibcLocales
 , iana-etc
-, iproute
+, iproute2
 , iputils
 , socat
 , utillinux
@@ -53,7 +53,7 @@ let
         curl              # CLI tool for transferring files via URLs
         glibcLocales      # Locale information for the GNU C Library
         iana-etc          # IANA protocol and port number assignments
-        iproute           # Utilities for controlling TCP/IP networking
+        iproute2          # Utilities for controlling TCP/IP networking
         iputils           # Useful utilities for Linux networking
         socat             # Utility for bidirectional data transfer
         utillinux         # System utilities for Linux
@@ -82,7 +82,7 @@ let
       exec ${pkgs.${exe}}/bin/${exe} $@
     ${clusterStatements}
     else
-      echo "Managed configuration for network "$NETWORK" does not exist"
+      echo "[Error] Managed configuration for network "$NETWORK" does not exist"
     fi
   '';
 

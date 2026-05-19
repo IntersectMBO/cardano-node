@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator does not infer payload fields for LSM backend trace constructors."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "enclosing": {
+          "$ref": "types/EnclosingTimed.schema.json"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enclosing",
+        "kind"
+      ],
+      "type": "object"
+    }
+  }
+}

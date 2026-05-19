@@ -51,7 +51,6 @@ import           Prelude
 
 import           Data.Function (on)
 import           Data.List.NonEmpty
-import           Data.Text (Text)
 import           GHC.Generics
 
 

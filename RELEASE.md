@@ -29,9 +29,21 @@ This is the release process for node releases
    Stable releases can go all the way to mainnet, beta should only go to preprod and wait for that release to be relabeled as stable or a new stable release to be cut.
 10. GitHub release is published
 
+This is the release process for node release hot fixes:
+
+1. **Create a hotfix branch**  
+   - **Branch naming format**: `release/X.Y.Z` (e.g., for a hotfix on cabal version `10.5` already tagged and released as `10.5.0`, name it `release/10.5.1`).  
+   - **Important**: CI will only run if the branch follows this exact naming convention.  
+
+2. **Update the version**  
+   - Bump the Node version in the `cabal` file to reflect the hotfix changes. 
+
+3. **Follow the standard release process**  
+   Resume from **Step 3** of the [normal release process](#release-process). 
+
 # Rotating Release Engineer Role
 
-All sprints are aligned across the node and it's components. At the end of a sprint cycle the new rotating Release Engineer is decided on by the leadership team.
+All sprints are aligned across the node and its components. At the end of a sprint cycle the new rotating Release Engineer is decided on by the leadership team.
 This person's primary duties are integration of new releases of dependencies up the stack to the node. They serve this role until the release is finalized
 according to the above release process (ideally 1 sprint cycle).
 The Release Engineer works with the Dev Leads to decide which changes should be included in their component, including any in-flight PRs that haven't been merged yet.

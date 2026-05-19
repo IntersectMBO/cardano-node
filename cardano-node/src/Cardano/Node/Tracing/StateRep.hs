@@ -22,6 +22,7 @@ module Cardano.Node.Tracing.StateRep
 import           Cardano.Api (textShow)
 
 import           Cardano.Logging
+import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
@@ -36,8 +37,8 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
-import           Data.Aeson
-import           Data.Text (Text)
+import           Data.Aeson hiding (Result (..))
+import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
@@ -47,6 +48,11 @@ deriving instance FromJSON ChunkNo
 deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
+
+deriving instance Generic  TracePrometheusSimple
+deriving instance FromJSON TracePrometheusSimple
+deriving instance ToJSON   TracePrometheusSimple
+deriving instance NFData   TracePrometheusSimple
 
 data OpeningDbs
   = StartedOpeningImmutableDB
@@ -98,6 +104,9 @@ deriving instance (NFData StartupState)
 --   All node states prior to tracing system going online are effectively invisible.
 data NodeState
   = NodeTracingOnlineConfiguring
+  | NodeTracingFailure String
+  | NodeTracingForwardingInterrupted HowToConnect String
+  | NodePrometheusSimple TracePrometheusSimple
   | NodeOpeningDbs OpeningDbs
   | NodeReplays Replays
   | NodeInitChainSelection InitChainSelection
@@ -110,7 +119,9 @@ data NodeState
 deriving instance (NFData NodeState)
 
 instance LogFormatting NodeState where
-  forMachine _ = \case
+  forMachine _dtal = \case
+    NodeTracingOnlineConfiguring -> mconcat
+      [ "kind" .= String "NodeTracingOnlineConfiguring" ]
     NodeOpeningDbs x -> mconcat
       [ "kind" .= String "NodeOpeningDbs",         "openingDb" .= toJSON x]
     NodeReplays x -> mconcat
@@ -118,18 +129,44 @@ instance LogFormatting NodeState where
     NodeInitChainSelection x -> mconcat
       [ "kind" .= String "NodeInitChainSelection", "chainSel"  .= toJSON x]
     NodeKernelOnline -> mconcat
-      [ "kind" .= String "NodeInitChainSelection"]
+      [ "kind" .= String "NodeKernelOnline"]
     NodeAddBlock x -> mconcat
       [ "kind" .= String "NodeAddBlock",           "addBlock"  .= toJSON x]
     NodeStartup x -> mconcat
       [ "kind" .= String "NodeStartup",            "startup"   .= toJSON x]
     NodeShutdown x -> mconcat
       [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
-    _ -> mempty
+    NodeTracingFailure x -> mconcat
+      [ "kind" .= String "NodeTracingFailure",     "message"   .= toJSON x]
+    NodeTracingForwardingInterrupted howToConnect x -> mconcat
+      [ "kind" .= String "NodeTracingForwardingInterrupted"
+      , "conn" .= howToConnect
+      , "message" .= toJSON x
+      ]
+    NodePrometheusSimple promSimple ->
+      forMachine _dtal promSimple
+
+  forHuman = \case
+    NodeTracingFailure errMsg ->
+      T.pack errMsg
+    NodeTracingForwardingInterrupted howToConnect errMsg ->
+      T.pack $ "trace forwarding connection with " <> show howToConnect <> " failed: " <> errMsg
+    NodePrometheusSimple promSimple ->
+      forHuman promSimple
+    _
+      -> ""
 
 instance MetaTrace NodeState where
   namespaceFor NodeTracingOnlineConfiguring {}  =
     Namespace [] ["NodeTracingOnlineConfiguring"]
+  namespaceFor NodeTracingFailure {} =
+    Namespace [] ["NodeTracingFailure"]
+  namespaceFor NodeTracingForwardingInterrupted {} =
+    Namespace [] ["NodeTracingForwardingInterrupted"]
+  namespaceFor (NodePrometheusSimple TracePrometheusSimpleStart{}) =
+    Namespace [] ["PrometheusSimple", "Start"]
+  namespaceFor (NodePrometheusSimple TracePrometheusSimpleStop{}) =
+    Namespace [] ["PrometheusSimple", "Stop"]
   namespaceFor NodeOpeningDbs {}  =
     Namespace [] ["OpeningDbs"]
   namespaceFor NodeReplays {}  =
@@ -147,6 +184,14 @@ instance MetaTrace NodeState where
 
   severityFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) _ =
     Just Info
+  severityFor  (Namespace _ ["NodeTracingFailure"]) _ =
+    Just Error
+  severityFor  (Namespace _ ["NodeTracingForwardingInterrupted"]) _ =
+    Just Warning
+  severityFor  (Namespace _ ["PrometheusSimple", "Start"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["PrometheusSimple", "Stop"]) _ =
+    Just Warning
   severityFor  (Namespace _ ["OpeningDbs"]) _ =
     Just Info
   severityFor  (Namespace _ ["NodeReplays"]) _ =
@@ -166,6 +211,10 @@ instance MetaTrace NodeState where
 
   documentFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) = Just
     "Tracing system came online, system configuring now"
+  documentFor  (Namespace _ ["NodeTracingFailure"]) = Just
+    "Tracing system experienced a non-fatal failure during startup"
+  documentFor  (Namespace _ ["NodeTracingForwardingInterrupted"]) = Just
+    "Trace/metrics forwarding connection was interrupted"
   documentFor  (Namespace _ ["OpeningDbs"]) = Just
     "ChainDB components being opened"
   documentFor  (Namespace _ ["NodeReplays"]) = Just
@@ -173,17 +222,25 @@ instance MetaTrace NodeState where
   documentFor  (Namespace _ ["NodeInitChainSelection"]) = Just
     "Performing initial chain selection"
   documentFor  (Namespace _ ["NodeKernelOnline"]) = Just
-    ""
+    "Tracing system configured and node kernel is online"
   documentFor  (Namespace _ ["NodeAddBlock"]) = Just
-   "Applying block"
+    "Applying block"
   documentFor  (Namespace _ ["NodeStartup"]) = Just
     "Node startup"
   documentFor  (Namespace _ ["NodeShutdown"]) = Just
     "Node shutting down"
+  documentFor  (Namespace _ ["PrometheusSimple", "Start"]) =
+    Just "PrometheusSimple backend is starting"
+  documentFor  (Namespace _ ["PrometheusSimple", "Stop"]) =
+    Just "PrometheusSimple backend stopped"
   documentFor _ns = Nothing
 
   allNamespaces = [
           Namespace [] ["NodeTracingOnlineConfiguring"]
+        , Namespace [] ["NodeTracingFailure"]
+        , Namespace [] ["NodeTracingForwardingInterrupted"]
+        , Namespace [] ["PrometheusSimple", "Start"]
+        , Namespace [] ["PrometheusSimple", "Stop"]
         , Namespace [] ["OpeningDbs"]
         , Namespace [] ["NodeReplays"]
         , Namespace [] ["NodeInitChainSelection"]
@@ -241,7 +298,7 @@ traceNodeStateChainDB _scp tr ev =
         _ -> return ()
     ChainDB.TraceAddBlockEvent ev' ->
       case ev' of
-        ChainDB.AddedToCurrentChain _ (ChainDB.SelectionChangedInfo currentTip ntEpoch sInEpoch _ _ _) _ _ -> do
+        ChainDB.AddedToCurrentChain _ (ChainDB.SelectionChangedInfo currentTip ntEpoch sInEpoch _ _ _) _ _ _ -> do
           -- The slot of the latest block consumed (our progress).
           let RP.RealPoint ourSlotSinceSystemStart _ = currentTip
           -- The slot corresponding to the latest wall-clock time (our target).

@@ -6,8 +6,7 @@ module  Cardano.TxGenerator.UTxO
         (module Cardano.TxGenerator.UTxO)
         where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..))
+import           Cardano.Api hiding (txId)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))

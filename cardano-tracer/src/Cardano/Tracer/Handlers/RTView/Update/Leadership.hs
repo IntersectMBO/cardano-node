@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -9,6 +10,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
+import           Data.Text (isInfixOf)
 import           Data.Time.Clock (UTCTime)
 
 updateLeadershipHistory
@@ -19,26 +21,26 @@ updateLeadershipHistory
   -> UTCTime
   -> IO ()
 updateLeadershipHistory nodeId (ChainHistory cHistory) metricName metricValue now =
-  case metricName of
+  if
     -- Slot when the node was a leader, but couldn't forge the block.
-    "Forge.NodeCannotForge"         -> updateNodeCannotForge
+    | "nodeCannotForge" `isInfixOf` metricName       -> updateNodeCannotForge
     -- Slot when this node forged last block.
-    "Forge.ForgedSlotLast"          -> updateForgedSlotLast
+    | "forgedSlotLast" `isInfixOf` metricName        -> updateForgedSlotLast
     -- Slot when this node is leader.
-    "Forge.NodeIsLeader"            -> updateNodeIsLeader
+    | "Forge.node-is-leader" `isInfixOf` metricName  -> updateNodeIsLeader
     -- Slot when this node made leadership check and concludes it's not leader.
-    "Forge.NodeNotLeader"           -> updateNodeIsNotLeader
+    | "Forge.node-not-leader" `isInfixOf` metricName -> updateNodeIsNotLeader
     -- Slot when invalid block was forged.
-    "Forge.ForgedInvalidSlotLast"   -> updateForgedInvalidSlotLast
+    | "Forge.forged-invalid" `isInfixOf` metricName  -> updateForgedInvalidSlotLast
     -- Slot when the node adopted the block it forged.
-    "Forge.AdoptedOwnBlockSlotLast" -> updateAdoptedSlotLast
+    | "Forge.adopted" `isInfixOf` metricName         -> updateAdoptedSlotLast
     -- Slot when the node didn't adopted the block it forged, but the block was valid.
-    "Forge.NotAdoptedSlotLast"      -> updateNotAdoptedSlotLast
+    | "Forge.didnt-adopt" `isInfixOf` metricName     -> updateNotAdoptedSlotLast
     -- Slot when the leadership check is started.
-    "Forge.AboutToLeadSlotLast"     -> updateAboutToLeadSlotLast
+    | "Forge.about-to-lead" `isInfixOf` metricName   -> updateAboutToLeadSlotLast
     -- Slot when the leadership check is failed.
-    "Forge.CouldNotForgeSlotLast"   -> updateCouldNotForgeSlotLast
-    _ -> return ()
+    | "Forge.could-not-forge" `isInfixOf` metricName -> updateCouldNotForgeSlotLast
+    | otherwise                                      -> return ()
  where
   updateNodeCannotForge =
     readValueI metricValue $ addHistoricalData cHistory nodeId now NodeCannotForgeData

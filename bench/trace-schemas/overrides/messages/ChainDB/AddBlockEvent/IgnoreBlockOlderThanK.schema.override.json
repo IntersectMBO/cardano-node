@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot map the legacy namespace to the renamed IgnoreBlockOlderThanImmTip constructor."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "block": {
+          "$ref": "types/RealPoint.schema.json"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "block",
+        "kind"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -12,24 +12,27 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
+import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
 
 import           Data.Maybe (fromJust)
+import           GHC.Stack
 
 
 -- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
 -- regardless of which particular era.
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of
-  InAnyCardanoEra ByronEra a   ->   InAnyCardanoEra ByronEra $ f a
-  InAnyCardanoEra ShelleyEra a ->   InAnyCardanoEra ShelleyEra $ f a
-  InAnyCardanoEra AllegraEra a ->   InAnyCardanoEra AllegraEra $ f a
-  InAnyCardanoEra MaryEra a    ->   InAnyCardanoEra MaryEra $ f a
-  InAnyCardanoEra AlonzoEra a  ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a ->   InAnyCardanoEra BabbageEra $ f a
-  InAnyCardanoEra ConwayEra a  ->   InAnyCardanoEra ConwayEra $ f a
+  InAnyCardanoEra ByronEra a     ->   InAnyCardanoEra ByronEra $ f a
+  InAnyCardanoEra ShelleyEra a   ->   InAnyCardanoEra ShelleyEra $ f a
+  InAnyCardanoEra AllegraEra a   ->   InAnyCardanoEra AllegraEra $ f a
+  InAnyCardanoEra MaryEra a      ->   InAnyCardanoEra MaryEra $ f a
+  InAnyCardanoEra AlonzoEra a    ->   InAnyCardanoEra AlonzoEra $ f a
+  InAnyCardanoEra BabbageEra a   ->   InAnyCardanoEra BabbageEra $ f a
+  InAnyCardanoEra ConwayEra a    ->   InAnyCardanoEra ConwayEra $ f a
+  InAnyCardanoEra DijkstraEra a  ->   InAnyCardanoEra DijkstraEra $ f a
 
 -- | `keyAddress` determines an address for the relevant era.
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
@@ -79,3 +82,8 @@ mkTxValidityUpperBound slotNo =
 -- because its type enforces it being a Shelley-based era.
 mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
 mkTxInModeCardano = TxInMode shelleyBasedEra
+
+-- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
+-- Partial. Useful in tests.
+mkTxIn :: HasCallStack => Text -> TxIn
+mkTxIn = either error id . P.runParser parseTxIn

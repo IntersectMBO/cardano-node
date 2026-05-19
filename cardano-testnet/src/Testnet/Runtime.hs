@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -12,16 +13,20 @@
 
 module Testnet.Runtime
   ( startNode
+  , initAndStartKesAgent
+  , TestnetKesAgentArgs(..)
   , startLedgerNewEpochStateLogging
   , NodeStartFailure (..)
+  -- Exposed for testing purposes
+  , asyncRegister_
   ) where
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Shelley.State as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.Shelley.State as L
 
 import           Prelude
 
@@ -35,7 +40,7 @@ import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSC
-import           Data.List (isInfixOf)
+import           Data.List (isInfixOf, uncons)
 import qualified Data.List as List
 import           GHC.Stack
 import qualified GHC.Stack as GHC
@@ -45,19 +50,22 @@ import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
+import           System.Process (waitForProcess)
 
 import           Testnet.Filepath
+import           Cardano.Node.Testnet.Paths (defaultSocketName)
 import qualified Testnet.Ping as Ping
-import           Testnet.Process.Run
-import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
-                   showIpv4Address, testnetSprockets)
+import           Testnet.Process.Run (ProcessError (..), initiateProcess)
+import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated,
+                   procKesAgent, procNode)
+import           Testnet.Types (TestnetKesAgent (..), TestnetNode (..),
+                   TestnetRuntime (configurationFile), showIpv4Address, testnetSprockets)
 
-import           Hedgehog (MonadTest)
-import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
-import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
+
+import           RIO (race, runRIO)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -103,7 +111,6 @@ startNode
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => MonadTest m
   => TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
@@ -123,13 +130,13 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  liftIO $ createDirectoryIfMissingNew_ $ logDir </> node
-  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
+  void . liftIOAnnotated $ createDirectoryIfMissingNew $ logDir </> node
+  void . liftIOAnnotated $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
       nodePidFile = logDir </> node </> "node.pid"
-      socketRelPath = socketDir </> node </> "sock"
+      socketRelPath = socketDir </> node </> defaultSocketName
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
   hNodeStdout <- retryOpenFile nodeStdoutFile IO.WriteMode
@@ -144,19 +151,20 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
        left MaxSprocketLengthExceededError
 
     let socketAbsPath = H.sprocketSystemName sprocket
-        completeNodeCmd =  nodeCmd ++
+        completeNodeCmd =  nodeCmd <>
                              [ "--socket-path", H.sprocketArgumentName sprocket
                              , "--port", show port
                              , "--host-addr", showIpv4Address ipv4
                              ]
-
-    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ procNode completeNodeCmd
+    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ runRIO () $ procNode completeNodeCmd
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
-    -- is out of CLOSING state.
-    H.note_ $ "Waiting for port " <> show port <> " to be available before starting node"
-    H.assertM $ Ping.waitForPortClosed 30 0.1 port
+
+    let portWaitTimeout = 45
+    isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 port
+    unless isClosed $
+      throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting node: " <> show port
 
     (Just stdIn, _, _, hProcess, _)
       <- firstExceptT ProcessRelatedFailure $ initiateProcess
@@ -169,31 +177,37 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We force the evaluation of initiateProcess so we can be sure that
     -- the process has started. This allows us to read stderr in order
     -- to fail early on errors generated from the cardano-node binary.
-    pid <- liftIO (IO.getPid hProcess)
+    pid <- liftIOAnnotated (IO.getPid hProcess)
       >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
 
     -- We then log the pid in the temp dir structure.
-    liftIO $ IO.writeFile nodePidFile $ show pid
+    liftIOAnnotated $ IO.writeFile nodePidFile $ show pid
 
-    -- Wait for socket to be created
-    eSprocketError <-
-      H.evalIO $
-        Ping.waitForSprocket
-          120  -- timeout
-          0.2 -- check interval
-          sprocket
+    -- Wait for socket to be created and check for process to not exit
+    res <- liftIOAnnotated $
+      race
+        (waitForProcess hProcess)
+        ( Ping.waitForSprocket
+            120 -- timeout
+            0.2 -- check interval
+            sprocket
+        )
 
     -- If we do have anything on stderr, fail.
-    stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+    stdErrContents <- liftIOAnnotated $ IO.readFile nodeStderrFile
     unless (null stdErrContents) $
       throwError $ mkNodeNonEmptyStderrError stdErrContents
 
     -- No stderr and no socket? Fail.
-    firstExceptT
-      (\ioex ->
-        NodeExecutableError . hsep $
-          ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
-      $ hoistEither eSprocketError
+    case res of
+      Left _ -> pure () -- Handled using stderr above
+      Right eSprocketError -> do
+        -- No stderr and no socket? Fail.
+        firstExceptT
+          (\ioex ->
+            NodeExecutableError . hsep $
+              ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+          $ hoistEither eSprocketError
 
     -- Ping node and fail on error
     -- FIXME: pinging of the node is broken now, has the protocol changed?
@@ -211,41 +225,213 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       , nodeStderr = nodeStderrFile
       , nodeProcessHandle = hProcess
       }
-  where
-    -- close provided list of handles when 'ExceptT' throws an error
-    closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
-    closeHandlesOnError handles action =
-      catchE action $ \e -> do
-        liftIO $ mapM_ IO.hClose handles
-        throwE e
 
-    -- Sometimes even when we close the files manually, the operating system still holds the lock for some
-    -- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of
-    -- failing the node startup procedure, we simply try to use a different file name for the logs, with
-    -- the suffix @-n.log@ where @n@ is an attempt number.
-    retryOpenFile :: MonadIO m
-                  => MonadCatch m
-                  => FilePath -- ^ path we're trying to open
-                  -> IO.IOMode
-                  -> ExceptT NodeStartFailure m IO.Handle
-    retryOpenFile fullPath mode = go 0
-      where
-        go :: MonadIO m
-           => MonadCatch m
-           => Int
-           -> ExceptT NodeStartFailure m IO.Handle
-        go n = do
-          let (path, extension) = splitExtension fullPath
-              path' = if n > 0
-                         then path <> "-" <> show n <> extension
-                         else fullPath
-          r <- fmap (first FileRelatedFailure) . try . liftIO $ IO.openFile path' mode
-          case r of
-            Right h -> pure h
-            Left e
-              -- give up after 1000 attempts
-              | n >= 1000 -> throwE e
-              | otherwise -> go (n + 1)
+-- | Start a kes-agent for a particular node
+startKESAgent
+  :: HasCallStack
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
+  => TmpAbsolutePath
+  -- ^ The temporary absolute path
+  -> String
+  -- ^ The name of the node
+  -> [String]
+  -- ^ additional CLI options for 'kes-agent`
+  -> ExceptT NodeStartFailure m TestnetKesAgent
+startKESAgent tp node args = GHC.withFrozenCallStack $ do
+  let tempBaseAbsPath = makeTmpBaseAbsPath tp
+      socketDir = makeSocketDir tp
+      logDir = makeLogDir tp
+      kesAgentStr= "kes-agent"
+
+  _ <- liftIO $ createDirectoryIfMissingNew $ logDir </> node </> kesAgentStr
+  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node </> kesAgentStr)
+
+  let nodeStdoutFile = logDir </> node </> kesAgentStr </>  "stdout.log"
+      nodeStderrFile = logDir </> node </> kesAgentStr </> "stderr.log"
+      nodePidFile = logDir </> node </> kesAgentStr </> (node <> kesAgentStr <> ".pid")
+      serviceSocketRelPath = socketDir </> node </> kesAgentStr </> "service.sock"
+      controlSocketRelPath = socketDir </> node </> kesAgentStr </> "control.sock"
+      serviceSprocket = Sprocket tempBaseAbsPath serviceSocketRelPath
+      controlSprocket = Sprocket tempBaseAbsPath controlSocketRelPath
+
+  hNodeStdout <- retryOpenFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- retryOpenFile nodeStderrFile IO.ReadWriteMode
+
+  -- Sometimes the handles are not getting properly closed when node fails to start. This results in
+  -- operating system holding the file lock for longer than it's necessary. This in the end prevents retrying
+  -- node start and acquiring a lock for the same stderr/stdout files again.
+  closeHandlesOnError [hNodeStdout, hNodeStderr] $ do
+
+    unless (List.length (H.sprocketArgumentName serviceSprocket) <= H.maxSprocketArgumentNameLength) $
+       left MaxSprocketLengthExceededError
+    unless (List.length (H.sprocketArgumentName controlSprocket) <= H.maxSprocketArgumentNameLength) $
+       left MaxSprocketLengthExceededError
+
+    let kesAgentCmd = [ "run"
+                      , "-s", tempBaseAbsPath </> serviceSocketRelPath
+                      , "-c", tempBaseAbsPath </> controlSocketRelPath
+                      ] ++ args
+
+    kesAgentProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ runRIO () $ procKesAgent kesAgentCmd
+
+    (Just stdIn, _, _, hProcess, _)
+      <- firstExceptT ProcessRelatedFailure $ initiateProcess
+            $ kesAgentProcess
+               { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
+               , IO.std_err = IO.UseHandle hNodeStderr
+               , IO.cwd = Just tempBaseAbsPath
+               }
+
+    -- We force the evaluation of initiateProcess so we can be sure that
+    -- the process has started. This allows us to read stderr in order
+    -- to fail early on errors generated from the cardano-node binary.
+    pid <- liftIO (IO.getPid hProcess)
+      >>= hoistMaybe (NodeExecutableError $ "startKESAgent:" <+> pretty node <+> "'s process did not start.")
+
+    -- We then log the pid in the temp dir structure.
+    liftIO $ IO.writeFile nodePidFile $ show pid
+
+    -- Wait for the service and control sockets to be created
+    eServiceSprocketError <-
+      liftIOAnnotated $
+        Ping.waitForSprocket
+          120  -- timeout
+          0.2 -- check interval
+          serviceSprocket
+    eControlSprocketError <-
+      liftIOAnnotated $
+        Ping.waitForSprocket
+          120  -- timeout
+          0.2 -- check interval
+          controlSprocket
+
+    -- If we do have anything on stderr, fail.
+    stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+    unless (null stdErrContents) $
+      throwError $ mkNodeNonEmptyStderrError stdErrContents
+
+    -- No stderr and no socket? Fail.
+    firstExceptT
+      (\ioex ->
+        NodeExecutableError . hsep $
+          ["Socket", pretty serviceSocketRelPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+      $ hoistEither eServiceSprocketError
+    firstExceptT
+      (\ioex ->
+        NodeExecutableError . hsep $
+          ["Socket", pretty controlSocketRelPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
+      $ hoistEither eControlSprocketError
+
+    -- Ping node and fail on error
+    -- FIXME: pinging of the node is broken now, has the protocol changed?
+    -- Ping.pingNode (fromIntegral testnetMagic) sprocket
+    --    >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
+
+    pure $ TestnetKesAgent
+      { kesAgentName = node
+      , kesAgentPoolKeys = Nothing -- they're set in the function caller, if present
+      , kesAgentServiceSprocket= serviceSprocket
+      , kesAgentControlSprocket = controlSprocket
+      , kesAgentStdinHandle = stdIn
+      , kesAgentStdout = nodeStdoutFile
+      , kesAgentStderr = nodeStderrFile
+      , kesAgentProcessHandle = hProcess
+      }
+
+-- | Various file paths needed to start and initialised a 'kes-agent' process
+data TestnetKesAgentArgs =
+  TestnetKesAgentArgs
+  { tkaaShelleyGenesisFile :: FilePath
+  , tkaaColdVKeyFile :: FilePath
+  , tkaaColdSKeyFile :: FilePath
+  , tkaaKesVKeyFile :: FilePath
+  , tkaaOpcertCounterFile :: FilePath
+  , tkaaOpcertFile :: FilePath
+  }
+
+-- | Start the 'kes-agent' process and initialise it to handle the kes keys
+--   for a block-producing node.
+initAndStartKesAgent
+  :: HasCallStack
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
+  =>
+  TmpAbsolutePath
+  -- ^ The temporary absolute path
+  -> String
+  -- ^ The name of the node
+  -> TestnetKesAgentArgs
+  -> ExceptT NodeStartFailure m TestnetKesAgent
+initAndStartKesAgent tp nodeNameStr
+  TestnetKesAgentArgs{ tkaaShelleyGenesisFile
+                     , tkaaColdVKeyFile
+                     , tkaaColdSKeyFile
+                     , tkaaKesVKeyFile
+                     , tkaaOpcertCounterFile
+                     , tkaaOpcertFile
+                     }
+  = do
+  -- start the agent process
+  kesAgent@TestnetKesAgent{kesAgentControlSprocket} <- startKESAgent tp nodeNameStr
+    [ "--cold-verification-key", tkaaColdVKeyFile
+    , "--genesis-file", tkaaShelleyGenesisFile
+    ]
+  -- generate kes key
+  execKesAgentControl_ [ "gen-staged-key"
+                       , "--kes-verification-key-file", tkaaKesVKeyFile
+                       , "--control-address", H.sprocketSystemName kesAgentControlSprocket]
+  -- issue opcert
+  execCli_
+    [ "node", "issue-op-cert"
+    , "--kes-verification-key-file", tkaaKesVKeyFile
+    , "--cold-signing-key-file", tkaaColdSKeyFile
+    , "--operational-certificate-issue-counter", tkaaOpcertCounterFile
+    , "--kes-period", "0"
+    , "--out-file", tkaaOpcertFile
+    ]
+  -- install the opcert into the kes-agent
+  execKesAgentControl_ [ "install-key"
+                       , "--control-address", H.sprocketSystemName kesAgentControlSprocket
+                       , "--opcert-file", tkaaOpcertFile]
+  pure kesAgent
+
+-- | Close provided list of handles when 'ExceptT' throws an error
+closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
+closeHandlesOnError handles action =
+  catchE action $ \e -> do
+    liftIOAnnotated $ mapM_ IO.hClose handles
+    throwE e
+
+-- Sometimes even when we close the files manually, the operating system still holds the lock for some
+-- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of
+-- failing the node startup procedure, we simply try to use a different file name for the logs, with
+-- the suffix @-n.log@ where @n@ is an attempt number.
+retryOpenFile :: MonadIO m
+              => MonadCatch m
+              => FilePath -- ^ path we're trying to open
+              -> IO.IOMode
+              -> ExceptT NodeStartFailure m IO.Handle
+retryOpenFile fullPath mode = go 0
+  where
+    go :: MonadIO m
+       => MonadCatch m
+       => Int
+       -> ExceptT NodeStartFailure m IO.Handle
+    go n = do
+      let (path, extension) = splitExtension fullPath
+          path' = if n > 0
+                     then path <> "-" <> show n <> extension
+                     else fullPath
+      r <- fmap (first FileRelatedFailure) . try . liftIOAnnotated $ IO.openFile path' mode
+      case r of
+        Right h -> pure h
+        Left e
+          -- give up after 1000 attempts
+          | n >= 1000 -> throwE e
+          | otherwise -> go (n + 1)
 
 
 
@@ -254,9 +440,6 @@ createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True directory
   pure directory
 
-createDirectoryIfMissingNew_ :: HasCallStack => FilePath -> IO ()
-createDirectoryIfMissingNew_ directory = GHC.withFrozenCallStack $
-  void $ createDirectoryIfMissingNew directory
 
 createSubdirectoryIfMissingNew :: ()
   => HasCallStack
@@ -271,16 +454,14 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
 -- Pretty JSON logs will be placed in:
 -- 1. <tmp workspace directory>/logs/ledger-new-epoch-state.log
 -- 2. <tmp workspace directory>/logs/ledger-new-epoch-state-diffs.log
--- NB: The diffs represent the the changes in the 'NewEpochState' between each
+-- NB: The diffs represent the changes in the 'NewEpochState' between each
 -- block or turn of the epoch. We have excluded the 'stashedAVVMAddresses'
 -- field of 'NewEpochState' in the JSON rendering.
 -- The logging thread will be cancelled when `MonadResource` releases all resources.
 -- Idempotent.
 startLedgerNewEpochStateLogging
   :: HasCallStack
-  => MonadCatch m
   => MonadResource m
-  => MonadTest m
   => TestnetRuntime
   -> FilePath -- ^ tmp workspace directory
   -> m ()
@@ -290,29 +471,29 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       logFile = logDir </> "ledger-epoch-state.log"
       diffFile = logDir </> "ledger-epoch-state-diffs.log"
 
-  H.evalIO (IO.doesDirectoryExist logDir) >>= \case
+  liftIOAnnotated $ IO.doesDirectoryExist logDir >>= \case
     True -> pure ()
+    False ->
+      void $ createDirectoryIfMissingNew logDir
+
+  liftIOAnnotated (IO.doesFileExist logFile) >>= \case
+    True -> return ()
     False -> do
-      H.note_ $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
-      H.failure
+      liftIOAnnotated $ appendFile logFile ""
 
-  H.evalIO (IO.doesFileExist logFile) >>= \case
-    True -> do
-      H.note_ $ "Epoch states logging to " <> logFile <> " is already started."
-    False -> do
-      H.evalIO $ appendFile logFile ""
-      socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (testnetSprockets testnetRuntime)
+      let socketPath = case uncons (testnetSprockets testnetRuntime) of
+            Just (sprocket, _) -> H.sprocketSystemName sprocket
+            Nothing            -> throwString "No testnet sprocket available"
 
-      _ <- H.asyncRegister_ . runExceptT $
-        foldEpochState
-          (configurationFile testnetRuntime)
-          (Api.File socketPath)
-          Api.QuickValidation
-          (EpochNo maxBound)
-          Nothing
-          (handler logFile diffFile)
+      void $ asyncRegister_ . runExceptT $
+                  foldEpochState
+                    (configurationFile testnetRuntime)
+                    (Api.File socketPath)
+                    Api.QuickValidation
+                    (EpochNo maxBound)
+                    Nothing
+                    (handler logFile diffFile)
 
-      H.note_ $ "Started logging epoch states to: " <> logFile <> "\nEpoch state diffs are logged to: " <> diffFile
   where
     handler :: FilePath -- ^ log file
             -> FilePath -- ^ diff file
@@ -323,7 +504,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo) = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
           blockLabel = "#### BLOCK " <> show blockNo <> " ####"
-      liftIO . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
+      liftIOAnnotated . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
 
       -- store epoch state for logging of differences
       mPrevEpochState <- get
@@ -331,15 +512,22 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       forM_ mPrevEpochState $ \(AnyNewEpochState sbe' pnes _) -> do
         let prettyPnes = shelleyBasedEraConstraints sbe' (encodePretty pnes)
             difference = calculateEpochStateDiff prettyPnes prettyNes
-        liftIO . appendFile diffFp $ unlines [blockLabel, difference, ""]
+        liftIOAnnotated . appendFile diffFp $ unlines [blockLabel, difference, ""]
 
       pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
-            <> displayException e <> "\n"
+          exists <- liftIO $ IO.doesFileExist outputFp
+          if exists
+            then liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+                   <> displayException e <> "\n"
+            else
+              liftIO $ writeFile outputFp $ unlines
+                 ["Ledger new epoch logging failed - caught exception:"
+                 , displayException e
+                 ]
           pure ConditionMet
 
 calculateEpochStateDiff
@@ -362,3 +550,20 @@ instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.
       , "rewardUpdate" .= nesRu
       , "currentStakeDistribution" .= nesPd
       ]
+
+
+-- | Runs an action in background, and registers its cancellation to 'MonadResource'.
+asyncRegister_ :: HasCallStack
+               => MonadResource m
+               => IO a -- ^ Action to run in background
+               -> m (ReleaseKey, H.Async a)
+asyncRegister_ act = GHC.withFrozenCallStack $ do
+      allocate
+        (do a <- H.async act
+            H.link a
+            return a
+        )
+        cleanUp
+  where
+    cleanUp :: H.Async a -> IO ()
+    cleanUp = H.cancel

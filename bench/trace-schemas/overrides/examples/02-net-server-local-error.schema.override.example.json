@@ -1,0 +1,16 @@
+{
+  "_target": "bench/trace-schemas/messages/Net/Server/Local/Error.schema.json",
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Document operator-facing semantics"
+  },
+  "patch": {
+    "data": {
+      "description": "Local server accept loop error payload",
+      "required": [
+        "kind",
+        "error"
+      ]
+    }
+  }
+}

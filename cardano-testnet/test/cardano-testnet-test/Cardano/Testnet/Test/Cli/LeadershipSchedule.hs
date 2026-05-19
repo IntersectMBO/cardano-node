@@ -16,20 +16,22 @@ module Cardano.Testnet.Test.Cli.LeadershipSchedule
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
-import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
 
 import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as J
 import           Data.Default.Class
+import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import qualified GHC.Stack as GHC
@@ -38,12 +40,14 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
+import           Testnet.Start.Cardano
 import           Testnet.Types
 
 import           Hedgehog (Property, (===))
@@ -65,12 +69,12 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
-        { cardanoNodeEra = asbe
-        , cardanoNodes =
-          AutomaticNodeOptions [ SpoNodeOptions []
-                               , SpoNodeOptions []
-                               , SpoNodeOptions []
-                               ]
+        { creationEra = asbe
+        , creationNodes =
+            SpoNodeOptions [] :|
+          [ SpoNodeOptions []
+          , SpoNodeOptions []
+          ]
         }
       eraString = eraToString sbe
 
@@ -79,7 +83,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     , wallets=wallet0:_
     , configurationFile
     , testnetNodes
-    } <- cardanoTestnetDefault cTestnetOptions def conf
+    } <- createAndRunTestnet cTestnetOptions def conf
 
   node1sprocket <- H.headM $ testnetSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
@@ -94,7 +98,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
@@ -150,7 +154,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    (creationEra cTestnetOptions)
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp
@@ -175,7 +179,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   H.cat $ work </> "utxo-2.json"
 
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+  utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
@@ -227,10 +231,10 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let valency = 1
-      topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
-          RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
+  let topology = defaultP2PTopology
+                   [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
+                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                   ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
@@ -255,8 +259,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       , "--operational-certificate-issue-counter-file", testSpoOperationalCertFp
       , "--out-file", testSpoOperationalCertFp
       ]
-
-  jsonBS <- createConfigJson tempAbsPath sbe
+  jsonBS <- liftToIntegration $
+    Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

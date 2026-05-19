@@ -13,7 +13,6 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
 import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
@@ -40,7 +39,7 @@ import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -51,7 +50,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
 hprop_check_drep_activity :: Property
-hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog $ \watchdog -> do
+hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog $ \watchdog -> do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -62,12 +61,12 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 1
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = 1
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
       eraName = eraToString sbe
-      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -75,7 +74,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -172,7 +171,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   H.kickWatchdog watchdog
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
-  -- because DReps won't expire if there is not enough activity (opportunites to participate).
+  -- because DReps won't expire if there is not enough activity (opportunities to participate).
   -- This is accounted for by the dormant epoch count
   let numOfFillerProposals = 4 :: Int
   sequence_
@@ -217,7 +216,7 @@ activityChangeProposalTest
                          -- the proposal.
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
-  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
+  -> m (TxId, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
                            stakeKeys wallet votes change minWait mExpected maxWait = do
   let sbe = convert ceo
@@ -261,7 +260,7 @@ voteChangeProposal
   -> ShelleyBasedEra era -- ^ The 'ShelleyBasedEra' witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> String -- ^ The transaction id of the governance action to vote.
+  -> TxId -- ^ The transaction id of the governance action to vote.
   -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default DRep that will make the vote and the type of the vote

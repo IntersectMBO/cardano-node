@@ -1,10 +1,12 @@
 { pkgs
-, lib
+, haskellProject
 , stateDir
 , subBackendName
 , ...
 }:
 let
+
+  inherit (pkgs) lib;
 
   # Backend-specific Nix bits:
   materialise-profile = { profileBundle }:
@@ -122,7 +124,7 @@ let
     ############################################################################
     lib.attrsets.optionalAttrs (subBackendName == "cloud") {
       openssh_hacks = rec {
-        commit = "5d8c5913c70723318acf47496e2abf7d2c99384f"; # OpenSSH version 9.8 (Branch "9.8");
+        commit = "74ab7169b3f374e45a1186527da3a225f471bf25"; # OpenSSH version 10.0p2 (Branch "10.0p2");
         # Not used locally. Needed to create the SSH "start.sh" script.
         nix-store-path  = (__getFlake "github:fmaste/openssh-portable-hacks/${commit}").packages.x86_64-linux.openssh_hacks;
         flake-reference = "github:fmaste/openssh-portable-hacks";
@@ -145,29 +147,33 @@ let
       # the one used to enter the shell.
       cardano-node = rec {
         # Local reference only used if not "cloud".
-        # Avoid rebuilding on every commit because of `set-git-rev`.
-        nix-store-path = pkgs.cardanoNodePackages.cardano-node.passthru.noGitRev;
+        nix-store-path = haskellProject.exes.cardano-node;
         flake-reference = "github:intersectmbo/cardano-node";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.cardano-node.passthru.noGitRev"
         ;
       };
       cardano-cli = rec {
         # Local reference only used if not "cloud".
-        # Avoid rebuilding on every commit because of `set-git-rev`.
-        nix-store-path = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
+        nix-store-path = haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli;
         flake-reference = "github:input-output-hk/cardano-cli";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.cardano-cli.passthru.noGitRev";
       };
       cardano-tracer = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.cardano-tracer;
+        nix-store-path = haskellProject.exes.cardano-tracer;
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "cardanoNodePackages.cardano-tracer";
       };
       tx-generator = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.tx-generator.passthru.noGitRev;
+        nix-store-path = haskellProject.exes.tx-generator;
         flake-reference = "github:intersectmbo/cardano-node";
+        # Where to fetch the binary from during "cloud" runs.
+        # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.tx-generator.passthru.noGitRev";
       };
     }
@@ -187,7 +193,7 @@ let
         exec = {
           # TODO: oneTracerPerGroup
           oneTracerPerCluster = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -195,7 +201,7 @@ let
               withSsh = false;
             };
           oneTracerPerNode = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -210,7 +216,7 @@ let
           # Always "oneTracerPerNode"
           # TODO: oneTracerPerCluster and oneTracerPerGroup
           nomadExec = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;
@@ -218,7 +224,7 @@ let
               withSsh = false;
             };
           ssh = import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
+            { inherit pkgs stateDir;
               inherit profileBundle;
               inherit generatorTaskName;
               inherit installables;

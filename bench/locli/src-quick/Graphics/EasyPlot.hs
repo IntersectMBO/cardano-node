@@ -275,7 +275,7 @@ instance (Fractional x, Enum x, Show x, Fractional y, Enum y, Show y, Num z, Sho
 instance Plot String where
     plot' options term g = plot' @(Graph3D Double Double Int) options term $ Gnuplot3D [] [] g
 
--- | plots mutliple 3D functions using gnuplots native function parser
+-- | plots multiple 3D functions using gnuplots native function parser
 --   and renderer. The String will be interpreted as 'Gnuplot3D'.
 instance Plot [String] where
     plot' options term g = plot' @[Graph3D Double Double Int] options term $ map (Gnuplot3D [] []) g

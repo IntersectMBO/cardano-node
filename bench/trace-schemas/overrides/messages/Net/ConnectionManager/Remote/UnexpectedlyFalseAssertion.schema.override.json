@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot infer the fallback constructor payload for remote connection-manager assertions."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "info": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "info",
+        "kind"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Gov.Transaction.HashMismatch
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Cardano.Testnet
 
@@ -27,6 +26,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile, tamperBase16Hash)
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', execCliAny, mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -50,8 +50,10 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -59,7 +61,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -76,7 +78,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   infoActionFp <- H.note $ work </> gov </> "info.action"
 

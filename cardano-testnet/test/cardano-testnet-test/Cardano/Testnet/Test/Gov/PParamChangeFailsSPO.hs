@@ -34,7 +34,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (failToSubmitTx, signTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -47,7 +47,7 @@ import           Hedgehog.Internal.Source (HasCallStack, withFrozenCallStack)
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PParam change fails for SPO/"'@
 hprop_check_pparam_fails_spo :: Property
-hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbsBasePath' ->
+hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -61,8 +61,10 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -70,7 +72,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     , wallets=wallet0:wallet1:_wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -154,7 +156,7 @@ failToVoteChangeProposalWithSPOs
                     -- using the 'getEpochStateView' function.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> String -- ^ The transaction id of the governance action to vote.
+  -> TxId -- ^ The transaction id of the governance action to vote.
   -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default SPO that will make the vote and the type of the vote

@@ -19,7 +19,6 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -51,7 +50,6 @@ import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import qualified Cardano.TxGenerator.Utils as Utils
 import           Cardano.TxGenerator.UTxO
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 import           Prelude
 
@@ -72,13 +70,14 @@ liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
   case era of
-    AnyCardanoEra ConwayEra  -> action AsConwayEra
-    AnyCardanoEra BabbageEra -> action AsBabbageEra
-    AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
-    AnyCardanoEra MaryEra    -> action AsMaryEra
-    AnyCardanoEra AllegraEra -> action AsAllegraEra
-    AnyCardanoEra ShelleyEra -> action AsShelleyEra
-    AnyCardanoEra ByronEra   -> error "byron not supported"
+    AnyCardanoEra ConwayEra   -> action AsConwayEra
+    AnyCardanoEra BabbageEra  -> action AsBabbageEra
+    AnyCardanoEra AlonzoEra   -> action AsAlonzoEra
+    AnyCardanoEra MaryEra     -> action AsMaryEra
+    AnyCardanoEra AllegraEra  -> action AsAllegraEra
+    AnyCardanoEra ShelleyEra  -> action AsShelleyEra
+    AnyCardanoEra ByronEra    -> error "byron not supported"
+    AnyCardanoEra DijkstraEra -> action AsDijkstraEra
 
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
@@ -208,14 +207,18 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-localSubmitTx :: TxInMode -> ActionM (SubmitResult TxValidationErrorInCardanoMode)
+localSubmitTx :: TxInMode -> ActionM TxSubmitResult
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
   case ret of
-    SubmitSuccess -> return ret
-    SubmitFail e -> do
+    TxSubmitSuccess -> return ret
+    TxSubmitFail e -> do
       let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
+      traceDebug msg
+      return ret
+    TxSubmitError e -> do
+      let msg = concat [ "local submit error: " , show e , " (" , show tx , ")" ]
       traceDebug msg
       return ret
 --      throwE $ ApiError msg

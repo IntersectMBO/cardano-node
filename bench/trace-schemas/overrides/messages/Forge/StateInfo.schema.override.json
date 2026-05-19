@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot infer the KESInfo payload behind the Forge.StateInfo namespace."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "endPeriod": {
+          "type": "integer"
+        },
+        "evolution": {
+          "type": "integer"
+        },
+        "keyExpiresIn": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "startPeriod": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "endPeriod",
+        "evolution",
+        "kind",
+        "startPeriod"
+      ],
+      "type": "object"
+    }
+  }
+}

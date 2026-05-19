@@ -1,7 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Logging hiding (LocalSocket)
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
@@ -12,6 +14,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+
 
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
@@ -54,12 +57,12 @@ main = do
   currentLogLock <- newLock
   currentDPLock  <- newLock
 #if RTVIEW
-  eventsQueues   <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues mempty Nothing connectedNodesNames dpRequestors currentDPLock
 
   rtViewPageOpened <- newTVarIO False
 #endif
 
-  tracer <- mkTracerTracer $ SeverityF $ Just Warning
+  tracer <- mkTraceBundle $ SeverityF $ Just Warning
 
   let tracerEnv :: TracerConfig -> HandleRegistry -> TracerEnv
       tracerEnv config handleRegistry = TracerEnv
@@ -71,11 +74,12 @@ main = do
         , teCurrentDPLock         = currentDPLock
         , teDPRequestors          = dpRequestors
         , teProtocolsBrake        = protocolsBrake
-        , teTracer                = tracer
+        , teTracer                = tracer.assorted
         , teReforwardTraceObjects = \_-> pure ()
         , teRegistry              = handleRegistry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teTimeseriesHandle      = Nothing
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -138,21 +142,24 @@ main = do
 
   mkConfig :: FilePath -> LogFormat -> TracerConfig
   mkConfig root format = TracerConfig
-    { networkMagic   = 764824073
-    , network        = AcceptAt (LocalSocket "")
-    , loRequestNum   = Nothing
-    , ekgRequestFreq = Nothing
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = NE.fromList [LoggingParams root FileMode format]
-    , rotation       = Nothing
-    , verbosity      = Nothing
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = 764824073
+    , network          = AcceptAt (Net.LocalPipe "")
+    , loRequestNum     = Nothing
+    , ekgRequestFreq   = Nothing
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = NE.fromList [LoggingParams root FileMode format]
+    , rotation         = Nothing
+    , verbosity        = Nothing
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
+    , prometheusLabels = Nothing
     }
 
   generate :: Int -> IO [TraceObject]

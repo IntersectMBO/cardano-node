@@ -11,9 +11,8 @@ module Cardano.Testnet.Test.SubmitApi.Transaction
   ( hprop_transaction
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as A
 import qualified Cardano.Api.Ledger as L
-import qualified Cardano.Api.Ledger.Lens as A
 
 import           Cardano.Testnet
 
@@ -51,7 +50,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 -- | Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/SubmitApi.transaction/"'@
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -60,8 +59,8 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
       sbe = ShelleyBasedEraConway
       eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-      options = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
         }
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -71,7 +70,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   poolNode1 <- H.headM testnetNodes
 
@@ -99,7 +98,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
@@ -157,7 +156,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
         , "--out-file", work </> "utxo-2.json"
         ]
 
-      utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+      utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
       UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 

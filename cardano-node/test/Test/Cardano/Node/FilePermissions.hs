@@ -23,7 +23,6 @@ import           System.Directory (removeFile)
 
 import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
-import           Control.Exception (bracket)
 import           Control.Monad (Monad (..))
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
@@ -40,6 +39,7 @@ import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
 import           Text.Show (Show (..))
 import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
+import           Control.Exception (bracket)
 
 #ifdef UNIX
 
@@ -47,9 +47,8 @@ import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
-import           Control.Exception (bracket)
 import           Hedgehog
-import           Hedgehog.Extras
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 #endif
 
@@ -136,7 +135,7 @@ prop_sanityCheck_checkVRFFilePermissions =
                         (const . liftIO . runExceptT $ checkVRFFilePermissions capturingTracer vrfPrivateKeyGroup)
     case groupResult of
       Left (GroupPermissionsExist _) -> do
-        note_ "Group permissions check should not fail"
+        H.note_ "Group permissions check should not fail"
         failure
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "

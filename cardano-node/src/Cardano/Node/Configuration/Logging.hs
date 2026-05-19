@@ -77,7 +77,7 @@ import           Control.Concurrent.MVar (MVar, newMVar)
 import           Control.Concurrent.STM (STM)
 import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad (forM_, forever, void, when)
+import           Control.Monad
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
@@ -240,7 +240,7 @@ createLoggingLayer ver nodeConfig' p = do
 
          forM_ [metricsLogger, errorsLoggers] $ \loggerName ->
            Config.getBackends logConfig loggerName >>= \backends ->
-             when (TraceForwarderBK `notElem` backends) $
+             unless (TraceForwarderBK `elem` backends) $
                Config.setBackends logConfig loggerName $ Just (TraceForwarderBK : backends)
 
      Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
@@ -344,7 +344,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
             in getGenesisValues "Shelley" cfgShelley
           Api.CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
-                                    cfgBabbage cfgConway = Consensus.configLedger cfg
+                                    cfgBabbage cfgConway cfgDjikstra = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
                ++ getGenesisValues "Shelley" cfgShelley
                ++ getGenesisValues "Allegra" cfgAllegra
@@ -352,6 +352,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
                ++ getGenesisValues "Alonzo"  cfgAlonzo
                ++ getGenesisValues "Babbage" cfgBabbage
                ++ getGenesisValues "Conway"  cfgConway
+               ++ getGenesisValues "Djikstra" cfgDjikstra
       items = nub $
         [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)

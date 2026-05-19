@@ -6,6 +6,7 @@ module Cardano.Tracer.Environment
   ) where
 
 import           Cardano.Logging.Types
+import           Cardano.Timeseries.Component (TimeseriesHandle)
 import           Cardano.Tracer.Configuration
 #if RTVIEW
 import           Cardano.Tracer.Handlers.Notifications.Types
@@ -36,6 +37,7 @@ data TracerEnv = TracerEnv
   , teRegistry              :: !HandleRegistry
   , teStateDir              :: !(Maybe FilePath)
   , teMetricsHelp           :: ![(Text, Builder)]
+  , teTimeseriesHandle      :: !(Maybe TimeseriesHandle)
   }
 
 #if RTVIEW

@@ -445,7 +445,7 @@ EOF
         then batch=$(get_most_significant_git_tag)
         fi
         local batch_inf=$(echo -n ${batch} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z^0-9]//g')
-        local prof_suf=$(test -v "WB_PROFILING" && test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
+        local prof_suf=$(test -v "WB_PROFILEDBUILD" && test -n "$WB_PROFILEDBUILD" -a "$WB_PROFILEDBUILD" = 'yes' && echo '-prof')
         local run="${date_pref}-${hash}-${batch_inf::12}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 

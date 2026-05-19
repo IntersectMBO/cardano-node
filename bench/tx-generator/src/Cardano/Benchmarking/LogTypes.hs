@@ -28,6 +28,7 @@ import           Cardano.Benchmarking.OuroborosImports
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
+import           Cardano.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
@@ -36,10 +37,9 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 import           Cardano.TxGenerator.Types (TPSRate)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
 import           Ouroboros.Network.IOManager (IOManager)
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
@@ -48,7 +48,6 @@ import           Prelude
 import qualified Codec.CBOR.Term as CBOR
 import qualified Control.Concurrent.Async as Async (Async)
 import qualified Control.Concurrent.STM as STM (TVar)
-import           Data.Text
 import           Data.Time.Clock (DiffTime, NominalDiffTime)
 import           GHC.Generics
 import qualified Network.Mux as Mux
@@ -123,6 +122,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubError Text
   | TraceBenchPlutusBudgetSummary PlutusBudgetSummary
   -- ^ PlutusBudgetSummary.
+  | TraceBenchForwardingInterrupted HowToConnect String
   deriving stock (Show, Generic)
 
 data SubmissionSummary

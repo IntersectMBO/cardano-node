@@ -85,8 +85,9 @@ computeRoutes TracerEnv{teConnectedNodesNames, teAcceptedMetrics} = atomically d
 
 
 
-contentHdrJSON, contentHdrOpenMetrics, contentHdrUtf8Html, contentHdrUtf8Text :: ResponseHeaders
+contentHdrJSON, contentHdrOpenMetrics, contentHdrUtf8Html, contentHdrUtf8Text, contentHdrPrometheus :: ResponseHeaders
 contentHdrJSON        = [(hContentType, "application/json")]
-contentHdrOpenMetrics = [(hContentType, "application/openmetrics-text; version=1.0.0; charset=utf-8")]
-contentHdrUtf8Html    = [(hContentType, "text/html; charset=utf-8")]
-contentHdrUtf8Text    = [(hContentType, "text/plain; charset=utf-8")]
+contentHdrOpenMetrics = [(hContentType, "application/openmetrics-text;version=1.0.0;charset=utf-8")]
+contentHdrUtf8Html    = [(hContentType, "text/html;charset=utf-8")]
+contentHdrUtf8Text    = [(hContentType, "text/plain;charset=utf-8")]
+contentHdrPrometheus  = [(hContentType, "text/plain;version=0.0.4;charset=utf-8")]

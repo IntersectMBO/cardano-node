@@ -43,6 +43,8 @@ import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
 import           Prettyprinter
 
+import           Testnet.Process.RunIO (liftIOAnnotated)
+
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
@@ -65,7 +67,7 @@ pingNode :: MonadIO m
          => TestnetMagic -- ^ testnet magic
          -> IO.Sprocket  -- ^ node sprocket
          -> m (Either PingClientError ()) -- ^ '()' means success
-pingNode networkMagic sprocket = liftIO $ bracket
+pingNode networkMagic sprocket = liftIOAnnotated $ bracket
   (Socket.socket (Socket.addrFamily peer) Socket.Stream Socket.defaultProtocol)
   Socket.close
   (\sd -> handle (pure . Left . PceException) $ withTimeoutSerial $ \timeoutfn -> do
@@ -80,10 +82,10 @@ pingNode networkMagic sprocket = liftIO $ bracket
     Socket.connect sd (Socket.addrAddress peer)
     peerStr <- peerString
 
-    bearer <- getBearer makeSocketBearer sduTimeout nullTracer sd Nothing
+    bearer <- getBearer makeSocketBearer sduTimeout sd Nothing
 
     let versions = supportedNodeToClientVersions networkMagic
-    !_ <- Mux.write bearer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
+    !_ <- Mux.write bearer nullTracer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
     (msg, !_) <- nextMsg bearer timeoutfn handshakeNum
 
     pure $ case CBOR.deserialiseFromBytes handshakeDec msg of
@@ -130,7 +132,7 @@ pingNode networkMagic sprocket = liftIO $ bracket
             -> MiniProtocolNum -- ^ handshake protocol number
             -> IO (LBS.ByteString, Time) -- ^ raw message and timestamp
     nextMsg bearer timeoutfn ptclNum = do
-      (sdu, t_e) <- Mux.read bearer timeoutfn
+      (sdu, t_e) <- Mux.read bearer nullTracer timeoutfn
       if mhNum (msHeader sdu) == ptclNum
         then pure (msBlob sdu, t_e)
         else nextMsg bearer timeoutfn ptclNum
@@ -143,7 +145,7 @@ waitForSprocket :: MonadIO m
                 -> MT.DiffTime -- ^ interval
                 -> IO.Sprocket
                 -> m (Either IOException ())
-waitForSprocket timeout interval sprocket = liftIO $ do
+waitForSprocket timeout interval sprocket = liftIOAnnotated $ do
   lastResult <- newIORef (Right ())
   _ <- MT.timeout timeout $ loop lastResult
   readIORef lastResult
@@ -158,7 +160,7 @@ waitForSprocket timeout interval sprocket = liftIO $ do
 
 -- | Check if the sprocket can be connected to. Returns an exception thrown during the connection attempt.
 checkSprocket :: MonadIO m => IO.Sprocket -> m (Either IOException ())
-checkSprocket sprocket = liftIO $ do
+checkSprocket sprocket = liftIOAnnotated $ do
   let AddrInfo{addrFamily, addrSocketType, addrProtocol, addrAddress} = sprocketToAddrInfo sprocket
   bracket (Socket.socket addrFamily addrSocketType addrProtocol) Socket.close $ \sock -> do
     -- Capture only synchronous exceptions from the connection attempt.
@@ -179,10 +181,10 @@ waitForPortClosed
   -> MT.DiffTime -- ^ check interval
   -> PortNumber
   -> m Bool -- ^ 'True' if port is closed, 'False' if timeout was reached before that
-waitForPortClosed timeout interval portNumber = liftIO $ do
+waitForPortClosed timeout interval portNumber = liftIOAnnotated $ do
   let retryPolicy = R.constantDelay (round @Double $ realToFrac interval) <> R.limitRetries (ceiling $ toRational timeout / toRational interval)
   fmap not . R.retrying retryPolicy (const pure) $ \_ ->
-    liftIO (IO.isPortOpen (fromIntegral portNumber))
+    liftIOAnnotated (IO.isPortOpen (fromIntegral portNumber))
 
 data PingClientError
   = PceDecodingError

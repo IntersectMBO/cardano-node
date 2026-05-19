@@ -2,7 +2,6 @@
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -13,6 +12,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Cardano.Tracer.MetaTrace
   ( module Cardano.Tracer.MetaTrace
@@ -22,29 +22,34 @@ module Cardano.Tracer.MetaTrace
 
 import           Cardano.Logging
 import           Cardano.Logging.Resources
+import           Cardano.Timeseries.Component.Trace (TimeseriesTrace)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Types (NodeId (..), NodeName)
 
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
+import           Data.Functor (($>), (<&>))
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           GHC.Generics
+import           Data.Text as T (Text, pack)
 import qualified System.IO as Sys
+
+
+
+rtViewConfigWarning :: Text
+rtViewConfigWarning = "RTView requested in config but cardano-tracer was built without it"
 
 data TracerTrace
   -- | Static information about the build.
   = TracerBuildInfo
-    { ttBuiltWithRTView      :: !Bool
+    { ttBuiltWithRTView      :: Bool
     }
   | TracerParamsAre
-    { ttConfigPath           :: !FilePath
-    , ttStateDir             :: !(Maybe FilePath)
-    , ttMinLogSeverity       :: !(Maybe SeverityS) }
+    { ttConfigPath           :: FilePath
+    , ttStateDir             :: Maybe FilePath
+    , ttMinLogSeverity       :: Maybe SeverityS }
   | TracerConfigIs
-    { ttConfig               :: !TracerConfig
-    , ttWarnRTViewMissing    :: !Bool
+    { ttConfig               :: TracerConfig
+    , ttWarnRTViewMissing    :: Bool
     }
   | TracerInitStarted
   | TracerInitEventQueues
@@ -54,152 +59,155 @@ data TracerTrace
     }
   | TracerStartedLogRotator
   | TracerStartedPrometheus
-    { ttPrometheusEndpoint   :: !Endpoint
+    { ttPrometheusEndpoint   :: Endpoint
+    }
+  | TracerStartedTimeseries
+    { ttTimeseriesEndpoint   :: Endpoint
     }
   | TracerStartedMonitoring
-    { ttMonitoringEndpoint   :: !Endpoint
-    , ttMonitoringType       :: !Text
+    { ttMonitoringEndpoint   :: Endpoint
+    , ttMonitoringType       :: Text
     }
   | TracerStartedAcceptors
-    { ttAcceptorsAddr        :: !Network }
+    { ttAcceptorsAddr        :: Network }
   | TracerStartedRTView
   | TracerStartedReforwarder
   | TracerSockListen
-    { ttListenAt             :: !FilePath }
+    { ttListenAt             :: FilePath }
   | TracerSockIncoming
-    { ttConnectionIncomingAt :: !FilePath
-    , ttAddr                 :: !Text }
+    { ttConnectionIncomingAt :: FilePath
+    , ttAddr                 :: Text }
   | TracerSockConnecting
-    { ttConnectingTo         :: !FilePath }
+    { ttConnectingTo         :: FilePath }
   | TracerSockConnected
-    { ttConnectedTo          :: !FilePath }
+    { ttConnectedTo          :: FilePath }
   | TracerShutdownInitiated
   | TracerShutdownHistBackup
   | TracerShutdownComplete
   | TracerError
-    { ttError                :: !Text }
+    { ttError                :: Text }
+  | TracerMissingCertificate
+    { ttMissingCertificateEndpoint :: !Endpoint }
   | TracerResource
-    { ttResource             :: !ResourceStats }
-  deriving (Generic, Show)
+    { ttResource             :: ResourceStats }
+  | TracerForwardingInterrupted
+    { ttConnection           :: HowToConnect
+    , ttMessage              :: String
+    }
+  deriving Show
 
-instance ToJSON TracerTrace where
-  toEncoding :: TracerTrace -> Encoding
-  toEncoding = \case
-    TracerBuildInfo{..} -> concatPairs
-      [ "BuiltWithRTView" .= ttBuiltWithRTView
-      , "kind"            .= txt "TracerBuildInfo"
+-- | A bundle of domain-split tracers used in the application.
+data TraceBundle = TraceBundle{
+  -- | A tracer used to trace all kinds of things happening in the application.
+  assorted :: !(Trace IO TracerTrace),
+  -- | A tracer that has to do only with timeseries storing/querying/pruning etc.
+  timeseries :: !(Trace IO TimeseriesTrace)
+}
+
+instance LogFormatting TracerTrace where
+  forHuman t@TracerConfigIs{ttWarnRTViewMissing = True} =
+      rtViewConfigWarning <> ": " <> forHuman t {ttWarnRTViewMissing = False}
+  forHuman (TracerForwardingInterrupted howToConnect msg) =
+      T.pack $ "connection with " <> show howToConnect <> " failed: " <> msg
+  forHuman _ = ""
+
+  forMachine _dtal = \case
+    TracerBuildInfo{..} -> mconcat
+      [ "builtWithRTView" .= ttBuiltWithRTView
+      , "kind"            .= AE.String "TracerBuildInfo"
       ]
-    TracerParamsAre{..} -> concatPairs
-      [ "ConfigPath"     .= ttConfigPath
-      , "StateDir"       .= ttStateDir
-      , "MinLogSeverity" .= ttMinLogSeverity
-      , "kind"           .= txt "TracerParamsAre"
+    TracerParamsAre{..} -> mconcat
+      [ "configPath"     .= ttConfigPath
+      , "stateDir"       .= ttStateDir
+      , "minLogSeverity" .= ttMinLogSeverity
+      , "kind"           .= AE.String "TracerParamsAre"
       ]
-    TracerConfigIs{..} -> concatPairs $
-      [ "Config"            .= ttConfig
-      , "kind"              .= txt "TracerConfigIs" ] ++
-      [ "WarnRTViewMissing" .= txt "RTView requested in config but cardano-tracer was built without it."
+    TracerConfigIs{..} -> mconcat $
+      [ "config"            .= ttConfig
+      , "kind"              .= AE.String "TracerConfigIs" ] ++
+      [ "warnRTViewMissing" .= rtViewConfigWarning
       | ttWarnRTViewMissing
       ]
-    TracerInitStarted -> concatPairs
-      [ "kind" .= txt "TracerInitStarted"
+    TracerInitStarted -> mconcat
+      [ "kind" .= AE.String "TracerInitStarted"
       ]
-    TracerInitEventQueues -> concatPairs
-      [ "kind" .= txt "TracerInitEventQueues"
+    TracerInitEventQueues -> mconcat
+      [ "kind" .= AE.String "TracerInitEventQueues"
       ]
-    TracerInitDone -> concatPairs
-      [ "kind" .= txt "TracerInitDone"
+    TracerInitDone -> mconcat
+      [ "kind" .= AE.String "TracerInitDone"
       ]
-    TracerAddNewNodeIdMapping (NodeId nodeId, nodeName) -> concatPairs
-      [ "kind"     .= txt "TracerAddNewNodeIdMapping"
-      , "nodeId"   .= txt nodeId
-      , "nodeName" .= txt nodeName
+    TracerAddNewNodeIdMapping (NodeId nodeId, nodeName) -> mconcat
+      [ "kind"     .= AE.String "TracerAddNewNodeIdMapping"
+      , "nodeId"   .= AE.String nodeId
+      , "nodeName" .= AE.String nodeName
       ]
-    TracerStartedLogRotator -> concatPairs
-      [ "kind" .= txt "TracerStartedLogRotator"
+    TracerStartedLogRotator -> mconcat
+      [ "kind" .= AE.String "TracerStartedLogRotator"
       ]
-    TracerStartedPrometheus{..} -> concatPairs
-      [ "kind"     .= txt "TracerStartedPrometheus"
+    TracerStartedPrometheus{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedPrometheus"
       , "endpoint" .= ttPrometheusEndpoint
       ]
-    TracerStartedMonitoring{..} -> concatPairs
-      [ "kind"     .= txt "TracerStartedMonitoring"
+    TracerStartedTimeseries{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedTimeseries"
+      , "endpoint" .= ttTimeseriesEndpoint
+      ]
+    TracerStartedMonitoring{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedMonitoring"
       , "endpoint" .= ttMonitoringEndpoint
       , "type"     .= ttMonitoringType
       ]
-    TracerStartedAcceptors{..} -> concatPairs
-      [ "kind"          .= txt "TracerStartedAcceptors"
+    TracerStartedAcceptors{..} -> mconcat
+      [ "kind"          .= AE.String "TracerStartedAcceptors"
       , "AcceptorsAddr" .= ttAcceptorsAddr
       ]
-    TracerStartedRTView -> concatPairs
-      [ "kind" .= txt "TracerStartedRTView"
+    TracerStartedRTView -> mconcat
+      [ "kind" .= AE.String "TracerStartedRTView"
       ]
-    TracerStartedReforwarder -> concatPairs
-      [ "kind" .= txt "TracerStartedReforwarder"
+    TracerStartedReforwarder -> mconcat
+      [ "kind" .= AE.String "TracerStartedReforwarder"
       ]
-    TracerSockListen{..} -> concatPairs
-      [ "kind"     .= txt "TracerSockListen"
-      , "ListenAt" .= ttListenAt
+    TracerSockListen{..} -> mconcat
+      [ "kind"     .= AE.String "TracerSockListen"
+      , "listenAt" .= ttListenAt
       ]
-    TracerSockIncoming{..} -> concatPairs
-      [ "kind"                 .= txt "TracerSockIncoming"
-      , "ConnectionIncomingAt" .= ttConnectionIncomingAt
-      , "Addr"                 .= ttAddr
+    TracerSockIncoming{..} -> mconcat
+      [ "kind"                 .= AE.String "TracerSockIncoming"
+      , "connectionIncomingAt" .= ttConnectionIncomingAt
+      , "addr"                 .= ttAddr
       ]
-    TracerSockConnecting{..} -> concatPairs
-      [ "kind"                 .= txt "TracerSockConnecting"
-      , "ConnectionIncomingAt" .= ttConnectingTo
+    TracerSockConnecting{..} -> mconcat
+      [ "kind"                 .= AE.String "TracerSockConnecting"
+      , "connectionIncomingAt" .= ttConnectingTo
       ]
-    TracerSockConnected{..} -> concatPairs
-      [ "kind"        .= txt "TracerSockConnected"
-      , "ConnectedTo" .= ttConnectedTo
+    TracerSockConnected{..} -> mconcat
+      [ "kind"        .= AE.String "TracerSockConnected"
+      , "connectedTo" .= ttConnectedTo
       ]
-    TracerShutdownInitiated -> concatPairs
-      [ "kind" .= txt "TracerShutdownInitiated"
+    TracerShutdownInitiated -> mconcat
+      [ "kind" .= AE.String "TracerShutdownInitiated"
       ]
-    TracerShutdownHistBackup -> concatPairs
-      [ "kind" .= txt "TracerShutdownHistBackup"
+    TracerShutdownHistBackup -> mconcat
+      [ "kind" .= AE.String "TracerShutdownHistBackup"
       ]
-    TracerShutdownComplete -> concatPairs
-      [ "kind" .= txt "TracerShutdownComplete"
+    TracerShutdownComplete -> mconcat
+      [ "kind" .= AE.String "TracerShutdownComplete"
       ]
-    TracerError{..} -> concatPairs
-      [ "kind"  .= txt "TracerError"
-      , "Error" .= ttError
+    TracerMissingCertificate{..} -> mconcat
+      [ "kind"     .= AE.String "TracerMissingCertificate"
+      , "endpoint" .= ttMissingCertificateEndpoint
       ]
-    TracerResource{..} -> concatPairs
-      [ "kind"     .= txt "TracerResource"
-      , "Resource" .= ttResource
+    TracerError{..} -> mconcat
+      [ "kind"  .= AE.String "TracerError"
+      , "error" .= ttError
       ]
-   where
-    txt :: Text -> Text
-    txt = id
-    concatPairs :: [Series] -> Encoding
-    concatPairs = pairs . mconcat
-
-  toJSON = AE.genericToJSON jsonEncodingOptions
-
-jsonEncodingOptions :: AE.Options
-jsonEncodingOptions = AE.defaultOptions
-  { AE.fieldLabelModifier     = drop 2
-  , AE.tagSingleConstructors  = True
-  , AE.sumEncoding =
-    AE.TaggedObject
-    { AE.tagFieldName = "kind"
-    , AE.contentsFieldName = "contents"
-    }
-  }
-
-instance LogFormatting TracerTrace where
-  forHuman t@TracerConfigIs{ttWarnRTViewMissing = True} = T.pack $
-    unlines
-      [ show t ++ ": RTView requested in config but cardano-tracer was built without it."
-      , "Enable with `-f +rtview`."
+    TracerResource{..} -> forMachine _dtal ttResource
+    TracerForwardingInterrupted{..} -> mconcat
+      [ "kind"    .= AE.String "TracerForwardingInterrupted"
+      , "conn"    .= ttConnection
+      , "message" .= ttMessage
       ]
-  forHuman t = T.pack (show t)
-  forMachine _ t = case AE.toJSON t of
-                             AE.Object x -> x
-                             _ -> error "Impossible"
 
 instance MetaTrace TracerTrace where
     namespaceFor TracerBuildInfo {} = Namespace [] ["BuildInfo"]
@@ -211,6 +219,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerAddNewNodeIdMapping {} = Namespace [] ["AddNewNodeIdMapping"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
     namespaceFor TracerStartedPrometheus{} = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedTimeseries{} = Namespace [] ["StartedTimeseriers"]
     namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
     namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
@@ -222,8 +231,10 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerShutdownInitiated = Namespace [] ["ShutdownInitiated"]
     namespaceFor TracerShutdownHistBackup = Namespace [] ["ShutdownHistBackup"]
     namespaceFor TracerShutdownComplete = Namespace [] ["ShutdownComplete"]
+    namespaceFor TracerMissingCertificate {} = Namespace [] ["MissingCertificate"]
     namespaceFor TracerError {} = Namespace [] ["Error"]
-    namespaceFor TracerResource {} = Namespace [] ["Resource"]
+    namespaceFor TracerResource {} = Namespace [] ["Resources"]
+    namespaceFor TracerForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
 
     severityFor (Namespace _ ["BuildInfo"]) _ = Just Info
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
@@ -234,6 +245,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["AddNewNodeIdMapping"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
+    severityFor (Namespace _ ["StartedTimeseries"]) _ = Just Info
     severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
     severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
@@ -242,11 +254,13 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
     severityFor (Namespace _ ["SockConnecting"]) _ = Just Info
     severityFor (Namespace _ ["SockConnected"]) _ = Just Info
+    severityFor (Namespace _ ["MissingCertificate"]) _ = Just Warning
     severityFor (Namespace _ ["ShutdownInitiated"]) _ = Just Warning
     severityFor (Namespace _ ["ShutdownHistBackup"]) _ = Just Info
     severityFor (Namespace _ ["ShutdownComplete"]) _ = Just Warning
     severityFor (Namespace _ ["Error"]) _ = Just Error
-    severityFor (Namespace _ ["Resource"]) _ = Just Info
+    severityFor (Namespace _ ["Resources"]) _ = Just Info
+    severityFor (Namespace _ ["ForwardingInterrupted"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor _ = Just ""
@@ -261,6 +275,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["AddNewNodeIdMapping"]
       , Namespace [] ["StartedLogRotator"]
       , Namespace [] ["StartedPrometheus"]
+      , Namespace [] ["StartedTimeseries"]
       , Namespace [] ["StartedMonitoring"]
       , Namespace [] ["StartedAcceptors"]
       , Namespace [] ["StartedRTView"]
@@ -269,42 +284,48 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["SockIncoming"]
       , Namespace [] ["SockConnecting"]
       , Namespace [] ["SockConnected"]
+      , Namespace [] ["MissingCertificate"]
       , Namespace [] ["ShutdownInitiated"]
       , Namespace [] ["ShutdownHistBackup"]
       , Namespace [] ["ShutdownComplete"]
       , Namespace [] ["Error"]
-      , Namespace [] ["Resource"]
+      , Namespace [] ["Resources"]
+      , Namespace [] ["ForwardingInterrupted"]
       ]
 
-stderrShowTracer :: Trace IO TracerTrace
+stderrShowTracer :: Show a => Trace IO a
 stderrShowTracer =  contramapM'
     (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
 
-mkTracerTracer :: SeverityF -> IO (Trace IO TracerTrace)
-mkTracerTracer defSeverity = do
-  standardTracer
-    >>= machineFormatter
+mkTracerTracer :: Trace IO FormattedMessage -> SeverityF -> IO (Trace IO TracerTrace)
+mkTracerTracer std defSeverity =
+    machineFormatter std
     >>= filterSeverityFromConfig
     >>= \t ->
           let finalTracer = withNames ["Tracer"] (withSeverity t)
-          in configTracerTracer defSeverity finalTracer >> pure finalTracer
+          in configTracerTracer finalTracer $> finalTracer
+  where
+    configTracerTracer :: Trace IO TracerTrace -> IO ()
+    configTracerTracer tr = do
+      configReflection <- emptyConfigReflection
+      configureTracers configReflection initialTraceConfig [tr]
+     where
+       initialTraceConfig :: TraceConfig
+       initialTraceConfig = emptyTraceConfig {
+         tcOptions = Map.fromList [([], [ConfSeverity defSeverity]), (["Tracer"], [ConfDetail DMaximum])]
+       }
 
-configTracerTracer :: SeverityF -> Trace IO TracerTrace -> IO ()
-configTracerTracer defSeverity tr = do
-  configReflection <- emptyConfigReflection
-  configureTracers configReflection initialTraceConfig [tr]
+mkTimeseriesTracer :: Trace IO FormattedMessage -> IO (Trace IO TimeseriesTrace)
+mkTimeseriesTracer std = do
+ !tr <- machineFormatter std >>= filterSeverityFromConfig <&> withNames ["Tracer"] . withSeverity
+ configReflection <- emptyConfigReflection
+ configureTracers configReflection cfg [tr]
+ pure tr
  where
-   initialTraceConfig :: TraceConfig
-   initialTraceConfig =
-     TraceConfig
-     { tcForwarder         = Nothing
-     , tcNodeName          = Nothing
-     , tcPeerFrequency     = Nothing
-     , tcResourceFrequency = Nothing
-     , tcLedgerMetricsFrequency = Nothing
-     , tcMetricsPrefix     = Nothing
-     , tcOptions = Map.fromList
-                   [ ([],         [ConfSeverity defSeverity])
-                   , (["Tracer"], [ConfDetail DMaximum])
-                   ]
-     }
+   cfg :: TraceConfig
+   cfg = emptyTraceConfig {tcOptions = Map.fromList [([], [ConfSeverity (SeverityF (Just Info))])]}
+
+mkTraceBundle :: SeverityF -> IO TraceBundle
+mkTraceBundle sev = do
+  !std <- standardTracer
+  TraceBundle <$> mkTracerTracer std sev <*> mkTimeseriesTracer std

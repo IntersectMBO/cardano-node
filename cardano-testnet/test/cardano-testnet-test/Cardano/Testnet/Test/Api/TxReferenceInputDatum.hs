@@ -10,12 +10,10 @@ module Cardano.Testnet.Test.Api.TxReferenceInputDatum
   )
 where
 
-import           Cardano.Api
+import           Cardano.Api hiding (txId)
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Network as Net
-import qualified Cardano.Api.Network as Net.Tx
-import           Cardano.Api.Shelley
-import qualified Cardano.Api.Tx.UTxO as Utxo
+import qualified Cardano.Api.UTxO as Utxo
 
 import           Cardano.Testnet
 
@@ -26,7 +24,6 @@ import           Data.Default.Class
 import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
-import           Data.Proxy
 import           Data.Set (Set)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -60,14 +57,14 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
       beo = convert ceo
       sbe = convert ceo
       eraProxy = proxyToAsType Proxy
-      options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+      creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
 
   tr@TestnetRuntime
     { configurationFile
     , testnetNodes = node0 : _
     , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : wallet1 : _
     } <-
-    cardanoTestnetDefault options def conf
+    createAndRunTestnet creationOptions def conf
 
   systemStart <- H.noteShowM $ getStartTime tempAbsPath' tr
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
@@ -133,7 +130,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
     utxo <- findAllUtxos epochStateView sbe
 
-    BalancedTxBody _ txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) _ fee <-
+    BalancedTxBody _ txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) _ fee <-
       H.leftFail $
         makeTransactionBodyAutoBalance
           sbe
@@ -167,11 +164,9 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
 
     -- wait till transaction gets included in the block
-    _ <- waitForBlocks epochStateView 1
-
-    -- test if it's in UTxO set
-    utxo1 <- findAllUtxos epochStateView sbe
-    let txUtxo = Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
+    txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
+      (Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') <$> findAllUtxos epochStateView sbe)
+      (not . Utxo.null)
     (length txOuts + 1) === length (toList txUtxo)
 
     let chainTxOuts =
@@ -180,7 +175,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             . reverse
             . map snd
             . toList
-            $ Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
+            $ txUtxo
 
     -- check that the transaction's outputs are the same as we've submitted them
     -- i.e. check the datums
@@ -212,7 +207,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             & setTxOuts [txOut]
             & setTxProtocolParams (pure $ pure pparams)
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) <-
+    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
       H.leftFail $ createTransactionBody sbe content
 
     let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
@@ -230,11 +225,11 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
 
     -- wait till transaction gets included in the block
-    _ <- waitForBlocks epochStateView 1
+    txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
+      (Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') <$> findAllUtxos epochStateView sbe)
+      (not . Utxo.null)
 
     -- test if the transaction is visible in UTxO set
-    utxo1 <- findAllUtxos epochStateView sbe
-    let txUtxo = Utxo.filterWithKey (\(TxIn txId' _) _ -> txId == txId') utxo1
     [toCtxUTxOTxOut txOut] === (snd <$> toList txUtxo)
     pure txUtxo
 
@@ -259,7 +254,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
             & setTxOuts [txOut]
             & setTxProtocolParams (pure $ pure pparams)
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats' datums) _) _ _) <-
+    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
       H.leftFail $ createTransactionBody sbe content
 
     let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
@@ -300,8 +295,11 @@ submitTx
 submitTx sbe connectionInfo tx =
   withFrozenCallStack $
     H.evalIO (submitTxToNodeLocal connectionInfo (TxInMode sbe tx)) >>= \case
-      Net.Tx.SubmitFail reason -> pure . Left $ reason
-      Net.Tx.SubmitSuccess -> pure $ Right ()
+      TxSubmitFail reason -> pure . Left $ reason
+      TxSubmitSuccess -> pure $ Right ()
+      TxSubmitError err -> do
+        H.annotate $ "submitTxToNodeLocal connection error: " <> show err
+        H.failure
 
 
 expectTxSubmissionSuccess :: HasCallStack

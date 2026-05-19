@@ -1,0 +1,52 @@
+{
+    "auxiliary scripts": null,
+    "certificates": [
+        {
+            "Stake address registration": {
+                "deposit": 400000,
+                "stake credential": {
+                    "keyHash": "9b89af289eb9a5c39ef6bda389c2db97ad61075cae7e28e8664e331c"
+                }
+            }
+        }
+    ],
+    "collateral inputs": [],
+    "currentTreasuryValue": null,
+    "datums": [],
+    "era": "Conway",
+    "fee": "380 Lovelace",
+    "governance actions": [],
+    "inputs": [
+        "0c86481baa21cbefc776d5c9b6799c651030d70b926feded6f57943a8a760cba#0"
+    ],
+    "metadata": null,
+    "mint": null,
+    "outputs": [
+        {
+            "address": "addr_test1vr7rrhh0wfwn9r4uh3ap9zjyn6d4x28mwjtmwdryu5nsu9g4htv62",
+            "address era": "Shelley",
+            "amount": {
+                "lovelace": 10000000
+            },
+            "network": "Testnet",
+            "payment credential key hash": "fc31deef725d328ebcbc7a128a449e9b5328fb7497b73464e5270e15",
+            "reference script": null,
+            "stake reference": null
+        }
+    ],
+    "redeemers": [],
+    "reference inputs": [],
+    "required signers (payment key hashes needed for scripts)": null,
+    "return collateral": null,
+    "scripts": [],
+    "total collateral": null,
+    "treasuryDonation": 0,
+    "update proposal": null,
+    "validity range": {
+        "lower bound": null,
+        "upper bound": null
+    },
+    "voters": {},
+    "withdrawals": null,
+    "witnesses": []
+}

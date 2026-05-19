@@ -7,13 +7,20 @@ module Main
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Api.TxReferenceInputDatum
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
+import qualified Cardano.Testnet.Test.Cli.Plutus.BuildRaw
 import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
+import qualified Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
 import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
+import qualified Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation
+import qualified Cardano.Testnet.Test.Cli.Scripts.Simple.Mint
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
+import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
@@ -25,10 +32,15 @@ import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
+import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
+import qualified Cardano.Testnet.Test.Rpc.Query
+import qualified Cardano.Testnet.Test.Rpc.Transaction
 import qualified Cardano.Testnet.Test.RunTestnet
+import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
+import qualified Cardano.Testnet.Test.UpdateTimeStamps
 
 import           Prelude
 
@@ -52,6 +64,7 @@ tests = do
     [ T.testGroup "Spec"
         [ T.testGroup "Ledger Events"
            [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+           , ignoreOnWindows "Async Register" Cardano.Testnet.Test.SanityCheck.hprop_asyncRegister_sanity_check
            -- FIXME this tests gets stuck - investigate why
            -- , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
             -- TODO: Replace foldBlocks with checkConditionResult
@@ -74,9 +87,16 @@ tests = do
                , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                , ignoreOnWindows "Transaction Build Wrong Hash" WrongHash.hprop_transaction_build_wrong_hash
                ]
+            , T.testGroup "Simple Script"
+                [ ignoreOnWindows "Simple Script Mint" Cardano.Testnet.Test.Cli.Scripts.Simple.Mint.hprop_simple_script_mint
+                , ignoreOnWindows "Simple Reference Script Mint" Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation.hprop_ref_simple_script_mint
+
+                ]
             , T.testGroup "Plutus"
                 [ ignoreOnWindows "PlutusV3 purposes" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_plutus_purposes_v3
                 , ignoreOnWindows "PlutusV2 transaction with two script certs" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_tx_two_script_certs_v2
+                , ignoreOnWindows "Collateral With Multiassets" Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral.hprop_collateral_with_tokens
+                , ignoreOnWindows "Build Raw Ref Script" Cardano.Testnet.Test.Cli.Plutus.BuildRaw.hprop_build_raw_ref_script_spend
                 , T.testGroup "Cost Calc"
                   [ ignoreOnWindows "Ref Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_ref_plutus_cost_calculation
                   , ignoreOnWindows "Normal Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_plutus_cost_calculation
@@ -94,7 +114,10 @@ tests = do
           , ignoreOnWindows "Shutdown On SlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
+          , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
+          , ignoreOnWindows "transaction build with withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward
+          , ignoreOnWindows "transaction build with plutus withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward_plutus_v3
           -- FIXME
           -- , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule
 
@@ -111,10 +134,17 @@ tests = do
           ]
         ]
         , T.testGroup "Cardano-testnet"
-          [ ignoreOnWindows "Testnet produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
+          , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
+          , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
+        ]
+    , T.testGroup "RPC"
+        [ ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
+        , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         ]
     ]
 

@@ -21,7 +21,7 @@ import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -32,7 +32,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
-hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -45,11 +45,11 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 0
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = 0
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
         }
-      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -57,7 +57,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -94,7 +94,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
   void $ registerDRep execConfig epochStateView ceo work "drep2" wallet1
 
   checkDRepState epochStateView sbe $ \m ->
-    if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit]
+    if map (L.fromCompact . L.drepDeposit) (Map.elems m) == [L.Coin minDRepDeposit]
        then Just ()
        else Nothing
 

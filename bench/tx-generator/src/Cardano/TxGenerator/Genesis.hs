@@ -4,10 +4,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- HLINT ignore "Use map" -}
+{- HLINT ignore "Use map with tuple-section" -}
 
 -- | This module provides means to secure funds that are given in genesis.
---   To secure a fund, the key locking the transaction ouput in genesis has to be provided.
+--   To secure a fund, the key locking the transaction output in genesis has to be provided.
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
@@ -18,12 +18,10 @@ module Cardano.TxGenerator.Genesis
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCredential,
-                   fromShelleyStakeReference)
+import           Cardano.Api hiding (ShelleyGenesis)
 
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
+import           Cardano.Ledger.Shelley.API (Addr (..))
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
@@ -125,7 +123,7 @@ mkGenesisTransaction key ttl fee txins txouts
   = bimap
       ApiError
       (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   txBodyContent = defaultTxBodyContent shelleyBasedEra
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)

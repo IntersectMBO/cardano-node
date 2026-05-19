@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Trace.Forward.Configuration.TraceObject
   ( AcceptorConfiguration (..)
   , ForwarderConfiguration (..)
@@ -6,7 +8,7 @@ module Trace.Forward.Configuration.TraceObject
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
 import           Control.Concurrent.STM.TVar (TVar)
-import           Control.Tracer (Tracer)
+import           "contra-tracer" Control.Tracer (Tracer)
 
 import           Trace.Forward.Protocol.TraceObject.Type
 
@@ -14,9 +16,6 @@ import           Trace.Forward.Protocol.TraceObject.Type
 data AcceptorConfiguration lo = AcceptorConfiguration
   { -- | The tracer that will be used by the acceptor in its network layer.
     acceptorTracer :: !(Tracer IO (TraceSendRecv (TraceObjectForward lo)))
-    -- | The endpoint that will be used to listen to the forwarder.
-    --   Only local socket/pipe is supported.
-  , forwarderEndpoint :: !FilePath
     -- | The request specifies how many 'TraceObject's will be requested.
   , whatToRequest :: !NumberOfTraceObjects
     -- | 'TVar' that can be used as a brake: if an external thread sets
@@ -29,17 +28,11 @@ data AcceptorConfiguration lo = AcceptorConfiguration
 data ForwarderConfiguration lo = ForwarderConfiguration
   { -- | The tracer that will be used by the forwarder in its network layer.
     forwarderTracer :: !(Tracer IO (TraceSendRecv (TraceObjectForward lo)))
-    -- | The endpoint that will be used to connect to the acceptor.
-    --   Only local socket/pipe is supported.
-  , acceptorEndpoint :: !FilePath
-    -- | The big size of internal queue for tracing items. We use it in
-    --   the beginning of the session, to avoid queue overflow, because
-    --   initially there is no connection with acceptor yet, and the
-    --   number of tracing items after node's start may be very big.
-  , disconnectedQueueSize :: !Word
-    -- | The small size of internal queue for tracing items. We use it
-    --   after the big queue is empty, which means that acceptor is connected
-    --   and tracing items are already forwarded to it. We switch to small
-    --   queue to reduce memory usage in the node.
-  , connectedQueueSize :: !Word
+    -- | The size of the internal queue for tracing items.
+    --   Use a size suitable for the beginning of the session, to avoid queue
+    --   overflows, because initially there is no connection with acceptor yet,
+    --   and the number of tracing items after the node starts may be very big.
+    --   At the same time choose a number that reduces memory usage in the node.
+  , queueSize :: !Word
   }
+

@@ -5,7 +5,7 @@ Setting this up for testing and for actual use on a real network.
 
 ### Pre-requisites
 
-You will need some a cardano network with payment address and keys.  This may be on `mainnet`, official `testnet`
+You will need a cardano network with payment address and keys.  This may be on `mainnet`, official `testnet`
 or a testnet that you've set up yourself.  We will assume these files are in a directory called `playground`:
 
 * `user-1-payment.addr` - User 1 payment address.  This address must have sufficient funds.
@@ -60,14 +60,14 @@ playground $ CARDANO_NODE_SOCKET_PATH=node.socket cardano-cli query utxo --addre
 8a3d63d4d95f669ef62570f2936ad50d2cfad399e04808ca21474e70b11987ee     0        97640000 lovelace
 ```
 
-Save that date into environment variables for future use.  For example:
+Save that data into environment variables for future use.  For example:
 
 ```bash
 playground $ txhash=8a3d63d4d95f669ef62570f2936ad50d2cfad399e04808ca21474e70b11987ee
 playground $ balance=97640000
 ```
 
-Find out much much will remain after paying `1000000 lovelace` to the target account:
+Find out how much will remain after paying `1000000 lovelace` to the target account:
 
 ```bash
 playground $ remaining=$(echo "$balance - 1000000 - 180000" | bc)

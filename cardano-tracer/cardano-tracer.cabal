@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.3.3
+version:                0.4.0
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
                         Trace,
-copyright:              2022-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+copyright:              2022-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -56,6 +56,9 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
+
 library
   import:               project-config
 
@@ -70,13 +73,11 @@ library
                         Cardano.Tracer.Handlers.RTView.State.EraSettings
                         Cardano.Tracer.Handlers.RTView.State.Historical
                         Cardano.Tracer.Handlers.RTView.State.Last
-                        Cardano.Tracer.Handlers.RTView.State.Peers
 
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Own
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
                         Cardano.Tracer.Handlers.RTView.UI.HTML.About
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Body
                         Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
@@ -104,7 +105,6 @@ library
                         Cardano.Tracer.Handlers.RTView.Update.NodeInfo
                         Cardano.Tracer.Handlers.RTView.Update.NodeState
                         Cardano.Tracer.Handlers.RTView.Update.Nodes
-                        Cardano.Tracer.Handlers.RTView.Update.Peers
                         Cardano.Tracer.Handlers.RTView.Update.Reload
                         Cardano.Tracer.Handlers.RTView.Update.Resources
                         Cardano.Tracer.Handlers.RTView.Update.Transactions
@@ -123,6 +123,7 @@ library
                         Cardano.Tracer.Handlers.Metrics.Monitoring
                         Cardano.Tracer.Handlers.Metrics.Prometheus
                         Cardano.Tracer.Handlers.Metrics.Servers
+                        Cardano.Tracer.Handlers.Metrics.TimeseriesServer
                         Cardano.Tracer.Handlers.Metrics.Utils
 
                         Cardano.Tracer.Handlers.Notifications.Check
@@ -133,7 +134,6 @@ library
                         Cardano.Tracer.Handlers.Notifications.Utils
 
                         Cardano.Tracer.Handlers.ReForwarder
-                        Cardano.Tracer.Handlers.SSL.Certs
                         Cardano.Tracer.Handlers.State.TraceObjects
                         Cardano.Tracer.Handlers.System
                         Cardano.Tracer.Handlers.Utils
@@ -146,20 +146,26 @@ library
                         Cardano.Tracer.Types
                         Cardano.Tracer.Utils
 
-  other-modules:        Cardano.Tracer.Handlers.Notifications.Timer
+  other-modules:        Cardano.Tracer.Handlers.Logs.Journal.NoSystemd
+                        Cardano.Tracer.Handlers.Notifications.Timer
+                        Cardano.Tracer.Time
+
                         Paths_cardano_tracer
+
   autogen-modules:      Paths_cardano_tracer
 
   if flag(rtview)
     build-depends:
                         cardano-git-rev ^>=0.2.2
                       , cassava
+                      , string-qq
                       , threepenny-gui
                       , utf8-string
                       , vector
 
   if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
+    other-modules:      Cardano.Tracer.Handlers.Logs.Journal.Systemd
 
   if (flag(systemd) && os(linux)) || flag(rtview)
     build-depends:      unordered-containers
@@ -170,35 +176,36 @@ library
                       , bimap
                       , blaze-html
                       , bytestring
+                      , cardano-diffusion ^>= 1.0
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward >= 0.9
+                      , ekg-forward >= 1.2
                       , ekg-wai
                       , extra
                       , filepath
                       , http-types
                       , mime-mail
+                      , network
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.21.3
-                      , ouroboros-network-api ^>= 0.14.1
-                      , ouroboros-network-framework
+                      , ouroboros-network:{api, framework} ^>= 1.1
                       , signal
                       , slugify
                       , smtp-mail ^>= 0.5
                       , stm <2.5.2 || >=2.5.3
-                      , string-qq
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.9.2
-                      , trace-forward ^>= 2.2.11
-                      , trace-resources ^>= 0.2.3
+                      , trace-dispatcher ^>= 2.12.0
+                      , trace-forward ^>= 2.4.0
+                      , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
                       , warp ^>= 3.4
+                      , warp-tls
                       , yaml
+                      , cardano-timeseries-io
 
   if os(windows)
     build-depends:    Win32
@@ -248,11 +255,12 @@ library demo-forwarder-lib
                       , extra
                       , filepath
                       , generic-data
+                      , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14.1
-                      , ouroboros-network-framework
+                      , optparse-applicative
+                      , ouroboros-network:{api, framework}
                       , tasty-quickcheck
+                      , text
                       , time
                       , trace-dispatcher
                       , trace-forward
@@ -269,6 +277,7 @@ executable demo-forwarder
   main-is:              forwarder.hs
 
   build-depends:        demo-forwarder-lib
+                      , trace-dispatcher
 
   ghc-options:          -threaded
                         -rtsopts
@@ -292,11 +301,12 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14.1
+                      , optparse-applicative
+                      , ouroboros-network:api
                       , stm <2.5.2 || >=2.5.3
-                      , text
                       , tasty-quickcheck
+                      , text
+                      , trace-dispatcher
                       , trace-forward
                       , vector
                       , vector-algorithms
@@ -350,10 +360,10 @@ test-suite cardano-tracer-test
                       , extra
                       , filepath
                       , generic-data
+                      , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14.1
-                      , ouroboros-network-framework
+                      , optparse-applicative
+                      , ouroboros-network:{api, framework}
                       , stm <2.5.2 || >=2.5.3
                       , tasty
                       , tasty-quickcheck
@@ -397,6 +407,7 @@ test-suite cardano-tracer-test-ext
   build-depends:        aeson
                       , async
                       , bytestring
+                      , cardano-diffusion
                       , cardano-tracer
                       , cborg
                       , containers
@@ -409,11 +420,10 @@ test-suite cardano-tracer-test-ext
                       , filepath
                       , generic-data
                       , Glob
+                      , network
                       , network-mux
-                      , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.21.3
-                      , ouroboros-network-api ^>= 0.14.1
-                      , ouroboros-network-framework
+                      , optparse-applicative
+                      , ouroboros-network:{api, framework}
                       , process
                       , QuickCheck
                       , tasty

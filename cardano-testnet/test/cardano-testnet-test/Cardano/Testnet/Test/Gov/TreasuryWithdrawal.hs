@@ -13,9 +13,8 @@ module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
   ( hprop_ledger_events_treasury_withdrawal
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Ledger (Coin, Credential, EpochInterval (EpochInterval),
-                   KeyRole (Staking))
+import           Cardano.Api hiding (txId)
+import           Cardano.Api.Ledger (Credential, EpochInterval (EpochInterval), KeyRole (Staking))
 
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
@@ -44,6 +43,7 @@ import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -64,10 +64,12 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
       era = toCardanoEra sbe
       eraName = eraToString era
 
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 200
-                           , genesisActiveSlotsCoeff = 0.3
-                           }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 200
+                                       , genesisActiveSlotsCoeff = 0.3
+                                       }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -75,7 +77,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow nodeSprocket
@@ -92,7 +94,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   treasuryWithdrawalActionFp <- H.note $ work </> gov </> "treasury-withdrawal.action"
 
@@ -196,7 +198,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     ]
 -- }}}
 
-  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
+  txId <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
@@ -211,7 +213,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txIdString
+      , "--governance-action-tx-id", prettyShow txId
       , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n

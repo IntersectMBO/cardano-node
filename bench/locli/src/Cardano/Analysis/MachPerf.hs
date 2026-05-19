@@ -4,7 +4,8 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 
 {- HLINT ignore "Use head" -}
-{- HLINT ignore "Evaluate" -}
+{- HLINT ignore "Use maybe" -}
+{- HLINT ignore "Use mapM" -}
 
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
@@ -571,28 +572,29 @@ slotStatsMachPerf :: Run -> (LogObjectSource, [SlotStats NominalDiffTime]) -> Ei
 slotStatsMachPerf _ (f, []) =
   Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack (logObjectSourceFile f)
 slotStatsMachPerf run (f, slots) =
-  Right . (f,) $ MachPerf
-  { mpVersion            = getLocliVersion
-  , mpDomainSlots        = domSlots
-  , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
-  , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
-  --
-  , cdfStarts            = dist (slCountStarts <$> slots)
-  , cdfLeads             = dist (slCountLeads <$> slots)
-  , cdfUtxo              = dist (slUtxoSize <$> slots)
-  , cdfDensity           = dist (slDensity <$> slots)
-  , cdfStarted           = dist (slStarted `mapSMaybe` slots)
-  , cdfBlkCtx            = dist (slBlkCtx `mapSMaybe` slots)
-  , cdfLgrState          = dist (slLgrState `mapSMaybe` slots)
-  , cdfLgrView           = dist (slLgrView `mapSMaybe` slots)
-  , cdfLeading           = dist (slLeading `mapSMaybe` slots)
-  , cdfBlockGap          = dist (slBlockGap <$> slots)
-  , cdfSpanLensCpu       = dist sssSpanLensCpu
-  , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
-  , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
-  , mpResourceCDFs       = computeResCDF stdCentiles slResources slots
-  , ..
-  }
+  Right (f, MachPerf
+    { mpVersion            = getLocliVersion
+    , mpDomainSlots        = domSlots
+    , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
+    , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
+    --
+    , cdfStarts            = dist (slCountStarts <$> slots)
+    , cdfLeads             = dist (slCountLeads <$> slots)
+    , cdfUtxo              = dist (slUtxoSize <$> slots)
+    , cdfDensity           = dist (slDensity <$> slots)
+    , cdfStarted           = dist (slStarted `mapSMaybe` slots)
+    , cdfBlkCtx            = dist (slBlkCtx `mapSMaybe` slots)
+    , cdfLgrState          = dist (slLgrState `mapSMaybe` slots)
+    , cdfLgrView           = dist (slLgrView `mapSMaybe` slots)
+    , cdfLeading           = dist (slLeading `mapSMaybe` slots)
+    , cdfBlockGap          = dist (slBlockGap <$> slots)
+    , cdfSpanLensCpu       = dist sssSpanLensCpu
+    , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
+    , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
+    , mpResourceCDFs       = computeResCDF stdCentiles slResources slots
+    , ..
+    }
+  )
  where
    domSlots = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
 
@@ -622,7 +624,7 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
   cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
-  mpResourceCDFs       <- sequence $ traverse identity (mps <&> mpResourceCDFs) <&>
+  mpResourceCDFs       <- sequence $ traverse (identity . mpResourceCDFs) mps <&>
     \case
       [] -> Left CDFEmptyDataset
       (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
@@ -657,7 +659,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
   cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
-  mpResourceCDFs       <- sequence $ traverse identity (mps <&> mpResourceCDFs) <&>
+  mpResourceCDFs       <- sequence $ traverse (identity . mpResourceCDFs) mps <&>
     \case
       [] -> Left CDFEmptyDataset
       (xs :: [CDF (CDF I) Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
@@ -675,7 +677,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
     }
  where
    slotDomains :: [DataDomain I SlotNo]
-   slotDomains = concat $ mps <&> mpDomainSlots
+   slotDomains = concatMap mpDomainSlots mps
 
    comb :: forall a. Divisible a => Combine (CDF I) a
    comb = stdCombine2 centiles

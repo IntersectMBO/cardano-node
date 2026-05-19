@@ -40,7 +40,6 @@ profilesNoEraScalingLocal =
         . P.loopback
         . V.valueLocal
         . E.fastDuration
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariant300
   ]
@@ -53,7 +52,6 @@ profilesNoEraScalingCloud =
         . V.timescaleSmall . P.maxBlockSize 88000
         . P.shutdownOnSlot 7200 . P.generatorEpochs 6
         . V.valueCloud
-        . P.p2pOn
         . clusterNomadSsdNoRegions
         . P.analysisSizeFull . P.analysisEpoch3Plus
       fast  = P.empty & V.genesisVariantPreVoltaire . C.composeFiftytwo . E.base . E.fastDuration . nomadSsd
@@ -62,8 +60,8 @@ profilesNoEraScalingCloud =
     utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire . P.rtsHeapLimit 16384 . P.heapLimit 16384
   , utxoScale   & P.name "utxoscale-solo-12M64G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
-  , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing . P.p2pOn
-  , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble . P.newTracing . P.p2pOn
+  , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing
+  , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble . P.newTracing
   ]
   -----------
   -- Latency.
@@ -84,7 +82,7 @@ profilesNoEraScalingCloud =
   in [
     latency & P.name "latency-nomadperfssd"
             . P.desc "AWS perf-ssd class cluster, stop when all latency services stop"
-            . P.traceForwardingOn . P.newTracing . P.p2pOn . nomadSsd
+            . P.traceForwardingOn . P.newTracing . nomadSsd
   ]
 
 nomadSsd :: Types.Profile -> Types.Profile
@@ -101,9 +99,16 @@ clusterNomadSsdNoRegions =
   , Types.explorer = Just $ Types.Resources 16 120000 124000
   })
   .
-  P.nomadHostVolume (Types.HostVolume "/ssd2" False "ssd2")
-  .
-  P.nomadHostVolume (Types.HostVolume "/ssd1" False "ssd1")
+  P.appendNomadHostVolume (
+    let hostVolumes =
+          [ Types.HostVolume "/ssd1" False "ssd1"
+          , Types.HostVolume "/ssd2" False "ssd2"
+          ]
+    in  Types.ByNodeType {
+          Types.producer = hostVolumes
+        , Types.explorer = Just hostVolumes
+        }
+  )
   .
   P.nomadSSHLogsOn
   .

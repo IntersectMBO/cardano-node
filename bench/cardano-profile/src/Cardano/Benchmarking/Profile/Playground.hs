@@ -81,8 +81,6 @@ profilesNoEraPlayground =
         . P.uniCircle . P.loopback . V.hosts 2
         . M.benchDuration
         . P.traceForwardingOn . P.newTracing
-        . P.p2pOn
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . V.genesisVariantVoltaire
         -- Cloud Plutus workload
         . V.plutusTypeLoop . V.plutusBase . P.tps 0.85
@@ -93,13 +91,12 @@ profilesNoEraPlayground =
           P.empty &
           P.fixedLoaded
         . P.uniCircle . V.hosts 2 . P.loopback
-        . V.genesisVariantVoltaire . P.voting . P.v10Preview
+        . V.genesisVariantVoltaire . P.voting
         . V.datasetMiniature
         . V.fundsVoting
         . compressedFor3Epochs
         . V.plutusDoublePlusSaturation . P.txFee 1000000
         . P.analysisStandard
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
   -- Budget profiles.
     ciBenchLike & P.name "calibrate-volt"
@@ -111,5 +108,5 @@ profilesNoEraPlayground =
   , voting & P.name "development-voting"
            . P.dreps 1000
            . P.workloadAppend W.votingWorkloadx2
-           . P.traceForwardingOn . P.newTracing . P.p2pOff
+           . P.traceForwardingOn . P.newTracing
   ]

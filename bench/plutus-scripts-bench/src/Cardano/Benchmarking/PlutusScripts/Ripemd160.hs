@@ -7,7 +7,7 @@
 
 module Cardano.Benchmarking.PlutusScripts.Ripemd160 (script) where
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
+import           Cardano.Api (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
                    Script (..), toScriptInAnyLang)
 
 import           Cardano.Benchmarking.ScriptAPI

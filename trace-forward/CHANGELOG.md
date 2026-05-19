@@ -1,5 +1,26 @@
 # ChangeLog
 
+## 2.4.1 - Mar 2026
+
+* Increase robustness of evaluating trace objects to be forwarded
+* Updated to `ekg-forward-1.2`, `ouroboros-network-1.1` and `typed-protocols-1.2`
+
+
+## 2.4.0 - Nov 2025
+
+* Refactor `writeToSink` and `readFromSink` to simplify STM usage
+* Drop incongruous logic of switching queue capacity from `ForwardSink`, along with related fields and code
+* Provide `InitForwardingConfig` config record type for `initForwarding` and `initForwardingDelayed`
+
+## 2.3.1 - Oct 2025
+
+* Updated to `ekg-forward-1.0`, `ouroboros-network-framework-0.19.2` and `typed-protocols-1.0`.
+
+## 2.3.0 - Jul 2025
+
+* Remove unused `forwarderEndpoint` and `acceptorEndpoint` fields from forwarder / acceptor configuration types.
+* `trace-forward` now depends on `trace-dispatcher`, and not the other way round.
+
 ## 2.2.11 - Mar 2025
 
 * Updated to `ouroboros-network-framework-0.17`

@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot map the legacy TraceUseLedgerAfter namespace to the TraceUseLedgerPeers payload."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "useLedgerPeers": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "useLedgerPeers"
+      ],
+      "type": "object"
+    }
+  }
+}

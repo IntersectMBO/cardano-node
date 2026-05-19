@@ -41,7 +41,7 @@ runLogsRotator TracerEnv
   } = do
   whenJust rotation \rotParams -> do
     traceWith teTracer TracerStartedLogRotator
-    launchRotator loggingParamsForFiles rotParams verbosity teRegistry teCurrentLogLock
+    launchRotator loggingParamsForFiles rotParams verbosity teTracer teRegistry teCurrentLogLock
  where
   loggingParamsForFiles :: [LoggingParams]
   loggingParamsForFiles = nub (NE.filter filesOnly logging)
@@ -53,14 +53,15 @@ launchRotator
   :: [LoggingParams]
   -> RotationParams
   -> Maybe Verbosity
+  -> Trace IO TracerTrace
   -> HandleRegistry
   -> Lock
   -> IO ()
-launchRotator [] _ _ _ _ = return ()
+launchRotator [] _ _ _ _ _ = return ()
 launchRotator loggingParamsForFiles
-              rotParams@RotationParams{rpFrequencySecs} verb registry currentLogLock =
+              rotParams@RotationParams{rpFrequencySecs} verb tracer registry currentLogLock =
   forever do
-    showProblemIfAny verb do
+    showProblemIfAny verb tracer do
       forM_ loggingParamsForFiles \loggingParam -> do
         checkRootDir currentLogLock registry rotParams loggingParam
     sleep $ fromIntegral rpFrequencySecs

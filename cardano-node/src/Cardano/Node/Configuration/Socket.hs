@@ -26,7 +26,7 @@ import qualified Network.Socket as Socket
 
 import           Cardano.Node.Configuration.NodeAddress
 
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Cardano.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 
 #if !defined(mingw32_HOST_OS)
 import           System.Directory (removeFile)
@@ -195,7 +195,7 @@ gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
     let firstUnixSocket :: Maybe LocalSocket
         firstUnixSocket = join $ listToMaybe . (\(_, _, a) -> a) <$> systemDSockets
 
-    -- only when 'ncSocketpath' is specified or a unix socket is passed through
+    -- only when 'ncSocketPath' is specified or a UNIX socket is passed through
     -- socket activation
     local <- case (getLast ncSocketPath, firstUnixSocket) of
       (Nothing, Nothing)    -> return Nothing

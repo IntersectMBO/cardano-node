@@ -1,0 +1,7 @@
+let lagBlocks = 42 in
+let lagSeconds = 42 in
+let maxBlock = max ((blockMetric now) {"environment" = "${env}"}) in
+let maxSlot = max ((slotMetric now) {"environment" = "${env}"}) in
+let block = map (\x -> abs (maxBlock - x) > lagBlocks) ((blockMetric now) {"environment" = "${env}"}) in
+let slot = map (\x -> abs (maxSlot - x) < lagSeconds) ((slotMetric now) {"environment" = "${env}"}) in
+filter (\x -> fst x && !(snd x)) (join block slot)

@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {- HLINT ignore "Use map" -}
+{- HLINT ignore "Use map with tuple-section" -}
 
 module Test.Trace.Forward.Protocol.DataPoint.Examples
   ( dataPointAcceptorApply

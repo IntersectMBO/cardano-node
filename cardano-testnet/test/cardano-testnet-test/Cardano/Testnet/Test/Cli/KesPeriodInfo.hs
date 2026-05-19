@@ -14,17 +14,19 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Output
-import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
+import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -33,11 +35,13 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -65,14 +69,14 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
-      cTestnetOptions = def { cardanoNodeEra = asbe }
+      cTestnetOptions = def { creationEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
     , testnetNodes
-    } <- cardanoTestnetDefault cTestnetOptions def conf
+    } <- createAndRunTestnet cTestnetOptions def conf
   node1sprocket <- H.headM $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
@@ -86,7 +90,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "utxo-1.json"
     ]
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
+  utxo1Json <- H.readJsonFileOk $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
@@ -145,7 +149,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    (creationEra cTestnetOptions)
     (verificationKey testDelegatorKeys)
     keyDeposit
     testDelegatorRegCertFp
@@ -170,7 +174,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   H.cat $ work </> "utxo-2.json"
 
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+  utxo2Json <- H.readJsonFileOk $ work </> "utxo-2.json"
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
@@ -220,10 +224,10 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  let valency = 1
-      topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
-            RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
+  let topology = defaultP2PTopology
+                   [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
+                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                   ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
@@ -254,7 +258,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath sbe
+  jsonBS <- liftToIntegration $ Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
@@ -305,7 +309,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "current-tip.json"
     ]
 
-  tipJSON <- H.leftFailM . H.readJsonFile $ work </> "current-tip.json"
+  tipJSON <- H.readJsonFileOk $ work </> "current-tip.json"
   tip <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @QueryTipLocalStateOutput tipJSON
   currEpoch <-
     case mEpoch tip of
@@ -333,7 +337,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , "--out-file", work </> "current-tip-2.json"
     ]
 
-  tip2JSON <- H.leftFailM . H.readJsonFile $ work </> "current-tip-2.json"
+  tip2JSON <- H.readJsonFileOk $ work </> "current-tip-2.json"
   tip2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @QueryTipLocalStateOutput tip2JSON
 
   currEpoch2 <-

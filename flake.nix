@@ -27,11 +27,6 @@
       flake = false;
     };
 
-    em = {
-      url = "github:deepfire/em";
-      flake = false;
-    };
-
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
@@ -40,14 +35,12 @@
     };
 
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
 
     haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
-      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
+      url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
@@ -67,7 +60,6 @@
   outputs = {
     cardano-automation,
     CHaP,
-    em,
     haskellNix,
     incl,
     iohkNix,
@@ -78,7 +70,7 @@
   } @ input: let
     inherit (builtins) elem match;
     inherit (nixpkgs) lib;
-    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate ;
+    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate;
     inherit (utils.lib) eachSystem flattenTree;
     inherit (iohkNix.lib) prefixNamesWith;
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
@@ -87,6 +79,8 @@
     # Make `/usr/bin/security` available in `PATH`, which is needed for stack
     # on darwin which calls this binary to find certificates
       pkgs.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
+
+    windowsCompilerNixName = "ghc9122";
 
     supportedSystems = import ./nix/supported-systems.nix;
     defaultSystem = head supportedSystems;
@@ -106,18 +100,21 @@
       iohkNix.overlays.utils
       (final: prev: {
         inherit customConfig;
-        bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
-        em = import em {
-          inherit (final) system;
-          nixpkgsSrcs = nixpkgs.outPath;
-          nixpkgsRev = nixpkgs.rev;
-        };
+        bench-data-publish = cardano-automation.outputs.packages.${final.stdenv.hostPlatform.system}."bench-data-publish:exe:bench-data-publish";
         gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
         commonLib =
           lib
           // iohkNix.lib
           // final.cardanoLib
           // import ./nix/svclib.nix {inherit (final) pkgs;};
+      })
+      (final: prev: {
+        # For musl builds, make sure the static `liburing.a` file is not deleted in `postInstall`
+        # ex: https://github.com/NixOS/nixpkgs/blob/f84a9816b2d5f7caade4b2fab16a66486abb7038/pkgs/by-name/li/liburing/package.nix#L43-L45
+        liburing = prev.liburing.overrideAttrs (attrs:
+          final.lib.optionalAttrs final.stdenv.hostPlatform.isMusl {
+            postInstall = builtins.replaceStrings ["rm $out/lib/liburing*.a"] [""] attrs.postInstall;
+          });
       })
       (import ./nix/pkgs.nix)
       self.overlay
@@ -128,34 +125,44 @@
     in
       # Take all executables from the project local packages
       project.exes
-      // (with project.hsPkgs; {
-        # Add some executables from other relevant packages
-        inherit (bech32.components.exes) bech32;
-        inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
-        # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
-        # Keep available an alternative without the git revision, like the other
-        # passthru (profiled and asserted in nix/haskell.nix) that
-        # have no git revision but for the same compilation alternative.
-        cardano-node =
-          let node = project.exes.cardano-node;
-          in recursiveUpdate
-               (set-git-rev node)
-               {passthru = {noGitRev = node;};}
-        ;
-        cardano-cli =
-          let cli = cardano-cli.components.exes.cardano-cli;
-          in recursiveUpdate
-               (set-git-rev cli)
-               {passthru = {noGitRev = cli;};}
-        ;
-      } // optionalAttrs (project.exes ? tx-generator) {
-        tx-generator =
-          let tx-gen = project.exes.tx-generator;
-          in recursiveUpdate
-               (set-git-rev tx-gen)
-               {passthru = {noGitRev = tx-gen;};}
-        ;
-      });
+      // (with project.hsPkgs;
+        {
+          # Add some executables from other relevant packages
+          inherit (bech32.components.exes) bech32;
+          inherit (dmq-node.components.exes) dmq-node;
+          inherit (ouroboros-consensus.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
+          inherit (kes-agent.components.exes) kes-agent kes-agent-control;
+          # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
+          # Keep available an alternative without the git revision, like the other
+          # passthru (profiled and asserted in nix/haskell.nix) that
+          # have no git revision but for the same compilation alternative.
+          cardano-node = let
+            node = project.exes.cardano-node;
+          in
+            recursiveUpdate
+            (set-git-rev node)
+            {passthru = {noGitRev = node;};};
+          cardano-cli = let
+            cli = cardano-cli.components.exes.cardano-cli;
+          in
+            recursiveUpdate
+            (set-git-rev cli)
+            {passthru = {noGitRev = cli;};};
+          cardano-submit-api = let
+            submit-api = project.exes.cardano-submit-api;
+          in
+            recursiveUpdate
+            (set-git-rev submit-api)
+            {passthru = {noGitRev = submit-api;};};
+        }
+        // optionalAttrs (project.exes ? tx-generator) {
+          tx-generator = let
+            tx-gen = project.exes.tx-generator;
+          in
+            recursiveUpdate
+            (set-git-rev tx-gen)
+            {passthru = {noGitRev = tx-gen;};};
+        });
 
     mkCardanoNodePackages = project:
       (collectExes project)
@@ -164,7 +171,7 @@
       };
 
     mkFlakeAttrs = pkgs: rec {
-      inherit (pkgs) system;
+      system = pkgs.stdenv.hostPlatform.system;
       inherit (pkgs.haskell-nix) haskellLib;
       inherit (haskellLib) collectChecks' collectComponents';
       inherit (pkgs.commonLib) eachEnv environments mkSupervisordCluster;
@@ -225,7 +232,7 @@
       packages =
         exes
         # Linux only packages:
-        // optionalAttrs (system == "x86_64-linux")
+        // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"])
         (let
           workbenchTest = {
             profileName,
@@ -242,6 +249,7 @@
         in {
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+          "dockerImage/tracer" = pkgs.tracerDockerImage;
 
           # This is a very light profile, no caching and pinning needed.
           workbench-ci-test = workbenchTest {
@@ -303,9 +311,15 @@
           "db-analyser"
           "db-synthesizer"
           "db-truncater"
+          "dmq-node"
+          "kes-agent"
+          "kes-agent-control"
           "snapshot-converter"
           "tx-generator"
         ];
+
+        # Binaries only supported on Linux; excluded from Windows and Darwin releases.
+        linuxOnlyBins = ["kes-agent" "kes-agent-control"];
 
         ciJobsVariants =
           mapAttrs (
@@ -318,7 +332,7 @@
           {
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {inherit (pkgs.cardanoLib.environments) mainnet preview preprod;};
           }
-          // optionalAttrs (system == "x86_64-linux") {
+          // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"]) {
             native =
               packages
               // {
@@ -338,7 +352,10 @@
                 variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
             musl = let
-              muslProject = project.projectCross.musl64;
+              muslProject =
+                if system == "x86_64-linux"
+                then project.projectCross.musl64
+                else project.projectCross.aarch64-multiplatform-musl;
               projectExes = collectExes muslProject;
             in
               projectExes
@@ -354,26 +371,31 @@
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
               };
+          }
+          # Compiling windows on aarch64-linux requires aarch64 wine64 for TH code.
+          # Currently github:NixOS/nixpkgs/nixpkgs-unstable#legacyPackages.aarch64-linux.wine64 does not build.
+          # Once building, windowsProject candidate for win-arm64 is project.projectCross.ucrtAarch64.
+          // optionalAttrs (elem system ["x86_64-linux"]) {
             windows = let
-              windowsProject = project.projectCross.mingwW64;
+              windowsProject = (project.appendModule {compiler-nix-name = windowsCompilerNixName;}).projectCross.mingwW64;
               projectExes = collectExes windowsProject;
             in
               projectExes
               // (removeRecurse {
                 inherit (windowsProject) checks tests benchmarks;
-                cardano-node-win64 = import ./nix/binary-release.nix {
+                cardano-node-win = import ./nix/binary-release.nix {
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
-                  platform = "win64";
+                  platform = "win";
                   exes = collect isDerivation (
-                    filterAttrs (n: _: elem n releaseBins) projectExes
+                    filterAttrs (n: _: elem n releaseBins && !(elem n linuxOnlyBins)) projectExes
                   );
                 };
                 internal.roots.project = windowsProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
               });
           }
-          // optionalAttrs (system == "x86_64-darwin") {
+          // optionalAttrs (elem system ["x86_64-darwin" "aarch64-darwin"]) {
             native =
               filterAttrs
               (n: _:
@@ -386,7 +408,7 @@
                   inherit (exes.cardano-node.identifier) version;
                   platform = "macos";
                   exes = collect isDerivation (
-                    filterAttrs (n: _: elem n releaseBins) (collectExes project)
+                    filterAttrs (n: _: elem n releaseBins && !(elem n linuxOnlyBins)) (collectExes project)
                   );
                 };
                 shells = removeAttrs devShells ["profiled"];
@@ -481,14 +503,28 @@
         cardanoNodeProject =
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
-            inherit CHaP incl;
+            inherit CHaP incl windowsCompilerNixName;
             macOS-security = macOS-security (final.pkgs);
           })
           .appendModule [
             customConfig.haskellNix
           ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser tx-generator;
+        inherit
+          (final.cardanoNodePackages)
+          bech32
+          cardano-cli
+          cardano-node
+          cardano-submit-api
+          cardano-tracer
+          db-analyser
+          db-synthesizer
+          db-truncater
+          dmq-node
+          locli
+          snapshot-converter
+          tx-generator
+          ;
       };
       nixosModules = {
         cardano-node = {
@@ -497,7 +533,7 @@
           ...
         }: {
           imports = [./nix/nixos/cardano-node-service.nix];
-          services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+          services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
         };
         cardano-submit-api = {
           pkgs,
@@ -505,7 +541,15 @@
           ...
         }: {
           imports = [./nix/nixos/cardano-submit-api-service.nix];
-          services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+          services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
+        };
+        cardano-tracer = {
+          pkgs,
+          lib,
+          ...
+        }: {
+          imports = [./nix/nixos/cardano-tracer-service.nix];
+          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
         };
       };
     };

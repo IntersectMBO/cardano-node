@@ -1,13 +1,13 @@
 cabal-version: 3.0
 
 name:                   trace-forward
-version:                2.2.11
+version:                2.4.1
 synopsis:               The forwarding protocols library for cardano node.
 description:            The library providing typed protocols for forwarding different
                         information from the cardano node to an external application.
 category:               Cardano,
                         Trace,
-copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -43,6 +43,7 @@ library
                         Trace.Forward.Protocol.TraceObject.Codec
                         Trace.Forward.Protocol.TraceObject.Forwarder
                         Trace.Forward.Protocol.TraceObject.Type
+                        Trace.Forward.Forwarding
 
                         Trace.Forward.Run.DataPoint.Acceptor
                         Trace.Forward.Run.DataPoint.Forwarder
@@ -54,6 +55,8 @@ library
 
                         Trace.Forward.Utils.DataPoint
                         Trace.Forward.Utils.TraceObject
+                        Trace.Forward.Utils.ForwardSink
+                        Trace.Forward.Utils.Version
 
   build-depends:        aeson
                       , async
@@ -64,15 +67,17 @@ library
                       , deepseq
                       , extra
                       , io-classes
+                      , network
                       , network-mux
-                      , ouroboros-network-api
+                      , ouroboros-network:{api, framework} ^>= 1.1
+                      , ekg-core
+                      , ekg-forward  >= 1.2
                       , singletons ^>= 3.0
-                      , ouroboros-network-framework ^>= 0.18.0.2
                       , serialise
                       , stm
                       , text
-                      , typed-protocols ^>= 0.3
-                      , typed-protocols-cborg
+                      , trace-dispatcher ^>= 2.12
+                      , typed-protocols:{typed-protocols, cborg} ^>= 1.2
 
 test-suite test
   import:               project-config
@@ -99,14 +104,13 @@ test-suite test
                       , contra-tracer
                       , io-classes
                       , io-sim
-                      , ouroboros-network-api
-                      , ouroboros-network-framework
+                      , ouroboros-network:{api, framework}
                       , trace-forward
                       , QuickCheck
                       , serialise
                       , tasty
                       , tasty-quickcheck
-                      , typed-protocols
+                      , typed-protocols:{typed-protocols, codec-properties}
                       , text
 
   ghc-options:          -rtsopts

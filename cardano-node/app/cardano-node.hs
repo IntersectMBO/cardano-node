@@ -1,14 +1,14 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE GADTs #-}
 
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration(..))
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..))
 import           Cardano.Node.Handlers.TopLevel
-import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
-                   renderHelpDoc)
+import           Cardano.Node.Parsers (nodeCLIParser)
 import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
@@ -19,7 +19,6 @@ import qualified Data.Text.IO as Text
 import           Data.Version (showVersion)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-import           Options.Applicative.Help ((<$$>))
 import           System.Info (arch, compilerName, compilerVersion, os)
 import           System.IO (hPutStrLn, stderr)
 
@@ -57,22 +56,11 @@ main = do
         Opt.info (fmap RunCmd nodeCLIParser
                   <|> fmap TraceDocumentation parseTraceDocumentationCmd
                   <|> parseVersionCmd
-                  <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
+                  <**> helper)
 
           ( Opt.fullDesc <>
             Opt.progDesc "Start node of the Cardano blockchain."
           )
-
-      helperBrief :: String -> String -> String -> Parser (a -> a)
-      helperBrief l d helpText = Opt.abortOption (Opt.InfoMsg helpText) $ mconcat
-        [ Opt.long l
-        , Opt.help d ]
-
-      nodeCliHelpMain :: String
-      nodeCliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" nodeCLIParser
-        <$$> ""
-        <$$> parserHelpOptions nodeCLIParser
 
 
 data Command = RunCmd PartialNodeConfiguration

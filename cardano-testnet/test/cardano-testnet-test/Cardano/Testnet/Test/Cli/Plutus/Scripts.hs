@@ -28,7 +28,7 @@ import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -44,9 +44,9 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 -- Execute me with:
--- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Scripts/"@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3 purposes/"'@
 hprop_plutus_purposes_v3 :: Property
-hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -57,14 +57,14 @@ hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -194,9 +194,9 @@ hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \
 
 -- |
 -- Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 Create transaction with two script certs/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 transaction with two script certs/"'@
 hprop_tx_two_script_certs_v2 :: Property
-hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -207,14 +207,14 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+    creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options def conf
+    } <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   SpoNodeKeys{poolNodeKeysCold=KeyPair{verificationKey=spoKeyCold}} <- H.nothingFail $ poolKeys node
@@ -229,7 +229,7 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
   txin <- T.unpack . renderTxIn <$> findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV2"
-  H.writeFile plutusScript $ T.unpack plutusV2StakeScript
+  H.writeFile plutusScript $ T.unpack plutusV2StakeScript --plutusV3Script
 
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
@@ -258,6 +258,8 @@ hprop_tx_two_script_certs_v2 = integrationWorkspace "tx-2-script-certs" $ \tempA
       tx = work </> "two-certs-tx"
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000 ]
 
+  s <- execCli' execConfig [anyEraToString anyEra, "transaction", "policyid", "--script-file", plutusScript]
+  H.note_ $ "Script hash: " <> s
   let txBuildArgs =
         [ anyEraToString anyEra, "transaction", "build"
         , "--change-address", T.unpack $ paymentKeyInfoAddr wallet0

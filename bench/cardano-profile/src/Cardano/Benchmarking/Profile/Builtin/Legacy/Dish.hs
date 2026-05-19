@@ -30,7 +30,7 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 profilesNoEraDish :: [Types.Profile]
 profilesNoEraDish =
   let dish =
-        -- Using `P.p2pOff . P.newTracing` like all "forge-stress" profiles.
+        -- Using `P.newTracing` like all "forge-stress" profiles.
           P.empty & FS.base
         . V.hosts 3
         . V.genesisVariant300

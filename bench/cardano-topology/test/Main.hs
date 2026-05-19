@@ -84,7 +84,6 @@ topology = Tasty.testGroup
       "chainsync-early-alonzo",
       "chainsync-early-alonzo-notracer",
       "chainsync-early-alonzo-oldtracing",
-      "chainsync-early-alonzo-p2p",
       "chainsync-early-byron",
       "chainsync-early-byron-notracer",
       "chainsync-early-byron-oldtracing"
@@ -126,10 +125,8 @@ topology = Tasty.testGroup
     }
     [
       "ci-bench-nomadperf",
-      "ci-bench-nomadperf-nop2p",
       "ci-bench-oldtracing-nomadperf",
       "ci-test-nomadperf",
-      "ci-test-nomadperf-nop2p",
       "ci-test-oldtracing-nomadperf"
     ]
   --}
@@ -138,24 +135,6 @@ topology = Tasty.testGroup
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("Torus (ci-test nomadperf) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.Torus
-            2
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
-  , testCase "ci-test-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/ci-test-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("Torus (ci-test nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.Torus
@@ -191,9 +170,7 @@ topology = Tasty.testGroup
     }
     [
       "default-nomadperf",
-      "default-nomadperf-nop2p",
-      "oldtracing-nomadperf",
-      "oldtracing-nomadperf-nop2p"
+      "oldtracing-nomadperf"
     ]
   --}
   , testCase "default-nomadperf-coay" $ do
@@ -201,24 +178,6 @@ topology = Tasty.testGroup
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("Torus (default-nomadperf) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.Torus
-            6
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
-  , testCase "default-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/default-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("Torus (default-nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.Torus
@@ -254,38 +213,42 @@ topology = Tasty.testGroup
     }
     [
       "fast-nomadperf",
-      "fast-nomadperf-nop2p",
       "fast-nomadperfssd",
       "latency-nomadperf",
       "latency-nomadperfssd",
       "plutus-drep100k-nomadperf",
       "plutus-drep10k-nomadperf",
       "plutus-drep1k-nomadperf",
-      "plutus-drep2k-nomadperf",
       "plutus-nomadperf",
-      "plutus-nomadperf-nop2p",
       "plutus-secp-ecdsa-nomadperf",
       "plutus-secp-schnorr-nomadperf",
+      "plutus-volt-lmdb-nomadperf",
+      "plutus-volt-memx15-nomadperf",
+      "plutus-volt-memx2-nomadperf",
       "plutus-volt-nomadperf",
-      "plutus-volt-blockmem-x1.5-nomadperf-coay",
-      "plutus-volt-blockmem-x2-nomadperf-coay",
+      "plutus-volt-rtsqg1-nomadperf",
       "plutus-voting-double-volt-nomadperf",
       "plutus-voting-utxo-volt-nomadperf",
       "plutus-voting-volt-nomadperf",
       "plutus24-nomadperf",
-      "plutusv3-blst-double-nomadperf",
-      "plutusv3-blst-half-nomadperf",
       "plutusv3-blst-nomadperf",
+      "plutusv3-blst-stepx15-nomadperf",
+      "plutusv3-blst-stepx2-nomadperf",
+      "plutusv3-ripemd-nomadperf",
+      "plutusv3-ripemd-stepx15-nomadperf",
+      "plutusv3-ripemd-stepx2-nomadperf",
+      "plutusv3-volt-nomadperf",
       "value-drep100k-nomadperf",
       "value-drep10k-nomadperf",
       "value-drep1k-nomadperf",
-      "value-drep2k-nomadperf",
       "value-nomadperf",
-      "value-nomadperf-nop2p",
       "value-nomadperfssd",
       "value-oldtracing-nomadperf",
-      "value-oldtracing-nomadperf-nop2p",
+      "value-volt-cgmem-nomadperf",
+      "value-volt-lmdb-cgmem-nomadperf",
+      "value-volt-lmdb-nomadperf",
       "value-volt-nomadperf",
+      "value-volt-rtsqg1-nomadperf",
       "value-voting-double-volt-nomadperf",
       "value-voting-utxo-volt-nomadperf",
       "value-voting-volt-nomadperf"
@@ -296,24 +259,6 @@ topology = Tasty.testGroup
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("TorusDense (value-volt-nomadperf) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.TorusDense
-            52
-            [
-              Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_1
-            , Types.AWS Types.AP_SOUTHEAST_2
-            ]
-            (\_ -> Just 1)
-          )
-          (Just (Types.AWS Types.EU_CENTRAL_1))
-        )
-  , testCase "value-nomadperf-nop2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/value-nomadperf-nop2p-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("TorusDense (value-nomadperf-nop2p) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.TorusDense
@@ -389,48 +334,38 @@ topology = Tasty.testGroup
       "with_proxy": false
     }
     [
+      "calibrate-blockmem-x1.5-volt",
+      "calibrate-blockmem-x1.5-volt-fill",
+      "calibrate-blockmem-x2-volt",
+      "calibrate-blockmem-x2-volt-fill",
+      "calibrate-volt",
       "ci-bench",
       "ci-bench-drep",
       "ci-bench-lmdb",
       "ci-bench-notracer",
-      "ci-bench-p2p",
       "ci-bench-plutus",
       "ci-bench-plutus-secp-ecdsa",
       "ci-bench-plutus-secp-schnorr",
       "ci-bench-plutus24",
       "ci-bench-plutusv3-blst",
       "ci-bench-plutusv3-ripemd",
+      "ci-bench-plutusv3-ripemd-step2x",
       "ci-bench-rtview",
       "ci-test",
       "ci-test-hydra",
       "ci-test-notracer",
-      "ci-test-p2p",
       "ci-test-plutus",
       "ci-test-rtview",
+      "development-voting",
       "epoch-transition",
       "fast",
       "fast-notracer",
       "fast-oldtracing",
-      "fast-p2p",
       "fast-plutus"
     ]
   --}
   , testCase "ci-test-coay" $ do
       fp <- Paths.getDataFileName "data/test/ci-test-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("UniCircle (loopback) (2) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.UniCircle
-            2
-            Types.Loopback
-            (\_ -> Just 1)
-          )
-          Nothing
-        )
-  , testCase "ci-test-p2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/ci-test-p2p-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("UniCircle (loopback) (2) == (decode \"" ++ fp ++ "\")")
@@ -462,13 +397,12 @@ topology = Tasty.testGroup
       "with_proxy": false
     }
     [
+      "dish",
       "dish-10M",
       "dish-10M-plutus",
-      "dish",
       "dish-plutus",
       "forge-stress",
       "forge-stress-notracer",
-      "forge-stress-p2p",
       "forge-stress-plutus",
       "forge-stress-pre",
       "forge-stress-pre-notracer",
@@ -486,20 +420,6 @@ topology = Tasty.testGroup
   --}
   , testCase "forge-stress-coay" $ do
       fp <- Paths.getDataFileName "data/test/forge-stress-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("UniCircle (loopback) (3) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.UniCircle
-            3
-            Types.Loopback
-            (\_ -> Just 1)
-          )
-          Nothing
-        )
-  , testCase "forge-stress-p2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/forge-stress-p2p-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("UniCircle (loopback) (3) == (decode \"" ++ fp ++ "\")")
@@ -531,9 +451,8 @@ topology = Tasty.testGroup
       "with_proxy": false
     }
     [
-      "model-secp-ecdsa-double",
-      "model-secp-ecdsa-half",
-      "model-secp-ecdsa-plain",
+      "model-secp-ecdsa",
+      "model-secp-ecdsa-stepx2",
       "model-value",
       "model-value-test"
     ]
@@ -612,11 +531,11 @@ topology = Tasty.testGroup
       "with_proxy": false
     }
     [
+      "6-dense",
       "6-dense-1h",
       "6-dense-1h-rtsprof",
       "6-dense-4h",
       "6-dense-4h-rtsprof",
-      "6-dense",
       "6-dense-rtsprof"
     ]
   --}
@@ -654,23 +573,24 @@ topology = Tasty.testGroup
     }
     [
       "default",
-      "default-p2p",
       "devops",
       "forge-stress-large",
+      "forge-stress-pre-large",
+      "forge-stress-pre-large-rtsN3",
+      "forge-stress-pre-large-rtsN4",
+      "forge-stress-pre-large-rtsqg1",
+      "forge-stress-pre-large-rtsqg1N4",
       "idle",
       "oldtracing",
       "plutus",
       "plutus-secp-ecdsa",
       "plutus-secp-schnorr",
-      "plutuscall-loop-double",
-      "plutuscall-loop-half",
-      "plutuscall-loop-plain",
-      "plutuscall-secp-ecdsa-double",
-      "plutuscall-secp-ecdsa-half",
-      "plutuscall-secp-ecdsa-plain",
-      "plutuscall-secp-schnorr-double",
-      "plutuscall-secp-schnorr-half",
-      "plutuscall-secp-schnorr-plain",
+      "plutuscall-loop",
+      "plutuscall-loop-memx2",
+      "plutuscall-secp-ecdsa",
+      "plutuscall-secp-ecdsa-stepx2",
+      "plutuscall-secp-schnorr",
+      "plutuscall-secp-schnorr-stepx2",
       "plutuscall-volt-blst",
       "plutuscall-volt-loop",
       "plutuscall-volt-ripemd",
@@ -693,8 +613,8 @@ topology = Tasty.testGroup
           )
           Nothing
         )
-  , testCase "default-p2p-coay" $ do
-      fp <- Paths.getDataFileName "data/test/default-p2p-coay/topology.json"
+  , testCase "default-coay" $ do
+      fp <- Paths.getDataFileName "data/test/default-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
         ("UniCircle (loopback) (6) == (decode \"" ++ fp ++ "\")")
@@ -728,8 +648,7 @@ topology = Tasty.testGroup
     [
       "10",
       "10-notracer",
-      "10-p2p",
-      "10-plutus"
+      "10-plutus
     ]
   --}
   , testCase "10-coay" $ do

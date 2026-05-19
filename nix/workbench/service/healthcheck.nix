@@ -1,4 +1,5 @@
 { pkgs
+, haskellProject
 , backend
 , profile
 , nodeSpecs
@@ -12,17 +13,19 @@ let
   supervisor      = pkgs.supervisor;
   grep            = pkgs.gnugrep;
   jq              = pkgs.jq;
-  # Avoid rebuilding the script on every commit.
-  # `noGitRev` does not have `set-git-rev` that is set on every commit.
-  cardano-node = with pkgs;
+  # Decide where the executables come from:
+  #########################################
+  cardano-node =
     if backend.useCabalRun
     then "cardano-node"
-    else cardanoNodePackages.cardano-node.passthru.noGitRev + "/bin/cardano-node"
+    else haskellProject.exes.cardano-node + "/bin/cardano-node"
   ;
-  cardano-cli  = with pkgs;
+  cardano-cli  =
     if backend.useCabalRun
     then "cardano-cli"
-    else cardanoNodePackages.cardano-cli.passthru.noGitRev + "/bin/cardano-cli";
+    else haskellProject.hsPkgs.cardano-cli.components.exes.cardano-cli + "/bin/cardano-cli"
+  ;
+  #########################################
 in {
   start =
     # Assumptions:

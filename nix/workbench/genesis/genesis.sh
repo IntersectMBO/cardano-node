@@ -1,6 +1,7 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 
-global_genesis_format_version=September-01-2024
+global_genesis_format_version=October-13-2025
 
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
@@ -703,6 +704,7 @@ genesis-create-testnet-data() {
     jq_fmutate "$dir/alonzo-genesis.json"       -S .
     jq_fmutate "$dir/conway-genesis.spec.json"  -S .
     jq_fmutate "$dir/conway-genesis.json"       -S .
+    jq_fmutate "$dir/dijkstra-genesis.json"     -S .
 
     ln -sf shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
     ln -sf shelley-genesis.json      "$dir/genesis-shelley.json"
@@ -710,6 +712,7 @@ genesis-create-testnet-data() {
     ln -sf alonzo-genesis.json       "$dir/genesis.alonzo.json"
     ln -sf conway-genesis.spec.json  "$dir/genesis.conway.spec.json"
     ln -sf conway-genesis.json       "$dir/genesis.conway.json"
+    ln -sf dijkstra-genesis.json     "$dir/genesis.dijkstra.json"
 
     shopt -s extglob
 

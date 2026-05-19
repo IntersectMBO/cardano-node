@@ -1,0 +1,512 @@
+
+x ::= <identifier>
+
+n ::= <decimal-natural-number-literal>
+
+s, s' ::= <string-in-double-quotes>
+
+// Label
+l ::= s
+
+// Set of labels
+l̄ ::= (l, ..., l)
+
+// Label constraint
+c ::= l = s | l != s
+
+// Set of label constraints
+c̄ ::= {c, ..., c}
+
+// Types
+A, B, C, T ::= InstantVector T | RangeVector T | Scalar | Bool | Timestamp | Duration | (T, T) | T -> T | Text
+
+// Contexts
+Γ ::= ε | Γ (x ≔ t : T) | Γ (x : T)
+
+// Terms
+t, f, e, a, b ::= x
+                | (t, t)
+                | \x -> t
+                | let x = t in t
+                | fst t
+                | snd t
+                | eq_scalar t t
+                | not_eq_scalar t t
+                | eq_bool t t
+                | not_eq_bool t t
+                | lt_bool t t
+                | lte_bool t t
+                | gt_bool t t
+                | gte_bool t t
+                | lt_scalar t t
+                | lte_scalar t t
+                | gt_scalar t t
+                | gte_scalar t t
+                | add_scalar t t
+                | sub_scalar t t
+                | mul_scalar t t
+                | div_scalar t t
+                | not t
+                | and t t
+                | or t t
+                | milliseconds n
+                | seconds n
+                | minutes n
+                | hours n
+                | epoch
+                | now
+                | rewind t t
+                | fast_forward t t
+                | timestamp_to_scalar t
+                | bool_to_scalar t
+                | round_scalar t
+                | abs t
+                | range t t t
+                | range t t t t
+                | filter_by_label t c̄
+                | max t
+                | min t
+                | avg t
+                | filter t
+                | join t t
+                | map t
+                | increase t
+                | rate t
+                | avg_over_time t
+                | sum_over_time t
+                | quantile_over_time t t
+                | unless t t
+                | eq_instant_vector_scalar t t
+                | not_eq_instant_vector_scalar t t
+                | lt_instant_vector_scalar t t
+                | lte_instant_vector_scalar t t
+                | gt_instant_vector_scalar t t
+                | gte_instant_vector_scalar t t
+                | add_instant_vector_scalar t t
+                | sub_instant_vector_scalar t t
+                | mul_instant_vector_scalar t t
+                | div_instant_vector_scalar t t
+                | instant_vector_to_scalar t
+                | quantile_by t t
+                | metrics
+
+┌──────┐
+│A type│
+└──────┘
+
+A type
+----------------------
+InstantVector A type
+
+
+A type
+--------------------
+RangeVector A type
+
+
+Scalar type
+
+
+Bool type
+
+
+A type
+B type
+-----------
+(A, B) type
+
+A type
+B type
+------
+A -> B
+
+
+Timestamp type
+
+
+Duration type
+
+Text type
+
+┌──────┐
+│Γ ctx │
+└──────┘
+
+ε ctx
+
+Γ ctx
+A type
+-------------
+Γ (x : A) ctx
+
+Γ ⊦ t : A
+-----------------
+Γ (x ≔ t : A) ctx
+
+┌─────────┐
+│Γ ctx    │
+│A type   │
+│---------│
+│Γ ⊦ t : A│
+└─────────┘
+
+
+--------------------- ✔
+Γ₀ (x : C) Γ₁ ⊦ x : C
+
+
+------------------------- ✔
+Γ₀ (x ≔ t : C) Γ₁ ⊦ x : C
+
+
+x ∈ metric-store
+----------------------------------------- ✔
+Γ ⊦ x : Timestamp -> InstantVector Scalar
+
+
+Γ (x := t : A) ⊦ e : B
+---------------------- ✔
+Γ ⊦ let x = t in e : B
+
+
+(x : A) ⊦ t : B
+-------------------- ✔
+Γ ⊦ \x -> t : A -> B
+
+
+Γ ⊦ t : (A, B)
+-------------- ✔
+Γ ⊦ fst t : A
+
+
+Γ ⊦ t : (A, B)
+-------------- ✔
+Γ ⊦ snd t : B
+
+
+Γ ⊦ a : A
+Γ ⊦ b : B
+------------------- ✔
+Γ ⊦ (a, b) : (A, B)
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+---------------------- ✔
+Γ ⊦ eq_bool a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+-------------------------- ✔
+Γ ⊦ not_eq_bool a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+-------------------------- ✔
+Γ ⊦ lt_bool a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+-------------------------- ✔
+Γ ⊦ lte_bool a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+-------------------------- ✔
+Γ ⊦ gt_bool a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+-------------------------- ✔
+Γ ⊦ gte_bool a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+------------------------ ✔
+Γ ⊦ eq_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+---------------------------- ✔
+Γ ⊦ not_eq_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+------------------------ ✔
+Γ ⊦ lt_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+------------------------- ✔
+Γ ⊦ lte_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+------------------------ ✔
+Γ ⊦ gt_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+------------------------- ✔
+Γ ⊦ gte_scalar a b : Bool
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+--------------------------- ✔
+Γ ⊦ add_scalar a b : Scalar
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+--------------------------- ✔
+Γ ⊦ sub_scalar a b : Scalar
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+--------------------------- ✔
+Γ ⊦ mul_scalar a b : Scalar
+
+
+Γ ⊦ a : Scalar
+Γ ⊦ b : Scalar
+--------------------------- ✔
+Γ ⊦ div_scalar a b : Scalar
+
+
+Γ ⊦ a : Bool
+---------------- ✔
+Γ ⊦ not a : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+------------------ ✔
+Γ ⊦ and a b : Bool
+
+
+Γ ⊦ a : Bool
+Γ ⊦ b : Bool
+----------------- ✔
+Γ ⊦ or a b : Bool
+
+
+n integer // integer literal
+-----------------------------  ✔
+Γ ⊦ milliseconds n : Duration
+
+
+n integer // integer literal
+----------------------------  ✔
+Γ ⊦ seconds n : Duration
+
+
+n integer // integer literal
+----------------------------  ✔
+Γ ⊦ minutes n : Duration
+
+
+n integer // integer literal
+          // Syntax hugar: <int>h ✗
+-----------------------------------  ✔
+Γ ⊦ hours n : Duration
+
+
+Γ ⊦ epoch : Timestamp ✔
+
+
+Γ ⊦ now : Timestamp ✔
+
+
+Γ ⊦ t : Timestamp
+Γ ⊦ d : Duration
+-------------------------- ✔
+Γ ⊦ rewind t d : Timestamp
+
+
+Γ ⊦ t : Timestamp
+Γ ⊦ d : Duration
+-------------------------------- ✔
+Γ ⊦ fast_forward t d : Timestamp
+
+
+Γ ⊦ t : Timestamp
+---------------------------------- ✔
+Γ ⊦ timestamp_to_scalar t : Scalar
+
+
+Γ ⊦ t : Bool
+----------------------------- ✔
+Γ ⊦ bool_to_scalar t : Scalar
+
+
+// Given a continuous timeseries vector and an interval computes a discrete timeseries vector (range vector)
+Γ ⊦ s : Timestamp -> InstantVector a
+Γ ⊦ a : Timestamp
+Γ ⊦ b : Timestamp
+------------------------------------ ✔
+Γ ⊦ range s a b : RangeVector a
+
+
+// More general version with a sampling rate
+Γ ⊦ s : Timestamp -> InstantVector a
+Γ ⊦ a : Timestamp
+Γ ⊦ b : Timestamp
+Γ ⊦ d : Duration
+--------------------------------- ✔
+Γ ⊦ range s a b d : RangeVector a
+
+
+// Takes a subset of instant vector `v` by keeping only those instants whose labels
+// satisfy the constraints c̄
+Γ ⊦ v : InstantVector a
+----------------------------------------- ✔
+Γ ⊦ filter_by_label c̄ v : InstantVector a
+
+
+Γ ⊦ v : InstantVector Scalar
+---------------------------- ✔
+Γ ⊦ max v : Scalar
+
+
+Γ ⊦ v : InstantVector Scalar
+---------------------------- ✔
+Γ ⊦ min v : Scalar
+
+
+Γ ⊦ v : InstantVector Scalar
+--------------------------- ✔
+Γ ⊦ avg v : Scalar
+
+
+Γ ⊦ f : A -> Bool
+Γ ⊦ v : InstantVector A
+-------------------------------- ✔
+Γ ⊦ filter f v : InstantVector A
+
+
+Γ ⊦ u : InstantVector A
+Γ ⊦ v : InstantVector B
+----------------------------------- // 1-to-1 match is assumed ✔
+Γ ⊦ join u v : InstantVector (A, B)
+
+
+Γ ⊦ f : A -> B
+Γ ⊦ v : InstantVector A
+----------------------------- ✔
+Γ ⊦ map f u : InstantVector B
+
+
+Γ ⊦ t : Scalar
+--------------------------- ✔
+Γ ⊦ round_scalar t : Scalar
+
+
+Γ ⊦ t : Scalar
+------------------ ✔
+Γ ⊦ abs t : Scalar
+
+
+Γ ⊦ r : RangeVector Scalar
+------------------------------------ ✔
+Γ ⊦ increase r : InstantVector Scalar
+
+
+Γ ⊦ r : RangeVector Scalar
+--------------------------------- ✔
+Γ ⊦ rate r : InstantVector Scalar
+
+
+Γ ⊦ r : RangeVector Scalar
+------------------------------------------ ✔
+Γ ⊦ avg_over_time r : InstantVector Scalar
+
+
+Γ ⊦ r : RangeVector Scalar
+------------------------------------------ ✔
+Γ ⊦ sum_over_time r : InstantVector Scalar
+
+
+Γ ⊦ q : Scalar // must be in range of [0; 1]
+Γ ⊦ r : RangeVector
+------------------------------------------------- ✔
+Γ ⊦ quantile_over_time q r : InstantVector Scalar
+
+
+// Returns elements of `u` whose label instance doesn't occur in `v`
+Γ ⊦ u : InstantVector a
+Γ ⊦ v : InstantVector b
+-------------------------------- ✔
+Γ ⊦ unless u v : InstantVector a
+
+
+// meta-level abbreviation
+Γ ⊦ a : InstantVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------------------------------ ✔
+Γ ⊦ lte_instant_vector_scalar a s : InstantVector Scalar
+    lte_instant_vector_scalar a s ≡ filter (\v -> v <= s) a   // same rule holds for other binary relations
+
+
+// meta-level abbreviation
+Γ ⊦ v : InstantVector Scalar
+Γ ⊦ s : Scalar
+------------------------------------ ✗
+Γ ⊦ v <= bool s : InstantVector Bool
+v <= bool s ≡ (\x -> x <= s) v
+
+
+// meta-level definition (define via map)
+Γ ⊦ v : InstantVector Scalar
+Γ ⊦ s : Scalar
+-------------------------------------------------------- ✔
+Γ ⊦ add_instant_vector_scalar v s : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+Γ ⊦ v : InstantVector Scalar
+Γ ⊦ s : Scalar
+-------------------------------------------------------- ✔
+Γ ⊦ sub_instant_vector_scalar v s : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+Γ ⊦ v : InstantVector Scalar
+Γ ⊦ s : Scalar
+---------------------------------------------------- ✔
+Γ ⊦ mul_instant_vector_scalar : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+Γ ⊦ v : InstantVector Scalar
+Γ ⊦ s : Scalar
+-------------------------------------------------------- ✔
+Γ ⊦ div_instant_vector_scalar v s : InstantVector Scalar
+
+
+// meta-level definition (define via map)
+Γ ⊦ v : InstantVector Bool
+----------------------------------------------------- ✔
+Γ ⊦ instant_vector_to_scalar v : InstantVector Scalar
+
+
+Γ ⊦ q : Scalar
+Γ ⊦ v : InstantVector Scalar
+-------------------------------------------- ✔
+Γ ⊦ quantile_by q v l̄ : InstantVector Scalar
+
+Γ ctx
+------------------ ✔
+Γ ⊦ metrics : Text

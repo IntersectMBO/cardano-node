@@ -29,12 +29,12 @@
   "cardano_version_major": "Cardano node version information",
   "cardano_version_minor": "Cardano node version information",
   "cardano_version_patch": "Cardano node version information",
-  "connectedPeers": "Number of connected peers",
   "density": "The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.",
   "epoch": "In which epoch is the tip of the current chain.",
   "forgedSlotLast": "Slot number of the last forged block",
   "forging_enabled": "A node without forger credentials or started as non-producing has forging disabled.",
   "forks": "counter for forks",
+  "GSM.state": "The state of the Genesis State Machine. 0 = PreSyncing, 1 = Syncing, 2 = CaughtUp.",
   "haskell_compiler_major": "Cardano compiler version information",
   "haskell_compiler_minor": "Cardano compiler version information",
   "haskell_compiler_patch": "Cardano compiler version information",
@@ -104,5 +104,6 @@
   "systemStartTime": "The UTC time this node was started.",
   "tipBlock": "Values for hash, parent hash and issuer verification key hash",
   "txsInMempool": "Transactions in mempool",
-  "txsSyncDuration": "Time to sync the mempool in ms after block adoption"
+  "txsSyncDuration": "Latest time to sync the mempool in ms after block adoption",
+  "txsSyncDurationTotal": "Cumulative time spent syncing the mempool in ms after block adoption"
 }

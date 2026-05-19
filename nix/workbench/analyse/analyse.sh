@@ -162,50 +162,22 @@ case "$op" in
         local usage="USAGE: wb analyse $op RUN"
         local run=${1:?$usage}; shift
         local dir=$(run compute-path "$run")
+        local report=$(find "$dir/analysis" -name "*.typ" | head -n1)
 
-        progress "analyse | report" "rendering report:  $(white $run)"
-        local emacs_args=(
-            --batch
-            "$dir"/analysis/*.org
-            --eval
-            '(progn
-               (org-table-recalculate-buffer-tables)
-               (org-table-recalculate-buffer-tables)
-               (org-babel-execute-buffer)
-               (org-redisplay-inline-images)
-               (org-latex-export-to-pdf))
-            '
-        )
-        if em "${emacs_args[@]}"
-        then cat <<EOF
+        if test -z "$report"
+        then fail "found no typst (*.typ) report source to render in $dir/analysis"; fi
 
-Seeing $(red PDF file produced with errors) just above?  If not, just ignore this message.
+        if ! which "typst" > /dev/null
+        then fail "No 'typst' binary found in PATH. As long as not part of the workbench shell, consider: 'nix profile install nixpkgs#typst'"; fi
 
-Most likely some $(yellow Gnuplot scripts) failed to produce images.
+        progress "analyse | report" "rendering typst report:  $(white $report)"
+        
+        local outfile=$(typst query --root ../.. --one --field value "$report" '<export_file_name>' | xargs echo)
+        local pdffile="$dir"/analysis/"$outfile"
 
-To see $(yellow which ones failed) and how, you'll need to:
-
-  1. run $(white em) directly:  $(white em "$dir"/analysis/*.org)
-  2. run the export command interactively:  $(white C-c C-x C-x)
-  3. look into the $(yellow '*gnuplot*') buffer for errors, like:
-
-     $(red all points y value undefined)
-
-Either $(green fix these scripts), or remove them entirely, then $(blue retry export).
-
-EOF
-        else cat <<EOF
-
-$(red ERROR: report generation failed)
-
-Quick error with short output and this line?
-
-    $(red 'Debugger entered--Lisp error: (error "Cannot resolve lock conflict in batch mode"')
-
-  You have the report $(blue .org) file open in Emacs -- close it first.
-
-EOF
-        fi;;
+        progress "analyse | report" "compiling to PDF:        $(white $pdffile)"
+        typst c --root ../.. $report $pdffile
+        ;;
 
     variance | var )
         local script=(

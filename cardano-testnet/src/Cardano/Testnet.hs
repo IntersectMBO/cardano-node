@@ -5,13 +5,16 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   cardanoTestnet,
-  cardanoTestnetDefault,
+  createAndRunTestnet,
+  createTestnetEnv,
   retryOnAddressInUseError,
 
   -- ** Testnet options
-  CardanoTestnetOptions(..),
-  TestnetNodeOptions(..),
-  AutomaticNodeOption(..),
+  TestnetCreationOptions(..),
+  TestnetRuntimeOptions(..),
+  TestnetEnvOptions(..),
+  RpcSupport(..),
+  NodeOption(..),
   cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
   getDefaultShelleyGenesis,
@@ -28,6 +31,7 @@ module Cardano.Testnet (
 
   -- * EpochState processsing helper functions
   maybeExtractGovernanceActionIndex,
+  maybeExtractGovernanceActionExpiry,
 
   -- * Processes
   procChairman,
@@ -46,6 +50,7 @@ module Cardano.Testnet (
   TestnetNode(..),
   isTestnetNodeSpo,
   nodeSocketPath,
+  nodeRpcSocketPath,
   ) where
 
 import           Testnet.Components.Query

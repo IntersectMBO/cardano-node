@@ -25,19 +25,22 @@ import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Protocol.Checkpoints
 import qualified Cardano.Node.Protocol.Conway as Conway
+import qualified Cardano.Node.Protocol.Dijkstra as Dijkstra
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import           Data.Function ((&))
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Prelude
+
+import           Data.Function ((&))
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
@@ -60,6 +63,7 @@ mkSomeConsensusProtocolCardano
   -> NodeShelleyProtocolConfiguration
   -> NodeAlonzoProtocolConfiguration
   -> NodeConwayProtocolConfiguration
+  -> Maybe NodeDijkstraProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> NodeCheckpointsConfiguration
   -> Maybe ProtocolFilepaths
@@ -85,7 +89,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcConwayGenesisFile,
                              npcConwayGenesisFileHash
                            }
-                           npc@NodeHardForkProtocolConfiguration {
+                           ndpc
+                           NodeHardForkProtocolConfiguration {
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
                             -- testing development/unstable eras is used. This lets us include
@@ -96,7 +101,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestMaryHardForkAtEpoch,
                              npcTestAlonzoHardForkAtEpoch,
                              npcTestBabbageHardForkAtEpoch,
-                             npcTestConwayHardForkAtEpoch
+                             npcTestConwayHardForkAtEpoch,
+                             npcTestDijkstraHardForkAtEpoch,
+                             npcExperimentalHardForksEnabled
                            }
                            checkpointsConfiguration
                            files = do
@@ -117,20 +124,22 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     (alonzoGenesis, _alonzoGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $
-        case npcTestStartingEra npc of
-          Nothing ->
-            Alonzo.readGenesis Nothing
-                               npcAlonzoGenesisFile
-                               npcAlonzoGenesisFileHash
-          Just (AnyShelleyBasedEra sbe) -> do
-            Alonzo.readGenesis (Just $ toCardanoEra sbe)
-                               npcAlonzoGenesisFile
+        Alonzo.readGenesis npcAlonzoGenesisFile
                                npcAlonzoGenesisFileHash
 
     (conwayGenesis, _conwayGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationConwayGenesisReadError $
         Conway.readGenesis npcConwayGenesisFile
                                 npcConwayGenesisFileHash
+
+    dijkstraGenesis <-
+      case ndpc of
+        Nothing -> pure Dijkstra.emptyDijkstraGenesis
+        Just (NodeDijkstraProtocolConfiguration npcDijkstraGenesisFile npcDijkstraGenesisFileHash) -> do
+          (dijkstraGenesis, _dijkstraGenesisHash) <- firstExceptT CardanoProtocolInstantiationDijkstraGenesisReadError $
+           Dijkstra.readGenesis npcDijkstraGenesisFile
+                                 npcDijkstraGenesisFileHash
+          pure dijkstraGenesis
 
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
@@ -171,13 +180,16 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 3
+      , Consensus.cardanoProtocolVersion = if npcExperimentalHardForksEnabled
+                                           then ProtVer (natVersion @12) 0
+                                           else ProtVer (natVersion @11) 0
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
             shelleyGenesis
             alonzoGenesis
             conwayGenesis
+            dijkstraGenesis
       , Consensus.cardanoHardForkTriggers =
         Consensus.CardanoHardForkTriggers' {
           triggerHardForkShelley =
@@ -232,6 +244,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               maybe
                 Consensus.CardanoTriggerHardForkAtDefaultVersion
                 Consensus.CardanoTriggerHardForkAtEpoch
+        , triggerHardForkDijkstra =
+            npcTestDijkstraHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         }
       , Consensus.cardanoCheckpoints = checkpointsMap
       }
@@ -258,6 +275,9 @@ data CardanoProtocolInstantiationError =
      | CardanoProtocolInstantiationConwayGenesisReadError
          Shelley.GenesisReadError
 
+     | CardanoProtocolInstantiationDijkstraGenesisReadError
+         Shelley.GenesisReadError
+
      | CardanoProtocolInstantiationPraosLeaderCredentialsError
          Shelley.PraosLeaderCredentialsError
 
@@ -277,6 +297,8 @@ instance Error CardanoProtocolInstantiationError where
     "Alonzo related: " <> prettyError err
   prettyError (CardanoProtocolInstantiationConwayGenesisReadError err) =
     "Conway related : " <> prettyError err
+  prettyError (CardanoProtocolInstantiationDijkstraGenesisReadError err) =
+    "Dijkstra related : " <> prettyError err
   prettyError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
     prettyError err
   prettyError (CardanoProtocolInstantiationErrorAlonzo err) =

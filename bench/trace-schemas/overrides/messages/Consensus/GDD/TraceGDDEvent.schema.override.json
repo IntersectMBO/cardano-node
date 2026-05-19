@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot map the single TraceGDDEvent namespace to its concrete constructors."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "oneOf": [
+        {
+          "required": [
+            "kind",
+            "losingPeers",
+            "loeHead",
+            "sgen"
+          ]
+        },
+        {
+          "required": [
+            "kind",
+            "peers"
+          ]
+        }
+      ],
+      "properties": {
+        "bounds": {
+          "type": "array"
+        },
+        "candidateSuffixes": {
+          "type": "array"
+        },
+        "candidates": {
+          "type": "array"
+        },
+        "curChain": {
+          "type": "object"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "loeHead": {
+          "type": "object"
+        },
+        "losingPeers": {
+          "type": "array"
+        },
+        "peers": {
+          "type": "array"
+        },
+        "sgen": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    }
+  }
+}

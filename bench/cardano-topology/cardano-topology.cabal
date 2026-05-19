@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-topology
-version:                8.4.0
+version:                11.0.0
 synopsis:               A cardano topology generator
 description:            A cardano topology generator.
 category:               Cardano,
                         Test,
-copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -19,18 +19,12 @@ data-files:             data/test/10-coay/*.json
                         data/test/ci-test-coay/*.json
                         data/test/ci-test-dense10-coay/*.json
                         data/test/ci-test-nomadperf-coay/*.json
-                        data/test/ci-test-nomadperf-nop2p-coay/*.json
-                        data/test/ci-test-p2p-coay/*.json
                         data/test/default-coay/*.json
                         data/test/default-nomadperf-coay/*.json
-                        data/test/default-nomadperf-nop2p-coay/*.json
-                        data/test/default-p2p-coay/*.json
                         data/test/fast-solo-coay/*.json
                         data/test/forge-stress-coay/*.json
-                        data/test/forge-stress-p2p-coay/*.json
                         data/test/model-value-coay/*.json
                         data/test/trace-bench-coay/*.json
-                        data/test/value-nomadperf-nop2p-coay/*.json
                         data/test/value-volt-nomadperf-coay/*.json
 
 common project-config
@@ -71,7 +65,7 @@ executable cardano-topology
                       , bytestring
                       , containers
                       , graphviz
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , split
                       , text
                       , cardano-topology

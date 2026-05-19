@@ -1,47 +1,68 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.TxSubmit
   ( runTxSubmitWebapi
   , opts
+  , TxSubmitCommand(..)
   ) where
 
-import qualified Cardano.BM.Setup as Logging
-import           Cardano.BM.Trace (Trace, logInfo)
-import qualified Cardano.BM.Trace as Logging
+import           Cardano.Logging (BackendConfig (..), ConfigOption (ConfBackend, ConfSeverity),
+                   FormatLogging (HumanFormatColoured), SeverityF (SeverityF), SeverityS (Info),
+                   Trace, TraceConfig, configureTracers, ekgTracer, emptyConfigReflection,
+                   emptyTraceConfig, mkCardanoTracer, readConfigurationWithDefault, standardTracer,
+                   tcOptions, traceWith)
 import           Cardano.TxSubmit.CLI.Parsers (opts)
-import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitNodeParams (..))
-import           Cardano.TxSubmit.Config (GenTxSubmitNodeConfig (..), ToggleLogging (..),
-                   TxSubmitNodeConfig, readTxSubmitNodeConfig)
+import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitCommand (..),
+                   TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
+import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Data.Text (Text)
+import           Data.Map
+import qualified System.Metrics as EKG
+import           System.Metrics.Prometheus.Registry (RegistrySample, sample)
+import           System.Remote.Monitoring.Prometheus (defaultOptions, toPrometheusRegistry)
+
+defaultTraceConfig :: TraceConfig
+defaultTraceConfig =
+   emptyTraceConfig
+    { tcOptions = Data.Map.fromList
+        [([], [ ConfSeverity (SeverityF (Just Info))
+              , ConfBackend [Stdout HumanFormatColoured, EKGBackend]])
+        ]
+    }
 
 runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do
-    tsnc <- readTxSubmitNodeConfig (unConfigFile $ tspConfigFile tsnp)
-    trce <- mkTracer tsnc
-    (metrics, metricsServer) <- registerMetricsServer (tspMetricsPort tsnp)
-    txSubmitServer <- Async.async $
-      runTxSubmitServer trce metrics tspWebserverConfig tspProtocol tspNetworkId tspSocketPath
-    void $ Async.waitAnyCancel
-      [ txSubmitServer
-      , metricsServer
-      ]
-    logInfo trce "runTxSubmitWebapi: Async.waitAnyCancel returned"
+    tracingConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) defaultTraceConfig
+    (trce, registrySample) <- mkTraceDispatcher tracingConfig
+    Async.withAsync
+      (runTxSubmitServer trce tspWebserverConfig tspProtocol tspNetworkId tspSocketPath)
+      $ \txSubmitServer ->
+        Async.withAsync (registerMetricsServer trce registrySample tspMetricsPort) $ \_ ->
+          Async.wait txSubmitServer
+    traceWith trce ApplicationStopping
   where
     TxSubmitNodeParams
       { tspProtocol
       , tspNetworkId
       , tspSocketPath
       , tspWebserverConfig
+      , tspMetricsPort
+      , tspConfigFile
       } = tsnp
 
-mkTracer :: TxSubmitNodeConfig -> IO (Trace IO Text)
-mkTracer enc = case tscToggleLogging enc of
-  LoggingOn -> liftIO $ Logging.setupTrace (Right $ tscLoggingConfig enc) "cardano-tx-submit"
-  LoggingOff -> pure Logging.nullTracer
+mkTraceDispatcher :: TraceConfig -> IO (Trace IO TraceSubmitApi, IO RegistrySample)
+mkTraceDispatcher config = do
+  trBase <- standardTracer
+  ekgStore <- EKG.newStore
+  let registry = toPrometheusRegistry ekgStore (defaultOptions mempty) -- Convert EKG metrics store to prometheus metrics registry on-demand
+  trEkg  <- ekgTracer config ekgStore
+  configReflection <- emptyConfigReflection
+  !tr <- mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
+  configureTracers configReflection config [tr]
+  traceWith tr ApplicationInitializeMetrics
+  pure (tr, registry >>= sample)

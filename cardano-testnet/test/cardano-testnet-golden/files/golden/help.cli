@@ -1,24 +1,34 @@
-Usage: cardano-testnet (cardano | version | help)
+Usage: cardano-testnet (cardano | create-env | version | help)
 
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
-  [ --shelley-era
-  | --allegra-era
-  | --mary-era
-  | --alonzo-era
-  | --babbage-era
-  | --conway-era
+Usage: cardano-testnet cardano 
+  [ --node-env FILEPATH [--preserve-timestamps]
+  | [--num-pool-nodes COUNT]
+    [--max-lovelace-supply WORD64]
+    [--num-dreps NUMBER]
+    [--testnet-magic INT]
+    [--epoch-length SLOTS]
+    [--slot-length SECONDS]
+    [--active-slots-coeff DOUBLE]
+    [--params-file FILEPATH | --params-mainnet]
+    [--output-dir DIRECTORY]
   ]
-  [--max-lovelace-supply WORD64]
-  [--nodeLoggingFormat LOGGING_FORMAT]
-  [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
-  [--output-dir DIRECTORY]
-  --testnet-magic INT
+  [--enable-grpc]
+  [--use-kes-agent]
+
+  Start a testnet and keep it running until stopped
+
+Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
+  [--max-lovelace-supply WORD64]
+  [--num-dreps NUMBER]
+  [--testnet-magic INT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
+  [--params-file FILEPATH | --params-mainnet]
+  --output DIRECTORY
 
-  Start a testnet in any era
+  Create a sandbox for Cardano testnet
 
 Usage: cardano-testnet version 
 

@@ -46,8 +46,10 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
 
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { genesisEpochLength = 100 }
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -55,7 +57,7 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -146,8 +148,7 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
       H.noteM_ $ execCli' execConfig
         [ "conway", "transaction", "submit" , "--tx-file", signedTxFp ]
 
-      void $ waitForEpochs epochStateView (EpochInterval 3)
-
-      L.Coin finalTreasury <- getTreasuryValue epochStateView
-      H.note_ $ "finalTreasury: " <> show finalTreasury
-      finalTreasury H.=== (currentTreasury + toInteger treasuryDonation)
+      let expectedTreasury = L.Coin $ currentTreasury + toInteger treasuryDonation
+      void $ retryUntilM epochStateView (WaitForEpochs $ EpochInterval 10)
+        (getTreasuryValue epochStateView)
+        (== expectedTreasury)

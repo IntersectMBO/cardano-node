@@ -14,26 +14,27 @@ module Test.Cardano.Node.Gen
   , genNodeIPAddress
   , genNodeIPv4Address
   , genNodeIPv6Address
-  , genNodeSetup
   ) where
 
 import           Cardano.Api (textShow)
 
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
+import           Cardano.Network.NodeToNode.Version
 import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
                    NodeIPv4Address, NodeIPv6Address)
-import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
-                   LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
-                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.NodeToNode.Version
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
+import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
+                   PublicRootPeers (..), RootConfig (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
-                   RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -50,14 +51,15 @@ import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Gen ()
 import qualified Hedgehog.Range as Range
 
-genNetworkTopology :: Gen NetworkTopology
+-- TODO parameterize generators
+genNetworkTopology :: Gen CardanoNetworkTopology
 genNetworkTopology =
   Gen.choice
-    [ RealNodeTopology <$> genLocalRootPeersGroups
-                       <*> Gen.list (Range.linear 0 10) genPublicRootPeers
-                       <*> genUseLedgerPeers
-                       <*> genUseBootstrapPeers
-                       <*> genPeerSnapshotPath
+    [ NetworkTopology <$> genLocalRootPeersGroups
+                      <*> Gen.list (Range.linear 0 10) genPublicRootPeers
+                      <*> genUseLedgerPeers
+                      <*> (fmap unPeerSnapshotFile <$> genPeerSnapshotPath)
+                      <*> genUseBootstrapPeers
     ]
 
 -- | Generate valid encodings of p2p topology files
@@ -145,32 +147,23 @@ genNodeIPv4Address = genNodeAddress' genNodeHostIPv4Address
 genNodeIPv6Address :: Gen NodeIPv6Address
 genNodeIPv6Address = genNodeAddress' genNodeHostIPv6Address
 
-genNodeSetup :: Gen NodeSetup
-genNodeSetup =
-  NodeSetup
-    <$> Gen.word64 (Range.linear 0 10000)
-    <*> Gen.maybe (genNodeAddress' genNodeHostIPv4Address)
-    <*> Gen.maybe (genNodeAddress' genNodeHostIPv6Address)
-    <*> Gen.list (Range.linear 0 6) genRootConfig
-    <*> genUseLedgerPeers
-
-genDomainAddress :: Gen DomainAccessPoint
-genDomainAddress =
-  DomainAccessPoint
-    <$> Gen.element cooking
-    <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
-
+-- Generates only fully qualified domain names.
+--
 genRelayAddress :: Gen RelayAccessPoint
-genRelayAddress = do
-  isDomain <- Gen.bool
-  if isDomain
-    then RelayDomainAccessPoint <$> genDomainAddress
-    else RelayAccessAddress
-          <$> Gen.choice
-                [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
-                , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
-                ]
-          <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+genRelayAddress =
+  Gen.choice
+    [ RelayAccessDomain
+        . (<> ".")
+        <$> Gen.element cooking
+        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+    , RelayAccessSRVDomain . (<> ".") <$> Gen.element cooking
+    , RelayAccessAddress
+        <$> Gen.choice
+              [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
+              , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
+              ]
+        <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+    ]
 
 genRootConfig :: Gen RootConfig
 genRootConfig = do
@@ -178,14 +171,23 @@ genRootConfig = do
     <$> Gen.list (Range.linear 0 6) genRelayAddress
     <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer]
 
-genLocalRootPeersGroup :: Gen LocalRootPeersGroup
-genLocalRootPeersGroup = do
-    ra <- genRootConfig
-    hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
-    wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
-    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> pure InitiatorAndResponderDiffusionMode
+genProvenance :: Gen Provenance
+genProvenance = Gen.element [Outbound, Inbound]
 
-genLocalRootPeersGroups :: Gen LocalRootPeersGroups
+genLocalRoots :: Gen LocalRoots
+genLocalRoots =
+  LocalRoots
+    <$> genRootConfig
+    <*> genProvenance
+
+genLocalRootPeersGroup :: Gen (LocalRootPeersGroup PeerTrustable)
+genLocalRootPeersGroup = do
+    ra <- genLocalRoots
+    hval <- Gen.int (Range.linear 0 (length (rootAccessPoints (rootConfig ra))))
+    wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
+    LocalRootPeersGroup ra (HotValency hval) wval InitiatorAndResponderDiffusionMode <$> genPeerTrustable
+
+genLocalRootPeersGroups :: Gen (LocalRootPeersGroups PeerTrustable)
 genLocalRootPeersGroups =
   LocalRootPeersGroups
     <$> Gen.list (Range.linear 0 6) genLocalRootPeersGroup

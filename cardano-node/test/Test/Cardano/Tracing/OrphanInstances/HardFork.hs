@@ -3,7 +3,7 @@
 -- The golden files are stored in the path given by 'addPrefix'.
 --
 -- If a new test is added and no golden file exists for it it will be created.
--- This new file needs to be commited.
+-- This new file needs to be committed.
 --
 -- For now we added a couple of representative examples, however the tests are
 -- not exhaustive.
@@ -73,6 +73,7 @@ ntc_HFV3_allDisabled =
       :* Consensus.EraNodeToClientDisabled -- Alonzo
       :* Consensus.EraNodeToClientDisabled -- Babbage
       :* Consensus.EraNodeToClientDisabled -- Conway
+      :* Consensus.EraNodeToClientDisabled -- Dijkstra
       :* Nil
     )
 
@@ -89,6 +90,7 @@ ntc_HFV3_ByronV1 =
       :* Consensus.EraNodeToClientDisabled -- Alonzo
       :* Consensus.EraNodeToClientDisabled -- Babbage
       :* Consensus.EraNodeToClientDisabled -- Conway
+      :* Consensus.EraNodeToClientDisabled -- Dijkstra
       :* Nil
     )
 
@@ -105,6 +107,7 @@ ntc_HFV3_ByronV1_ShelleyV8 =
       :* Consensus.EraNodeToClientDisabled -- Alonzo
       :* Consensus.EraNodeToClientDisabled -- Babbage
       :* Consensus.EraNodeToClientDisabled -- Conway
+      :* Consensus.EraNodeToClientDisabled -- Dijkstra
       :* Nil
     )
 
@@ -121,6 +124,7 @@ ntc_HFV3_ByronV1_ShelleyV8_ConwayV2 =
       :* Consensus.EraNodeToClientDisabled -- Alonzo
       :* Consensus.EraNodeToClientDisabled -- Babbage
       :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion8 -- Conway
+      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion8 -- Dijkstra
       :* Nil
     )
 

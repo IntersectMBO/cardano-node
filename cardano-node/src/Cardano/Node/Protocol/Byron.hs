@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Node.Protocol.Byron
@@ -13,6 +14,10 @@ module Cardano.Node.Protocol.Byron
   ) where
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Consensus
+import           Cardano.Api.Monad.Error
+import           Cardano.Api.Pretty
+import           Cardano.Api.Serialise.Raw
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
@@ -31,11 +36,11 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
+import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
-
 
 ------------------------------------------------------------------------------
 -- Byron protocol
@@ -162,6 +167,9 @@ data ByronProtocolInstantiationError =
   | SigningKeyDeserialiseFailure !FilePath
   | SigningKeyFilepathNotSpecified
   deriving Show
+
+instance Exception ByronProtocolInstantiationError where
+  displayException = docToString . prettyError
 
 instance Error ByronProtocolInstantiationError where
   prettyError (CanonicalDecodeFailure fp failure) =

@@ -1,9 +1,18 @@
 {
-  "Producers": [
+  "bootstrapPeers": null,
+  "localRoots": [
     {
-      "addr": "127.0.0.1",
-      "port": 30003,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30003
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     }
-  ]
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
 }

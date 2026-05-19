@@ -93,6 +93,7 @@ data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
   | TxCmdTxReadError !RawCborDecodeError
   | TxCmdTxSubmitValidationError !TxValidationErrorInCardanoMode
+  | TxCmdTxSubmitConnectionError !Text
 
 deriving instance Generic TxCmdError
 
@@ -108,6 +109,7 @@ renderTxCmdError = \case
     case e of
       TxValidationErrorInCardanoMode err -> "transaction submit error " <> T.pack (show err)
       TxValidationEraMismatch eraMismatch -> "transaction submit era mismatch" <> textShow eraMismatch
+  TxCmdTxSubmitConnectionError msg -> "transaction submit connection error: " <> msg
 
 -- | Servant API which provides access to tx submission webapi
 type TxSubmitApi = "api" :> ToServantApi TxSubmitApiRecord

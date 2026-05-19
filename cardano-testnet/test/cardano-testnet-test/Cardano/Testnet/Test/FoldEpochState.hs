@@ -16,7 +16,7 @@ import           Data.Default.Class
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H
@@ -24,14 +24,14 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test as H
 
 prop_foldEpochState :: H.Property
-prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       sbe = ShelleyBasedEraConway
-      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
-  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options def conf
+  runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet creationOptions def conf
 
   socketPathAbs <- do
     socketPath' <- H.sprocketArgumentName <$> H.headM (testnetSprockets runtime)

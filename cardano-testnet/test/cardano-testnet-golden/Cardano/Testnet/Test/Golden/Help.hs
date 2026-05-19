@@ -5,6 +5,7 @@
 module Cardano.Testnet.Test.Golden.Help
   ( golden_HelpAll
   , golden_HelpCmds
+  , golden_VersionCmd
   ) where
 
 import           Cardano.Testnet.Test.Golden.Util
@@ -23,7 +24,6 @@ import           Text.Regex (Regex, mkRegex, subRegex)
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Stock.OS (isWin32)
-import qualified Hedgehog.Extras.Test.Golden as H
 
 ansiRegex :: Regex
 ansiRegex = mkRegex "\\[[0-9]+m"
@@ -45,8 +45,8 @@ extractCmd = id
             (c:_) -> Char.isAlpha c
             [] -> False
 
--- | Test that converting a @cardano-address@ Byron signing key yields the
--- expected result.
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpAll/"'@
 golden_HelpAll :: Property
 golden_HelpAll =
   H.propertyOnce . H.moduleWorkspace "help" $ \_ -> do
@@ -81,6 +81,8 @@ deselectSuffix suffix text =
 selectCmd :: Text -> Maybe Text
 selectCmd = selectAndDropPrefix "Usage: cardano-testnet " <=< deselectSuffix " COMMAND"
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpCmds/"'@
 golden_HelpCmds :: Property
 golden_HelpCmds =
   H.propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do
@@ -101,3 +103,24 @@ golden_HelpCmds =
         cmdHelp <- filterAnsi . second <$> execDetailCardanoTestnet (fmap Text.unpack usage <> ["--help"])
 
         H.diffVsGoldenFile cmdHelp expectedCmdHelpFp
+
+-- | Filter out volatile lines from 'cardano-testnet version' output.
+-- Removes the first two lines: The first one contains package version,
+-- OS, arch, compiler and the second one is the git rev line.
+filterVersionOutput :: String -> String
+filterVersionOutput =
+  unlines . drop 2 . map Text.unpack . Text.lines . Text.pack
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_VersionCmd/"'@
+golden_VersionCmd :: Property
+golden_VersionCmd =
+  H.propertyOnce . H.moduleWorkspace "version-cmd" $ \_ -> do
+    unless isWin32 $ do
+      versionFp <- H.note "test/cardano-testnet-golden/files/golden/version_cmd.cli"
+
+      versionOutput <- filterVersionOutput . filterAnsi <$> execCardanoTestnet
+        [ "version"
+        ]
+
+      H.diffVsGoldenFile versionOutput versionFp

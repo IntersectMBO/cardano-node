@@ -10,6 +10,8 @@ module Cardano.Tracer.Test.Acceptor
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Logging (standardTracer)
+import qualified Cardano.Logging.Types as Net
 #if RTVIEW
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
@@ -52,7 +54,8 @@ launchAcceptorsSimple mode localSock dpName = do
   currentLogLock <- newLock
   currentDPLock <- newLock
 
-  tr <- mkTracerTracer $ SeverityF $ Just Warning
+  std <- standardTracer
+  tr <- mkTracerTracer std $ SeverityF $ Just Warning
 
 #if RTVIEW
   eventsQueues <- initEventsQueues tr Nothing connectedNodesNames dpRequestors currentDPLock
@@ -81,6 +84,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teRegistry              = registry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teTimeseriesHandle      = Nothing
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -101,23 +105,26 @@ launchAcceptorsSimple mode localSock dpName = do
     ]
  where
   mkConfig = TracerConfig
-    { networkMagic   = 764824073
-    , network        = case mode of
-                         Initiator -> ConnectTo $ NE.fromList [LocalSocket localSock]
-                         Responder -> AcceptAt (LocalSocket localSock)
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
-    , rotation       = Nothing
-    , verbosity      = Just Minimum
-    , metricsNoSuffix = Nothing
-    , metricsHelp    = Nothing
-    , hasForwarding  = Nothing
-    , resourceFreq   = Nothing
-    , ekgRequestFull = Nothing
+    { networkMagic     = 764824073
+    , network          = case mode of
+                           Initiator -> ConnectTo $ NE.fromList [Net.LocalPipe localSock]
+                           Responder -> AcceptAt (Net.LocalPipe localSock)
+    , loRequestNum     = Just 1
+    , ekgRequestFreq   = Just 1.0
+    , hasEKG           = Nothing
+    , hasPrometheus    = Nothing
+    , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
+    , tlsCertificate   = Nothing
+    , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
+    , rotation         = Nothing
+    , verbosity        = Just Minimum
+    , metricsNoSuffix  = Nothing
+    , metricsHelp      = Nothing
+    , hasForwarding    = Nothing
+    , resourceFreq     = Nothing
+    , ekgRequestFull   = Nothing
+    , prometheusLabels = Nothing
     }
 
 -- | To be able to ask any 'DataPoint' by the name without knowing the actual type,

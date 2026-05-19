@@ -1,12 +1,12 @@
 cabal-version: 3.8
 
 name:                   cardano-node
-version:                10.5.1
+version:                11.0.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
                         Validator,
-copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -46,17 +46,10 @@ common maybe-unix
   if !os(windows)
     build-depends:      unix
 
-common text
-  if impl(ghc == 8.10.7) && os(darwin) && arch(aarch64)
-    build-depends: text >= 1.2.5.0
-  else
-    build-depends: text >= 2.0
-
 library
   import:               project-config
                       , maybe-unix
                       , maybe-Win32
-                      , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
 
@@ -72,7 +65,6 @@ library
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
-                        Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
@@ -85,12 +77,14 @@ library
                         Cardano.Node.Protocol.Cardano
                         Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
+                        Cardano.Node.Protocol.Dijkstra
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
                         Cardano.Node.Run
                         Cardano.Node.Startup
                         Cardano.Node.STM
+                        Cardano.Node.Testnet.Paths
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
@@ -104,7 +98,6 @@ library
                         Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
-                        Cardano.Node.Tracing.Peers
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
@@ -112,17 +105,14 @@ library
                         Cardano.Node.Tracing.Tracers.ChainDB
                         Cardano.Node.Tracing.Tracers.Consensus
                         Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                        Cardano.Node.Tracing.Tracers.Diffusion
                         Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
-                        Cardano.Node.Tracing.Tracers.NonP2P
-                        Cardano.Node.Tracing.Tracers.P2P
-                        Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
+                        Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
@@ -135,7 +125,6 @@ library
                         Cardano.Tracing.OrphanInstances.HardFork
                         Cardano.Tracing.OrphanInstances.Network
                         Cardano.Tracing.OrphanInstances.Shelley
-                        Cardano.Tracing.Peer
                         Cardano.Tracing.Render
                         Cardano.Tracing.Shutdown
                         Cardano.Tracing.Startup
@@ -149,22 +138,25 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.16
-                      , cardano-crypto-class
+                      , cardano-api ^>= 11.0
+                      , cardano-data
+                      , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-allegra
                       , cardano-ledger-api
                       , cardano-ledger-babbage
-                      , cardano-ledger-binary
+                      , cardano-ledger-binary >= 1.7.1
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
+                      , cardano-ledger-conway >= 1.22.1.0
                       , cardano-ledger-core
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
+                      , cardano-rpc ^>= 10.2
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -175,13 +167,14 @@ library
                       , ekg-wai
                       , ekg-core
                       , filepath
-                      , formatting
                       , generic-data
                       , hashable
                       , hostname
-                      , io-classes >= 1.5
+                      , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8
                       , iohk-monitoring ^>= 0.2
+                      , kes-agent ^>=1.2
                       , microlens
+                      , mmap
                       , network-mux
                       , iproute
                       , lobemo-backend-aggregation
@@ -192,16 +185,10 @@ library
                       , network
                       , network-mux >= 0.8
                       , nothunks
-                      , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.27
-                      , ouroboros-consensus-cardano ^>= 0.25
-                      , ouroboros-consensus-diffusion ^>= 0.23
-                      , ouroboros-consensus-protocol
-                      , ouroboros-consensus-observe
-                      , ouroboros-network-api ^>= 0.14.1
-                      , ouroboros-network ^>= 0.21.3
-                      , ouroboros-network-framework ^>= 0.18
-                      , ouroboros-network-protocols ^>= 0.14
+                      , optparse-applicative
+                      , ouroboros-consensus:{ouroboros-consensus, lmdb, lsm, cardano, diffusion, protocol} ^>= 3.0.1
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, framework-tracing, tracing} ^>= 1.1
+                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances, tracing} ^>=1.0
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -209,24 +196,21 @@ library
                       , resource-registry
                       , safe-exceptions
                       , scientific
-                      , si-timers
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
-                      , strict-stm
                       , sop-core
                       , sop-extras
                       , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.9.2
-                      , trace-forward ^>= 2.2.11
-                      , trace-resources ^>= 0.2.3
+                      , trace-dispatcher ^>= 2.12.0
+                      , trace-forward ^>= 2.4.0
+                      , trace-resources ^>= 0.2.4
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.3
-                      , typed-protocols-stateful >= 0.3
+                      , typed-protocols:{typed-protocols, stateful} >= 1.2
                       , yaml
 
 executable cardano-node
@@ -239,7 +223,7 @@ executable cardano-node
   if arch(arm)
     ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
   else
-    ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
+    ghc-options:        "-with-rtsopts=-T -I0 -A16m -qg1 -qb1 -N2 --disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
@@ -248,7 +232,7 @@ executable cardano-node
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , text
 
 test-suite cardano-node-test
@@ -264,6 +248,8 @@ test-suite cardano-node-test
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-api
+                      , cardano-rpc
+                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
@@ -272,14 +258,11 @@ test-suite cardano-node-test
                       , filepath
                       , hedgehog
                       , hedgehog-corpus
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
-                      , ouroboros-consensus
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
-                      , ouroboros-network
-                      , ouroboros-network-api
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
+                      , ouroboros-network:{api, framework, ouroboros-network}
                       , strict-sop-core
                       , text
                       , trace-dispatcher

@@ -36,7 +36,19 @@ cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
 
 trace-documentation:
-	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config-new-tracing.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
+	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
+
+trace-schemas-regenerate: ## Regenerate trace schemas, apply overrides, validate
+	bash bench/trace-schemas/scripts/schema-gen/RegenerateTraceSchemas.sh
+
+trace-schemas-overrides-check: ## Check whether all schema overrides are applied
+	nix run .#apply-schema-overrides -- --check --verbose
+
+trace-schemas-overrides-coverage: ## Fail when generated schema files change without matching override sidecars (use RANGE=origin/master...HEAD in CI)
+	nix run .#check-override-coverage -- ${if ${RANGE},--range ${RANGE}}
+
+trace-schemas-validate: ## Validate trace message schemas against meta.schema.json
+	nix run .#validate-trace-schemas
 
 ###
 ### Workbench
@@ -58,7 +70,7 @@ shell:                                           ## Nix shell, (workbench from /
 	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'useCabalRun' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
-shell-prof: ARGS += --arg 'profiling' '"space"'  ## Nix shell, everything Haskell built profiled
+shell-prof: ARGS += --arg 'profiledBuild' true --arg 'profilingType' '"space-heap"'  ## Nix shell, everything Haskell built profiled and run with `-hT`.
 
 analyse: RUN := wb analyse std ${TAG}
 analyse: shell
@@ -83,7 +95,7 @@ $(eval $(call define_profile_targets,           $(LOCAL_PROFILES)))
 $(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 # Dynamic local/supervisor profile targets.
-playground-%: 
+playground-%:
 	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
 
 ###

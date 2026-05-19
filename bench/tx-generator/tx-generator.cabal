@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.15
+version:                2.16
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
                         Test,
-copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -23,9 +23,6 @@ flag withplutuslib
   manual:               True
 
 common project-config
-  if os(windows)
-    buildable: False
-
   default-language:     Haskell2010
 
 common with-library
@@ -58,8 +55,6 @@ library
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
-                        -- TODO: switch back to -Wwarn=deprecations having removed createAndValidateTransactionBody in favour of createTransactionBody (Cardano.Api deprecation)
-                        -Wno-deprecations
 
   exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
@@ -91,6 +86,7 @@ library
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
                         Cardano.TxGenerator.Setup.NodeConfig
+                        Cardano.TxGenerator.Setup.TestnetDiscovery
                         Cardano.TxGenerator.Setup.Plutus
                         Cardano.TxGenerator.PlutusContext
                         Cardano.TxGenerator.Setup.SigningKey
@@ -113,12 +109,13 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.16
+                      , cardano-api ^>= 11.0
                       , cardano-binary
-                      , cardano-cli ^>= 10.11
+                      , cardano-cli ^>= 11.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
+                      , cardano-diffusion ^>= 1.0
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
@@ -126,35 +123,32 @@ library
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , directory
                       , dlist
                       , extra
                       , filepath
                       , formatting
                       , generic-monoid
                       , ghc-prim
-                      , io-classes
+                      , io-classes:{io-classes, strict-stm}
                       , microlens
                       , mtl
                       , network
                       , network-mux
-                      , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.7.0
-                      , ouroboros-network
-                      , ouroboros-network-api
-                      , ouroboros-network-framework
-                      , ouroboros-network-protocols
+                      , optparse-applicative
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
+                      , ouroboros-network:{api, framework, framework-tracing, ouroboros-network, protocols} >= 1.1
                       , plutus-ledger-api
                       , plutus-tx
                       , random
+                      , typed-protocols ^>= 1.2
                       , serialise
                       , streaming
-                      , strict-stm
                       , cardano-ledger-shelley
                       , prettyprinter
                       , stm
@@ -205,7 +199,7 @@ executable calibrate-script
                       , directory
                       , extra
                       , filepath
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , cardano-api
                       , text
                       , transformers
@@ -238,7 +232,7 @@ test-suite tx-generator-apitest
                       , directory
                       , extra
                       , filepath
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , cardano-api
                       , cardano-cli
                       , cardano-node
@@ -258,9 +252,21 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
+                      , aeson
+                      , bytestring
+                      , cardano-api
+                      , cardano-node
+                      , directory
+                      , extra
+                      , filepath
+                      , QuickCheck
                       , tasty
                       , tasty-hunit
+                      , tasty-quickcheck
+                      , temporary
                       , tx-generator
+
+  other-modules:        TestnetDiscoveryTest
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists

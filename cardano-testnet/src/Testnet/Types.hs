@@ -21,6 +21,7 @@ module Testnet.Types
   , testnetSprockets
   , TestnetNode(..)
   , nodeSocketPath
+  , nodeRpcSocketPath
   , nodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
@@ -42,18 +43,18 @@ module Testnet.Types
   , getStartTime
   , testnetDefaultIpv4Address
   , showIpv4Address
+  , TestnetKesAgent(..)
   ) where
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (nodeSocketPathToRpcSocketPath)
 
 import           Prelude
 
@@ -62,7 +63,6 @@ import qualified Data.Aeson as A
 import           Data.List (intercalate)
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
-import           Data.Text (Text)
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
@@ -145,11 +145,26 @@ data TestnetNode = TestnetNode
   , nodeProcessHandle :: !IO.ProcessHandle
   }
 
+data TestnetKesAgent = TestnetKesAgent
+  { kesAgentName :: !String
+  , kesAgentPoolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
+  , kesAgentServiceSprocket :: !Sprocket
+  , kesAgentControlSprocket :: !Sprocket
+  , kesAgentStdinHandle :: !IO.Handle
+  , kesAgentStdout :: !FilePath
+  , kesAgentStderr :: !FilePath
+  , kesAgentProcessHandle :: !IO.ProcessHandle
+  }
+
 isTestnetNodeSpo :: TestnetNode -> Bool
 isTestnetNodeSpo = isJust . poolKeys
 
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
+
+-- | Provide a default RPC socket path
+nodeRpcSocketPath :: TestnetNode -> SocketPath
+nodeRpcSocketPath = nodeSocketPathToRpcSocketPath . nodeSocketPath
 
 -- | Connection data for a node in the testnet
 nodeConnectionInfo :: MonadTest m
@@ -211,7 +226,7 @@ getStartTime
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>= \case
-      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ ->
+      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ _ ->
         pure $ unGenesisFile npcByronGenesisFile
   let byronGenesisFilePath = tempRootPath </> byronGenesisFile
   SystemStart . G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
@@ -239,4 +254,3 @@ testnetDefaultIpv4Address = tupleToHostAddress (127, 0, 0, 1)
 showIpv4Address :: IsString s => HostAddress -> s
 showIpv4Address address = fromString . intercalate "." $ show <$> [a,b,c,d]
   where (a,b,c,d) = hostAddressToTuple address
-

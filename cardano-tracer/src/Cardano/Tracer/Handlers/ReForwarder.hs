@@ -1,7 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | This  module initializes a reforwarding service for use by
 --   cardano-tracer.  It could [re-] serve the three miniprotocols on
@@ -15,21 +17,22 @@ module Cardano.Tracer.Handlers.ReForwarder
   ( initReForwarder
   ) where
 
-import           Cardano.Logging.Forwarding
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Tracer.DataPoint
 import qualified Cardano.Logging.Types as Log
+import           Cardano.Network.NodeToClient (withIOManager)
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.MetaTrace
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
 
+import           Control.Exception (SomeException (..))
 import           Control.Monad (when)
-import           Data.List (isPrefixOf)
 import qualified Data.Text as Text
 
-import           Trace.Forward.Utils.DataPoint
-import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
+import           Trace.Forward.Forwarding
+import           Trace.Forward.Utils.ForwardSink (ForwardSink)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 -- | Initialize the reforwarding service if configured to be active.
 --   Returns
@@ -45,22 +48,17 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
                 teTracer = do
   mForwarding <- case hasForwarding of
       Nothing -> pure Nothing
-      Just x  -> case x of
-        (ConnectTo{}, _, _) ->
+      Just (ConnectTo{}, _, _) ->
           error "initReForwarder:  unsupported mode of operation:  ConnectTo.  Use AcceptAt."
-        (AcceptAt (LocalSocket socket), mFwdNames, forwConf) -> do
-          (fwdsink, dpStore :: DataPointStore) <- withIOManager $ \iomgr -> do
+      Just (AcceptAt howToConnect, flattenNS -> mFwdNames, forwConf) -> do
+          (fwdsink, dpStore :: DataPointStore) <- withIOManager \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
-            initForwarding iomgr forwConf
-                                 (NetworkMagic networkMagic)
-                                 Nothing
-                                 (Just (socket, Log.Responder))
+            initForwarding iomgr forwConf $ initForwardingWith howToConnect
           pure $ Just ( filteredWriteToSink
                           (traceObjectHasPrefixIn mFwdNames)
                           fwdsink
                       , dataPointTracer @IO dpStore
                       )
-
   let traceDP = case mForwarding of
                   Just (_,tr) -> tr
                   Nothing     -> mempty
@@ -73,18 +71,28 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
             const $ return ()
 
   return (writesToSink', traceDP)
+  where
+    flattenNS = fmap (map (Text.intercalate "."))
 
+    initForwardingWith initHowToConnect =
+      InitForwardingWith
+        { initNetworkMagic          = NetworkMagic networkMagic
+        , initEKGStore              = Nothing
+        , initForwarderMode         = Log.Responder
+        , initOnForwardInterruption = Just $ \(SomeException e) ->
+            traceWith teTracer (TracerForwardingInterrupted initHowToConnect $ show e)
+        , initOnQueueOverflow       = Nothing
+        , ..
+        }
 
-traceObjectHasPrefixIn :: Maybe [[Text.Text]] -> Log.TraceObject -> Bool
-traceObjectHasPrefixIn mFwdNames logObj =
+traceObjectHasPrefixIn :: Maybe [Text.Text] -> Log.TraceObject -> Bool
+traceObjectHasPrefixIn mFwdNames (normalizeNamespace . Log.toNamespace -> ns) =
   case mFwdNames of
     Nothing       -> True -- forward everything in this case
-    Just fwdNames -> any (`isPrefixOf` Log.toNamespace logObj) fwdNames
-
+    Just fwdNames -> any (`Text.isPrefixOf` ns) fwdNames
 
 filteredWriteToSink :: (Log.TraceObject -> Bool)
                     -> ForwardSink Log.TraceObject
                     -> Log.TraceObject -> IO ()
 filteredWriteToSink p fwdsink logObj =
   when (p logObj) $ writeToSink fwdsink logObj
-

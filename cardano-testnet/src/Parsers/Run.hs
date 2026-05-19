@@ -1,5 +1,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
@@ -8,31 +11,24 @@ module Parsers.Run
   , pref
   , opts
   ) where
-
-import           Cardano.Api.Shelley (ShelleyGenesis)
-
 import           Cardano.CLI.Environment
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import           Cardano.Node.Configuration.POM
-import           Cardano.Node.Types
 
-import qualified Data.Aeson as Aeson
-import           Data.Foldable
-import           Data.Monoid
-import           Data.Yaml (decodeFileThrow)
+import           Control.Monad (void)
+import           Data.Maybe (fromMaybe)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-import qualified System.Directory as System
-import           System.FilePath (takeDirectory, (</>))
+import           System.Directory (doesDirectoryExist)
 
-import           Testnet.Property.Run
+import           Testnet.Filepath (unTmpAbsPath)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
+import           RIO (display, forever, logInfo, runSimpleApp, threadDelay)
+import           UnliftIO.Resource (runResourceT)
+import           Cardano.Prelude (unlessM)
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
@@ -40,18 +36,17 @@ pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
 opts :: EnvCli -> ParserInfo CardanoTestnetCommands
 opts envCli = Opt.info (commands envCli <**> helper) idm
 
--- TODO: Remove StartBabbageTestnet and StartShelleyTestnet
--- by allowing the user to start testnets in any era (excluding Byron)
--- via StartCardanoTestnet
 data CardanoTestnetCommands
   = StartCardanoTestnet CardanoTestnetCliOptions
+  | CreateTestnetEnv CardanoTestnetCreateEnvOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
 commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
   asum
-    [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
+    [ fmap StartCardanoTestnet (subparser cmdCardano)
+    , fmap CreateTestnetEnv (subparser cmdCreateEnv)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]
@@ -60,54 +55,50 @@ commands envCli =
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
+  CreateTestnetEnv cmdOpts -> createEnvOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
+createEnvOptions :: CardanoTestnetCreateEnvOptions -> IO ()
+createEnvOptions CardanoTestnetCreateEnvOptions
+  { createEnvCreationOptions=creationOptions
+  , createEnvOutputDir=outputDir
+  } = do
+      conf <- mkConfigAbs outputDir
+      void $ createTestnetEnv
+        creationOptions
+        -- Do not add hashes to the main config file, so that genesis files
+        -- can be modified without having to recompute hashes every time.
+        conf{genesisHashesPolicy = WithoutHashes}
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
-runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
-    case cardanoNodes testnetOptions of
-      AutomaticNodeOptions _ -> runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions genesisOptions
-      UserProvidedNodeOptions nodeInputConfigFile -> do
-        nodeConfigFile <- readNodeConfigurationFile nodeInputConfigFile
-        let protocolConfig :: NodeProtocolConfiguration =
-              case getLast $ pncProtocolConfig nodeConfigFile of
-                Nothing -> error $ "Genesis files not specified in node configuration file: " <> nodeInputConfigFile
-                Just x -> x
-            adjustedProtocolConfig =
-              -- Make all the files be relative to the location of the config file.
-              adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
-            (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
-        shelleyGenesis :: UserProvidedData ShelleyGenesis <-
-          genesisFilepathToData $ npcShelleyGenesisFile shelley
-        alonzoGenesis :: UserProvidedData AlonzoGenesis <-
-          genesisFilepathToData $ npcAlonzoGenesisFile alonzo
-        conwayGenesis :: UserProvidedData ConwayGenesis <-
-          genesisFilepathToData $ npcConwayGenesisFile conway
-        runTestnet testnetOptions $ cardanoTestnet
-          testnetOptions
-          genesisOptions
-          shelleyGenesis
-          alonzoGenesis
-          conwayGenesis
+runCardanoOptions = \case
+  NoUserProvidedEnv NoUserProvidedEnvOptions{noEnvCreationOptions, noEnvOutputDir, noEnvRuntimeOptions} -> do
+    -- Create the sandbox, then run cardano-testnet.
+    -- It is not necessary to update timestamps here, because
+    -- the genesis files will be created with up-to-date stamps already.
+    let dirName = fromMaybe "testnet" noEnvOutputDir
+    conf <- mkConfigAbs dirName
+    runSimpleApp . runResourceT $ do
+      logInfo $ "Creating environment: " <> display (tempAbsPath conf)
+      createTestnetEnv noEnvCreationOptions conf
+      logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+      void $ cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
+      logInfo "Testnet started"
+      waitForShutdown
+  StartFromEnv StartFromEnvOptions{fromEnvOptions, fromEnvRuntimeOptions} -> do
+    -- Run cardano-testnet in the sandbox provided by the user
+    let dirName = envPath fromEnvOptions
+    unlessM (doesDirectoryExist dirName) $ error $ "The provided path does not exist or is not a directory: " <> dirName
+    conf <- mkConfigAbs dirName
+    nodes <- readNodeOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
+    runSimpleApp . runResourceT $ do
+      logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
+      void $ cardanoTestnet nodes fromEnvRuntimeOptions
+               conf{updateTimestamps = envUpdateTimestamps fromEnvOptions}
+      logInfo "Testnet started"
+      waitForShutdown
   where
-    getShelleyGenesises (NodeProtocolConfigurationCardano _byron shelley alonzo conway _hardForkConfig _checkPointConfig) =
-      (shelley, alonzo, conway)
-    readNodeConfigurationFile :: FilePath -> IO PartialNodeConfiguration
-    readNodeConfigurationFile file = do
-      errOrNodeConfig <- Aeson.eitherDecodeFileStrict' file
-      case errOrNodeConfig of
-        Left err -> error $ "Error reading node configuration file: " <> err
-        Right nodeConfig -> pure nodeConfig
-    genesisFilepathToData :: Aeson.FromJSON a => GenesisFile -> IO (UserProvidedData a)
-    genesisFilepathToData (GenesisFile filepath) = do
-      exists <- System.doesFileExist filepath
-      if exists
-        then UserProvidedData <$> decodeFileThrow filepath
-        else
-          -- Here we forbid mixing defaulting of genesis files with providing a user node configuration file:
-          --
-          -- Because of this check, either the user passes a node configuration file AND he passes all the genesis files.
-          -- Or the user doesn't pass a node configuration file AND cardano-testnet generates all the genesis files.
-          -- See the discussion here: https://github.com/IntersectMBO/cardano-node/pull/6103#discussion_r1995431437
-          error $ "Genesis file specified in node configuration file does not exist: " <> filepath
+    waitForShutdown = do
+      logInfo "Waiting for shutdown (Ctrl+C)"
+      forever (threadDelay 100_000)

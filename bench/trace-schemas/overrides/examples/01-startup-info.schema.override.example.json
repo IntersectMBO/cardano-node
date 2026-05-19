@@ -1,0 +1,13 @@
+{
+  "_target": "bench/trace-schemas/messages/Startup/Info.schema.json",
+  "data": {
+    "properties": {
+      "kind": {
+        "enum": [
+          "StartupInfo",
+          "StartupInfoLegacy"
+        ]
+      }
+    }
+  }
+}

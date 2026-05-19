@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator does not infer payload fields for ResourceStats."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "Alloc": {
+          "type": "integer"
+        },
+        "CentiBlkIO": {
+          "type": "integer"
+        },
+        "CentiCpu": {
+          "type": "integer"
+        },
+        "CentiGC": {
+          "type": "integer"
+        },
+        "CentiMut": {
+          "type": "integer"
+        },
+        "FsRd": {
+          "type": "integer"
+        },
+        "FsWr": {
+          "type": "integer"
+        },
+        "GcsMajor": {
+          "type": "integer"
+        },
+        "GcsMinor": {
+          "type": "integer"
+        },
+        "Heap": {
+          "type": "integer"
+        },
+        "Live": {
+          "type": "integer"
+        },
+        "NetRd": {
+          "type": "integer"
+        },
+        "NetWr": {
+          "type": "integer"
+        },
+        "RSS": {
+          "type": "integer"
+        },
+        "Threads": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "Alloc",
+        "CentiBlkIO",
+        "CentiCpu",
+        "CentiGC",
+        "CentiMut",
+        "FsRd",
+        "FsWr",
+        "GcsMajor",
+        "GcsMinor",
+        "Heap",
+        "Live",
+        "NetRd",
+        "NetWr",
+        "RSS",
+        "Threads",
+        "kind"
+      ],
+      "type": "object"
+    }
+  }
+}

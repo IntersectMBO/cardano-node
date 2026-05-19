@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,6 +18,10 @@ import           System.FilePath
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
+import           RIO (Display (..))
+
+import           Cardano.Node.Testnet.Paths (defaultSocketDir)
+
 
 makeSprocket
   :: TmpAbsolutePath
@@ -32,11 +37,14 @@ newtype TmpAbsolutePath = TmpAbsolutePath
   { unTmpAbsPath :: FilePath
   } deriving (Eq, Show, IsString)
 
+instance Display TmpAbsolutePath where
+  textDisplay = fromString . unTmpAbsPath
+
 makeTmpRelPath :: TmpAbsolutePath -> FilePath
 makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
 
 makeSocketDir :: TmpAbsolutePath -> FilePath
-makeSocketDir fp = makeTmpRelPath fp </> "socket"
+makeSocketDir fp = makeTmpRelPath fp </> defaultSocketDir
 
 makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
 makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirectory fp

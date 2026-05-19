@@ -1,0 +1,45 @@
+# Start
+#######
+
+# Server in 10.0.0.100
+
+[nix-shell:~/]$ wb nomad server configure srv01 10.0.0.100 4646 4647 4648
+[nix-shell:~/]$ wb nomad server start srv01
+workbench:  Starting Nomad server "srv01" ...
+workbench:  Nomad server "srv01" started with PID 957859
+workbench:  Waiting for the listening HTTP server (25s) ...
+
+# Client in 10.0.0.100, in the same machine as the server
+
+[nix-shell:~/]$ wb nomad client configure cli02 10.0.0.100 14646 14647 14648 eu-central-1
+[nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" wb nomad client start cli01 sudo
+workbench:  Starting Nomad client "cli01" ...
+workbench:  Nomad client "cli01" started with PID 982458
+workbench:  Waiting for the listening HTTP server (25s) ...
+workbench:  Waiting until the Nomad server sees the client (25s) ...
+[nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" nomad node status
+ID        Node Pool  DC            Name                          Class   Drain  Eligibility  Status
+ab0d4ba7  default    eu-central-1  workbench-nomad-client-cli01  <none>  false  eligible     ready
+
+# Client in 10.0.0.101, in a different machine than the same server
+
+[nix-shell:~/]$ wb nomad client configure cli01 10.0.0.101 4646 4647 4648 eu-central-1
+[nix-shell:~/]$ NOMAD_ADDR="http://10.0.0.100:4646" wb nomad client start cli01 sudo
+workbench:  Starting Nomad client "cli01" ...
+[sudo] password for user: 
+workbench:  Nomad client "cli01" started with PID 74439
+workbench:  Waiting for the listening HTTP server (25s) ...
+workbench:  Waiting until the Nomad server sees the client (25s) ...
+
+# Stop
+######
+
+[nix-shell:~/]$ wb nomad client stop cli01
+workbench:  Stopping Nomad client "cli01" process PID 982458 ...
+[sudo] password for user: 
+workbench:  Wait up to 30 seconds for PID 982458 to exit
+workbench:  Unmount any folders left by the client
+[nix-shell:~/]$ wb nomad server stop srv01
+workbench:  Stopping Nomad server "srv01" process PID 957859 ...
+workbench:  Wait up to 15 seconds for PID 957859 to exit
+

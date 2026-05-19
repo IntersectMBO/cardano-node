@@ -3,7 +3,9 @@
 
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 
-{- HLINT ignore "Eta reduce" -}
+{- HLINT ignore "Use mapM" -}
+{- HLINT ignore "Redundant <&>" -}
+{- HLINT ignore "Use maybe" -}
 
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
@@ -62,7 +64,7 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
     \case
       [] -> Left CDFEmptyDataset
       xs@((d,_):ds) -> do
-        unless (all (d ==) $ fmap fst ds) $
+        unless (all ((d ==) . fst) ds) $
           Left $ CDFIncoherentSamplingCentiles [Centile . read . T.unpack . T.drop 3 . fst <$> xs]
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
@@ -476,7 +478,7 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
            & find mbeForgP)
 
       fail' :: Host -> Hash -> BPErrorKind -> BPError
-      fail' host hash desc = BPError host hash Nothing desc
+      fail' host hash = BPError host hash Nothing
 
       handleMiss :: String -> SMaybe a -> a
       handleMiss slotDesc = fromSMaybe $ error $ mconcat
@@ -741,7 +743,7 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
   _ -> mv
  where
    fail' :: Host -> Hash -> BPErrorKind -> BPError
-   fail' host hash desc = BPError host hash (Just lo) desc
+   fail' host hash = BPError host hash (Just lo)
 
    fail :: Host -> Hash -> BPErrorKind -> MachBlockEvents a
    fail host hash desc = MBE $ fail' host hash desc

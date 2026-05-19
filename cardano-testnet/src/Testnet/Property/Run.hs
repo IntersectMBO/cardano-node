@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Testnet.Property.Run
-  ( runTestnet
+  ( UserProvidedEnv(..)
+  , runTestnet
   -- Ignore tests on various OSs
   , ignoreOn
   , ignoreOnWindows
@@ -10,12 +12,13 @@ module Testnet.Property.Run
   , disabled
   ) where
 
+import           Cardano.Api.IO (unFile)
+
 import           Prelude
 
 import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Bool (bool)
 import           Data.String (IsString (..))
@@ -23,14 +26,20 @@ import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.Directory
 import qualified System.Exit as IO
+import           System.FilePath (normalise, (</>))
 import qualified System.Info as SYS
 import qualified System.IO as IO
+import           Text.Printf (printf)
 
+import           Testnet.Process.RunIO
 import           Testnet.Property.Util (integration, integrationWorkspace)
-import           Testnet.Start.Types
+import           Testnet.Start.Types (Conf, mkConf)
+
+import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), spoNodes)
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import qualified Hedgehog.Extras.Test.Base as H
 import           Test.Tasty.ExpectedFailure (wrapTest)
@@ -38,55 +47,89 @@ import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
-runTestnet :: CardanoTestnetOptions -> (Conf -> H.Integration a) -> IO ()
-runTestnet tnOpts tn = do
-  tvRunning <- STM.newTVarIO False
+-- | Whether the user has provided the path to an existing testnet environment
+-- through the @--node-env@ flag, or not. This determines whether the testnet
+-- will reuse an existing environment or whether a new one should be created.
+data UserProvidedEnv
+  = NoUserProvidedEnv
+    -- ^ No user-provided environment, a new environment will be created for the user.
+  | UserProvidedEnv FilePath
+    -- ^ The user provided the path to an existing testnet environment through the @--node-env@ flag.
 
-  void . H.check $ testnetProperty tnOpts $ \c -> do
-    void $ tn c
-    H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
+runTestnet :: UserProvidedEnv -> (Conf -> H.Integration TestnetRuntime) -> IO ()
+runTestnet env tn = do
+  tvRunning <- STM.newTVarIO Nothing
 
-  running <- STM.readTVarIO tvRunning
+  void . H.check $ testnetProperty env $ \c -> do
+    runtime <- tn c
+    H.evalIO . STM.atomically $ STM.writeTVar tvRunning (Just runtime)
 
-  if running
-    then do
+  STM.readTVarIO tvRunning >>= \case
+    Just runtime@TestnetRuntime
+      { configurationFile
+      , testnetMagic
+      } -> do
       ANSI.setSGR [SetColor Foreground Vivid Green]
-      IO.putStr "Testnet is running.  Type CTRL-C to exit."
+      IO.putStrLn $ printf
+        "Please disregard the message above implying a failure.\n\
+        \\n\
+        \Testnet is running with config file %s"
+        (unFile configurationFile)
+      case spoNodes runtime of
+        TestnetNode
+          { nodeSprocket=Sprocket{sprocketBase, sprocketName}
+          , nodeStdout
+          }:_ -> putStrLn $ printf
+            "Logs of the SPO node can be found at %s\n\
+            \\n\
+            \To interact with the testnet using cardano-cli, you might want to set:\n\
+            \\n\
+            \  export CARDANO_NODE_SOCKET_PATH=%s\n\
+            \  export CARDANO_NODE_NETWORK_ID=%d\n"
+            nodeStdout
+            (normalise $ sprocketBase </> sprocketName)
+            testnetMagic
+        [] -> do
+          ANSI.setSGR [SetColor Foreground Vivid Yellow]
+          IO.putStrLn "\nFailed to find any SPO node in the testnet\n"
+          ANSI.setSGR [SetColor Foreground Vivid Green]
+      IO.putStrLn "Type CTRL-C to exit."
+
       ANSI.setSGR [Reset]
-      IO.putStrLn ""
       void . forever $ IO.threadDelay 10000000
-    else do
+    Nothing -> do
       ANSI.setSGR [SetColor Foreground Vivid Red]
-      IO.putStr "Failed to start testnet."
+      IO.putStrLn "Failed to start testnet."
       ANSI.setSGR [Reset]
-      IO.putStrLn ""
       IO.exitFailure
 
 
-testnetProperty :: CardanoTestnetOptions -> (Conf -> H.Integration ()) -> H.Property
-testnetProperty CardanoTestnetOptions{cardanoOutputDir} runTn =
-  case cardanoOutputDir of
-      Nothing -> do
+testnetProperty :: UserProvidedEnv -> (Conf -> H.Integration ()) -> H.Property
+testnetProperty env runTn =
+  case env of
+      NoUserProvidedEnv -> do
         integrationWorkspace "testnet" $ \workspaceDir -> do
           mkConf workspaceDir >>= forkAndRunTestnet
-      Just userOutputDir ->
+      UserProvidedEnv userOutputDir ->
         integration $ do
           absUserOutputDir <- H.evalIO $ makeAbsolute userOutputDir
           dirExists <- H.evalIO $ doesDirectoryExist absUserOutputDir
-          (if dirExists then
-            -- Likely dangerous, but who are we to judge the user?
+          if dirExists then
+            -- Happens when the environment has previously been created by the user
             H.note_ $ "Reusing " <> absUserOutputDir
           else do
-            liftIO $ createDirectory absUserOutputDir
-            H.note_ $ "Created " <> absUserOutputDir)
+            liftIOAnnotated $ createDirectory absUserOutputDir
+            H.note_ $ "Created " <> absUserOutputDir
           conf <- mkConf absUserOutputDir
           forkAndRunTestnet conf
   where
     forkAndRunTestnet conf = do
       -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
-      void $ H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+      void $ H.evalM . liftResourceT . resourceForkIO . forever . liftIOAnnotated $ IO.threadDelay 10000000
       void $ runTn conf
       H.failure -- Intentional failure to force failure report
+
+
 
 -- Ignore properties on various OSs
 

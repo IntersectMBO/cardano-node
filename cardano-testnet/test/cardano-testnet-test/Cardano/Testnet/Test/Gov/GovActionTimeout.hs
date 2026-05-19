@@ -19,7 +19,6 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
-import           Data.String (fromString)
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -28,19 +27,18 @@ import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
+import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 -- | Test that SPOs cannot vote on a Protocol Parameter change
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Gov Action Timeout/"'@
 hprop_check_gov_action_timeout :: Property
-hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \tempAbsBasePath' ->
+hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -54,8 +52,10 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
       sbe = convert ceo
       eraName = eraToString sbe
       asbe = AnyShelleyBasedEra sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -63,7 +63,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -80,11 +80,6 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   baseDir <- H.createDirectoryIfMissing $ gov </> "output"
-
-  -- Figure out expiration time for proposals
-
-  govActionLifetime <- getGovActionLifetime epochStateView ceo
-  H.note_ $ "govActionLifetime: " <> show govActionLifetime
 
   -- Register stake address
   let stakeCertFp = gov </> "stake.regcert"
@@ -133,12 +128,29 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
                                Nothing (EpochInterval 3) stakeKeys wallet0 (EpochInterval 2)
 
-  -- Wait for proposal to expire
-  void $ waitForEpochs epochStateView (EpochInterval $ unEpochInterval govActionLifetime + 1)
+  -- Read the proposal's expiry epoch directly from the gov state.
+  -- The RATIFY rule removes expired proposals at the start of epoch
+  -- @expiresAfter + 1@, so once @currentEpoch > expiresAfter@ the proposal
+  -- must be gone.
+  expiresAfter@(EpochNo expiryE) <- H.nothingFailM $
+    maybeExtractGovernanceActionExpiry governanceActionTxId <$> getEpochState epochStateView
+  H.note_ $ "Proposal expires after epoch: " <> show expiresAfter
 
-  -- Check proposal expired
-  mGovernanceActionTxIx <- watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+  -- Wait until we are at least two epochs past @expiresAfter@, i.e. in
+  -- epoch @expiresAfter + 2@ or later. RATIFY removes the proposal at the
+  -- first block of epoch @expiresAfter + 1@, but the testnet security
+  -- parameter is @k = 5@ blocks while epochs average only ~10 blocks, so a
+  -- rollback within the @k@-window can cross the removal boundary. Waiting
+  -- a full extra epoch past the boundary makes the removal @k@-deep stable
+  -- and eliminates the rollback race.
+  EpochNo currentE <- getCurrentEpochNo epochStateView
+  let epochsToWait
+        | expiryE + 2 > currentE = fromIntegral $ expiryE + 2 - currentE
+        | otherwise = 0
+  void $ waitForEpochs epochStateView (EpochInterval epochsToWait)
 
-  mGovernanceActionTxIx H.=== Nothing
+  -- At this point the proposal must be absent from the gov state.
+  mGovernanceActionTxIx <-
+    maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
+  mGovernanceActionTxIx === Nothing
 

@@ -1,7 +1,7 @@
 { pkgs
-, lib
 , stateDir
 , profile
+, profiling
 , nodeSpecs
 , withGenerator
 , withTracer
@@ -10,9 +10,10 @@
 , inetHttpServerPort ? null
 }:
 
-with lib;
-
 let
+
+  inherit (pkgs) lib;
+
   # The prefix for every "[program:X] command=sh start.sh" because `supervisord`
   # may run in the most unexpected places where we can't asume what is or isn't
   # included in $PATH. Just make sure pkgs.bashInteractive is in the nix store.
@@ -112,8 +113,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -139,6 +141,18 @@ let
         ### - forge-stress-large:     11300000
         ### - value:                   5000000 (50s more needed)
         startsecs      = 5 + (profile.derived.dataset_measure / (5000000 / 50));
+        # The number of seconds to wait for the OS to return a SIGCHLD to
+        # supervisord after the program has been sent a stopsignal. If this
+        # number of seconds elapses before supervisord receives a SIGCHLD from
+        # the process, supervisord will attempt to kill it with a final SIGKILL.
+        stopwaitsecs =
+          if !(profiling.profiledBuild or false)
+          # Use the default value.
+          then 10
+          # May need a lot of time for a long running node to dump all the
+          # profiling data. Not risking it. 5 minutes.
+          else 5*60
+        ;
       })
     nodeSpecs))
     //
@@ -153,8 +167,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -174,8 +189,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -199,8 +215,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -224,8 +241,9 @@ let
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
-        stopasgroup    = false;
-        killasgroup    = false;
+        # Send stop and kill signals to the whole process group.
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         # Don't attempt any restart!
@@ -237,4 +255,4 @@ let
     ;
 
 in
-  generators.toINI {} supervisorConf
+  lib.generators.toINI {} supervisorConf

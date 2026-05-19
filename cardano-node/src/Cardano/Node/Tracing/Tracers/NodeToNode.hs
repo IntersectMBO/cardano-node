@@ -26,7 +26,6 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Me
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
@@ -34,11 +33,6 @@ import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import           Data.Time (DiffTime)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
-
-import qualified LeiosDemoOnlyTestFetch as LF
-import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, LeiosVote,
-                   messageLeiosFetchToObject, messageLeiosNotifyToObject, prettyEbHash)
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -92,9 +86,6 @@ instance ( ConvertTxId blk
              ]
 
 
-instance ToJSON SizeInBytes where
-    toJSON (SizeInBytes s) = toJSON s
-
 instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgRequestRange{}) =
       Namespace [] ["RequestRange"]
@@ -109,12 +100,12 @@ instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgClientDone{}) =
       Namespace [] ["ClientDone"]
 
-    severityFor (Namespace _ ["RequestRange"]) _ = Just Info
-    severityFor (Namespace _ ["StartBatch"]) _ = Just Info
-    severityFor (Namespace _ ["NoBlocks"]) _ = Just Info
-    severityFor (Namespace _ ["Block"]) _ = Just Info
-    severityFor (Namespace _ ["BatchDone"]) _ = Just Info
-    severityFor (Namespace _ ["ClientDone"]) _ = Just Info
+    severityFor (Namespace _ ["RequestRange"]) _ = Just Debug
+    severityFor (Namespace _ ["StartBatch"]) _ = Just Debug
+    severityFor (Namespace _ ["NoBlocks"]) _ = Just Debug
+    severityFor (Namespace _ ["Block"]) _ = Just Debug
+    severityFor (Namespace _ ["BatchDone"]) _ = Just Debug
+    severityFor (Namespace _ ["ClientDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["RequestRange"]) = Just
@@ -192,6 +183,16 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgInit"
       , "agency" .= String (pack $ show stok)
       ]
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
+    mconcat
+      [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
+    mconcat
+      [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
@@ -204,16 +205,6 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
     mconcat
       [ "kind" .= String "MsgDone"
@@ -223,23 +214,23 @@ instance (Show txid, Show tx)
 instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgInit {}) =
       Namespace [] ["MsgInit"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
-      Namespace [] ["RequestTxIds"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
-      Namespace [] ["ReplyTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxIds {}) =
-      Namespace [] ["RequestTxs"]
+      Namespace [] ["RequestTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxIds {}) =
+      Namespace [] ["ReplyTxIds"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
+      Namespace [] ["RequestTxs"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
       Namespace [] ["ReplyTxs"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgDone {}) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["MsgInit"]) _ = Just Info
-    severityFor (Namespace _ ["RequestTxIds"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyTxIds"]) _ = Just Info
-    severityFor (Namespace _ ["RequestTxs"]) _ = Just Info
-    severityFor (Namespace _ ["ReplyTxs"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["MsgInit"]) _ = Just Debug
+    severityFor (Namespace _ ["RequestTxIds"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyTxIds"]) _ = Just Debug
+    severityFor (Namespace _ ["RequestTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["ReplyTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["MsgInit"]) = Just
@@ -248,7 +239,7 @@ instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
       [ "Request a non-empty list of transaction identifiers from the client, "
       , "and confirm a number of outstanding transaction identifiers. "
       , "\n "
-      , "With 'TokBlocking' this is a a blocking operation: the response will "
+      , "With 'TokBlocking' this is a blocking operation: the response will "
       , "always have at least one transaction identifier, and it does not expect "
       , "a prompt response: there is no timeout. This covers the case when there "
       , "is nothing else to do but wait. For example this covers leaf nodes that "
@@ -369,9 +360,9 @@ instance MetaTrace (AnyMessage KA.KeepAlive) where
     namespaceFor (AnyMessageAndAgency _stok KA.MsgDone) =
       Namespace [] ["Done"]
 
-    severityFor (Namespace _ ["KeepAlive"]) _ = Just Info
-    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["KeepAlive"]) _ = Just Debug
+    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Debug
+    severityFor (Namespace _ ["Done"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["KeepAlive"]) = Just
@@ -422,7 +413,7 @@ instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
       Namespace [] ["PeerShareDone"]
 
     severityFor (Namespace _ ["PeerShareRequest"]) _ = Just Debug
-    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Info
+    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Debug
     severityFor (Namespace _ ["PeerShareDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
@@ -471,61 +462,3 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
-
------
-
-instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
-
-instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
-  forHuman = showT
-
-  forMachine _dtal (AnyMessageAndAgency _stok msg) =
-    messageLeiosNotifyToObject msg
-
-instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
-  forHuman = showT
-
-  forMachine _dtal (AnyMessageAndAgency _stok msg) =
-    messageLeiosFetchToObject msg
-
-instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
-    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
-      LN.MsgLeiosNotificationRequestNext {} -> Namespace [] ["RequestNext"]
-      LN.MsgLeiosBlockAnnouncement {} -> Namespace [] ["BlockAnnouncement"]
-      LN.MsgLeiosBlockOffer {} -> Namespace [] ["BlockOffer"]
-      LN.MsgLeiosBlockTxsOffer {} -> Namespace [] ["BlockTxsOffer"]
-      LN.MsgLeiosVotes {} -> Namespace [] ["Votes"]
-      LN.MsgDone -> Namespace [] ["Done"]
-
-    severityFor _ _ = Just Debug
-
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["RequestNext"]
-      , Namespace [] ["BlockAnnouncement"]
-      , Namespace [] ["BlockOffer"]
-      , Namespace [] ["BlockTxsOffer"]
-      , Namespace [] ["Votes"]
-      , Namespace [] ["Done"]
-      ]
-
-instance MetaTrace (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
-    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
-      LF.MsgLeiosBlockRequest {} -> Namespace [] ["BlockRequest"]
-      LF.MsgLeiosBlock {} -> Namespace [] ["Block"]
-      LF.MsgLeiosBlockTxsRequest {} -> Namespace [] ["BlockTxsRequest"]
-      LF.MsgLeiosBlockTxs {} -> Namespace [] ["BlockTxs"]
-      LF.MsgDone -> Namespace [] ["Done"]
-
-    severityFor _ _ = Just Debug
-
-    documentFor _ = Nothing
-
-    allNamespaces = [
-        Namespace [] ["BlockRequest"]
-      , Namespace [] ["Block"]
-      , Namespace [] ["BlockTxsRequest"]
-      , Namespace [] ["BlockTxs"]
-      , Namespace [] ["Done"]
-      ]

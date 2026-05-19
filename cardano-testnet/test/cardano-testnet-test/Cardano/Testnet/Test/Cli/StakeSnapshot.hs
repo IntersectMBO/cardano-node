@@ -40,7 +40,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
     { testnetMagic
     , testnetNodes
     , configurationFile
-    } <- cardanoTestnetDefault def def conf
+    } <- createAndRunTestnet def def conf
 
   let nSpoNodes = length $ spoNodes runtime
   poolNode1 <- H.headM testnetNodes

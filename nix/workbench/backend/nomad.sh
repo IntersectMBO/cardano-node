@@ -826,24 +826,28 @@ backend_nomad() {
       fi
       # Stop tracer(s).
       #################
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if test "${one_tracer_per_node}" = "true"
+      # A "tracer"(s) is optional.
+      if jqtest ".node.tracer" "${dir}"/profile.json
       then
-        local jobs_tracers_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad stop-all-tracers "${dir}" "${node}" &
-          jobs_tracers_array+=("$!")
-        done
-        if ! wait_all "${jobs_tracers_array[@]}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if test "${one_tracer_per_node}" = "true"
         then
-          msg "$(red "Failed to stop tracer(s)")"
-        fi
-      else
-        if ! backend_nomad stop-all-tracers "${dir}" "tracer"
-        then
-          msg "$(red "Failed to stop tracer")"
+          local jobs_tracers_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad stop-all-tracers "${dir}" "${node}" &
+            jobs_tracers_array+=("$!")
+          done
+          if ! wait_all "${jobs_tracers_array[@]}"
+          then
+            msg "$(red "Failed to stop tracer(s)")"
+          fi
+        else
+          if ! backend_nomad stop-all-tracers "${dir}" "tracer"
+          then
+            msg "$(red "Failed to stop tracer")"
+          fi
         fi
       fi
     ;;
@@ -891,7 +895,7 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local workload=${1:?$usage}; shift
       local task=${1:?$usage}; shift
-      local task_dir="${dir}"/"${workload}"/"${task}"
+      local task_dir="${dir}"/workloads/"${workload}"/"${task}"
       if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
       then
         if backend_nomad is-task-program-running "${dir}" "${task}" "${workload}"
@@ -1523,10 +1527,10 @@ backend_nomad() {
 
     ############################################################################
     # Functions to start/stop groups of cluster "programs":
-    # - start-tracers      RUN-DIR
-    # - start-nodes        RUN-DIR
-    # - start-workloads    RUN-DIR
-    # - start-healthchecks RUN-DIR
+    # - start-tracers          RUN-DIR
+    # - start-nodes            RUN-DIR
+    # - start-workload-by-name RUN-DIR
+    # - start-healthchecks     RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -1537,44 +1541,44 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
 
       # A "tracer"(s) is optional.
-      if jqtest ".node.tracer" "${dir}"/profile.json
+      if ! jqtest ".node.tracer" "${dir}"/profile.json
       then
         true
-      fi
-
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if ! test "${one_tracer_per_node}" = "true"
-      then
-        backend_nomad start-tracer "${dir}" "tracer"
       else
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-tracer "${dir}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
+        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+        if ! test "${one_tracer_per_node}" = "true"
         then
-          if ! wait_kill_em_all "${jobs_array[@]}"
+          backend_nomad start-tracer "${dir}" "tracer"
+        else
+          local jobs_array=()
+          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+          for node in ${nodes[*]}
+          do
+            backend_nomad start-tracer "${dir}" "${node}" &
+            jobs_array+=("$!")
+          done
+          # Wait and check!
+          if test -n "${jobs_array}"
           then
-            msg "$(red "Failed to start tracer(s)")"
-            backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-            fatal "scenario.sh start-tracers failed!"
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/tracer/"${node}"/started
-              then
-                msg "$(red "Tracer for \"${node}\" failed to start!")"
-                backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-                fatal "scenario.sh start-tracers failed!"
-              fi
-            done
+            if ! wait_kill_em_all "${jobs_array[@]}"
+            then
+              msg "$(red "Failed to start tracer(s)")"
+              backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+              fatal "scenario.sh start-tracers failed!"
+            else
+              for node in ${nodes[*]}
+              do
+                if ! test -f "${dir}"/tracer/"${node}"/started
+                then
+                  msg "$(red "Tracer for \"${node}\" failed to start!")"
+                  backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+                  fatal "scenario.sh start-tracers failed!"
+                fi
+              done
+            fi
           fi
+          return 0
         fi
-        return 0
       fi
     ;;
 
@@ -1636,39 +1640,36 @@ backend_nomad() {
     ;;
 
     # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-workloads )
-      local usage="USAGE: wb backend $op RUN-DIR"
+    start-workload-by-name )
+      local usage="USAGE: wb backend $op RUN-DIR WORKLOAD-NAME"
       local dir=${1:?$usage}; shift
+      local workload=${1:?$usage}; shift
 
-      # For every workload
-      for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+      local jobs_array=()
+      # Workload may or may not run something in all producers.
+      local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+      for node in ${nodes[*]}
       do
-        local jobs_array=()
-        # Workload may or may not run something in all producers.
-        local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-workload "${dir}" "${workload}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_kill_em_all "${jobs_array[@]}"
-          then
-            fatal "Failed to start workload(s)"
-            return 1
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/workloads/"${workload}"/"${node}"/started
-              then
-                fatal "Workload \"${workload}\" for \"${node}\" failed to start!"
-              fi
-            done
-          fi
-        fi
+        backend_nomad start-workload "${dir}" "${workload}" "${node}" &
+        jobs_array+=("$!")
       done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_kill_em_all "${jobs_array[@]}"
+        then
+          fatal "Failed to start workload(s)"
+          return 1
+        else
+          for node in ${nodes[*]}
+          do
+            if ! test -f "${dir}"/workloads/"${workload}"/"${node}"/started
+            then
+              fatal "Workload \"${workload}\" for \"${node}\" failed to start!"
+            fi
+          done
+        fi
+      fi
       return 0
     ;;
 
@@ -2113,7 +2114,6 @@ backend_nomad() {
 
       local nomad_environment=$(envjqr   'nomad_environment')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
       local socket_name
       if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
       then
@@ -2122,16 +2122,21 @@ backend_nomad() {
         socket_name=$(jq -r '.network.contents' "${dir}/tracer/config.json")
       fi
       # Wait for tracer socket
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "${dir}/profile.json")
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${task}" tracer  \
         &&                                                                   \
           ! backend_nomad task-file-stat "${dir}" "${task}" run/current/tracer/"${socket_name}" | grep --quiet "application/octet-stream"
-      do printf "%3d" $i; sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+      do
+        local now
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        printf "%3d" $elapsed; sleep 1
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for Task \"${task}\"'s tracer after ${patience}s")"
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
@@ -2144,7 +2149,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${elapsed}s)!")"
       return 0
     ;;
 
@@ -2169,19 +2174,22 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      local patience start elapsed=0
+      patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      start="$(date +"%s")"
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      local i=0
       # Always keep checking that the supervisord program is still running!
       while \
             backend_nomad is-task-program-running "${dir}" "${node}" "${node}" \
         &&                                                                     \
           ! backend_nomad task-file-stat "${dir}" "${node}" run/current/"${node}"/node.socket 2>/dev/null | grep --quiet "application/octet-stream"
-      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
+      # TODO: Add the "timer" `printf "%3d" $elapsed;` but for concurrent processes!
       do
         sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+        local now elapsed
+        now="$(date +"%s")"
+        elapsed=$((now-start))
+        if test "${elapsed}" -ge "${patience}"
         then
           msg "$(red "Patience ran out for \"${node}\" after ${patience}s")"
           msg "$(yellow "check logs in ${dir}/${node}/[stdout & stderr]")"
@@ -2189,7 +2197,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${elapsed}s)!")"
       return 0
     ;;
 
@@ -2715,10 +2723,10 @@ backend_nomad() {
       local workload=${1:?$usage}; shift
       local task=${1:?$usage}; shift
 
-      msg "$(blue Fetching) $(yellow "\"${workload}\" workload") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      msg "$(blue Fetching) $(yellow "\"${workload}\" workload") entire directory from Nomad $(yellow "Task \"${task}\"") ..."
       # TODO: Add compression, either "--zstd" or "--xz"
-        backend_nomad task-exec-program-run-files-tar-zstd                 \
-          "${dir}" "${task}" "workloads/${workload}"                       \
+        backend_nomad task-exec-directory-tar-zstd \
+        "${dir}" "${task}" "workloads/${workload}" \
       | tar --extract                                                      \
           --directory="${dir}"/workloads/"${workload}"/"${task}"/ --file=- \
           --no-same-owner --no-same-permissions
@@ -2792,10 +2800,10 @@ backend_nomad() {
           then
             msg "$(blue Fetching) $(yellow "\"tracer\"") logRoot from Nomad $(yellow "Task \"${task}\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
-              backend_nomad task-exec-tracer-folders-tar-zstd           \
-              "${dir}" "${task}"                                        \
-            | tar --extract                                             \
-                --directory="${dir}"/tracer/ --file=-                   \
+              backend_nomad task-exec-directory-tar-zstd \
+              "${dir}" "${task}" "tracer/logRoot"        \
+            | tar --extract                              \
+                --directory="${dir}"/tracer/ --file=-    \
                 --no-same-owner --no-same-permissions
           fi
         else
@@ -2804,10 +2812,10 @@ backend_nomad() {
           then
             msg "$(blue Fetching) $(yellow "\"tracer\"") logRoot from Nomad $(yellow "Task \"tracer\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
-              backend_nomad task-exec-tracer-folders-tar-zstd         \
-              "${dir}" "tracer"                                       \
-            | tar --extract                                           \
-                --directory="${dir}"/tracer/ --file=-                 \
+              backend_nomad task-exec-directory-tar-zstd \
+              "${dir}" "tracer" "tracer/logRoot"         \
+            | tar --extract                              \
+                --directory="${dir}"/tracer/ --file=-    \
                 --no-same-owner --no-same-permissions
           fi
         fi
@@ -2987,9 +2995,9 @@ backend_nomad() {
           if test -n "${strikes}"
           then
             # A strike parameter was given
-            msg "$(yellow "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(yellow "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             strikes=$(( strikes - 1 ))
-            msg "$(yellow "Strikes for \"is-task-program-running\" left: ${strikes}")"
+            msg "$(yellow "Strikes for \"is-task-program-running ${task} ${program}\" left: ${strikes}")"
             if test "${strikes}" -gt 0
             then
               # Strikes still available, sleep/retry!
@@ -3004,11 +3012,11 @@ backend_nomad() {
               backend_nomad is-task-program-running "${dir}" "${task}" "${program}" "${strikes}"
             else
               # Fails everything only if using strikes!
-              fatal "Function \"is-task-program-running\" failed: $(cat ${stderr_file})"
+              fatal "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})"
             fi
           else
             # No strike parameter was given, don't use "fatal"!
-            msg "$(red "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            msg "$(red "Function \"is-task-program-running ${task} ${program}\" failed: $(cat ${stderr_file})")"
             false
           fi
         else
@@ -3020,7 +3028,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-running\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
+          msg "$(yellow "WARNING: \"is-task-program-running ${task} ${program}\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
         fi
         true # Program is running!
       fi
@@ -3047,7 +3055,7 @@ backend_nomad() {
         if test -n "${strikes}"
         then
           # A strike parameter was given
-          msg "$(yellow "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(yellow "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           strikes=$(( strikes - 1 ))
           msg "$(yellow "Strikes for \"is-task-program-failed\" left: ${strikes}")"
           if test "${strikes}" -gt 0
@@ -3064,11 +3072,11 @@ backend_nomad() {
             backend_nomad is-task-program-failed "${dir}" "${task}" "${program}" $(( strikes - 1 ))
           else
             # Fails everything only if using strikes!
-            fatal "Function \"is-task-program-failed\" failed"
+            fatal "Function \"is-task-program-failed ${task} ${program}\" failed"
           fi
         else
           # No strike parameter was given, don't use "fatal"!
-          msg "$(red "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          msg "$(red "Function \"is-task-program-failed ${task} ${program}\" failed: $(cat ${stderr_file})")"
           true # Assuming program failed due to Nomad command error!
         fi
       else
@@ -3076,7 +3084,7 @@ backend_nomad() {
         if test -s "${stderr_file}"
         then
           # Don't supress possible error messages!
-          msg "$(yellow "WARNING: \"is-task-program-failed\" is returning a non-empty stderr: $(cat ${stderr_file})")"
+          msg "$(yellow "WARNING: \"is-task-program-failed ${task} ${program}\" is returning a non-empty stderr: $(cat ${stderr_file})")"
         fi
         test "${exit_code}" != "0"
       fi
@@ -3176,38 +3184,35 @@ backend_nomad() {
         "
     ;;
 
-    task-exec-tracer-folders-tar-zstd )
+    # Generic function, gets the entire directory.
+    # May contain huge log files that `nomad exec` can't handle.
+    task-exec-directory-tar-zstd )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
+      local directory=${1:?$usage}; shift
 
       local bash_path="$(jq -r ".containerPkgs.bashInteractive.\"nix-store-path\"" "${dir}"/container-specs.json)"/bin/bash
-      local find_path="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/find
       local tar_path="$(jq  -r ".containerPkgs.gnutar.\"nix-store-path\""          "${dir}"/container-specs.json)"/bin/tar
       local cat_path="$(jq  -r ".containerPkgs.coreutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/cat
-      # TODO: Fetch the logRoot
-      local log_root="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""        "${dir}"/container-specs.json)"/bin/find
       # When executing commands the directories used depend on the filesystem
       # isolation mode (AKA chroot or not).
       local state_dir
       state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${task}")"
-      local tracer_dir="${state_dir}"/tracer/
+      local dir_to_tar="${state_dir}"/"${directory}"
       # TODO: Add compression, either "--zstd" or "--xz"
       # tar (child): zstd: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
       # tar (child): xz: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
-      backend_nomad task-exec "${dir}" "${task}"         \
-        "${bash_path}" -c                                \
-        "                                                \
-          \"${find_path}\" \"${tracer_dir}\"             \
-            -mindepth 1 -type d                          \
-            -printf \"%P\\n\"                            \
-        |                                                \
-          \"${tar_path}\" --create                       \
-            --directory=\"${tracer_dir}\" --files-from=- \
-        |                                                \
-          \"${cat_path}\"                                \
+      backend_nomad task-exec "${dir}" "${task}"     \
+        "${bash_path}" -c                            \
+        "                                            \
+          \"${tar_path}\"                            \
+            --directory=\"${dir_to_tar}\"            \
+            --create .                               \
+        |                                            \
+          \"${cat_path}\"                            \
         "
     ;;
 
@@ -3346,7 +3351,8 @@ backend_nomad() {
 # (Task Drivers are also called plugins because they are pluggable).
 nomad_create_server_config() {
   local name=$1
-  local http_port=$2 rpc_port=$3 serv_port=$4
+  local addr=$2
+  local http_port=$3 rpc_port=$4 serv_port=$5
   local state_dir=$(wb_nomad server state-dir-path "${name}")
   local config_file=$(wb_nomad server config-file-path "${name}")
   # Config:
@@ -3387,7 +3393,7 @@ data_dir  = "${state_dir}/data"
 # bind all network services to the same address. It is also possible to bind the
 # individual services to different addresses using the "addresses" configuration
 # option. Dev mode (-dev) defaults to localhost.
-bind_addr = "127.0.0.1"
+bind_addr = "${addr}"
 # Specifies the network ports used for different services required by the Nomad
 # agent.
 ports = {
@@ -3416,19 +3422,19 @@ ports = {
 advertise {
   # The address to advertise for the HTTP interface. This should be reachable by
   # all the nodes from which end users are going to use the Nomad CLI tools.
-  http = "127.0.0.1"
+  http = "${addr}"
   # The address used to advertise to Nomad clients for connecting to Nomad
   # servers for RPC. This allows Nomad clients to connect to Nomad servers from
   # behind a NAT gateway. This address much be reachable by all Nomad client
   # nodes. When set, the Nomad servers will use the advertise.serf address for
   # RPC connections amongst themselves. Setting this value on a Nomad client has
   # no effect.
-  rpc = "127.0.0.1"
+  rpc = "${addr}"
   # The address advertised for the gossip layer. This address must be reachable
   # from all server nodes. It is not required that clients can reach this
   # address. Nomad servers will communicate to each other over RPC using the
   # advertised Serf IP and advertised RPC Port.
-  serf = "127.0.0.1"
+  serf = "${addr}"
 }
 # The tls stanza configures Nomad's TLS communication via HTTP and RPC to
 # enforce secure cluster communication between servers, clients, and between.
@@ -3580,7 +3586,9 @@ EOF
 
 nomad_create_client_config() {
   local name=$1
-  local http_port=$2 rpc_port=$3 serv_port=$4
+  local addr=$2
+  local http_port=$3 rpc_port=$4 serv_port=$5
+  local datacenter=${6:-loopback}
   local cni_plugins_path=$(dirname $(which bridge))
   local state_dir=$(wb_nomad client state-dir-path "${name}")
   local config_file=$(wb_nomad client config-file-path "${name}")
@@ -3590,15 +3598,30 @@ nomad_create_client_config() {
   for server_name in $(ls "${nomad_servers_dir}"); do
     if wb_nomad server is-running "${server_name}"
     then
-      local port=$(wb_nomad server port rpc "${server_name}")
+      local server_addr=$(wb_nomad server port addr "${server_name}")
+      local server_port=$(wb_nomad server port rpc  "${server_name}")
       if test -z "${servers_addresses}"
       then
-        servers_addresses="${servers_addresses} \"127.0.0.1:${port}\""
+        servers_addresses="\"${server_addr}:${server_port}\""
       else
-        servers_addresses="${servers_addresses}, \"127.0.0.1:${port}\""
+        servers_addresses="${servers_addresses}, \"${server_addr}:${server_port}\""
       fi
     fi
   done
+  # If NOMAD_ADDR is not unset and not empty, add it to the list of servers.
+  if ! test -z "${NOMAD_ADDR+set}" && test -n "${NOMAD_ADDR}"
+  then
+    local hostname
+    # Forcing the default port!
+    hostname="${NOMAD_ADDR#*://}" # Take out the "http://" part.
+    hostname="${hostname%:*}"     # Keep up to ":".
+    if test -z "${servers_addresses}"
+    then
+      servers_addresses="\"${hostname}:4647\""
+    else
+      servers_addresses="${servers_addresses}, \"${hostname}:4647\""
+    fi
+  fi
   # Config:
   # - Nomad agent configuration docs:
   # - - https://developer.hashicorp.com/nomad/docs/configuration
@@ -3616,7 +3639,7 @@ nomad_create_client_config() {
 region = "global"
 # Specifies the data center of the local agent. All members of a datacenter
 # should share a local LAN connection.
-datacenter = "loopback"
+datacenter = "${datacenter}"
 # Specifies the name of the local node. This value is used to identify
 # individual agents. When specified on a server, the name must be unique within
 # the region.
@@ -3643,7 +3666,7 @@ plugin_dir  = "${state_dir}/data/plugins"
 # bind all network services to the same address. It is also possible to bind the
 # individual services to different addresses using the "addresses" configuration
 # option. Dev mode (-dev) defaults to localhost.
-bind_addr = "127.0.0.1"
+bind_addr = "${addr}"
 # Specifies the network ports used for different services required by the Nomad
 # agent.
 ports = {
@@ -3670,14 +3693,14 @@ ports = {
 advertise {
   # The address to advertise for the HTTP interface. This should be reachable by
   # all the nodes from which end users are going to use the Nomad CLI tools.
-  http = "127.0.0.1"
+  http = "${addr}"
   # The address used to advertise to Nomad clients for connecting to Nomad
   # servers for RPC. This allows Nomad clients to connect to Nomad servers from
   # behind a NAT gateway. This address much be reachable by all Nomad client
   # nodes. When set, the Nomad servers will use the advertise.serf address for
   # RPC connections amongst themselves. Setting this value on a Nomad client has
   # no effect.
-  rpc = "127.0.0.1"
+  rpc = "${addr}"
 }
 # The tls stanza configures Nomad's TLS communication via HTTP and RPC to
 # enforce secure cluster communication between servers, clients, and between.
@@ -3874,6 +3897,17 @@ client {
     # working directory.
     disable_file_sandbox = false
   }
+
+  # Feature parity with the "nomadperf" cloud cluster.
+  host_volume "cgroup" {
+    path = "/sys/fs/cgroup"
+    read_only = true
+  }
+
+  # To use when resolving IPs.
+  #meta {
+  #  my_ip = "${addr}"
+  #}
 
 }
 

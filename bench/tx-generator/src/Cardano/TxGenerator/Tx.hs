@@ -7,8 +7,7 @@ module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters)
+import           Cardano.Api hiding (txId)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund
@@ -30,7 +29,7 @@ type CreateAndStore m era           = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -
 -- | 'CreateAndStoreList' is meant to represent building a transaction
 -- and presenting a function to carry out the needed side effects.
 -- This type alias is also only used in "Cardano.Benchmarking.Wallet".
--- The @split@ parameter seems to actualy be used for not much more
+-- The @split@ parameter seems to actually be used for not much more
 -- than lists and records containing lists.
 type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 
@@ -148,7 +147,7 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   (outputs, _)  = toStore split
 
 -- | 'genTx' seems to mostly be a wrapper for
--- 'Cardano.Api.TxBody.createAndValidateTransactionBody', which uses
+-- 'Cardano.Api.TxBody.createTransactionBody', which uses
 -- the 'Either' convention in lieu of e.g.
 -- 'Control.Monad.Trans.Except.ExceptT'. Then the pure function
 -- 'Cardano.Api.Tx.makeSignedTransaction' is composed with it and
@@ -170,7 +169,7 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent sbe

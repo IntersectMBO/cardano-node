@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator cannot infer the fallback constructor payload for remote inbound-governor assertions."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "remoteSt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "remoteSt"
+      ],
+      "type": "object"
+    }
+  }
+}

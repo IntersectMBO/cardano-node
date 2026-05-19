@@ -22,13 +22,15 @@ import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
 import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
+import           Cardano.Network.NodeToClient (NodeToClientVersion)
+import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (PeerSnapshotFile)
-import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
+import           Cardano.Node.Types (PeerSnapshotFile (..))
+import           Cardano.Slotting.Slot (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -40,16 +42,13 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion)
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
-import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
-import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 
 import           Prelude
 
+import           Control.Exception (Exception (..))
 import           Data.Map.Strict (Map)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text, pack)
@@ -108,10 +107,18 @@ data StartupTrace blk =
   --
   | NetworkConfigUpdateError Text
 
+  -- | Log network configuration update warning.
+  --
+  | NetworkConfigUpdateWarning Text
+
+  -- | Log network configuration update info.
+  --
+  | NetworkConfigUpdateInfo Text
+
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint CardanoLocalRootConfig)]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
                   (Maybe PeerSnapshotFile)
@@ -133,8 +140,28 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
-  | LedgerPeerSnapshotLoaded (Either (UseLedgerPeers, WithOrigin SlotNo) (WithOrigin SlotNo))
+  | LedgerPeerSnapshotLoaded SlotNo
+  -- | Log that RPC configuration has been updated
+  | RpcConfigUpdate Text
+  -- | Log RPC configuration update error
+  | RpcConfigUpdateError Text
+  -- | Log RPC is forcefully disabled after a RPC server crash.
+  | RpcForceDisabled
+
   | MovedTopLevelOption String
+
+data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile
+  deriving Show
+
+instance Exception LedgerPeerSnapshotError where
+  displayException (LedgerPeerSnapshotTooOld useLedgerAfterSlot peerSnapshotSlot (PeerSnapshotFile snapshotFile)) =
+      "The ledger peer snapshot slot "
+    <> show peerSnapshotSlot
+    <> " is older than the 'useLedgerAfterSlot' entry in the topology file: "
+    <> show useLedgerAfterSlot
+    <> ".\n"
+    <> "Possible fix: update the ledger peer snapshot file: " <> show snapshotFile
+
 
 data EnabledBlockForging
   = EnabledBlockForging
@@ -155,12 +182,13 @@ data BasicInfoCommon = BasicInfoCommon {
   , biNodeStartTime :: UTCTime
   }
 
+-- Fields of this type are made strict to be sure no path from GC roots to genesis is retained
 data BasicInfoShelleyBased = BasicInfoShelleyBased {
-    bisEra               :: Text
-  , bisSystemStartTime   :: UTCTime
-  , bisSlotLength        :: NominalDiffTime
-  , bisEpochLength       :: Word64
-  , bisSlotsPerKESPeriod :: Word64
+    bisEra               :: !Text
+  , bisSystemStartTime   :: !UTCTime
+  , bisSlotLength        :: !NominalDiffTime
+  , bisEpochLength       :: !Word64
+  , bisSlotsPerKESPeriod :: !Word64
   }
 
 data BasicInfoByron = BasicInfoByron {
@@ -172,8 +200,6 @@ data BasicInfoByron = BasicInfoByron {
 data BasicInfoNetwork = BasicInfoNetwork {
     niAddresses     :: [SocketOrSocketInfo]
   , niDiffusionMode :: DiffusionMode
-  , niDnsProducers  :: [DnsSubscriptionTarget]
-  , niIpProducers   :: IPSubscriptionTarget
   }
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
@@ -205,7 +231,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
         let DegenLedgerConfig cfgShelley = configLedger cfg
         in getSystemStartShelley cfgShelley
       Api.CardanoBlockType ->
-        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway = configLedger cfg
+        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway cfgDijkstra = configLedger cfg
         in minimum [ getSystemStartByron
                    , getSystemStartShelley cfgShelley
                    , getSystemStartShelley cfgAllegra
@@ -213,6 +239,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
                    , getSystemStartShelley cfgAlonzo
                    , getSystemStartShelley cfgBabbage
                    , getSystemStartShelley cfgConway
+                   , getSystemStartShelley cfgDijkstra
                    ]
 
   getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg

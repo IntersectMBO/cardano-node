@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.16 -- Apr 2026
+
+* Added a `--testnet-config-dir` flag to `tx-generator json_highlevel` that auto-discovers connection settings config (socket path, signing key, node config, target nodes) from a `cardano-testnet` output directory.
+
 ## 2.15 -- Mar 2025
 
 * A new cabal flag `withplutuslib` is added, enabling import and re-compilation of Plutus scripts from `plutus-scripts-bench` - default: false; use for dev/test of new benchmarks only.

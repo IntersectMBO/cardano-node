@@ -41,7 +41,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview, v10Preview
+  , v8Preview, v9Preview
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
@@ -70,10 +70,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , chaindb
 
   -- Node
-  -- LMDB True or False.
-  , lmdb
-  -- Node's p2p flag.
-  , p2pOn, p2pOff
+  -- LMDB or LSMT True or False.
+  , lmdb, lsmt
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's tracer type.
@@ -99,8 +97,8 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Cluster params.
   , clusterMinimunStorage, ssdDirectory, clusterKeepRunningOn
-  , nomadNamespace, nomadClass, nomadResources, nomadHostVolume, nomadSSHLogsOn
-  , awsInstanceTypes, usePublicRouting
+  , nomadNamespace, nomadClass, nomadResources, appendNomadHostVolume
+  , nomadSSHLogsOn, awsInstanceTypes, usePublicRouting
 
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
@@ -113,7 +111,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
 ) where
 
-import           Prelude hiding (id)
+import           Prelude
 import           Data.Maybe (isJust)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
@@ -179,7 +177,9 @@ empty = Types.Profile {
   , Types.chaindb = Nothing
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
-    , Types.verbatim = Types.NodeVerbatim Nothing
+    , Types.utxo_lsmt = False
+    , Types.ssd_directory = Nothing
+    , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
     , Types.tracing_backend = ""
     , Types.rts_flags_override = []
@@ -204,31 +204,7 @@ empty = Types.Profile {
     , Types.ekg = False
     , Types.withresources = False
   }
-  , Types.cluster = Types.Cluster {
-      Types.nomad = Types.ClusterNomad {
-        Types.namespace = "default"
-      , Types.nomad_class = ""
-      , Types.resources = Types.ByNodeType {
-          Types.producer = Types.Resources 0 0 0
-        , Types.explorer = Just $ Types.Resources 0 0 0
-        }
-      , Types.host_volumes = Nothing
-      , Types.fetch_logs_ssh = False
-      }
-    , Types.aws = Types.ClusterAWS {
-        Types.instance_type = Types.ByNodeType {
-          Types.producer = ""
-        , Types.explorer = Nothing
-        }
-      , Types.use_public_routing = False
-      }
-    , Types.minimun_storage = Just $ Types.ByNodeType {
-        Types.producer = 0
-      , Types.explorer = Nothing
-      }
-    , Types.ssd_directory = Nothing
-    , Types.keep_running = False
-  }
+  , Types.cluster = Nothing
   , Types.analysis = Types.Analysis {
       Types.analysisType = Nothing
     , Types.cluster_base_startup_overhead_s = 0
@@ -443,9 +419,6 @@ v8Preview = helper_addOverlayOrDie "v8-preview"
 v9Preview :: HasCallStack => Types.Profile -> Types.Profile
 v9Preview = helper_addOverlayOrDie "v9-preview"
 
-v10Preview :: HasCallStack => Types.Profile -> Types.Profile
-v10Preview = helper_addOverlayOrDie "v10-preview"
-
 -- Budget:
 
 -- Steps:
@@ -620,24 +593,12 @@ node f p = p {Types.node = f (Types.node p)}
 lmdb :: Types.Profile -> Types.Profile
 lmdb = node (\n -> n {Types.utxo_lmdb = True})
 
--- P2P.
--------
+lsmt :: Types.Profile -> Types.Profile
+lsmt = node (\n -> n {Types.utxo_lsmt = True})
 
-p2pOn :: HasCallStack => Types.Profile -> Types.Profile
-p2pOn = node
-  (\n ->
-    if Types.verbatim n /= Types.NodeVerbatim Nothing
-    then error "p2pOn: `verbatim` already set (not Nothing)."
-    else n {Types.verbatim = Types.NodeVerbatim (Just True)}
-  )
+ssdDirectory :: String -> Types.Profile -> Types.Profile
+ssdDirectory str = node (\n -> n {Types.ssd_directory = Just str})
 
-p2pOff :: HasCallStack => Types.Profile -> Types.Profile
-p2pOff = node
-  (\n ->
-    if Types.verbatim n /= Types.NodeVerbatim Nothing
-    then error "p2pOff: `verbatim` already set (not Nothing)."
-    else n {Types.verbatim = Types.NodeVerbatim Nothing}
-  )
 
 -- Tracer.
 ----------
@@ -846,14 +807,41 @@ tracerWithresources = tracer (\t -> t {Types.withresources = True})
 -- Cluster.
 --------------------------------------------------------------------------------
 
+clusterEmpty :: Types.Cluster
+clusterEmpty =
+  Types.Cluster {
+    Types.nomad = Types.ClusterNomad {
+      Types.namespace = "default"
+    , Types.nomad_class = ""
+    , Types.resources = Types.ByNodeType {
+        Types.producer = Types.Resources 0 0 0
+      , Types.explorer = Just $ Types.Resources 0 0 0
+      }
+    , Types.host_volumes = Nothing
+    , Types.fetch_logs_ssh = False
+    }
+  , Types.aws = Types.ClusterAWS {
+      Types.instance_type = Types.ByNodeType {
+        Types.producer = ""
+      , Types.explorer = Nothing
+      }
+    , Types.use_public_routing = False
+    }
+  , Types.minimun_storage = Just $ Types.ByNodeType {
+      Types.producer = 0
+    , Types.explorer = Nothing
+    }
+  , Types.keep_running = False
+  }
+
 cluster :: (Types.Cluster -> Types.Cluster) -> Types.Profile -> Types.Profile
-cluster f p = p {Types.cluster = f (Types.cluster p)}
+cluster f p = p {Types.cluster = Just $ case Types.cluster p of
+                                          Nothing -> f clusterEmpty
+                                          (Just c) -> f c
+              }
 
 clusterMinimunStorage :: Maybe (Types.ByNodeType Int) -> Types.Profile -> Types.Profile
 clusterMinimunStorage ms = cluster (\c -> c {Types.minimun_storage = ms})
-
-ssdDirectory :: String -> Types.Profile -> Types.Profile
-ssdDirectory str = cluster (\c -> c {Types.ssd_directory = Just str})
 
 clusterKeepRunningOn :: Types.Profile -> Types.Profile
 clusterKeepRunningOn = cluster (\c -> c {Types.keep_running = True})
@@ -870,13 +858,12 @@ nomadClass nc = nomad (\n -> n {Types.nomad_class = nc})
 nomadResources :: Types.ByNodeType Types.Resources -> Types.Profile -> Types.Profile
 nomadResources r = nomad (\n -> n {Types.resources = r})
 
-nomadHostVolume :: Types.HostVolume -> Types.Profile -> Types.Profile
-nomadHostVolume hv = nomad (\n ->
-    let mhvs = case Types.host_volumes n of
-                 Nothing -> Just [hv]
-                 (Just hvs) -> Just $ hvs ++ [hv]
-    in n {Types.host_volumes = mhvs}
-  )
+appendNomadHostVolume :: Types.ByNodeType [Types.HostVolume] -> Types.Profile -> Types.Profile
+appendNomadHostVolume h = nomad (\n -> n {Types.host_volumes = Just $
+                                  case Types.host_volumes n of
+                                    Nothing -> h
+                                    (Just bnt) -> bnt <> h
+                                })
 
 nomadSSHLogsOn :: Types.Profile -> Types.Profile
 nomadSSHLogsOn = nomad (\n -> n {Types.fetch_logs_ssh = True})

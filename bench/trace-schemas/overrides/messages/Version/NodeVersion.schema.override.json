@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator does not infer payload fields for NodeVersionTrace."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "applicationName": {
+          "type": "string"
+        },
+        "applicationVersion": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "compilerName": {
+          "type": "string"
+        },
+        "compilerVersion": {
+          "type": "string"
+        },
+        "gitRevision": {
+          "type": "string"
+        },
+        "osName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "applicationName",
+        "applicationVersion",
+        "architecture",
+        "compilerName",
+        "compilerVersion",
+        "gitRevision",
+        "osName"
+      ],
+      "type": "object"
+    }
+  }
+}

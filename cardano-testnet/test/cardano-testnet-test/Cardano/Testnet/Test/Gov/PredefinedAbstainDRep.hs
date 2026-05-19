@@ -12,7 +12,6 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
 import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParamsL)
@@ -26,7 +25,6 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import           Data.Default.Class
-import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
@@ -65,7 +63,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Predefined Abstain DRep/"'@
 hprop_check_predefined_abstain_drep :: Property
-hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -75,11 +73,11 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = 3
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = 3
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
-      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -87,7 +85,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -183,7 +181,7 @@ desiredPoolNumberProposalTest
   -> Integer -- ^ Minimum number of epochs to wait before checking the result
   -> Maybe Integer -- ^ What the expected result is of the change (if anything)
   -> Integer -- ^ Maximum number of epochs to wait while waiting for the result
-  -> m (String, Word16)
+  -> m (TxId, Word16)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
   let sbe = convert ceo
@@ -225,7 +223,7 @@ makeDesiredPoolNumberChangeProposal
                             -- governance action if any.
   -> Word16 -- ^ What to change the @desiredPoolNumber@ to
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> m (String, Word16)
+  -> m (TxId, Word16)
 makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
                                     prevGovActionInfo desiredPoolNumber wallet = do
 
@@ -289,17 +287,17 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 1)
+      $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   pure (governanceActionTxId, governanceActionIndex)
 
 -- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
--- a default DRep (from the ones created by 'cardanoTestnetDefault')
+-- a default DRep (from the ones created by 'createAndRunTestnet')
 type DefaultDRepVote = (String, Int)
 
 -- | Create and issue votes for (or against) a government proposal with default
--- Delegate Representative (DReps created by 'cardanoTestnetDefault') using @cardano-cli@.
+-- Delegate Representative (DReps created by 'createAndRunTestnet') using @cardano-cli@.
 voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
@@ -307,7 +305,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
-  -> String -- ^ Transaction id of the governance action to vote.
+  -> TxId -- ^ Transaction id of the governance action to vote.
   -> Word16 -- ^ Index of the governance action to vote in the transaction.
   -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions

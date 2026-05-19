@@ -21,6 +21,7 @@ import           Cardano.Benchmarking.Tracer (initNullTracers)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Utils (mkTxIn)
 
 import           Prelude
 
@@ -76,7 +77,7 @@ testScript protocolFile submitMode =
   , InitWallet doneWallet
   , DefineSigningKey key skey
   , AddFund era genesisWallet
-    (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
+    (mkTxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0")
     (L.Coin 90000000000000) key
   , createChange genesisWallet splitWallet1 1 10
   , createChange splitWallet1 splitWallet2 10 30 -- 10 TXs with 30 outputs -> in total 300 outputs

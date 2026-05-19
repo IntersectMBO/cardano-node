@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -12,6 +13,7 @@ import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
+import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
@@ -19,14 +21,13 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeSta
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..),
-                   TxMeasure)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints)
-import           Ouroboros.Consensus.Node.Tracers (ForgedBlock)
-import           Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson)
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Peras.SelectView
+import           Ouroboros.Consensus.Protocol.Abstract (ReasonForSwitch, SelectView,
+                   SelectViewReasonForSwitch, TiebreakerView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Network.Block (Serialised)
 
@@ -54,13 +55,15 @@ type TraceConstraints blk =
     , ToObject (LedgerError blk)
     , ToObject (LedgerEvent blk)
     , ToObject (OtherHeaderEnvelopeError blk)
-    , ToObject (SelectView (BlockProtocol blk))
+    , ToObject (WeightedSelectView (BlockProtocol blk))
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotForge blk)
     , ToObject (ForgeStateUpdateError blk)
 
     , ToJSON (BlockNodeToClientVersion blk)
     , ToJSON (BlockNodeToNodeVersion blk)
+    , ToJSON (HeaderHash blk)
+
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
     , LogFormatting (Header blk)
@@ -68,13 +71,12 @@ type TraceConstraints blk =
     , LogFormatting (LedgerUpdate blk)
     , LogFormatting (LedgerWarning blk)
     , LogFormatting (OtherHeaderEnvelopeError blk)
-    , LogFormatting (SelectView (BlockProtocol blk))
+    , LogFormatting (WeightedSelectView (BlockProtocol blk))
     , LogFormatting (ValidationErr (BlockProtocol blk))
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
-    , LogFormatting (Set (Credential 'Staking))
-    , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
-
-    , ConsensusJson (HeaderHash blk)
-    , ConsensusJson (TxMeasure blk)
+    , LogFormatting (Set (Credential Staking))
+    , LogFormatting (NonEmpty.NonEmpty (KeyHash Staking))
+    , LogFormatting (Either (WithEmptyFragmentReasonForSwitch (WeightedSelectView (BlockProtocol blk))) (SelectViewReasonForSwitch (BlockProtocol blk)))
+    , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
     )

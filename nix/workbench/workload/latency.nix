@@ -1,4 +1,5 @@
 { pkgs
+, haskellProject
 , profile
 , nodeSpecs
 , workload

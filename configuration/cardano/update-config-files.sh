@@ -30,21 +30,19 @@ copyCfg "mainnet-alonzo-genesis.json"
 copyCfg "mainnet-byron-genesis.json"
 copyCfg "mainnet-checkpoints.json"
 copyCfg "mainnet-config.json"
-copyCfg "mainnet-config-bp.json"
+copyCfg "mainnet-config-legacy.json"
 copyCfg "mainnet-conway-genesis.json"
 copyCfg "mainnet-peer-snapshot.json"
 copyCfg "mainnet-shelley-genesis.json"
 copyCfg "mainnet-topology.json"
-copyCfg "mainnet-topology.json"
-
-# IohkNix new tracing config placeholder
-# copyCfg "mainnet-config-new-tracing.json"
 
 # Testnet-template
 copyTmplCfg "alonzo.json"
 copyTmplCfg "byron.json"
 copyTmplCfg "config.json"
+copyTmplCfg "config-legacy.json"
 copyTmplCfg "conway.json"
+copyTmplCfg "dijkstra.json"
 copyTmplCfg "shelley.json"
 copyTmplCfg "topology-empty-p2p.json"
 

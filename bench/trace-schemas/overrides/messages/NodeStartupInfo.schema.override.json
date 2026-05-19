@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator does not infer payload fields for NodeStartupInfo, which is traced through its ToJSON instance."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "suiEpochLength": {
+          "type": "integer"
+        },
+        "suiEra": {
+          "type": "string"
+        },
+        "suiSlotLength": {
+          "type": "number"
+        },
+        "suiSlotsPerKESPeriod": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "suiEpochLength",
+        "suiEra",
+        "suiSlotLength",
+        "suiSlotsPerKESPeriod"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -1,5 +1,44 @@
 # ChangeLog
 
+## NEXT
+
+## 0.4.0 (April 2026)
+* RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
+  since Node 10.6.2; fixes the RTView-enabled build.
+* Introduce secure communication via HTTPS for EKG and Prometheus metric servers, enabled
+  by a new boolean `epForceSSL` in the tracer configuration, per-endpoint.
+  The specified port will either speak HTTP or HTTPS depending on the flag.
+    "hasEKG":        {"epHost": "127.0.0.1", "epPort": 3100, "epForceSSL": true}
+    "hasPrometheus": {"epHost": "127.0.0.1", "epPort": 3200, "epForceSSL": true}
+  `warp-tls` run conditionally based on this value.
+* Certificates (TLS certs, keys, and (optional) chains field) specified by optional field
+  in the tracer configuration.
+     "tlsCertificate":
+       { "certificateFile": "/path/to/certificate.pem"
+       , "certificateKeyFile": "/path/to/key.pem"
+       , "certificateChain": ["/path/to/intermediate1.pem", "/path/to/intermediate2.pem"]
+       }
+* Integrate a timeseries store as a REST API:
+   - Tweak ekg-forward to relay node-emanated metrics to the timeseries store
+   - The store can be queried, pruned and configured dynamically via the API
+   - The store can be pruned periodically by an automatic process (configurable)
+
+## 0.3.6 (November 2025)
+* Implement Prometheus HTTP service discovery (SD) under the URL `/targets`
+* Add optional config field `"prometheusLabels": { "<labelname>": "<labelvalue>", ... }` for custom labels to be attached with Prometheus SD
+* Use `TracerTrace.forMachine` directly instead of going via derived `TracerTrace.toJSON`; remove unused `TracerTrace` JSON instances
+* Use proper 'camelCase' for machine-readable `TracerTrace`
+* Proper tracing (vs. dumping to stdout) for `showProblemIfAny` and for forwarding connection interruptions
+* Remove redundant `runInLoop` in favour of `trace-dispatcher`'s implementation
+* Split up journal handler implementation into internal modules `Systemd` and `NoSystemd` (maintenance)
+
+## 0.3.5 (October, 2025)
+* Updated to `ekg-forward-1.0`, `ouroboros-network-0.22.3`, `ouroboros-network-api-0.16` and `ouroboros-network-0.22.3`.
+* Updated metric names
+
+## 0.3.4 (July, 2025)
+* Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
+
 ## 0.3.3 (April, 2025)
 * Redesigned `Cardano.Tracer.Handlers.Notifications.Timer` interface with IO-actions instead of TVars.
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
@@ -24,7 +63,7 @@
 ## 0.3 (September 26, 2024)
 
 * Fix the creation of empty logs.
-* Abondon `snap` webserver in favour of `wai`/`warp` for Prometheus and EKG Monitoring.
+* Abandon `snap` webserver in favour of `wai`/`warp` for Prometheus and EKG Monitoring.
 * Add dynamic routing to EKG stores of all connected nodes.
 * Derive URL compliant routes from connected node names (instead of plain node names).
 * Remove the requirement of two distinct ports for the EKG backend (changing `hasEKG` config type).

@@ -7,17 +7,18 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeState
   , askNSetNodeState
   ) where
 
-import           Data.Aeson
-import           Data.Aeson.Types (Parser)
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 
-import           Control.Monad.Extra (whenJustM)
+import           Control.Monad.Extra (unless, whenJustM)
+import           Data.Aeson
+import           Data.Aeson.Types (Parser)
 import           Data.Text (Text, pack, unpack)
+import qualified Data.Vector as V (length, (!))
 import           Text.Printf (printf)
 
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
@@ -70,9 +71,8 @@ instance FromJSON NodeStateWrapper where
     tag :: Text <- obj .: "tag"
     unless (tag == "NodeAddBlock") do
       fail ("parseJSON @NodeStateWrapper: Expected tag 'NodeAddBlock', but got: " ++ unpack tag)
-    contents <- obj .: "contents"
-    withArray "contents" \arr -> do
-      unless (V.length arr == 3) do
-        fail ("parseJSON @NodeStateWrapper: Expected contents array of length 3, but got: " ++ show arr)
-      double <- parseJSON (arr V.! 2)
-      pure (NodeStateWrapper double)
+    arr <- obj .: "contents"
+    unless (V.length arr == 3) do
+      fail ("parseJSON @NodeStateWrapper: Expected contents array of length 3, but got: " ++ show arr)
+    double <- parseJSON (arr V.! 2)
+    pure (NodeStateWrapper double)

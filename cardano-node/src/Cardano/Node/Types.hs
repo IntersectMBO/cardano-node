@@ -16,6 +16,7 @@ module Cardano.Node.Types
   , GenesisFile(..)
   , PeerSnapshotFile (..)
   , CheckpointsFile(..)
+  , KESSource(..)
   , ProtocolFilepaths (..)
   , hasProtocolFile
   , GenesisHash(..)
@@ -34,6 +35,7 @@ module Cardano.Node.Types
   , NodeShelleyProtocolConfiguration(..)
   , NodeAlonzoProtocolConfiguration(..)
   , NodeConwayProtocolConfiguration(..)
+  , NodeDijkstraProtocolConfiguration(..)
   , NodeCheckpointsConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , renderVRFPrivateKeyFilePermissionError
@@ -44,9 +46,10 @@ import           Cardano.Api
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..))
 
 import           Control.Exception
 import           Data.Aeson
@@ -54,7 +57,6 @@ import           Data.ByteString (ByteString)
 import           Data.Maybe (isJust)
 import           Data.Monoid (Last (..))
 import           Data.String (IsString)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable
 import           Data.Word (Word16, Word8)
@@ -166,11 +168,16 @@ class AdjustFilePaths a where
   adjustFilePaths :: (FilePath -> FilePath) -> a -> a
 
 
+data KESSource
+  = KESKeyFilePath FilePath
+  | KESAgentSocketPath FilePath
+  deriving (Eq, Show)
+
 data ProtocolFilepaths =
      ProtocolFilepaths {
        byronCertFile        :: !(Maybe FilePath)
      , byronKeyFile         :: !(Maybe FilePath)
-     , shelleyKESFile       :: !(Maybe FilePath)
+     , shelleyKESSource     :: !(Maybe KESSource)
      , shelleyVRFFile       :: !(Maybe FilePath)
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
@@ -183,14 +190,14 @@ hasProtocolFile :: ProtocolFilepaths -> Bool
 hasProtocolFile ProtocolFilepaths {
     byronCertFile,
     byronKeyFile,
-    shelleyKESFile,
+    shelleyKESSource,
     shelleyVRFFile,
     shelleyCertFile,
     shelleyBulkCredsFile
   }
   =  isJust byronCertFile
   || isJust byronKeyFile
-  || isJust shelleyKESFile
+  || isJust shelleyKESSource
   || isJust shelleyVRFFile
   || isJust shelleyCertFile
   || isJust shelleyBulkCredsFile
@@ -207,6 +214,7 @@ data NodeProtocolConfiguration =
     NodeShelleyProtocolConfiguration
     NodeAlonzoProtocolConfiguration
     NodeConwayProtocolConfiguration
+    (Maybe NodeDijkstraProtocolConfiguration)
     NodeHardForkProtocolConfiguration
     NodeCheckpointsConfiguration
   deriving (Eq, Show)
@@ -232,6 +240,13 @@ data NodeConwayProtocolConfiguration =
        -- to enforce a maximum protocol version of 8 to avoid
        -- a permanent hard fork.
      , npcConwayGenesisFileHash :: !(Maybe GenesisHash)
+     }
+  deriving (Eq, Show)
+
+data NodeDijkstraProtocolConfiguration =
+     NodeDijkstraProtocolConfiguration {
+       npcDijkstraGenesisFile     :: !GenesisFile
+     , npcDijkstraGenesisFileHash :: !(Maybe GenesisHash)
      }
   deriving (Eq, Show)
 
@@ -357,6 +372,9 @@ data NodeHardForkProtocolConfiguration =
 
      , npcTestConwayHardForkAtEpoch         :: Maybe EpochNo
      , npcTestConwayHardForkAtVersion       :: Maybe Word
+
+     , npcTestDijkstraHardForkAtEpoch         :: Maybe EpochNo
+     , npcTestDijkstraHardForkAtVersion       :: Maybe Word
      }
   deriving (Eq, Show)
 
@@ -425,12 +443,13 @@ newtype TopologyFile = TopologyFile
   deriving newtype (Show, Eq)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch pccp) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pcd pch pccp) =
     NodeProtocolConfigurationCardano
       (adjustFilePaths f pcb)
       (adjustFilePaths f pcs)
       (adjustFilePaths f pca)
       (adjustFilePaths f pcc)
+      (adjustFilePaths f <$> pcd)
       pch
       (adjustFilePaths f pccp)
 
@@ -458,6 +477,12 @@ instance AdjustFilePaths NodeConwayProtocolConfiguration where
                       } =
     x { npcConwayGenesisFile = adjustFilePaths f npcConwayGenesisFile }
 
+instance AdjustFilePaths NodeDijkstraProtocolConfiguration where
+  adjustFilePaths f x@NodeDijkstraProtocolConfiguration {
+                        npcDijkstraGenesisFile
+                      } =
+    x { npcDijkstraGenesisFile = adjustFilePaths f npcDijkstraGenesisFile }
+
 instance AdjustFilePaths NodeCheckpointsConfiguration where
   adjustFilePaths f x@NodeCheckpointsConfiguration {
                         npcCheckpointsFile
@@ -479,6 +504,16 @@ instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
 
 instance AdjustFilePaths a => AdjustFilePaths (Last a) where
   adjustFilePaths f = fmap (adjustFilePaths f)
+
+instance AdjustFilePaths (File a b) where
+  adjustFilePaths f (File p) = File $ f p
+
+instance Functor f => AdjustFilePaths (RpcConfigF f) where
+  adjustFilePaths f (RpcConfig isEnabled rpcSocketPath nodeSocketPath) =
+    RpcConfig
+      isEnabled
+      (adjustFilePaths f <$> rpcSocketPath)
+      (adjustFilePaths f <$> nodeSocketPath)
 
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath

@@ -1,264 +1,578 @@
 {
-  "Producers": [
+  "localRoots": [
     {
-      "addr": "127.0.0.1",
-      "port": 30000,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30000
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30001,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30001
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30002,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30002
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30003,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30003
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30004,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30004
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30005,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30005
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30006,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30006
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30007,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30007
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30008,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30008
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30009,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30009
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30010,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30010
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30011,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30011
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30012,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30012
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30013,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30013
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30014,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30014
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30015,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30015
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30016,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30016
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30017,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30017
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30018,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30018
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30019,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30019
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30020,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30020
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30021,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30021
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30022,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30022
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30023,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30023
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30024,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30024
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30025,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30025
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30026,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30026
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30027,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30027
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30028,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30028
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30029,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30029
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30030,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30030
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30031,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30031
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30032,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30032
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30033,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30033
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30034,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30034
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30035,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30035
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30036,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30036
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30037,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30037
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30038,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30038
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30039,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30039
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30040,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30040
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30041,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30041
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30042,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30042
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30043,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30043
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30044,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30044
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30045,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30045
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30046,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30046
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30047,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30047
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30048,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30048
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30049,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30049
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30050,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30050
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     },
     {
-      "addr": "127.0.0.1",
-      "port": 30051,
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30051
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
       "valency": 1
     }
-  ]
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
 }

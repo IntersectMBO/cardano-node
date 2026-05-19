@@ -9,9 +9,12 @@ module Testnet.Process.Run
   , execCreateScriptContext
   , execCreateScriptContext'
   , execCliStdoutToJson
+  , execKESAgentControl
+  , execKESAgentControl_
   , initiateProcess
   , procCli
   , procNode
+  , procKESAgent
   , procSubmitApi
   , procChairman
   , mkExecConfig
@@ -41,6 +44,8 @@ import           System.IO
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
 import           System.Process
+
+import           Testnet.Process.RunIO (liftIOAnnotated)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
@@ -122,6 +127,7 @@ execCliStdoutToJson :: ()
   -> m a
 execCliStdoutToJson execConfig cmd = GHC.withFrozenCallStack $ do
   result <- execCli' execConfig cmd
+  H.note_ result
   H.leftFail . Aeson.eitherDecode $ fromString result
 
 -- | Create a 'CreateProcess' describing how to start the cardano-cli process
@@ -142,7 +148,43 @@ procNode
   -- ^ Arguments to the CLI command
   -> m CreateProcess
   -- ^ Captured stdout
-procNode = GHC.withFrozenCallStack $ H.procFlex "cardano-node" "CARDANO_NODE"
+procNode args = GHC.withFrozenCallStack $ do
+  process <- H.procFlex "cardano-node" "CARDANO_NODE" args
+  H.annotate . ("━━━━ command ━━━━\n" <>)$
+    case IO.cmdspec process of
+      IO.ShellCommand cmd -> cmd
+      IO.RawCommand cmd cmdArgs -> cmd <> " " <> unwords cmdArgs
+  pure process
+
+-- | Create a 'CreateProcess' describing how to start the kes-agent process
+-- and an argument list.
+procKESAgent
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+  -- ^ Captured stdout
+procKESAgent args = GHC.withFrozenCallStack $ do
+  process <- H.procFlex "kes-agent" "KES_AGENT" args
+  H.annotate . ("━━━━ command ━━━━\n" <>)$
+    case IO.cmdspec process of
+      IO.ShellCommand cmd -> cmd
+      IO.RawCommand cmd cmdArgs -> cmd <> " " <> unwords cmdArgs
+  pure process
+
+-- | Run kes-agent-control, returning the stdout
+execKESAgentControl
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -> m String
+execKESAgentControl = GHC.withFrozenCallStack $ H.execFlex "kes-agent-control" "KES_AGENT_CONTROL"
+
+-- | Run kes-agent-control, discarding return value
+execKESAgentControl_
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -> m ()
+execKESAgentControl_ = GHC.withFrozenCallStack $ void . execKESAgentControl
 
 -- | Create a 'CreateProcess' describing how to start the cardano-submit-api process
 -- and an argument list.
@@ -226,7 +268,7 @@ initiateProcess
   -> ExceptT ProcessError m (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 initiateProcess cp = do
   (mhStdin, mhStdout, mhStderr, hProcess)
-    <- handlesExceptT resourceAndIOExceptionHandlers . liftIO $ IO.createProcess cp
+    <- handlesExceptT resourceAndIOExceptionHandlers . liftIOAnnotated $ IO.createProcess cp
 
   releaseKey <- handlesExceptT resourceAndIOExceptionHandlers
                   . register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
@@ -237,4 +279,3 @@ resourceAndIOExceptionHandlers :: Applicative m => [Handler m ProcessError]
 resourceAndIOExceptionHandlers = [ Handler $ pure . ProcessIOException
                                  , Handler $ pure . ResourceException
                                  ]
-

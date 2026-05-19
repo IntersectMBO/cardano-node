@@ -10,4 +10,6 @@ python3Packages.buildPythonPackage {
   propagatedBuildInputs = [
     cardano-cli
   ];
+  pyproject = true;
+  build-system = [ python3Packages.setuptools ];
 }

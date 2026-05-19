@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -8,27 +9,30 @@ module Test.Cardano.Node.POM
 
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
+import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
+import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (makeRpcConfig)
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
-import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
-                   DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 
+import           Data.Bifunctor (first)
 import           Data.Monoid (Last (..))
+import           Data.String
 import           Data.Text (Text)
 
 import           Hedgehog (Property, discover, withTests, (===))
@@ -89,19 +93,21 @@ testNodeConwayProtocolConfiguration =
 testNodeHardForkProtocolConfiguration :: NodeHardForkProtocolConfiguration
 testNodeHardForkProtocolConfiguration =
   NodeHardForkProtocolConfiguration
-    { npcExperimentalHardForksEnabled = True
-    , npcTestShelleyHardForkAtEpoch   = Nothing
-    , npcTestShelleyHardForkAtVersion = Nothing
-    , npcTestAllegraHardForkAtEpoch   = Nothing
-    , npcTestAllegraHardForkAtVersion = Nothing
-    , npcTestMaryHardForkAtEpoch      = Nothing
-    , npcTestMaryHardForkAtVersion    = Nothing
-    , npcTestAlonzoHardForkAtEpoch    = Nothing
-    , npcTestAlonzoHardForkAtVersion  = Nothing
-    , npcTestBabbageHardForkAtEpoch   = Nothing
-    , npcTestBabbageHardForkAtVersion = Nothing
-    , npcTestConwayHardForkAtEpoch    = Nothing
-    , npcTestConwayHardForkAtVersion  = Nothing
+    { npcExperimentalHardForksEnabled  = True
+    , npcTestShelleyHardForkAtEpoch    = Nothing
+    , npcTestShelleyHardForkAtVersion  = Nothing
+    , npcTestAllegraHardForkAtEpoch    = Nothing
+    , npcTestAllegraHardForkAtVersion  = Nothing
+    , npcTestMaryHardForkAtEpoch       = Nothing
+    , npcTestMaryHardForkAtVersion     = Nothing
+    , npcTestAlonzoHardForkAtEpoch     = Nothing
+    , npcTestAlonzoHardForkAtVersion   = Nothing
+    , npcTestBabbageHardForkAtEpoch    = Nothing
+    , npcTestBabbageHardForkAtVersion  = Nothing
+    , npcTestConwayHardForkAtEpoch     = Nothing
+    , npcTestConwayHardForkAtVersion   = Nothing
+    , npcTestDijkstraHardForkAtEpoch   = Nothing
+    , npcTestDijkstraHardForkAtVersion = Nothing
     }
 
 testNodeCheckpointsConfiguration :: NodeCheckpointsConfiguration
@@ -118,6 +124,7 @@ testNodeProtocolConfiguration =
     testNodeShelleyProtocolConfiguration
     testNodeAlonzoProtocolConfiguration
     testNodeConwayProtocolConfiguration
+    Nothing -- Dijkstra configuration
     testNodeHardForkProtocolConfiguration
     testNodeCheckpointsConfiguration
 
@@ -147,6 +154,9 @@ testPartialYamlConfig =
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
     , pncChainSyncIdleTimeout = mempty
+    , pncMempoolTimeoutSoft = mempty
+    , pncMempoolTimeoutHard = mempty
+    , pncMempoolTimeoutCapacity = mempty
     , pncAcceptedConnectionsLimit = mempty
     , pncDeadlineTargetOfRootPeers = mempty
     , pncDeadlineTargetOfKnownPeers = mempty
@@ -163,13 +173,15 @@ testPartialYamlConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = mempty
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncRpcConfig = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -198,6 +210,9 @@ testPartialCliConfig =
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
     , pncChainSyncIdleTimeout = mempty
+    , pncMempoolTimeoutSoft = mempty
+    , pncMempoolTimeoutHard = mempty
+    , pncMempoolTimeoutCapacity = mempty
     , pncAcceptedConnectionsLimit = mempty
     , pncDeadlineTargetOfRootPeers = mempty
     , pncDeadlineTargetOfKnownPeers = mempty
@@ -214,13 +229,15 @@ testPartialCliConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncRpcConfig = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -228,6 +245,7 @@ eExpectedConfig :: Either Text NodeConfiguration
 eExpectedConfig = do
   traceOptions <- partialTraceSelectionToEither
                     (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+  ncRpcConfig <- first fromString $ makeRpcConfig mempty
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
     , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
@@ -251,6 +269,9 @@ eExpectedConfig = do
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
     , ncChainSyncIdleTimeout = NoTimeoutOverride
+    , ncMempoolTimeoutSoft = 1.0
+    , ncMempoolTimeoutHard = 1.5
+    , ncMempoolTimeoutCapacity = 5.0
     , ncAcceptedConnectionsLimit =
         AcceptedConnectionsLimit
           { acceptedConnectionsHardLimit = 512
@@ -272,12 +293,14 @@ eExpectedConfig = do
     , ncSyncTargetOfEstablishedBigLedgerPeers = 40
     , ncSyncTargetOfActiveBigLedgerPeers = 30
     , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
-    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncRpcConfig
+    , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
+    , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     }
 
 -- -----------------------------------------------------------------------------

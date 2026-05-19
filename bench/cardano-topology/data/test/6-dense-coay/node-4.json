@@ -9,7 +9,7 @@
       ],
       "advertise": false,
       "trustable": true,
-      "valency": 3
+      "valency": 1
     },
     {
       "accessPoints": [
@@ -20,7 +20,7 @@
       ],
       "advertise": false,
       "trustable": true,
-      "valency": 3
+      "valency": 1
     },
     {
       "accessPoints": [
@@ -31,7 +31,7 @@
       ],
       "advertise": false,
       "trustable": true,
-      "valency": 3
+      "valency": 1
     }
   ],
   "publicRoots": [],

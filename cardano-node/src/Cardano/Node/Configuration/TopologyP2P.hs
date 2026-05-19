@@ -1,49 +1,37 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes #-}
+
+-- needed for instance AdjustFilePaths CardanoNetworkTopology
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.TopologyP2P
-  ( TopologyError(..)
-  , NetworkTopology(..)
-  , PublicRootPeers(..)
-  , LocalRootPeersGroup(..)
-  , LocalRootPeersGroups(..)
-  , RootConfig(..)
-  , NodeHostIPAddress(..)
-  , NodeHostIPv4Address(..)
-  , NodeHostIPv6Address(..)
-  , NodeSetup(..)
-  , PeerAdvertise(..)
-  , nodeAddressToSockAddr
-  , readTopologyFile
+  ( readTopologyFile
   , readPeerSnapshotFile
   , readTopologyFileOrError
-  , rootConfigToRelayAccessPoint
   )
 where
 
 import           Cardano.Api (handleIOExceptionsLiftWith, liftEither, runExceptT, throwError)
 
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology,
+                   isValidTrustedPeerConfiguration)
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
+import           Ouroboros.Network.Diffusion.Topology (NetworkTopology (..))
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   WarmValency (..))
+                   LedgerPeersKind (..), isLedgerPeersEnabled)
 
-import           Control.Applicative (Alternative (..))
-import           Control.Exception.Safe (Exception (..), IOException, handleAny)
+import           Control.Exception.Safe (Exception (..), IOException, try)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified "contra-tracer" Control.Tracer as CT
@@ -51,196 +39,77 @@ import           Data.Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Maybe (isJust, isNothing)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Word (Word64)
 import           System.FilePath (takeDirectory, (</>))
 
-data NodeSetup = NodeSetup
-  { nodeId          :: !Word64
-  , nodeIPv4Address :: !(Maybe NodeIPv4Address)
-  , nodeIPv6Address :: !(Maybe NodeIPv6Address)
-  , producers       :: ![RootConfig]
-  , useLedger       :: !UseLedgerPeers
-  } deriving (Eq, Show)
-
-instance FromJSON NodeSetup where
-  parseJSON = withObject "NodeSetup" $ \o ->
-                NodeSetup
-                  <$> o .:  "nodeId"
-                  <*> o .:  "nodeIPv4Address"
-                  <*> o .:  "nodeIPv6Address"
-                  <*> o .:  "producers"
-                  <*> o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers
-
-instance ToJSON NodeSetup where
-  toJSON ns =
-    object
-      [ "nodeId"             .= nodeId ns
-      , "nodeIPv4Address"    .= nodeIPv4Address ns
-      , "nodeIPv6Address"    .= nodeIPv6Address ns
-      , "producers"          .= producers ns
-      , "useLedgerAfterSlot" .= useLedger ns
-      ]
-
-
--- | Each root peer consists of a list of access points and a shared
--- 'PeerAdvertise' field.
---
-data RootConfig = RootConfig
-  { rootAccessPoints :: [RelayAccessPoint]
-    -- ^ a list of relay access points, each of which is either an ip address
-    -- or domain name and a port number.
-  , rootAdvertise    :: PeerAdvertise
-    -- ^ 'advertise' configures whether the root should be advertised through
-    -- peer sharing.
-  } deriving (Eq, Show)
-
-instance FromJSON RootConfig where
-  parseJSON = withObject "RootConfig" $ \o ->
-                RootConfig
-                  <$> o .:  "accessPoints"
-                  <*> o .:? "advertise" .!= DoNotAdvertisePeer
-
-instance ToJSON RootConfig where
-  toJSON ra =
-    object
-      [ "accessPoints" .= rootAccessPoints ra
-      , "advertise"    .= rootAdvertise ra
-      ]
-
--- | Transforms a 'RootConfig' into a pair of 'RelayAccessPoint' and its
--- corresponding 'PeerAdvertise' value.
---
-rootConfigToRelayAccessPoint
-  :: RootConfig
-  -> [(RelayAccessPoint, PeerAdvertise)]
-rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise  } =
-    [ (accessPoint, rootAdvertise) | accessPoint <- rootAccessPoints ]
-
-
--- | A local root peers group.  Local roots are treated by the outbound
--- governor in a special way.  The node will make sure that a node has the
--- requested number ('valency'/'hotValency') of connections to the local root peer group.
--- 'warmValency' value is the value of warm/established connections that the node
--- will attempt to maintain. By default this value will be equal to 'hotValency'.
---
-data LocalRootPeersGroup = LocalRootPeersGroup
-  { localRoots :: RootConfig
-  , hotValency :: HotValency
-  , warmValency :: WarmValency
-  , trustable   :: PeerTrustable
-    -- ^ 'trustable' configures whether the root should be trusted in fallback
-    -- state.
-  , rootDiffusionMode :: DiffusionMode
-    -- ^ diffusion mode; used for local root peers.
-  } deriving (Eq, Show)
-
--- | Does not use the 'FromJSON' instance of 'RootConfig', so that
--- 'accessPoints', 'advertise', 'valency' and 'warmValency' fields are attached to the
--- same object.
-instance FromJSON LocalRootPeersGroup where
-  parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
-                hv@(HotValency v) <- o .: "valency"
-                                 <|> o .: "hotValency"
-                LocalRootPeersGroup
-                  <$> parseJSON (Object o)
-                  <*> pure hv
-                  <*> o .:? "warmValency" .!= WarmValency v
-                  <*> o .:? "trustable" .!= IsNotTrustable
-                      -- deserialise via NodeDiffusionMode
-                  <*> (maybe InitiatorAndResponderDiffusionMode getDiffusionMode
-                        <$> o .:? "diffusionMode")
-
-instance ToJSON LocalRootPeersGroup where
-  toJSON lrpg =
-    object
-      [ "accessPoints" .= rootAccessPoints (localRoots lrpg)
-      , "advertise" .= rootAdvertise (localRoots lrpg)
-      , "hotValency" .= hotValency lrpg
-      , "warmValency" .= warmValency lrpg
-      , "trustable" .= trustable lrpg
-        -- serialise via NodeDiffusionMode
-      , "diffusionMode" .= NodeDiffusionMode (rootDiffusionMode lrpg)
-      ]
-
-newtype LocalRootPeersGroups = LocalRootPeersGroups
-  { groups :: [LocalRootPeersGroup]
-  } deriving (Eq, Show)
-
-instance FromJSON LocalRootPeersGroups where
-  parseJSON = fmap LocalRootPeersGroups . parseJSONList
-
-instance ToJSON LocalRootPeersGroups where
-  toJSON = toJSONList . groups
-
-newtype PublicRootPeers = PublicRootPeers
-  { publicRoots :: RootConfig
-  } deriving (Eq, Show)
-
-instance FromJSON PublicRootPeers where
-  parseJSON = fmap PublicRootPeers . parseJSON
-
-instance ToJSON PublicRootPeers where
-  toJSON = toJSON . publicRoots
-
-data NetworkTopology = RealNodeTopology { ntLocalRootPeersGroups :: !LocalRootPeersGroups
-                                        , ntPublicRootPeers      :: ![PublicRootPeers]
-                                        , ntUseLedgerPeers       :: !UseLedgerPeers
-                                        , ntUseBootstrapPeers    :: !UseBootstrapPeers
-                                        , ntPeerSnapshotPath     :: !(Maybe PeerSnapshotFile)
-                                        }
-  deriving (Eq, Show)
-
-instance AdjustFilePaths NetworkTopology where
-  adjustFilePaths f nt@(RealNodeTopology _ _ _ _ mPeerSnapshotPath) =
-    nt{ntPeerSnapshotPath = PeerSnapshotFile . f . unPeerSnapshotFile <$> mPeerSnapshotPath}
-
-instance FromJSON NetworkTopology where
-  parseJSON = withObject "NetworkTopology" $ \o ->
-                RealNodeTopology <$> (o .: "localRoots"                                  )
-                                 <*> (o .: "publicRoots"                                 )
-                                 <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers  )
-                                 <*> (o .:? "bootstrapPeers" .!= DontUseBootstrapPeers   )
-                                 <*> (o .:? "peerSnapshotFile")
-
-instance ToJSON NetworkTopology where
-  toJSON top =
-    case top of
-      RealNodeTopology { ntLocalRootPeersGroups
-                       , ntPublicRootPeers
-                       , ntUseLedgerPeers
-                       , ntUseBootstrapPeers
-                       , ntPeerSnapshotPath
-                       } -> object [ "localRoots"         .= ntLocalRootPeersGroups
-                                   , "publicRoots"        .= ntPublicRootPeers
-                                   , "useLedgerAfterSlot" .= ntUseLedgerPeers
-                                   , "bootstrapPeers"     .= ntUseBootstrapPeers
-                                   , "peerSnapshotFile"   .= ntPeerSnapshotPath
-                                   ]
+instance AdjustFilePaths CardanoNetworkTopology where
+  adjustFilePaths f nt@NetworkTopology{peerSnapshotPath} =
+    nt{peerSnapshotPath = f <$> peerSnapshotPath}
 
 -- | Read the `NetworkTopology` configuration from the specified file.
-readTopologyFile :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text NetworkTopology)
-readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode} tracer = runExceptT $ do
+readTopologyFile :: ()
+  => NodeConfiguration
+  -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text CardanoNetworkTopology)
+readTopologyFile
+  NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode, ncProtocolFiles} tracer = runExceptT $ do
   bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
-  topology@RealNodeTopology{ntUseBootstrapPeers} <-
+  topology@NetworkTopology{useLedgerPeers, peerSnapshotPath, extraConfig} <-
     liftEither . first handlerJSON $
       eitherDecode $ LBS.fromStrict bs
 
   unless (isValidTrustedPeerConfiguration topology) $
     throwError handlerBootstrap
 
+  when (isBlockProducer && isLedgerPeersEnabled useLedgerPeers) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg "Use of ledger peers is not recommended for BP operation"
+
+  when (isJust peerSnapshotPath && not (isLedgerPeersEnabled useLedgerPeers) && isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateInfo
+           $ createMsg "Ledger peers and peer snapshot, although specified in the topology file, are disabled in line with recommended BP operation"
+
+  when (inPraosMode && isJust peerSnapshotPath &&  not (isLedgerPeersEnabled useLedgerPeers)) $
+    if isBlockProducer
+    then liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg
+           $  "Peer snapshot file specified but topology disables ledger peers - ignoring file. "
+           <> "To turn off this message remove peerSnapshotFile from the topology file."
+    else liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg
+           $  "Peer snapshot file specified but topology disables ledger peers - ignoring file. "
+           <> "To turn off this message enable the use of ledger peers or remove peerSnapshotFile from the topology file."
+
+
+  when (inGenesisMode && not (isLedgerPeersEnabled useLedgerPeers) && not isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg "It is recommended to use ledger peers and peer snapshot file for relay operations in Genesis mode"
+
+  when (inGenesisMode && isNothing peerSnapshotPath && isLedgerPeersEnabled useLedgerPeers && not isBlockProducer) $
+    liftIO $ CT.traceWith tracer
+           $ NetworkConfigUpdateWarning
+           $ createMsg
+           $  "It is recommended to specify an up-to-date ledger peer snapshot file for relay operations in Genesis mode "
+           <> "when the use of ledger peers is enabled."
+
   -- make all relative paths in the topology file relative to the topology file location
   adjustFilePaths (takeDirectory topologyFilePath </>) <$>
-    if isGenesisCompatible ncConsensusMode ntUseBootstrapPeers
+    if isGenesisCompatible ncConsensusMode extraConfig
        then pure topology
        else do
-         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateError genesisIncompatible
-         pure $ topology{ntUseBootstrapPeers = DontUseBootstrapPeers}
+         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateWarning genesisIncompatible
+         pure $ topology{extraConfig = DontUseBootstrapPeers}
   where
+    createMsg msg =
+      "Cardano.Node.Configuration.Topology.readTopologyFile: " <> msg
     handler :: IOException -> Text
-    handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                          ++ displayException e
+    handler = Text.pack . createMsg . displayException
     handlerJSON :: String -> Text
     handlerJSON err = mconcat
       [ "Is your topology file formatted correctly? "
@@ -252,11 +121,11 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
       , Text.pack err
       ]
     genesisIncompatible
-      = Text.pack $  "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                  <> "Bootstrap peers (field 'bootstrapPeers') are not compatible "
+      = Text.pack . createMsg $
+                     "Bootstrap peers (field 'bootstrapPeers') are not compatible "
                   <> "with Genesis syncing mode, reverting to 'DontUseBootstrapPeers'. "
                   <> "Big ledger peers will be leveraged for decentralized syncing - it "
-                  <> "is recommened to provide an up-to-date big ledger peer snapshot file "
+                  <> "is recommended to provide an up-to-date big ledger peer snapshot file "
                   <> "(field 'peerSnapshotFile' in topology configuration) to facilitate "
                   <> "this process."
     handlerBootstrap :: Text
@@ -268,40 +137,27 @@ readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath,
       ]
     isGenesisCompatible GenesisMode UseBootstrapPeers{} = False
     isGenesisCompatible _ _ = True
+    inPraosMode = ncConsensusMode == PraosMode
+    inGenesisMode = ncConsensusMode == GenesisMode
+    isBlockProducer = hasProtocolFile ncProtocolFiles
 
-readTopologyFileOrError :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO NetworkTopology
+readTopologyFileOrError :: ()
+  => NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO CardanoNetworkTopology
 readTopologyFileOrError nc tr =
       readTopologyFile nc tr
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile :: PeerSnapshotFile -> IO LedgerPeerSnapshot
-readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
-  handleException $
-    either error pure =<< eitherDecodeFileStrict peerSnapshotFile
+readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text (LedgerPeerSnapshot BigLedgerPeers))
+readPeerSnapshotFile (PeerSnapshotFile file) = do
+  content <- first renderException <$> try (BS.readFile file)
+  return $ first handler $ content >>= eitherDecodeStrict
   where
-    handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
+    renderException :: IOException -> String
+    renderException = displayException
 
---
--- Checking for chance of progress in bootstrap phase
---
-
--- | This function returns false if non-trustable peers are configured
---
-isValidTrustedPeerConfiguration :: NetworkTopology -> Bool
-isValidTrustedPeerConfiguration (RealNodeTopology (LocalRootPeersGroups lprgs) _ _ ubp _) =
-    case ubp of
-      DontUseBootstrapPeers   -> True
-      UseBootstrapPeers []    -> anyTrustable
-      UseBootstrapPeers (_:_) -> True
-  where
-    anyTrustable =
-      any (\LocalRootPeersGroup {localRoots, trustable} ->
-            case trustable of
-              IsNotTrustable -> False
-              IsTrustable    -> not
-                              . null
-                              . rootAccessPoints
-                              $ localRoots
-          ) lprgs
+    handler :: String -> Text
+    handler msg =
+      Text.pack
+        $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> msg

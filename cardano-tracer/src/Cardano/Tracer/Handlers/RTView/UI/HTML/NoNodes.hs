@@ -95,30 +95,31 @@ mkNoNodesInfo networkConfig = do
 
   cardanoTracerNote =
     case networkConfig of
-      AcceptAt (LocalSocket p) ->
+      AcceptAt conn ->
         "Currently, your <code>cardano-tracer</code> is configured as a server, "
         <> "so it accepts connections from your nodes via the local socket <code>"
-        <> p <> "</code>. Correspondingly, your nodes should be configured to "
+        <> show conn <> "</code>. Correspondingly, your nodes should be configured to "
         <> "initiate connections using tracing socket."
       ConnectTo addrs ->
         let manySocks = NE.length addrs > 1 in
         "Currently, your <code>cardano-tracer</code> is configured as a client, "
         <> "so it connects to your "
         <> (if manySocks then "nodes" else "node")
-        <> " via the local "
+        <> " via UNIX domain or TCP socket "
         <> (if manySocks
               then
-                let socks = map (\(LocalSocket p) -> "<code>" <> p <> "</code>") $ NE.toList addrs
-                in "sockets " <> intercalate ", " socks <> "."
+                let socks = map (\conn -> "<code>" <> show conn <> "</code>") $ NE.toList addrs
+                in "addresses " <> intercalate ", " socks <> "."
               else
-                "socket <code>" <> let LocalSocket p = NE.head addrs in p <> "</code>.")
+                "address <code>" <> show (NE.head addrs) <> "</code>.")
         <> " Correspondingly, our nodes should be configured to accept connections using tracing socket."
 
+  -- TODO: customize Node's CLI code hint by case matching on `conn :: HowToConnect`
   localNote =
     case networkConfig of
-      AcceptAt (LocalSocket p) ->
+      AcceptAt conn ->
         "Thus, if your <code>cardano-tracer</code> and your nodes are running on the same machine, run "
-         <> "the nodes with this argument: <code>--tracer-socket-path-connect " <> p <> "</code>."
+         <> "the nodes with this argument: <code>--tracer-socket-path-connect " <> show conn <> "</code>."
       ConnectTo{} ->
         "Thus, if your <code>cardano-tracer</code> and your nodes are running on the same machine, run "
          <> "the nodes with this argument: <code>--tracer-socket-path-accept SOCKET</code>, where "

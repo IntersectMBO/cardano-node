@@ -7,6 +7,7 @@ module Cardano.Tracer.Test.Restart.Tests
   ) where
 
 import           Cardano.Logging (Trace (..))
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run
@@ -40,8 +41,8 @@ propNetworkForwarder ts rootDir localSock = do
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   propNetwork' ts rootDir
-    ( launchForwardersSimple ts Initiator localSock 1000 10000
-    , doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
+    ( launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000
+    , doRunCardanoTracer config (Just $ rootDir <> "/../state") (TraceBundle stderrShowTracer stderrShowTracer) brake dpRequestors
     )
 
 propNetwork'
@@ -86,19 +87,22 @@ mkConfig
   -> FilePath
   -> TracerConfig
 mkConfig TestSetup{..} rootDir p = TracerConfig
-  { networkMagic   = fromIntegral . unNetworkMagic $ unI tsNetworkMagic
-  , network        = AcceptAt $ LocalSocket p
-  , loRequestNum   = Just 1
-  , ekgRequestFreq = Just 1.0
-  , hasEKG         = Nothing
-  , hasPrometheus  = Nothing
-  , hasRTView      = Nothing
-  , logging        = NE.fromList [LoggingParams rootDir FileMode ForMachine]
-  , rotation       = Nothing
-  , verbosity      = Just Minimum
-  , metricsNoSuffix = Nothing
-  , metricsHelp    = Nothing
-  , hasForwarding  = Nothing
-  , resourceFreq   = Nothing
-  , ekgRequestFull = Nothing
+  { networkMagic     = fromIntegral . unNetworkMagic $ unI tsNetworkMagic
+  , network          = AcceptAt (Net.LocalPipe p)
+  , loRequestNum     = Just 1
+  , ekgRequestFreq   = Just 1.0
+  , hasEKG           = Nothing
+  , hasPrometheus    = Nothing
+  , hasRTView        = Nothing
+  , hasTimeseries    = Nothing
+  , tlsCertificate   = Nothing
+  , logging          = NE.fromList [LoggingParams rootDir FileMode ForMachine]
+  , rotation         = Nothing
+  , verbosity        = Just Minimum
+  , metricsNoSuffix  = Nothing
+  , metricsHelp      = Nothing
+  , hasForwarding    = Nothing
+  , resourceFreq     = Nothing
+  , ekgRequestFull   = Nothing
+  , prometheusLabels = Nothing
   }

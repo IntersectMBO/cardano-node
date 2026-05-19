@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Parsers.Version
@@ -33,6 +34,8 @@ runVersionOptions VersionOptions = do
     , " - ", os, "-", arch
     , " - ", compilerName, "-", showVersion compilerVersion
     , "\ngit rev ", T.unpack $(gitRev)
+    , "\nbuilt against cardano-api ", VERSION_cardano_api
+    , "\nbuilt against cardano-cli ", VERSION_cardano_cli
     ]
 
 cmdVersion :: Mod CommandFields VersionOptions

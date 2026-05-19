@@ -1,45 +1,74 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
-  , CardanoTestnetOptions(..)
+  , NoUserProvidedEnvOptions(..)
+  , StartFromEnvOptions(..)
+  , CardanoTestnetCreateEnvOptions (..)
+  , TestnetCreationOptions(..)
+  , TestnetRuntimeOptions(..)
+  , TestnetEnvOptions(..)
   , InputNodeConfigFile(..)
+  , NodeId(..)
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
-  , cardanoNumPools
-  , cardanoNumRelays
+  , RpcSupport(..)
+  , creationNumPools
+  , creationNumRelays
 
   , anyEraToString
   , anyShelleyBasedEraToString
+  , defaultTestnetMagic
   , eraToString
 
-  , TestnetNodeOptions(..)
-  , AutomaticNodeOption(..)
+  , UpdateTimestamps(..)
+  , TestnetOnChainParams(..)
+  , mainnetParamsRequest
+  , NodeOption(..)
+  , isSpoNodeOptions
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
   , UserProvidedData(..)
+  , UserProvidedGeneses(..)
+  , PraosCredentialsSource(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
+  , GenesisHashesPolicy (..)
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
+  , mkConfigAbs
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
 
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+
 import           Prelude
 
+import           Control.Exception (throw)
+import           Control.Monad (unless)
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
+import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import qualified Network.HTTP.Simple as HTTP
+import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
@@ -47,52 +76,160 @@ import           Testnet.Filepath
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
--- | Command line options for the @cardano-testnet@ executable. They are used
--- in the parser, and then get split into 'CardanoTestnetOptions' and
--- 'GenesisOptions'
-data CardanoTestnetCliOptions = CardanoTestnetCliOptions
-  { cliTestnetOptions :: CardanoTestnetOptions
-  , cliGenesisOptions :: GenesisOptions
+-- | The default value for the --testnet-magic option for `cardano-testnet`
+defaultTestnetMagic :: Int
+defaultTestnetMagic = 42
+
+-- | Command line options for the @cardano-testnet cardano@ command.
+-- Either create a new testnet environment or use a pre-existing one
+-- (created by @create-env@).
+data CardanoTestnetCliOptions
+  = NoUserProvidedEnv NoUserProvidedEnvOptions
+  | StartFromEnv StartFromEnvOptions
+  deriving (Eq, Show)
+
+-- | Options for @cardano-testnet cardano@ when no user-provided environment
+-- is given: create a new environment and then start the testnet.
+data NoUserProvidedEnvOptions = NoUserProvidedEnvOptions
+  { noEnvCreationOptions :: TestnetCreationOptions
+  , noEnvOutputDir :: Maybe FilePath -- ^ @--output-dir@, uses a temporary directory if absent
+  , noEnvRuntimeOptions :: TestnetRuntimeOptions
   } deriving (Eq, Show)
 
-instance Default CardanoTestnetCliOptions where
-  def = CardanoTestnetCliOptions
-    { cliTestnetOptions = def
-    , cliGenesisOptions = def
+-- | Options for @cardano-testnet cardano --node-env@ when starting a testnet
+-- from a pre-existing environment (created by @create-env@).
+data StartFromEnvOptions = StartFromEnvOptions
+  { fromEnvOptions :: TestnetEnvOptions
+  , fromEnvRuntimeOptions :: TestnetRuntimeOptions
+  } deriving (Eq, Show)
+
+data UpdateTimestamps = UpdateTimestamps | DontUpdateTimestamps
+  deriving (Eq, Show)
+
+instance Default UpdateTimestamps where
+  def = DontUpdateTimestamps
+
+data TestnetOnChainParams
+  = DefaultParams
+  | OnChainParamsFile FilePath
+  -- ^ A file path to a JSON file containing on-chain params, formatted as:
+  -- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest
+  | OnChainParamsMainnet
+  deriving (Eq, Show)
+
+instance Default TestnetOnChainParams where
+  def = DefaultParams
+
+data UserProvidedGeneses = UserProvidedGeneses
+  { upgShelleyGenesis :: UserProvidedData ShelleyGenesis
+  , upgAlonzoGenesis :: UserProvidedData AlonzoGenesis
+  , upgConwayGenesis :: UserProvidedData ConwayGenesis
+  } deriving (Eq, Show)
+
+instance Default UserProvidedGeneses where
+  def = UserProvidedGeneses
+    def
+    def
+    def
+
+data PraosCredentialsSource = UseKesKeyFile | UseKesSocket
+  deriving (Eq, Show)
+
+instance Default PraosCredentialsSource where
+  def = UseKesKeyFile
+
+-- | An HTTP request to get a file containing up-to-date mainnet on-chain parameters.
+-- The file should be formatted with Blockfrost format:
+-- https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+mainnetParamsRequest :: HTTP.Request
+mainnetParamsRequest = either throw id $ HTTP.parseRequest
+  "https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json"
+
+-- | An abstract node id, used as placeholder in topology files
+-- when the actual ports/addresses aren't known yet (i.e. before runtime)
+newtype NodeId = NodeId Int
+  deriving (Eq, Ord, Show)
+
+instance ToJSON NodeId where
+  toJSON (NodeId i) = Aeson.String $ Text.pack $ "node_" ++ show i
+
+instance FromJSON NodeId where
+  parseJSON = Aeson.withText "NodeId" $ \t -> case Text.breakOn "_" t of
+    ("node", textId) -> case Aeson.eitherDecodeStrictText (Text.drop 1 textId) of
+      Right i -> pure $ NodeId i
+      Left _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
+    _ -> parseFail $ "Incorrect format for NodeId: " ++ show t
+
+-- | Command line options for the @cardano-testnet create-env@ subcommand.
+-- Creates a sandbox environment without starting nodes.
+data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
+  { createEnvCreationOptions :: TestnetCreationOptions
+  , createEnvOutputDir :: FilePath -- ^ Required @--output@ directory
+  } deriving (Eq, Show)
+
+data RpcSupport
+  = RpcDisabled
+  | RpcEnabled
+  deriving (Eq, Show)
+
+-- | Options for creating a testnet environment (genesis files, topology, ports).
+-- Used by both the @cardano@ and @create-env@ subcommands, and by
+-- 'Testnet.Start.Cardano.createAndRunTestnet' in tests.
+data TestnetCreationOptions = TestnetCreationOptions
+  { -- | Options controlling how many nodes to create and of which type.
+    creationNodes :: NonEmpty NodeOption
+  , creationEra :: AnyShelleyBasedEra -- ^ The era to start at
+  , creationMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
+                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
+  , creationNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
+  , creationGenesisOptions :: GenesisOptions
+  , creationOnChainParams :: TestnetOnChainParams
+  } deriving (Eq, Show)
+
+instance Default TestnetCreationOptions where
+  def = TestnetCreationOptions
+    { creationNodes = cardanoDefaultTestnetNodeOptions
+    , creationEra = AnyShelleyBasedEra ShelleyBasedEraConway
+    , creationMaxSupply = 100_000_020_000_000
+    , creationNumDReps = 3
+    , creationGenesisOptions = def
+    , creationOnChainParams = def
     }
 
--- | Options which, contrary to 'GenesisOptions' are not implemented
--- by tuning the genesis files.
-data CardanoTestnetOptions = CardanoTestnetOptions
-  { -- | Options controlling how many nodes to create and whether to use user-provided
-    -- configuration files, or to generate them automatically.
-    cardanoNodes :: TestnetNodeOptions
-  , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
-  , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
-                               -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
-  , cardanoNodeLoggingFormat :: NodeLoggingFormat
-  , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
-  , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+-- | Options for running testnet nodes (after the environment is created).
+-- These are independent of how the environment was created (from scratch
+-- or from an existing @--node-env@ path).
+data TestnetRuntimeOptions = TestnetRuntimeOptions
+  { runtimeEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  , runtimeEnableRpc :: RpcSupport -- ^ Whether to enable gRPC endpoints in all testnet nodes
+  , runtimeKESSource :: PraosCredentialsSource
+  } deriving (Eq, Show)
+
+instance Default TestnetRuntimeOptions where
+  def = TestnetRuntimeOptions
+    { runtimeEnableNewEpochStateLogging = True
+    , runtimeEnableRpc = RpcDisabled
+    , runtimeKESSource = def
+    }
+
+-- | Options specific to the @--node-env@ path: the environment directory
+-- and whether to update genesis timestamps before starting.
+data TestnetEnvOptions = TestnetEnvOptions
+  { envPath :: FilePath -- ^ Path to the pre-existing environment
+  , envUpdateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
 newtype InputNodeConfigFile = InputNodeConfigFile FilePath
   deriving (Eq, Show)
 
-cardanoNumPools :: CardanoTestnetOptions -> NumPools
-cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
-  NumPools $
-    case cardanoNodes of
-      UserProvidedNodeOptions _ -> 1
-      AutomaticNodeOptions opts -> length $ filter isSpoNodeOptions opts
+creationNumPools :: TestnetCreationOptions -> NumPools
+creationNumPools TestnetCreationOptions{creationNodes} =
+  NumPools $ length $ NEL.filter isSpoNodeOptions creationNodes
 
-cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
-cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
-  NumRelays $
-    case cardanoNodes of
-      UserProvidedNodeOptions _ -> 1
-      AutomaticNodeOptions opts -> length $ filter isRelayNodeOptions opts
+creationNumRelays :: TestnetCreationOptions -> NumRelays
+creationNumRelays TestnetCreationOptions{creationNodes} =
+  NumRelays $ length $ NEL.filter isRelayNodeOptions creationNodes
 
 -- | Number of stake pool nodes
 newtype NumPools = NumPools Int
@@ -106,17 +243,6 @@ newtype NumRelays = NumRelays Int
 newtype NumDReps = NumDReps Int
   deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
 
-instance Default CardanoTestnetOptions where
-  def = CardanoTestnetOptions
-    { cardanoNodes = cardanoDefaultTestnetNodeOptions
-    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraConway
-    , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
-    , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
-    , cardanoNumDReps = 3
-    , cardanoEnableNewEpochStateLogging = True
-    , cardanoOutputDir = Nothing
-    }
-
 -- | Options that are implemented by writing fields in the Shelley genesis file.
 data GenesisOptions = GenesisOptions
   { genesisTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
@@ -127,25 +253,16 @@ data GenesisOptions = GenesisOptions
 
 instance Default GenesisOptions where
   def = GenesisOptions
-    { genesisTestnetMagic = 42
+    { genesisTestnetMagic = defaultTestnetMagic
     , genesisEpochLength = 500
     , genesisSlotLength = 0.1
     , genesisActiveSlotsCoeff = 0.05
     }
 
-data TestnetNodeOptions =
-  UserProvidedNodeOptions FilePath
-  -- ^ Value used when the user specifies the node configuration file. We start one single SPO node.
-  | AutomaticNodeOptions [AutomaticNodeOption]
-  -- ^ Value used when @cardano-testnet@ controls the node configuration files.
-  -- We start a custom number of nodes.
-  deriving (Eq, Show)
-
--- | Type used when the user doesn't specify the node configuration file. We start
--- a custom number of nodes. The '@String' arguments will be appended to the default
--- options when starting the node.
-data AutomaticNodeOption =
-    SpoNodeOptions [String]
+-- | Whether a node should be an SPO or just a relay.
+-- The '@String' arguments will be appended to the default options when starting the node.
+data NodeOption
+  = SpoNodeOptions [String]
   | RelayNodeOptions [String]
   deriving (Eq, Show)
 
@@ -154,39 +271,75 @@ data AutomaticNodeOption =
 data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
+  deriving (Eq,Show)
 
-isSpoNodeOptions :: AutomaticNodeOption -> Bool
+instance Default (UserProvidedData a) where
+  def = NoUserProvidedData
+
+isSpoNodeOptions :: NodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
 isSpoNodeOptions RelayNodeOptions{} = False
 
-isRelayNodeOptions :: AutomaticNodeOption -> Bool
+isRelayNodeOptions :: NodeOption -> Bool
 isRelayNodeOptions SpoNodeOptions{} = False
 isRelayNodeOptions RelayNodeOptions{} = True
 
-cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
+cardanoDefaultTestnetNodeOptions :: NonEmpty NodeOption
 cardanoDefaultTestnetNodeOptions =
-  AutomaticNodeOptions [ SpoNodeOptions []
-                       , RelayNodeOptions []
+  SpoNodeOptions [] :| [ RelayNodeOptions []
                        , RelayNodeOptions []
                        ]
 
-data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+data NodeLoggingFormat
+  = NodeLoggingFormatAsJson
+  | NodeLoggingFormatAsText
+  deriving (Eq, Show)
+
+instance Pretty NodeLoggingFormat where
+  pretty = \case
+    NodeLoggingFormatAsJson -> "json"
+    NodeLoggingFormatAsText -> "text"
 
 data NodeConfiguration
 
 type NodeConfigurationYaml = File NodeConfiguration InOut
 
-newtype Conf = Conf
-  { tempAbsPath :: TmpAbsolutePath
+data GenesisHashesPolicy = WithHashes | WithoutHashes
+  deriving (Eq, Show)
+
+data Conf = Conf
+  { genesisHashesPolicy :: GenesisHashesPolicy
+  , tempAbsPath :: TmpAbsolutePath
+  , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- | Create a 'Conf' from a temporary absolute path. Logs the argument in the test.
+-- |  Same as mkConfig except that it renders the path
+-- when failing in a property test.
 mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
 mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
-  pure $ Conf
-    { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+  pure $ mkConfig tempAbsPath'
+
+-- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
+mkConfig :: FilePath -> Conf
+mkConfig tempAbsPath' =
+  Conf
+    { genesisHashesPolicy = WithHashes
+    , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    , updateTimestamps = DontUpdateTimestamps
     }
+
+-- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
+-- and updating time stamps disabled.
+mkConfigAbs :: FilePath -> IO Conf
+mkConfigAbs userOutputDir = do
+  absUserOutputDir <-  makeAbsolute userOutputDir
+  dirExists <- doesDirectoryExist absUserOutputDir
+  let conf = mkConfig absUserOutputDir
+  unless dirExists $
+    createDirectory absUserOutputDir
+  pure conf
 
 -- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
 anyEraToString :: AnyCardanoEra -> String

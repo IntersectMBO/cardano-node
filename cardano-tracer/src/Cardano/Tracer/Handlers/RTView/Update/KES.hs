@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,7 +19,7 @@ import           Cardano.Tracer.Utils
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
-import           Data.Text (pack)
+import           Data.Text (isInfixOf, pack)
 import           Data.Text.Read (decimal)
 import           Text.Printf (printf)
 
@@ -32,19 +33,19 @@ updateKESInfo
 updateKESInfo tracerEnv settings displayed =
   forAcceptedMetricsUI_ tracerEnv $ \(nodeId@(NodeId anId), (ekgStore, _)) ->
     forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(metricName, metricValue) ->
-      case metricName of
-        "Forge.CurrentKESPeriod" ->
-          setDisplayedValue nodeId displayed (anId <> "__node-current-kes-period") metricValue
-        "Forge.OperationalCertificateExpiryKESPeriod" ->
-          setDisplayedValue nodeId displayed (anId <> "__node-op-cert-expiry-kes-period") metricValue
-        "Forge.OperationalCertificateStartKESPeriod" ->
-          setDisplayedValue nodeId displayed (anId <> "__node-op-cert-start-kes-period") metricValue
-        "Forge.RemainingKESPeriods" -> do
+      if
+        | "currentKESPeriod" `isInfixOf` metricName ->
+        setDisplayedValue nodeId displayed (anId <> "__node-current-kes-period") metricValue
+        | "operationalCertificateExpiryKESPeriod" `isInfixOf` metricName ->
+        setDisplayedValue nodeId displayed (anId <> "__node-op-cert-expiry-kes-period") metricValue
+        | "operationalCertificateStartKESPeriod" `isInfixOf` metricName ->
+        setDisplayedValue nodeId displayed (anId <> "__node-op-cert-start-kes-period") metricValue
+        | "remainingKESPeriods" `isInfixOf` metricName -> do
           setDisplayedValue nodeId displayed (anId <> "__node-remaining-kes-periods") metricValue
           allSettings <- liftIO $ readTVarIO settings
           whenJust (M.lookup nodeId allSettings) $
             setDaysUntilRenew nodeId metricValue
-        _ -> return ()
+        | otherwise -> return ()
  where
   setDaysUntilRenew nodeId@(NodeId anId) metricValue EraSettings{esKESPeriodLength, esSlotLengthInS} = do
     case decimal metricValue of

@@ -12,21 +12,23 @@
 
 module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
 
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
+import           Cardano.Api (PlutusScript (..), PlutusScriptV2, PlutusScriptVersion (..),
+                   Script (..), toScriptInAnyLang)
+
+import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+import           Cardano.Benchmarking.ScriptAPI
+import qualified PlutusLedgerApi.V2 as PlutusV2
+
 import           Prelude as Haskell (String, (.), (<$>))
 
-import           Cardano.Api (PlutusScriptV2, toScriptInAnyLang, Script(..))
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..))
 import qualified Data.ByteString.Short as SBS
-import qualified PlutusLedgerApi.V2 as PlutusV2
+
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax
 import qualified PlutusTx
 import           PlutusTx.Foldable (sum)
-import           PlutusTx.List (length, all)
+import           PlutusTx.List (all, length)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
-
-import           Cardano.Benchmarking.ScriptAPI
-import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))

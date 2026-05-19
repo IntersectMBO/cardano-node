@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -30,13 +31,14 @@ where
 
 --------------------------------------------------------------------------------
 
-import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnits,
-                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3), PraosNonce,
-                   ProtocolParametersConversionError (..), makePraosNonce)
-import           Cardano.Api.Shelley (ExecutionUnitPrices (..), LedgerProtocolParameters (..),
-                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley),
+import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnitPrices (..),
+                   ExecutionUnits, LedgerProtocolParameters (..),
+                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3, PlutusScriptV4),
+                   PraosNonce, ProtocolParametersConversionError (..),
+                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraDijkstra, ShelleyBasedEraMary, ShelleyBasedEraShelley),
                    ShelleyLedgerEra, fromAlonzoCostModels, fromAlonzoExUnits, fromAlonzoPrices,
-                   toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices, toLedgerNonce)
+                   makePraosNonce, toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices,
+                   toLedgerNonce)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -45,6 +47,7 @@ import           Cardano.Ledger.Api.PParams
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Compactible as L
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 
 import           Data.Aeson ((.!=), (.:), (.:?), (.=))
@@ -63,7 +66,6 @@ import           Numeric.Natural (Natural)
 -- Era based ledger protocol parameters.
 --------------------------------------------------------------------------------
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 convertToLedgerProtocolParameters
   :: ShelleyBasedEra era
   -> ProtocolParameters
@@ -79,7 +81,6 @@ convertToLedgerProtocolParameters sbe pp =
 --
 -- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 data ProtocolParameters
   = ProtocolParameters
   { protocolParamProtocolVersion :: (Natural, Natural)
@@ -241,6 +242,7 @@ fromPlutusLanguageName :: Plutus.Language -> AnyPlutusScriptVersion
 fromPlutusLanguageName Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromPlutusLanguageName Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 fromPlutusLanguageName Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromPlutusLanguageName Plutus.PlutusV4 = AnyPlutusScriptVersion PlutusScriptV4
 
 instance Aeson.ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -295,6 +297,7 @@ toPlutusLanguageName :: AnyPlutusScriptVersion -> Plutus.Language
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV2) = Plutus.PlutusV2
 toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV3) = Plutus.PlutusV3
+toPlutusLanguageName (AnyPlutusScriptVersion PlutusScriptV4) = Plutus.PlutusV4
 
 -- Praos nonce.
 --------------------------------------------------------------------------------
@@ -347,6 +350,7 @@ toLedgerPParams ShelleyBasedEraMary = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo = toAlonzoPParams
 toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
 toLedgerPParams ShelleyBasedEraConway = toConwayPParams
+toLedgerPParams ShelleyBasedEraDijkstra = toConwayPParams
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toShelleyCommonPParams
@@ -376,8 +380,8 @@ toShelleyCommonPParams
     protVer <- mkProtVer protocolParamProtocolVersion
     let ppCommon =
           emptyPParams
-            & ppMinFeeAL .~ protocolParamTxFeePerByte
-            & ppMinFeeBL .~ protocolParamTxFeeFixed
+            & ppTxFeePerByteL .~ (CoinPerByte . L.compactCoinOrError $ protocolParamTxFeePerByte)
+            & ppTxFeeFixedL .~ protocolParamTxFeeFixed
             & ppMaxBBSizeL .~ fromIntegral protocolParamMaxBlockBodySize
             & ppMaxTxSizeL .~ fromIntegral protocolParamMaxTxSize
             & ppMaxBHSizeL .~ fromIntegral protocolParamMaxBlockHeaderSize
@@ -395,8 +399,8 @@ toShelleyCommonPParams
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toShelleyPParams
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
      )
   => ProtocolParameters
   -> Either ProtocolParametersConversionError (PParams ledgerera)
@@ -454,9 +458,9 @@ toAlonzoCommonPParams
             & ppPricesL .~ prices
             & ppMaxTxExUnitsL .~ toAlonzoExUnits maxTxExUnits
             & ppMaxBlockExUnitsL .~ toAlonzoExUnits maxBlockExUnits
-            & ppMaxValSizeL .~ maxValueSize
-            & ppCollateralPercentageL .~ collateralPercent
-            & ppMaxCollateralInputsL .~ maxCollateralInputs
+            & ppMaxValSizeL .~ fromIntegral maxValueSize
+            & ppCollateralPercentageL .~ fromIntegral collateralPercent
+            & ppMaxCollateralInputsL .~ fromIntegral maxCollateralInputs
     pure ppAlonzoCommon
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
@@ -492,7 +496,7 @@ toBabbagePParams
       requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
     let ppBabbage =
           ppAlonzoCommon
-            & ppCoinsPerUTxOByteL .~ CoinPerByte utxoCostPerByte
+            & ppCoinsPerUTxOByteL .~ CoinPerByte (L.compactCoinOrError utxoCostPerByte)
     pure ppBabbage
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
@@ -505,7 +509,6 @@ toConwayPParams = toBabbagePParams
 -- Conversion functions: protocol parameters from ledger types.
 --------------------------------------------------------------------------------
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromLedgerPParams
   :: ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -516,8 +519,8 @@ fromLedgerPParams ShelleyBasedEraMary = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAlonzo = fromExactlyAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
+fromLedgerPParams ShelleyBasedEraDijkstra = fromConwayPParams
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyCommonPParams
   :: EraPParams ledgerera
   => PParams ledgerera
@@ -529,8 +532,8 @@ fromShelleyCommonPParams pp =
     , protocolParamMaxBlockHeaderSize = fromIntegral $ pp ^. ppMaxBHSizeL
     , protocolParamMaxBlockBodySize = fromIntegral $ pp ^. ppMaxBBSizeL
     , protocolParamMaxTxSize = fromIntegral $ pp ^. ppMaxTxSizeL
-    , protocolParamTxFeeFixed = pp ^. ppMinFeeBL
-    , protocolParamTxFeePerByte = pp ^. ppMinFeeAL
+    , protocolParamTxFeeFixed = pp ^. ppTxFeeFixedL
+    , protocolParamTxFeePerByte = L.fromCompact . L.unCoinPerByte $ pp ^. ppTxFeePerByteL
     , protocolParamStakeAddressDeposit = pp ^. ppKeyDepositL
     , protocolParamStakePoolDeposit = pp ^. ppPoolDepositL
     , protocolParamMinPoolCost = pp ^. ppMinPoolCostL
@@ -552,11 +555,10 @@ fromShelleyCommonPParams pp =
     , protocolParamMinUTxOValue = Nothing -- Obsolete from Alonzo onwards
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromShelleyPParams
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
      )
   => PParams ledgerera
   -> ProtocolParameters
@@ -567,7 +569,6 @@ fromShelleyPParams pp =
     , protocolParamMinUTxOValue = Just $ pp ^. ppMinUTxOValueL
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromAlonzoPParams
   :: AlonzoEraPParams ledgerera
   => PParams ledgerera
@@ -579,12 +580,11 @@ fromAlonzoPParams pp =
     , protocolParamPrices = Just . fromAlonzoPrices $ pp ^. ppPricesL
     , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
     , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
-    , protocolParamMaxValueSize = Just $ pp ^. ppMaxValSizeL
-    , protocolParamCollateralPercent = Just $ pp ^. ppCollateralPercentageL
-    , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
+    , protocolParamMaxValueSize = Just $ fromIntegral (pp ^. ppMaxValSizeL)
+    , protocolParamCollateralPercent = Just $ fromIntegral (pp ^. ppCollateralPercentageL)
+    , protocolParamMaxCollateralInputs = Just $ fromIntegral (pp ^. ppMaxCollateralInputsL)
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromExactlyAlonzoPParams
   :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
   => PParams ledgerera
@@ -594,18 +594,16 @@ fromExactlyAlonzoPParams pp =
     { protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromBabbagePParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera
   -> ProtocolParameters
 fromBabbagePParams pp =
   (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
+    { protocolParamUTxOCostPerByte = Just . L.fromCompact . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
     , protocolParamDecentralization = Nothing
     }
 
--- TODO: Use the ledger's PParams (from module Cardano.Api.Ledger) type instead.
 fromConwayPParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera

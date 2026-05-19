@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -10,6 +11,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
+import           Data.Text (isInfixOf)
 import           Data.Text.Read (decimal)
 import           Data.Time.Clock (UTCTime)
 
@@ -21,11 +23,11 @@ updateTransactionsHistory
   -> UTCTime
   -> IO ()
 updateTransactionsHistory nodeId (TXHistory tHistory) metricName metricValue now =
-  case metricName of
-    "Mempool.TxsProcessedNum" -> updateTxsProcessedNum
-    "Mempool.MempoolBytes"    -> updateMempoolBytes
-    "Mempool.TxsInMempool"    -> updateTxsInMempool
-    _ -> return ()
+  if
+    | "txsProcessedNum" `isInfixOf` metricName -> updateTxsProcessedNum
+    | "mempoolBytes" `isInfixOf` metricName    -> updateMempoolBytes
+    | "txsInMempool" `isInfixOf` metricName    -> updateTxsInMempool
+    | otherwise                                -> return ()
  where
   updateTxsProcessedNum =
     readValueI metricValue $ addHistoricalData tHistory nodeId now TxsProcessedNumData

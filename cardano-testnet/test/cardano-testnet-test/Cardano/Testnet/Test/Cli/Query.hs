@@ -14,12 +14,10 @@ module Cardano.Testnet.Test.Cli.Query (
     hprop_cli_queries
 ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Internal.Genesis as Api
-import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), unboundRational)
+import           Cardano.Api.Ledger (EpochInterval (..), unboundRational)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 
 import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
@@ -42,7 +40,6 @@ import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import           Data.String (IsString (fromString))
-import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
@@ -54,14 +51,15 @@ import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
-import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
-                   getTxIx, watchEpochStateUpdate)
+import           Testnet.Components.Query (EpochStateView, TestnetWaitPeriod (..), checkDRepsNumber,
+                   getEpochStateDetails, getEpochStateView, getSlotNumber, getTxIx, retryUntilJustM)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpendOutputsOnlyTx,
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
+import           Testnet.Process.RunIO (liftIOAnnotated)
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), creationNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -69,7 +67,8 @@ import           Hedgehog
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Test.Golden as H
+
+import           RIO (runRIO)
 
 -- | Test CLI queries
 -- Execute me with:
@@ -77,7 +76,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
-hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -87,14 +86,16 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def
-        { genesisEpochLength = 100
-        -- We change slotCoeff because epochLength must be equal to:
-        -- securityParam * 10 / slotCoeff
-        , genesisActiveSlotsCoeff = 0.5
+      fastTestnetOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def
+            { genesisEpochLength = 100
+            -- We change slotCoeff because epochLength must be equal to:
+            -- securityParam * 10 / slotCoeff
+            , genesisActiveSlotsCoeff = 0.5
+            }
         }
-      nPools = cardanoNumPools fastTestnetOptions
+      nPools = creationNumPools fastTestnetOptions
 
   TestnetRuntime
     { testnetMagic
@@ -102,7 +103,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , configurationFile
     , wallets=wallet0:wallet1:_
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet fastTestnetOptions def conf
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
@@ -319,7 +320,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
         -- And we check
-        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", txId ]
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", prettyShow txId ]
 
     TestQuerySlotNumberCmd ->
       -- slot-number
@@ -332,7 +333,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
-        plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        plutusV3Script <- File <$> liftIOAnnotated (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
@@ -342,11 +343,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
         -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx
-        txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txId transferAmount)
+        txIx <- retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ getEpochStateDetails epochStateView >>= getTxIx sbe txId transferAmount
         -- Query the reference script size
         let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"
-                                       , "--tx-in", txId ++ "#" ++ show (txIx :: Int)
+                                       , "--tx-in", prettyShow (TxIn txId txIx)
                                        , "--out-file", protocolParametersOutFile
                                        ]
         H.diffFileVsGoldenFile
@@ -460,11 +461,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     -> ShelleyGenesis
     -> m SlotNo -- ^ The block number reached
   waitForFuturePParamsToStabilise epochStateView shelleyGenesisConf = withFrozenCallStack $
-    H.noteShowM . H.nothingFailM $
-      watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(_, slotNo, _) -> do
-        pure $ if areFuturePParamsStable shelleyGenesisConf slotNo
-               then Just slotNo
-               else Nothing
+    H.noteShowM $ retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ do
+      slotNo <- getSlotNumber epochStateView
+      pure $ if areFuturePParamsStable shelleyGenesisConf slotNo
+             then Just slotNo
+             else Nothing
 
   -- We wait till a slot after: 4 * securityParam / slotCoeff
   -- If we query 'govState' before that we get 'PotentialPParamsUpdate'
@@ -484,7 +485,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   readVerificationKeyFromFile
     :: ( HasCallStack
        , MonadIO m
-       , MonadCatch m
        , MonadTest m
        , HasTextEnvelope (VerificationKey keyrole)
        , SerialiseAsBech32 (VerificationKey keyrole)
@@ -493,7 +493,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     -> File content direction
     -> m (VerificationKey keyrole)
   readVerificationKeyFromFile work =
-    H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
+    H.evalIO . runRIO () . readVerificationKeyOrFile . VerificationKeyFilePath . File . (work </>) . unFile
 
   _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =

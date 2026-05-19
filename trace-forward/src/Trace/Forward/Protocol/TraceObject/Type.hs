@@ -23,15 +23,16 @@ module Trace.Forward.Protocol.TraceObject.Type
   , StBlockingStyle(..)
   ) where
 
+import           Cardano.Logging.Types (TraceObject)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
-import           Data.Kind (Type)
-import           Data.Singletons
 import           Codec.Serialise (Serialise (..))
+import           Data.Kind (Type)
 import           Data.List.NonEmpty (NonEmpty)
+import           Data.Singletons
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
-import           Network.TypedProtocol.Core -- (Protocol (..))
+import           Network.TypedProtocol.Core
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.
@@ -184,3 +185,5 @@ instance Protocol (TraceObjectForward lo) where
 
 deriving stock
   instance Show lo => Show (Message (TraceObjectForward lo) from to)
+
+instance ShowProxy TraceObject

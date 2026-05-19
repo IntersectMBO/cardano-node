@@ -8,7 +8,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
   ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (..))
 
@@ -28,7 +28,6 @@ import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
-import           Data.String
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
@@ -47,6 +46,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -80,11 +80,11 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString sbe
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = fromIntegral numVotes
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNumDReps = fromIntegral numVotes
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
-      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -92,7 +92,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -111,9 +111,9 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   constitutionActionFp <- H.note $ gov </> "constitution.action"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
   let constitutionAnchorDataIpfsHash = "QmXGkenkhh3NsotVwbNGToGsPuvJLgRT9aAz5ToyKAqdWP"
-  constitutionAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  constitutionAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   constitutionHash <- execCli' execConfig
     [ "hash", "anchor-data", "--file-binary", constitutionAnchorFile
@@ -229,8 +229,8 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-    pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 1)
+      $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"
@@ -261,7 +261,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === fromIntegral numVotes
 
-  -- We check that constitution was succcessfully ratified
+  -- We check that constitution was successfully ratified
   void . H.leftFailM . H.evalIO . runExceptT $
     foldEpochState
       configurationFile
@@ -272,7 +272,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
-                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txId
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow txId
                                     , "--governance-action-index", "0"
                                     ]
 
@@ -286,7 +286,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
 
   -- Check TxId returned is the same as the one we used
   proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
-  proposalsTxId === Text.pack txId
+  proposalsTxId === Text.pack (prettyShow txId)
 
   -- Check that committeeVotes is an empty object
   proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object
@@ -362,8 +362,8 @@ filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochStat
       let rState = Ledger.extractDRepPulsingState $ newEpochState ^. L.newEpochStateGovStateL . L.drepPulsingStateGovStateL
           constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
           constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
-          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: consitution does not have a guardrail script")
-                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
+          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: constitution does not have a guardrail script")
+                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionGuardrailsScriptHashL
       Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
 
     )

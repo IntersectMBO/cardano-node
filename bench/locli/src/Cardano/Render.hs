@@ -44,6 +44,7 @@ data RenderFormat
   | AsOrg
   | AsReport
   | AsPretty
+  | AsTypst
   deriving (Eq, Show, Bounded, Enum)
 
 -- | Explain the poor human a little bit of what was going on:
@@ -335,8 +336,13 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsOrg     -> orig
   AsReport  -> orig
   AsPretty  -> orig
+  AsTypst   -> orig
 
 renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
+
+renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsTypst} _x =
+  -- This will be supported in the future, when more and more report types receive a typst rendering.
+  error "renderAnalysisCDFs(AsTypst): single-run / single-section typst output not yet supported."  
 
 renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x

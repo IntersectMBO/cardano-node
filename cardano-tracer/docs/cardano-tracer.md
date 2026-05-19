@@ -12,13 +12,14 @@
 - [Build and run](#build-and-run)
 - [Configuration](#configuration)
   - [Distributed Scenario](#distributed-scenario)
-    - [Important](#important)
   - [Local Scenario](#local-scenario)
+  - [Forwarding over TCP](#forwarding-over-tcp)
   - [Network Magic](#network-magic)
   - [Requests](#requests)
   - [Logging](#logging)
   - [Logs Rotation](#logs-rotation)
   - [Prometheus](#prometheus)
+    - [Prometheus HTTP service discovery](#prometheus-http-service-discovery)
   - [EKG Monitoring](#ekg-monitoring)
   - [Verbosity](#verbosity)
   - [RTView](#rtview)
@@ -27,7 +28,7 @@
 
 ## Motivation
 
-Previously, the node handled all the logging by itself. Moreover, it provided monitoring tools as well: two web-servers, for Prometheus and for EKG monitoring page. `cardano-tracer` is a result of _moving_ all the logging/monitoring-related stuff from the node to a separate service. As a result, the node became smaller, faster, and simpler.
+Previously, the node handled all the logging by itself. Moreover, it provided monitoring tools as well: two web-servers, for Prometheus and for EKG monitoring page. `cardano-tracer` is a result of _moving_ all logging and monitoring related functionality from the node to a separate service. As a result, the node becomes smaller, more efficient, and simpler.
 
 ## Overview
 
@@ -81,8 +82,6 @@ The way how to configure `cardano-tracer` depends on your requirements. There ar
 Distributed scenario is for real-life case: for example, you have `N` nodes working on `N` different AWS-instances, and you want to collect all the logging/monitoring information from these nodes using one `cardano-tracer` process working on your machine.
 
 Local scenario is for testing case: for example, you want to try your new infrastructure from scratch, so you run `N` nodes and one `cardano-tracer` process on your machine.
-
-**IMPORTANT NOTICE**: Please note that `cardano-tracer` **does not** support connection via IP-address and port, to avoid unauthorized connections. The **only** way to establish connection with the node is the local socket (Unix sockets or Windows named pipes).
 
 ## Distributed Scenario
 
@@ -193,7 +192,7 @@ where:
 
 - `/tmp/forwarder.sock` is a path to the local socket on machine `A` _and_ a path to the local socket on machine `D`,
 - `john` is a user name you use to login on machine `D`,
-- `109.75.33.121` is an IP-adress of machine `D`.
+- `109.75.33.121` is an IP-address of machine `D`.
 
 Now run the same command on machines `B` and `C` to connect corresponding nodes with the same `cardano-tracer` working on machine `D`.
 
@@ -251,7 +250,35 @@ There is another way to connect `cardano-tracer` to your nodes: the `cardano-tra
 
 As you see, the tag in `network` field is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with your local nodes via the local sockets `/tmp/cardano-node-*.sock`. In this case each socket is used by a particular node.
 
-Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintainance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
+`AcceptAt` and `ConnectTo` are mirrored by the reciprocal CLI option on the node `--tracer-socket-path-connect` / `--tracer-socket-path-accept`. If you choose one on the node, you choose the opposite on the tracer. This only makes a difference to which entity initiates the handshake; after the handshake the configuration is identical
+
+Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintenance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
+
+## Forwarding over TCP
+
+In addition to forwarding over sockets, forwarding over TCP/IP is supported. In both cases, the 'forwarding protocol' is identical. For TCP forwarding, adjust the following (only showing the `AcceptAt` scenario here):
+
+Change node CLI option:
+```bash
+--tracer-socket-network-connect 10.0.0.2:34567
+```
+
+Adjust value for `network` in `cardano-tracer`'s configuration:
+```yaml
+network:
+  tag: AcceptAt
+  contents: "0.0.0.0:34567"
+```
+
+In this example, `cardano-tracer` listens on port 34567. Nodes can connect via IPv4 for forwarding, with `10.0.0.2` being `cardano-tracer`'s IP in that example.
+
+### Important
+
+On same-host setups sockets are always preferable due to **less overhead and better performance**. On multi-host setups, socket connection via SSH tunnels is always preferable due to **increased security**.
+
+Use TCP forwarding **if and only if** you control each and every aspect of the environment, such as port mapping or firewalls, or virtual network setup - the 'forwarding protocol' does not implement encrypting traffic nor authentication methods.
+
+
 
 ## Network Magic
 
@@ -340,7 +367,7 @@ The fields `rpMaxAgeMinutes`, `rpMaxAgeHours` specify the lifetime of the log fi
 
 ## Prometheus
 
-At top-level route `/` Promtheus gives a list of connected nodes.
+At top-level route `/` Prometheus gives a list of connected nodes.
 
 The responses are either human-readable names (HTML) with clickable
 links, or JSON mapping from connected node names to relative URLs,
@@ -422,7 +449,7 @@ rts_gc_bytes_copied 17114384
 # EOF
 ```
 
-Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a seperate JSON file containing such a map.
+Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a separate JSON file containing such a map.
 The system's internal metric names have to be used as keys (cf. [metrics documentation](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md#metrics)).
 ```
 "metricsHelp": "path/to/key-value-map.json"
@@ -436,7 +463,28 @@ or
 }
 ```
 
+### Prometheus HTTP service discovery
 
+The `/targets` path can be used for Prometheus HTTP service discovery. This lets
+Prometheus dynamically discover all connected nodes, and scrape their metrics.
+Below is a minimal example of a corresponding job definition that goes into the
+`prometheus.yml` configuration:
+
+```yaml
+  - job_name: "cardano-tracer"
+    http_sd_configs:
+      - url: 'http://127.0.0.1:3200/targets'    # <-- Your cardano-tracer's real hostname:prometheus port
+```
+
+Each target will have a label `node_name` which corresponds to the `TraceOptionNodeName` setting in the respective node config.
+
+In `cardano-tracer`'s config, you can optionally provide additional labels to be attached to *all* targets
+(default is no additional labels):
+```json
+  "prometheusLabels": {
+      "<labelname>": "<labelvalue>", ...
+    }
+```
 
 ## EKG Monitoring
 

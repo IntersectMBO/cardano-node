@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,9 +19,13 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
+  , txsMempoolTimeoutSoftCounterName
+  , txsSyncDurationTotalCounterName
+  , impliesMempoolTimeoutSoft
   ) where
 
 
+import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
@@ -40,12 +45,10 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, LedgerSupportsMempool, TxLimits (TxMeasure),
-                   TxMeasureMetrics (txMeasureMetricExUnitsMemory, txMeasureMetricExUnitsSteps, txMeasureMetricRefScriptsSizeBytes, txMeasureMetricTxSizeBytes),
-                   txForgetValidated, txId)
+                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
-import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.Mempool.TxSeq (TxSeqMeasure (mCount, mSize))
+import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
+                   TraceEventMempool (..), jsonMempoolRejectionDetails)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -57,8 +60,8 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
-import           Ouroboros.Consensus.Observe.ConsensusJson (ConsensusJson (toConsensusJson))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
@@ -67,10 +70,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
-import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
-import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
@@ -85,18 +85,6 @@ import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (TraceLeiosPeerDbException),
-                   leiosEbTxs, traceLeiosKernelToObject, traceLeiosPeerToObject)
-
-instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
-  forMachine _dtal (ConnectionId local' remote) =
-    mconcat [ "connectionId" .= String (showT local'
-                                          <> " "
-                                          <> showT remote)
-    ]
-  forHuman (ConnectionId local' remote) =
-    "ConnectionId " <>  showT local' <> " " <> showT remote
-
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
 --------------------------------------------------------------------------------
@@ -106,7 +94,7 @@ instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
     mconcat $ ("credentials" .= toJSON creds) : [forMachine dtal a]
 
   forHuman (TraceLabelCreds creds a)         =
-    "With label " <> (Text.pack . show) creds <> ", " <> forHumanOrMachine a
+    "With label " <> (Text.pack . show) creds <> ", " <> forHuman a
   asMetrics (TraceLabelCreds _creds a)        =
     asMetrics a
 
@@ -135,7 +123,7 @@ instance (LogFormatting peer, Show peer, LogFormatting a)
   forMachine dtal (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
   forHuman (TraceLabelPeer peerid a) = "Peer is: (" <> showT peerid
-                                        <> "). " <> forHumanOrMachine a
+                                        <> "). " <> forHuman a
   asMetrics (TraceLabelPeer _peerid a) = asMetrics a
 
 instance MetaTrace a => MetaTrace (TraceLabelPeer label a) where
@@ -670,7 +658,7 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk, ToJSON (HeaderHash blk))
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
@@ -695,7 +683,7 @@ instance (LogFormatting peer, Show peer) =>
     , "peers" .= toJSON
       (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
+  asMetrics _ = []
 
 instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
   namespaceFor (a : _tl) = (nsCast . namespaceFor) a
@@ -743,6 +731,11 @@ instance MetaTrace (FetchDecision [Point header]) where
     namespaceFor (Left _) = Namespace [] ["Decline"]
     namespaceFor (Right _) = Namespace [] ["Accept"]
 
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineChainIntersectionTooDeep)) = Just Debug
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineChainNotPlausible)) = Just Notice
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineAlreadyFetched)) = Just Debug
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightThisPeer)) = Just Debug
+    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightOtherPeer)) = Just Debug
     severityFor (Namespace _ ["Decline"]) _ = Just Info
     severityFor (Namespace _ ["Accept"])  _ = Just Info
     severityFor _ _ = Nothing
@@ -773,12 +766,15 @@ instance (HasHeader header, ConvertRawHash header) =>
       mconcat [ "kind" .= String "AddedFetchRequest" ]
     forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
       mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-    forMachine _dtal (BlockFetch.SendFetchRequest af _) =
-      mconcat [ "kind" .= String "SendFetchRequest"
+    forMachine dtal (BlockFetch.SendFetchRequest af gsv) =
+      mconcat $
+              [ "kind" .= String "SendFetchRequest"
               , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
               , "length" .= toJSON (fragmentLength' af)]
+              ++
+              [ "deltaq" .= toJSON gsv | dtal >= DDetailed ]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
@@ -1010,8 +1006,6 @@ instance ( LogFormatting peer
     , "peers" .= toJSON (map (forMachine dtal) (toList peers))
     ]
 
-  forHuman = forHumanFromMachine
-
 instance MetaTrace (TraceGDDEvent peer blk) where
   namespaceFor _ = Namespace [] ["TraceGDDEvent"]
 
@@ -1035,8 +1029,6 @@ instance ( HasHeader blk
     , "latestSlot" .= toJSON (unSlotNo <$> withOriginToMaybe latestSlot)
     , "idling" .= toJSON idling
     ]
-
-  forHuman = forHumanFromMachine
 
 
 --------------------------------------------------------------------------------
@@ -1062,157 +1054,6 @@ instance LogFormatting SanityCheckIssue where
             ]
   forHuman (InconsistentSecurityParam e) =
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
-
-
-
---------------------------------------------------------------------------------
--- TxInbound Tracer
---------------------------------------------------------------------------------
-
-instance LogFormatting (TraceTxSubmissionInbound txid tx) where
-  forMachine _dtal (TraceTxSubmissionCollected count) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionCollected"
-      , "count" .= toJSON count
-      ]
-  forMachine _dtal (TraceTxSubmissionProcessed processed) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionProcessed"
-      , "accepted" .= toJSON (ptxcAccepted processed)
-      , "rejected" .= toJSON (ptxcRejected processed)
-      ]
-  forMachine _dtal TraceTxInboundTerminated =
-    mconcat
-      [ "kind" .= String "TraceTxInboundTerminated"
-      ]
-  forMachine _dtal (TraceTxInboundCanRequestMoreTxs count) =
-    mconcat
-      [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
-      , "count" .= toJSON count
-      ]
-  forMachine _dtal (TraceTxInboundCannotRequestMoreTxs count) =
-    mconcat
-      [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
-      , "count" .= toJSON count
-      ]
-
-  asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM "submissions.submitted" (Just count)]
-  asMetrics (TraceTxSubmissionProcessed processed) =
-    [ CounterM "submissions.accepted"
-        (Just (ptxcAccepted processed))
-    , CounterM "submissions.rejected"
-        (Just (ptxcRejected processed))
-    ]
-  asMetrics _ = []
-
-instance MetaTrace (TraceTxSubmissionInbound txid tx) where
-    namespaceFor TraceTxSubmissionCollected {} = Namespace [] ["Collected"]
-    namespaceFor TraceTxSubmissionProcessed {} = Namespace [] ["Processed"]
-    namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
-    namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
-    namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
-
-    severityFor (Namespace _ ["Collected"]) _ = Just Debug
-    severityFor (Namespace _ ["Processed"]) _ = Just Debug
-    severityFor (Namespace _ ["Terminated"]) _ = Just Notice
-    severityFor (Namespace _ ["CanRequestMoreTxs"]) _ = Just Debug
-    severityFor (Namespace _ ["CannotRequestMoreTxs"]) _ = Just Debug
-    severityFor _ _ = Nothing
-
-    metricsDocFor (Namespace _ ["Collected"]) =
-      [ ("submissions.submitted", "")]
-    metricsDocFor (Namespace _ ["Processed"]) =
-      [ ("submissions.accepted", "")
-      , ("submissions.rejected", "")
-      ]
-    metricsDocFor _ = []
-
-    documentFor (Namespace _ ["Collected"]) = Just
-      "Number of transactions just about to be inserted."
-    documentFor (Namespace _ ["Processed"]) = Just
-      "Just processed transaction pass/fail breakdown."
-    documentFor (Namespace _ ["Terminated"]) = Just
-      "Server received 'MsgDone'."
-    documentFor (Namespace _ ["CanRequestMoreTxs"]) = Just $ mconcat
-      [ "There are no replies in flight, but we do know some more txs we"
-      , " can ask for, so lets ask for them and more txids."
-      ]
-    documentFor (Namespace _ ["CannotRequestMoreTxs"]) = Just $ mconcat
-      [ "There's no replies in flight, and we have no more txs we can"
-      , " ask for so the only remaining thing to do is to ask for more"
-      , " txids. Since this is the only thing to do now, we make this a"
-      , " blocking call."
-      ]
-    documentFor _ = Nothing
-
-    allNamespaces = [
-          Namespace [] ["Collected"]
-        , Namespace [] ["Processed"]
-        , Namespace [] ["Terminated"]
-        , Namespace [] ["CanRequestMoreTxs"]
-        , Namespace [] ["CannotRequestMoreTxs"]
-        ]
-
---------------------------------------------------------------------------------
--- TxOutbound Tracer
---------------------------------------------------------------------------------
-
-instance (Show txid, Show tx)
-      => LogFormatting (TraceTxSubmissionOutbound txid tx) where
-  forMachine DDetailed (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      , "txIds" .= String (Text.pack $ show txids)
-      ]
-  forMachine _dtal (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      ]
-  forMachine DDetailed (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      , "txs" .= String (Text.pack $ show txs)
-      ]
-  forMachine _dtal (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      ]
-  forMachine _dtal (TraceControlMessage _msg) =
-    mconcat
-      [ "kind" .= String "TraceControlMessage"
-      ]
-
-instance MetaTrace (TraceTxSubmissionOutbound txid tx) where
-    namespaceFor TraceTxSubmissionOutboundRecvMsgRequestTxs {} =
-      Namespace [] ["RecvMsgRequest"]
-    namespaceFor TraceTxSubmissionOutboundSendMsgReplyTxs {} =
-      Namespace [] ["SendMsgReply"]
-    namespaceFor TraceControlMessage {} =
-      Namespace [] ["ControlMessage"]
-
-    severityFor (Namespace _ ["RecvMsgRequest"]) _ =
-      Just Info
-    severityFor (Namespace _ ["SendMsgReply"]) _ =
-      Just Info
-    severityFor (Namespace _ ["ControlMessage"]) _ =
-      Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["RecvMsgRequest"]) = Just
-      "The IDs of the transactions requested."
-    documentFor (Namespace _ ["SendMsgReply"]) = Just
-      "The transactions to be sent in the response."
-    documentFor (Namespace _ ["ControlMessage"]) = Just
-      ""
-    documentFor _ = Nothing
-
-    allNamespaces =
-      [ Namespace [] ["RecvMsgRequest"]
-      , Namespace [] ["SendMsgReply"]
-      , Namespace [] ["ControlMessage"]
-      ]
-
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
@@ -1244,6 +1085,20 @@ instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
 -- Mempool Tracer
 --------------------------------------------------------------------------------
 
+txsMempoolTimeoutSoftCounterName :: Text.Text
+txsMempoolTimeoutSoftCounterName = "txsMempoolTimeoutSoft"
+
+txsSyncDurationTotalCounterName :: Text.Text
+txsSyncDurationTotalCounterName = "txsSyncDurationTotal"
+
+impliesMempoolTimeoutSoft :: TraceEventMempool blk -> Bool
+impliesMempoolTimeoutSoft = \case
+  TraceMempoolRejectedTx _tx _txApplyErr details _mpSz ->
+    case details of
+      MempoolRejectedByTimeoutSoft{} -> True
+      MempoolRejectedByLedger -> False
+  _ -> False
+
 instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
@@ -1257,14 +1112,15 @@ instance
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
-  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr details mpSz) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
       ] <>
+      if dtal < DDetailed then [] else
       [ "err" .= forMachine dtal txApplyErr
-      | dtal >= DDetailed
+      , "errdetails" .= jsonMempoolRejectionDetails details
       ]
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
@@ -1299,30 +1155,28 @@ instance
       [ "kind" .= String "TraceMempoolAttemptingAdd"
       , "tx" .= forMachine dtal tx
       ]
-  forMachine dtal (TraceMempoolLedgerFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerFound"
-      , "tip" .= forMachine dtal p
-      ]
-  forMachine dtal (TraceMempoolLedgerNotFound p) =
-    mconcat
-      [ "kind" .= String "TraceMempoolLedgerNotFound"
-      , "tip" .= forMachine dtal p
-      ]
 
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
       , "enclosingTime" .= et
       ]
+  forMachine _dtal TraceMempoolTipMovedBetweenSTMBlocks =
+    mconcat
+      [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
+      ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
+  asMetrics ev@(TraceMempoolRejectedTx _tx _txApplyErr _details mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
+    ]
+    ++
+    [ CounterM txsMempoolTimeoutSoftCounterName Nothing
+    | impliesMempoolTimeoutSoft ev
     ]
   asMetrics (TraceMempoolRemoveTxs txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1334,14 +1188,16 @@ instance
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
-    [ IntM "txsSyncDuration" (round $ 1000 * duration)
+    let durationMs = round (1000 * duration) :: Integer in
+    [ IntM "txsSyncDuration" durationMs
+    , CounterM txsSyncDurationTotalCounterName (Just (fromIntegral durationMs))
     ]
   asMetrics (TraceMempoolSynced RisingEdge) = []
 
   asMetrics TraceMempoolSyncNotNeeded {} = []
   asMetrics TraceMempoolAttemptingAdd {} = []
-  asMetrics TraceMempoolLedgerFound {} = []
-  asMetrics TraceMempoolLedgerNotFound {} = []
+
+  asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1359,8 +1215,8 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
-    namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["LedgerFound"]
-    namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["LedgerNotFound"]
+    namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
@@ -1369,8 +1225,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Warning
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerFound"]) _ = Just Debug
-    severityFor (Namespace _ ["LedgerNotFound"]) _ = Just Debug
+    severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1380,6 +1235,7 @@ instance MetaTrace (TraceEventMempool blk) where
     metricsDocFor (Namespace _ ["RejectedTx"]) =
       [ ("txsInMempool","Transactions in mempool")
       , ("mempoolBytes", "Byte size of the mempool")
+      , (txsMempoolTimeoutSoftCounterName, "Transactions that soft timed out in mempool")
       ]
     metricsDocFor (Namespace _ ["RemoveTxs"]) =
       [ ("txsInMempool","Transactions in mempool")
@@ -1391,7 +1247,8 @@ instance MetaTrace (TraceEventMempool blk) where
       , ("txsProcessedNum", "")
       ]
     metricsDocFor (Namespace _ ["Synced"]) =
-      [ ("txsSyncDuration", "Time to sync the mempool in ms after block adoption")
+      [ ("txsSyncDuration", "Latest time to sync the mempool in ms after block adoption")
+      , (txsSyncDurationTotalCounterName, "Cumulative time spent syncing the mempool in ms after block adoption")
       ]
     metricsDocFor _ = []
 
@@ -1414,12 +1271,8 @@ instance MetaTrace (TraceEventMempool blk) where
       "The mempool and the LedgerDB are syncing or in sync depending on the argument on the trace."
     documentFor (Namespace _ ["AttemptAdd"]) = Just
       "Mempool is about to try to validate and add a transaction."
-    documentFor (Namespace _ ["LedgerNotFound"]) = Just $ mconcat
-      [ "Ledger state requested by the mempool no longer in LedgerDB."
-      , " Will have to re-sync."
-      ]
-    documentFor (Namespace _ ["LedgerFound"]) = Just
-      "Ledger state requested by the mempool is in the LedgerDB."
+    documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
+      "LedgerDB moved to an alternative fork between two reads during re-sync."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1430,8 +1283,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["Synced"]
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
-      , Namespace [] ["LedgerNotFound"]
-      , Namespace [] ["LedgerFound"]
+      , Namespace [] ["TipMovedBetweenSTMBlocks"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1452,10 +1304,7 @@ instance ( tx ~ GenTx blk
          , Show (TxId (GenTx blk))
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
-         , LogFormatting (ForgeStateUpdateError blk)
-         , ConsensusJson (HeaderHash blk)
-         , ConsensusJson (TxMeasure blk)
-         )
+         , LogFormatting (ForgeStateUpdateError blk))
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
     mconcat
@@ -1538,11 +1387,16 @@ instance ( tx ~ GenTx blk
       , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
       , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
-  forMachine _dtal (TraceForgedBlock slotNo fb) =
+  forMachine _dtal (TraceForgedBlock slotNo _ blk _ _) =
     mconcat
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
-      , "forgedBlock"     .= toConsensusJson fb
+      , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
+      , "blockNo"   .= toJSON (unBlockNo $ blockNo blk)
+      , "blockPrev" .= String (renderChainHash
+                                @blk
+                                (renderHeaderHash (Proxy @blk))
+                                $ blockPrevHash blk)
       ]
   forMachine _dtal (TraceDidntAdoptBlock slotNo _) =
     mconcat
@@ -1645,7 +1499,7 @@ instance ( tx ~ GenTx blk
         <> renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash
         <> " ticked to slot "
         <> showT (unSlotNo mpSlot)
-  forHuman (TraceForgedBlock slotNo _) =
+  forHuman (TraceForgedBlock slotNo _ _ _ _) =
       "Forged block in slot " <> showT (unSlotNo slotNo)
   forHuman (TraceDidntAdoptBlock slotNo _) =
       "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
@@ -1703,22 +1557,9 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot fb) =
-      [ IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)
-      , CounterM "Forge.forged" Nothing
-      -- NOTE(bladyjoker): New!!!
-      , CounterM "Forge.ranking-block.total-count" Nothing
-      , CounterM "Forge.ranking-block.total-tx-count" (Just . fromInteger . toInteger . mCount . fbNewBlockSize $ fb)
-      , CounterM "Forge.ranking-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbNewBlockSize $ fb)
-      , CounterM "Forge.ranking-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbNewBlockSize $ fb)
-      , CounterM "Forge.ranking-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbNewBlockSize $ fb)
-      , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbNewBlockSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-count" (Just . fromInteger . toInteger . mCount . fbMempoolRestSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes . mSize . fbMempoolRestSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory . mSize . fbMempoolRestSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps . mSize . fbMempoolRestSize $ fb)
-      , CounterM "Forge.rest-in-mempool.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes . mSize . fbMempoolRestSize $ fb)
-      ]
+  asMetrics (TraceForgedBlock slot _ _ _ _) =
+    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
+     CounterM "Forge.forged" Nothing]
   asMetrics (TraceDidntAdoptBlock _slot _) =
     [CounterM "Forge.didnt-adopt" Nothing]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
@@ -2089,6 +1930,14 @@ instance ( LogFormatting selection
          ) => LogFormatting (TraceGsmEvent selection) where
   forMachine dtal =
     \case
+      GsmEventInitializedInCaughtUp ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInCaughtUp"
+          ]
+      GsmEventInitializedInPreSyncing ->
+        mconcat
+          [ "kind" .= String "GsmEventInitializedInPreSyncing"
+          ]
       GsmEventEnterCaughtUp i s ->
         mconcat
           [ "kind" .= String "GsmEventEnterCaughtUp"
@@ -2112,41 +1961,78 @@ instance ( LogFormatting selection
 
   forHuman = showT
 
+  asMetrics =
+    \case
+      GsmEventEnterCaughtUp {}       -> [caughtUp]
+      GsmEventLeaveCaughtUp {}       -> [preSyncing]
+      GsmEventPreSyncingToSyncing {} -> [syncing]
+      GsmEventSyncingToPreSyncing {} -> [preSyncing]
+      GsmEventInitializedInCaughtUp {}   -> [caughtUp]
+      GsmEventInitializedInPreSyncing {} -> [preSyncing]
+    where
+      preSyncing = IntM "GSM.state" 0
+      syncing    = IntM "GSM.state" 1
+      caughtUp   = IntM "GSM.state" 2
+
 instance MetaTrace (TraceGsmEvent selection) where
   namespaceFor =
     \case
+      GsmEventInitializedInCaughtUp   -> Namespace [] ["InitializedInCaughtUp"]
+      GsmEventInitializedInPreSyncing -> Namespace [] ["InitializedInPreSyncing"]
       GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
       GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
-      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["GsmEventPreSyncingToSyncing"]
-      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["GsmEventSyncingToPreSyncing"]
+      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["PreSyncingToSyncing"]
+      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["SyncingToPreSyncing"]
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["EnterCaughtUp"]               -> Just Info
-      Namespace _ ["LeaveCaughtUp"]               -> Just Info
-      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
-      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
+      Namespace _ ["InitializedInCaughtUp"]       -> Just Notice
+      Namespace _ ["InitializedInPreSyncing"]     -> Just Notice
+      Namespace _ ["EnterCaughtUp"]               -> Just Notice
+      Namespace _ ["LeaveCaughtUp"]               -> Just Warning
+      Namespace _ ["PreSyncingToSyncing"]         -> Just Notice
+      Namespace _ ["SyncingToPreSyncing"]         -> Just Notice
       Namespace _ _                               -> Nothing
 
   documentFor = \case
+    Namespace _ ["InitializedInCaughtUp"] -> Just "The GSM was initialized in the 'CaughtUp' state"
+    Namespace _ ["InitializedInPreSyncing"] -> Just "The GSM was initialized in the 'PreSyncing' state"
+
     Namespace _ ["EnterCaughtUp"] ->
       Just "Node is caught up"
     Namespace _ ["LeaveCaughtUp"] ->
       Just "Node is not caught up"
 
-    Namespace _ ["GsmEventPreSyncingToSyncing"] ->
+    Namespace _ ["PreSyncingToSyncing"] ->
       Just "The Honest Availability Assumption is now satisfied"
-    Namespace _ ["GsmEventSyncingToPreSyncing"] ->
+    Namespace _ ["SyncingToPreSyncing"] ->
       Just "The Honest Availability Assumption is no longer satisfied"
 
     Namespace _ _ ->
       Nothing
 
+  metricsDocFor = \case
+    Namespace _ ["InitializedInCaughtUp"]   -> doc
+    Namespace _ ["InitializedInPreSyncing"] -> doc
+    Namespace _ ["EnterCaughtUp"]           -> doc
+    Namespace _ ["LeaveCaughtUp"]           -> doc
+    Namespace _ ["PreSyncingToSyncing"]     -> doc
+    Namespace _ ["SyncingToPreSyncing"]     -> doc
+    Namespace _ _                           -> []
+    where
+      doc =
+        [ ("GSM.state"
+          , "The state of the Genesis State Machine. 0 = PreSyncing, 1 = Syncing, 2 = CaughtUp."
+          )
+        ]
+
   allNamespaces =
-    [ Namespace [] ["EnterCaughtUp"]
+    [ Namespace [] ["InitializedInCaughtUp"]
+    , Namespace [] ["InitializedInPreSyncing"]
+    , Namespace [] ["EnterCaughtUp"]
     , Namespace [] ["LeaveCaughtUp"]
-    , Namespace [] ["GsmEventPreSyncingToSyncing"]
-    , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    , Namespace [] ["PreSyncingToSyncing"]
+    , Namespace [] ["SyncingToPreSyncing"]
     ]
 
 --------------------------------------------------------------------------------
@@ -2190,8 +2076,6 @@ instance ( LogFormatting peer, Show peer, ConvertRawHash blk
       csjReasonToJSON = \case
         BecauseCsjDisengage -> String "BecauseCsjDisengage"
         BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
-
-  forHuman = forHumanFromMachine
 
 instance MetaTrace (Jumping.TraceEventCsj peer blk) where
   namespaceFor = \case
@@ -2285,47 +2169,139 @@ instance ( StandardHash blk
 
   forHuman = showT
 
-instance LogFormatting TraceLeiosKernel where
-    forHuman = showT
-    forMachine _dtal = traceLeiosKernelToObject
+{-------------------------------------------------------------------------------
+ KES-agent
+-------------------------------------------------------------------------------}
 
-    asMetrics (TraceLeiosBlockForged{eb, ebMeasure}) =
-        [ CounterM "Forge.endorser-block.total-count" Nothing
-        , CounterM "Forge.endorser-block.total-tx-count" (Just . fromIntegral . length $ leiosEbTxs eb)
-        , CounterM "Forge.endorser-block.total-tx-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricTxSizeBytes $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-xu-memory" (Just . fromInteger . toInteger . txMeasureMetricExUnitsMemory $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-xu-time" (Just . fromInteger . toInteger . txMeasureMetricExUnitsSteps $ ebMeasure)
-        , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes" (Just . fromInteger . toInteger . unByteSize32 . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
-        ]
-    asMetrics _ = []
+--------------------------------------------------------------------------------
+-- KES Agent tracer
+--------------------------------------------------------------------------------
 
-instance MetaTrace TraceLeiosKernel where
-    namespaceFor _ = Namespace [ ] [ "TraceLeiosKernel" ]
+instance LogFormatting Agent.ServiceClientTrace where
+  forMachine _dtal = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeTrace" ]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      mconcat [ "kind" .= String "ServiceClientVersionHandshakeFailed" ]
+    Agent.ServiceClientDriverTrace _sdt ->
+      mconcat [ "kind" .= String "ServiceClientDriverTrace" ]
+    Agent.ServiceClientSocketClosed ->
+      mconcat [ "kind" .= String "ServiceClientSocketClosed" ]
+    Agent.ServiceClientConnected _s ->
+      mconcat [ "kind" .= String "ServiceClientConnected" ]
+    Agent.ServiceClientAttemptReconnect{} ->
+      mconcat [ "kind" .= String "ServiceClientAttemptReconnect" ]
+    Agent.ServiceClientReceivedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientReceivedKey" ]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      mconcat [ "kind" .= String "ServiceClientDeclinedKey" ]
+    Agent.ServiceClientDroppedKey ->
+      mconcat [ "kind" .= String "ServiceClientDroppedKey" ]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      mconcat [ "kind" .= String "ServiceClientOpCertNumberCheck" ]
+    Agent.ServiceClientAbnormalTermination _s ->
+      mconcat [ "kind" .= String "ServiceClientAbnormalTermination" ]
+    Agent.ServiceClientStopped ->
+      mconcat [ "kind" .= String "ServiceClientStopped" ]
 
-    severityFor _ (Just TraceLeiosDbException{}) = Just Error
-    severityFor _ _ = Just Debug
+  forHuman = showT
 
-    documentFor _ = Nothing
-    allNamespaces = [Namespace [] [ "TraceLeiosKernel" ]]
+instance MetaTrace Agent.ServiceClientTrace where
+  namespaceFor = \case
+    Agent.ServiceClientVersionHandshakeTrace _vhdt ->
+      Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    Agent.ServiceClientVersionHandshakeFailed ->
+      Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    Agent.ServiceClientDriverTrace _sdt ->
+      Namespace [] ["ServiceClientDriverTrace"]
+    Agent.ServiceClientSocketClosed ->
+      Namespace [] ["ServiceClientSocketClosed"]
+    Agent.ServiceClientConnected _s ->
+      Namespace [] ["ServiceClientConnected"]
+    Agent.ServiceClientAttemptReconnect{} ->
+      Namespace [] ["ServiceClientAttemptReconnect"]
+    Agent.ServiceClientReceivedKey _tbt ->
+      Namespace [] ["ServiceClientReceivedKey"]
+    Agent.ServiceClientDeclinedKey _tbt ->
+      Namespace [] ["ServiceClientDeclinedKey"]
+    Agent.ServiceClientDroppedKey ->
+      Namespace [] ["ServiceClientDroppedKey"]
+    Agent.ServiceClientOpCertNumberCheck _ _ ->
+      Namespace [] ["ServiceClientOpCertNumberCheck"]
+    Agent.ServiceClientAbnormalTermination _s ->
+      Namespace [] ["ServiceClientAbnormalTermination"]
+    Agent.ServiceClientStopped ->
+      Namespace [] ["ServiceClientStopped"]
 
-    metricsDocFor _ =
-        [ ("Forge.endorser-block.total-count", "Counter of forged endorser blocks")
-        , ("Forge.endorser-block.total-tx-count", "Total number of transactions in the forged endorser block")
-        , ("Forge.endorser-block.total-tx-bytes", "Total transaction bytes in the forged endorser block")
-        , ("Forge.endorser-block.total-tx-xu-memory", "Total execution units (memory) in the forged endorser block")
-        , ("Forge.endorser-block.total-tx-xu-time", "Total execution units (time) in the forged endorser block")
-        , ("Forge.endorser-block.total-tx-ref-script-size-bytes", "Total reference script size bytes in the forged endorser block")
-        ]
+  severityFor ns _ = case ns of
+    Namespace [] ["ServiceClientVersionHandshakeTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientVersionHandshakeFailed"] ->
+      Just Error
+    Namespace [] ["ServiceClientDriverTrace"] ->
+      Just Debug
+    Namespace [] ["ServiceClientSocketClosed"] ->
+      Just Info
+    Namespace [] ["ServiceClientConnected"] ->
+      Just Info
+    Namespace [] ["ServiceClientAttemptReconnect"] ->
+      Just Info
+    Namespace [] ["ServiceClientReceivedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDeclinedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientDroppedKey"] ->
+      Just Info
+    Namespace [] ["ServiceClientOpCertNumberCheck"] ->
+      Just Debug
+    Namespace [] ["ServiceClientAbnormalTermination"] ->
+      Just Error
+    Namespace [] ["ServiceClientStopped"] ->
+      Just Info
+    Namespace _ _ -> Nothing
 
-instance LogFormatting TraceLeiosPeer where
-    forHuman = showT
-    forMachine _dtal = traceLeiosPeerToObject
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["ServiceClientVersionHandshakeTrace"]
+    , Namespace [] ["ServiceClientVersionHandshakeFailed"]
+    , Namespace [] ["ServiceClientDriverTrace"]
+    , Namespace [] ["ServiceClientSocketClosed"]
+    , Namespace [] ["ServiceClientConnected"]
+    , Namespace [] ["ServiceClientAttemptReconnect"]
+    , Namespace [] ["ServiceClientReceivedKey"]
+    , Namespace [] ["ServiceClientDeclinedKey"]
+    , Namespace [] ["ServiceClientDroppedKey"]
+    , Namespace [] ["ServiceClientOpCertNumberCheck"]
+    , Namespace [] ["ServiceClientAbnormalTermination"]
+    , Namespace [] ["ServiceClientStopped"]
+    ]
 
-instance MetaTrace TraceLeiosPeer where
-    namespaceFor _ = Namespace [] [ "TraceLeiosPeer" ]
+instance LogFormatting KESAgentClientTrace where
+  forMachine dtal = \case
+    KESAgentClientException ex -> mconcat
+      [ "kind" .= String "KESAgentClientException"
+      , "exception" .= String (Text.pack $ show ex)
+      ]
+    KESAgentClientTrace t -> mconcat
+      [ "kind" .= String "KESAgentClientTrace"
+      , "trace" .= forMachine dtal t
+      ]
 
-    severityFor _ (Just TraceLeiosPeerDbException{}) = Just Error
-    severityFor _ _ = Just Debug
+  forHuman = showT
 
-    documentFor _ = Nothing
-    allNamespaces = [Namespace [] [ "TraceLeiosPeer" ]]
+
+instance MetaTrace KESAgentClientTrace where
+  namespaceFor = \case
+    KESAgentClientException _ ->
+      Namespace [] ["KESAgentClientException"]
+    KESAgentClientTrace t -> nsCast $ namespaceFor t
+
+  severityFor (Namespace [] ["KESAgentClientException"]) _ = Just Error
+  severityFor (Namespace [] ["KESAgentClientTrace"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    Namespace [] ["KESAgentClientException"] :
+    fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])

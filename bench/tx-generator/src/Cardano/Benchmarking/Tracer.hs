@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -32,10 +33,14 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Startup
-import           Cardano.Node.Tracing.NodeInfo () -- MetaTrace NodeInfo
+import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission
+import           Ouroboros.Network.Tracing ()
 
+import           Control.Exception (SomeException (..))
 import           Control.Monad (forM, guard)
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
@@ -43,13 +48,13 @@ import           Data.Kind
 import           Data.List (find)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Proxy
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
+import           Network.Mux.Tracing ()
+import qualified Network.TypedProtocol.Codec as TypedProtocol
 
-import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject
 
 pattern TracerNameBench     :: Text
@@ -85,9 +90,9 @@ initNullTracers = BenchTracers
 -- if the first argument isJust, we assume we have a socket path
 -- and want to use trace-dispatcher, so we'll create a forwarding tracer
 initTxGenTracers :: Maybe (IOManager, NetworkId, FilePath) -> IO BenchTracers
-initTxGenTracers mbForwarding = do
+initTxGenTracers mbForwarding = mdo
   mbStdoutTracer <- fmap Just standardTracer
-  mbForwardingTracer <- prepareForwardingTracer
+  mbForwardingTracer <- prepareForwardingTracer tracers
   confState       <- emptyConfigReflection
 
   let
@@ -108,21 +113,34 @@ initTxGenTracers mbForwarding = do
   connectTracer   <- mkTracer TracerNameConnect   mbStdoutTracer mbForwardingTracer
   submitTracer    <- mkTracer TracerNameSubmit    mbStdoutTracer mbForwardingTracer
 
-  traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
+  let
+    tracers = BenchTracers
+      { btTxSubmit_    = benchTracer
+      , btConnect_     = connectTracer
+      , btSubmission2_ = submitTracer
+      , btN2N_         = n2nSubmitTracer
+      }
 
-  return $ BenchTracers
-    { btTxSubmit_    = benchTracer
-    , btConnect_     = connectTracer
-    , btSubmission2_ = submitTracer
-    , btN2N_         = n2nSubmitTracer
-    }
+  traceWith (btTxSubmit_ tracers) (TraceTxGeneratorVersion Version.txGeneratorVersion)
+  return tracers
  where
-  prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
-  prepareForwardingTracer = forM mbForwarding $
+  prepareForwardingTracer :: BenchTracers -> IO (Maybe (Trace IO FormattedMessage))
+  prepareForwardingTracer benchTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
-        let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
-        (forwardSink :: ForwardSink TraceObject, dpStore, kickoffForwarder) <-
-            initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+        let
+          forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
+          howToConnect = Net.LocalPipe tracerSocket
+          initForwConf = InitForwardingWith
+            { initNetworkMagic          = toNetworkMagic networkId
+            , initEKGStore              = Nothing
+            , initHowToConnect          = howToConnect
+            , initForwarderMode         = Initiator
+            , initOnForwardInterruption = Just $ \(SomeException e) ->
+                traceWith (btTxSubmit_ benchTracer) (TraceBenchForwardingInterrupted howToConnect $ show e)
+            , initOnQueueOverflow       = Nothing
+            }
+        (forwardSink, dpStore, kickoffForwarder) <-
+            initForwardingDelayed iomgr forwardingConf initForwConf
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').
@@ -134,7 +152,7 @@ initTxGenTracers mbForwarding = do
         traceWith nodeInfoTracer genInfo
 
         kickoffForwarder
-        pure $ forwardTracer forwardSink
+        pure $ forwardTracer (writeToSink forwardSink)
 
   prepareGenInfo :: IO NodeInfo
   prepareGenInfo =
@@ -164,20 +182,15 @@ configSilent :: ConfigOption
 configSilent = ConfSeverity (SeverityF Nothing)
 
 initialTraceConfig :: TraceConfig
-initialTraceConfig = TraceConfig {
-      tcOptions = Map.fromList
+initialTraceConfig = emptyTraceConfig 
+    { tcOptions = Map.fromList
           [ ([], [configSilent])
           , setMaxDetail TracerNameBench
           , ([TracerNameSubmitN2N], [configSilent])
           , setMaxDetail TracerNameConnect
           , setMaxDetail TracerNameSubmit
           ]
-    , tcForwarder = Just defaultForwarder {tofConnQueueSize = 2048, tofDisconnQueueSize = 4096}
-    , tcNodeName = Nothing
-    , tcPeerFrequency = Just 2000 -- Every 2 seconds
-    , tcResourceFrequency = Just 1000 -- Every second
-    , tcMetricsPrefix = Nothing
-    , tcLedgerMetricsFrequency = Nothing
+    , tcForwarder = Just defaultForwarder {tofQueueSize = 4096}
     }
   where
     setMaxDetail :: Text -> ([Text], [ConfigOption])
@@ -205,8 +218,14 @@ instance (ConstructorsOf f, ConstructorsOf g) => ConstructorsOf (f :+: g) where
 instance (Constructor ('MetaCons n f r)) => ConstructorsOf (C1 ('MetaCons n f r) x) where
   constructorsOf _ = [ conName @('MetaCons n f r) undefined ]
 
+
 instance LogFormatting (TraceBenchTxSubmit TxId) where
-  forHuman = Text.pack . show
+  forHuman = \case
+    TraceBenchForwardingInterrupted howToConnect errMsg ->
+      Text.pack $ "trace forwarding connection with " <> show howToConnect <> " failed: " <> errMsg
+    _
+      -> ""
+
   forMachine DMinimal _ = mempty
   forMachine DNormal t = mconcat [ "kind" .= A.String (genericName t) ]
   forMachine DDetailed t = forMachine DMaximum t
@@ -276,6 +295,11 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind"    .= A.String "TraceBenchPlutusBudgetSummary"
               , "summary" .= toJSON summary
               ]
+    TraceBenchForwardingInterrupted howToConnect msg ->
+      mconcat [ "kind"    .= A.String "TraceBenchForwardingInterrupted"
+              , "conn"    .= howToConnect
+              , "msg"     .= msg
+              ]
 
 instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceTxGeneratorVersion {} = Namespace [] ["TxGeneratorVersion"]
@@ -295,6 +319,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
     namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
+    namespaceFor TraceBenchForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
 
     severityFor _ _ = Just Info
 
@@ -318,6 +343,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["BenchTxSubDebug"]
         , Namespace [] ["BenchTxSubError"]
         , Namespace [] ["BenchPlutusBudgetSummary"]
+        , Namespace [] ["ForwardingInterrupted"]
         ]
 
 instance LogFormatting NodeToNodeSubmissionTrace where
@@ -369,30 +395,16 @@ instance MetaTrace NodeToNodeSubmissionTrace where
         , Namespace [] ["TxList"]
         ]
 
-instance LogFormatting SendRecvConnect where
+instance (Show txid, Show tx) => LogFormatting (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 txid tx)) where
   forHuman = Text.pack . show
-  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvConnect" ]
+  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "TxSubmission2" ]
 
-instance MetaTrace SendRecvConnect where
-    namespaceFor _ = Namespace [] ["ReqIdsBlocking"]
+instance MetaTrace (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 tx a)) where
+    namespaceFor _ = Namespace [] ["TxSubmission2"]
     severityFor _ _ = Just Info
 
     documentFor _ = Just ""
 
     allNamespaces = [
-          Namespace [] ["SendRecvConnect"]
-        ]
-
-instance LogFormatting SendRecvTxSubmission2 where
-  forHuman = Text.pack . show
-  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvTxSubmission2" ]
-
-instance MetaTrace SendRecvTxSubmission2 where
-    namespaceFor _ = Namespace [] ["SendRecvTxSubmission2"]
-    severityFor _ _ = Just Info
-
-    documentFor _ = Just ""
-
-    allNamespaces = [
-          Namespace [] ["SendRecvTxSubmission2"]
+          Namespace [] ["TxSubmission2"]
         ]

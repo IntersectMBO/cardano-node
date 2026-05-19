@@ -15,7 +15,7 @@ import           Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 -- Package: containers.
 import qualified Data.Map.Strict as Map
--- Package: optparse-applicative-fork.
+-- Package: optparse-applicative.
 import qualified Options.Applicative as OA
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profile

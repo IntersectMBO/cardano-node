@@ -11,6 +11,7 @@
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
 
 {- HLINT ignore "Redundant <$>" -}
+{- HLINT ignore "Move filter" -}
 
 module Cardano.Unlog.LogObject
   ( HostLogs (..)

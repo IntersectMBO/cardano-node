@@ -20,6 +20,7 @@ import           Prelude
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
@@ -54,15 +55,15 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNodes =
-          AutomaticNodeOptions [ SpoNodeOptions []
-                               , SpoNodeOptions []
-                               , SpoNodeOptions []
-                               ]
+      creationOptions = def
+        { creationEra = AnyShelleyBasedEra sbe
+        , creationNodes =
+            SpoNodeOptions [] :|
+          [ SpoNodeOptions []
+          , SpoNodeOptions []
+          ]
+        , creationGenesisOptions = def { genesisEpochLength = 100 }
         }
-      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -70,7 +71,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node

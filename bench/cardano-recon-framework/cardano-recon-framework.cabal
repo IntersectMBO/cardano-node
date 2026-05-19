@@ -1,0 +1,208 @@
+cabal-version:      3.4
+name:               cardano-recon-framework
+description:        Cardano Re(altime) Con(formance) Framework based on Linear Temporal Logic (LTL).
+category:           Cardano
+                    Testing
+copyright:          2026 Intersect.
+version:            1.1.1
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             Ruslan Feizerakhmanov, Juergen Nicklisch, Michael Karg
+maintainer:         ruslan.feizerakhmanov@iohk.io
+
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+data-files:
+    examples/cfgs/context.yaml
+    examples/cfgs/formulas.yaml
+    examples/extracts/ok-1.txt
+    examples/extracts/ok-2.txt
+    examples/extracts/ok-3.txt
+    examples/extracts/ok-4.txt
+    examples/extracts/ok-5.txt
+    examples/extracts/fail-1.txt
+    examples/extracts/fail-2.txt
+    examples/extracts/fail-3.txt
+    examples/extracts/fail-4.txt
+    examples/extracts/fail-5.txt
+    examples/extracts/fail-6.txt
+                    README.md
+                    recon-language-overview.md
+                    docs/*.txt
+
+flag debug
+  description:          Enable some pure verbose debug traces.
+  default:              False
+  manual:               True
+
+common common
+    ghc-options:      -Wall
+
+    if impl(ghc >= 9.8)
+      ghc-options:
+        -Wno-x-partial
+
+    default-language: Haskell2010
+
+    default-extensions:
+      BangPatterns
+      FlexibleContexts
+      FunctionalDependencies
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NumericUnderscores
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+
+      Strict
+
+    if flag(debug)
+      CPP-Options:        -DTRACE
+
+library
+    import:           common
+    exposed-modules:
+                      Cardano.ReCon.Common.Types
+                    , Cardano.ReCon.Common.Parser
+
+                    , Cardano.ReCon.LTL.Check
+                    , Cardano.ReCon.LTL.Formula
+                    , Cardano.ReCon.LTL.Formula.Parser
+                    , Cardano.ReCon.LTL.Formula.Prec
+                    , Cardano.ReCon.LTL.Formula.Yaml
+                    , Cardano.ReCon.LTL.Formula.Pretty
+                    , Cardano.ReCon.LTL.Satisfy
+
+                    , Cardano.ReCon.Integer.Polynomial.Parser
+                    , Cardano.ReCon.Integer.Polynomial.Term
+                    , Cardano.ReCon.Integer.Polynomial.Value
+
+                    , Cardano.ReCon.Presburger.Decide
+                    , Cardano.ReCon.Presburger.Formula
+                    , Cardano.ReCon.Presburger.Parser
+
+                    , Cardano.ReCon.Trace.Event
+                    , Cardano.ReCon.Trace.Feed
+                    , Cardano.ReCon.Trace.Ingest
+
+    other-modules:
+                      Cardano.ReCon.LTL.Internal.Occurs
+                    , Cardano.ReCon.LTL.Internal.Progress
+                    , Cardano.ReCon.LTL.Internal.Rewrite
+                    , Cardano.ReCon.LTL.Internal.Subst
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula.FinFree
+                    , Cardano.ReCon.LTL.Internal.IR.HomogeneousFormula.TextFree
+                    , Cardano.ReCon.Presburger.Internal.CooperQE
+                    , Cardano.ReCon.Presburger.Internal.IR.AffineDNF
+                    , Cardano.ReCon.Presburger.Internal.IR.CompNF
+                    , Cardano.ReCon.Presburger.Internal.IR.DNF
+                    , Cardano.ReCon.Presburger.Internal.IR.ForallFree
+                    , Cardano.ReCon.Presburger.Internal.IR.NegNF
+                    , Cardano.ReCon.Presburger.Internal.IR.NormAffineDNF
+                    , Cardano.ReCon.Presburger.Internal.IR.QuantifierFree
+    other-extensions:
+
+    build-depends:    base
+                    , containers
+                    , mtl
+                    , text
+                    , directory
+                    , trace-dispatcher ^>= 2.12
+                    , serialise
+                    , bytestring
+                    , time
+                    , stm
+                    , aeson
+                    , streaming
+                    , megaparsec
+                    , unagi-chan
+                    , yaml
+
+    hs-source-dirs:   src
+
+    ghc-options:      -O2
+
+
+executable cardano-recon
+    import:           common
+    main-is:          Cardano/ReCon.hs
+
+    ghc-options:      -O2
+                      -threaded
+                      -rtsopts
+                      -- limit to 2 cores for now
+                      "-with-rtsopts=-N2"
+
+    other-modules:
+        Cardano.ReCon.TraceMessage
+      , Cardano.ReCon.Cli
+      , Cardano.ReCon.Common
+    other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+      , text
+      , containers
+      , cardano-recon-framework
+      , trace-dispatcher ^>= 2.12
+      , aeson
+      , streaming
+      , async
+      , optparse-applicative
+      , aeson-pretty
+      , ekg-core
+      , network
+      , hostname
+      , contra-tracer ^>=0.1.0
+
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+test-suite cardano-recon-test
+  import: common
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Cardano/ReCon/Unit.hs
+  other-modules:
+      Cardano.ReCon.Integer.Polynomial.Semantics.Suite
+    , Cardano.ReCon.Integer.Polynomial.Syntax.Suite
+    , Cardano.ReCon.LTL.Semantics.Suite
+    , Cardano.ReCon.LTL.Syntax.Suite
+    , Cardano.ReCon.Presburger.Semantics.Suite
+    , Cardano.ReCon.Presburger.Syntax.Suite
+  build-depends:
+      base
+    , cardano-recon-framework
+    , containers
+    , tasty
+    , tasty-hunit
+    , text
+    , megaparsec
+
+test-suite cardano-recon-integration-test
+  import: common
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Cardano/ReCon/Integration.hs
+  other-modules:
+      Cardano.ReCon.Integration.Suite
+    , Paths_cardano_recon_framework
+  autogen-modules:
+      Paths_cardano_recon_framework
+  build-depends:
+      base
+    , cardano-recon-framework
+    , containers
+    , filepath
+    , tasty
+    , tasty-hunit
+    , text

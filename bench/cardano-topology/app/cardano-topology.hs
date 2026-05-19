@@ -30,11 +30,9 @@ data Cli =
   | ProjectionFor FilePath ProjectionFor
 
 data ProjectionFor =
-  -- Node i, base port, p2p on or off.
-    BFT Int Int Bool
-  | Pool Int Int Bool
-  -- Nodes indices, base port.
-  | Explorer Int Int
+  -- Node i, base port.
+    Core Int Int
+  | Relay Int Int
   | ChaindbServer
   | Proxy
   deriving Show
@@ -218,41 +216,22 @@ cliParserProjection =
          <> metavar "NODENUMBER"
          <> help "Base port"
          )
-     parseEnableP2P =
-        flag False True
-          ( long "enable-p2p"
-          <> help "Create a P2P topology"
-          )
-     parseSrcIndices =
-        option auto
-          ( long "nodes"
-          <> metavar "NODES"
-          <> help "Create a non-P2P topology with nodes [0..(NODES-1)]"
-          )
 
   in subparser $
-         command "bft"
+         command "core"
            (info
-             (BFT <$> parseNodeNumber <*> parseBasePort <*> parseEnableP2P)
-             (  progDesc "BFT"
+             (Core <$> parseNodeNumber <*> parseBasePort)
+             (  progDesc "Core"
              <> fullDesc
-             <> header "Generate the topology file for a BFT node"
+             <> header "Generate the topology file for a `coreNodes`"
              )
            )
-      <> command "pool"
+      <> command "relay"
            (info
-             (Pool <$> parseNodeNumber <*> parseBasePort <*> parseEnableP2P)
-             (  progDesc "Pool"
+             (Relay <$> parseNodeNumber <*> parseBasePort)
+             (  progDesc "Relay"
              <> fullDesc
-             <> header "Generate the topology file for a pool node"
-             )
-           )
-      <> command "explorer"
-           (info
-             (Explorer <$> parseSrcIndices <*> parseBasePort)
-             (  progDesc "Explorer"
-             <> fullDesc
-             <> header "Generate the topology file for an explorer node"
+             <> header "Generate the topology file for a `relayNodes`"
              )
            )
       <> command "chaindb-server"
@@ -333,14 +312,7 @@ writeProjectionFor topology projectionFor = do
   BSL8.putStrLn $ writeProjectionFor' topology projectionFor
 
 writeProjectionFor' :: Topo.Topology -> ProjectionFor -> BSL8.ByteString
-writeProjectionFor' topology (BFT  i basePort p2pEnabled) = writeProjectionForProducer topology i basePort p2pEnabled
-writeProjectionFor' topology (Pool i basePort p2pEnabled) = writeProjectionForProducer topology i basePort p2pEnabled
-writeProjectionFor' _ (Explorer srcIndices basePort) = Aeson.encode $ Projection.projectionExplorer srcIndices basePort
+writeProjectionFor' topology (Core  i basePort) = Aeson.encode $ Projection.projectionCoreNode  topology i basePort
+writeProjectionFor' topology (Relay i basePort) = Aeson.encode $ Projection.projectionRelayNode topology i basePort
 writeProjectionFor' topology ChaindbServer = Aeson.encode $ Projection.projectionChainDB topology
 writeProjectionFor' _ Proxy = error "Nodes of kind \"proxy\" are not supported, Nix handles this case!"
-
-writeProjectionForProducer :: Topo.Topology -> Int -> Int -> Bool -> BSL8.ByteString
-writeProjectionForProducer topology i basePort enableP2P =
-  if enableP2P
-  then Aeson.encode $ Projection.projectionP2P topology i basePort
-  else Aeson.encode $ Projection.projection    topology i basePort

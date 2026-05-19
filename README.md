@@ -16,7 +16,6 @@ The `cardano-node` repository is the point of integration of the
 [ledger](https://github.com/IntersectMBO/cardano-ledger),
 [consensus](https://github.com/IntersectMBO/ouroboros-consensus),
 [networking](https://github.com/IntersectMBO/ouroboros-network)
-and [logging](https://github.com/IntersectMBO/cardano-node/tree/master/trace-dispatcher)
 layers. It provides the `cardano-node` executable which is used to participate in the Cardano network.
 
 This is an approximate diagram of the dependencies among the different components:
@@ -45,11 +44,11 @@ stateDiagram-v2
 
 The process for getting a `cardano-node` executable can be found in the
 [Cardano Developer
-Portal](https://developers.cardano.org/docs/get-started/cardano-node/installing-cardano-node).
+Portal](https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/installing-cardano-node).
 
 The configuration and files required to run a `cardano-node` in one of the
 supported networks are described also in the [Cardano Developer
-Portal](https://developers.cardano.org/docs/get-started/cardano-node/running-cardano).
+Portal](https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/running-cardano).
 
 # Using `cardano-node` and dependencies as a library
 

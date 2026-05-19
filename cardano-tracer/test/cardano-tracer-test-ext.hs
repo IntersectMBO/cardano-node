@@ -4,11 +4,12 @@
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
 import           Cardano.Logging
+import qualified Cardano.Logging.Types as Net
+import           Cardano.Network.NodeToClient (withIOManager)
 import           Cardano.Tracer.Test.ForwardingStressTest.Script
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.Utils
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception
@@ -28,6 +29,9 @@ import qualified System.Process as Sys
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+
+import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwarding)
+import           Trace.Forward.Utils.TraceObject (writeToSink)
 
 main :: IO ()
 main = do
@@ -133,7 +137,15 @@ getExternalTracerState TestSetup{..} ref = do
      (forwardSink, _dpStore) <- withIOManager \iomgr -> do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
-       let tracerSocketMode = Just (unI tsSockExternal, Initiator)
-           forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
-       initForwarding iomgr forwardingConf (unI tsNetworkMagic) Nothing tracerSocketMode
-     pure (externalTracerHdl, forwardTracer forwardSink)
+       let forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
+       -- weaker machines (like CI runners) need to be able to buffer more trace objects for the stress test
+       initForwarding iomgr forwardingConf{ tofQueueSize = 768 } $
+         InitForwardingWith
+           { initNetworkMagic          = unI tsNetworkMagic
+           , initEKGStore              = Nothing
+           , initHowToConnect          = Net.LocalPipe (unI tsSockExternal)
+           , initForwarderMode         = Initiator
+           , initOnForwardInterruption = Nothing
+           , initOnQueueOverflow       = Nothing
+           }
+     pure (externalTracerHdl, forwardTracer (writeToSink forwardSink))

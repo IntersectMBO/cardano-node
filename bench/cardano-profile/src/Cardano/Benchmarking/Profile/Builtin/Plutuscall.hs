@@ -40,10 +40,8 @@ profilesNoEraPlutuscall =
         . compressedFor15Epochs
         . V.datasetSmall
         . V.fundsDefault
-        . P.p2pOff
         . P.traceForwardingOn . P.newTracing
         . P.analysisStandard
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Small dataset, honest 15 epochs duration"
 
       loop            = plutusCall & V.plutusTypeLoop    . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
@@ -54,7 +52,7 @@ profilesNoEraPlutuscall =
       blstVolt        = plutusCall & V.plutusTypeBLST    . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
       ripemdVolt      = plutusCall & V.plutusTypeRIPEMD  . V.plutusDoublePlusSaturation . P.analysisSizeSmall
 
-      postPlomin      = V.genesisVariantVoltaire         . P.v10Preview
+      postPlomin      = V.genesisVariantVoltaire
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
   , loop        & P.name "plutuscall-loop-memx2"           . postPlomin . P.budgetBlockMemoryDouble . P.overlay Pl.calibrateLoopBlockMemx2

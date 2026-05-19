@@ -8,10 +8,9 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ( hprop_gov_no_confidence
   ) where
 
-import           Cardano.Api as Api
+import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Conway.Genesis as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -26,7 +25,6 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
-import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (toList))
 import           Lens.Micro
@@ -41,7 +39,8 @@ import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import qualified Testnet.Process.Run as H
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -55,7 +54,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- Generate a testnet with a committee defined in the Conway genesis. Submit a motion of no confidence
 -- and have the required threshold of SPOs and DReps vote yes on it.
 hprop_gov_no_confidence :: Property
-hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -68,8 +67,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def { cardanoNodeEra = asbe  }
-      genesisOptions = def { genesisEpochLength = 200 }
+      creationOptions = def { creationEra = asbe, creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 
@@ -104,19 +102,17 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  let conwayGenesisWithCommittee = defaultConwayGenesis { L.cgCommittee = committee }
+  liftToIntegration $ createTestnetEnv creationOptions conf
+
+  H.rewriteJsonFile (tempAbsBasePath' </> "conway-genesis.json") $
+    \conwayGenesis -> conwayGenesis { L.cgCommittee = committee }
 
   TestnetRuntime
     { testnetMagic
     , testnetNodes
     , wallets=wallet0:_wallet1:_
     , configurationFile
-    } <- cardanoTestnet
-           fastTestnetOptions
-           genesisOptions
-           NoUserProvidedData NoUserProvidedData
-           (UserProvidedData conwayGenesisWithCommittee)
-           conf
+    } <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
@@ -132,8 +128,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   epochStateView <- getEpochStateView configurationFile (File socketPath)
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 3) $ \anyNewEpochState->
-    pure $ committeeIsPresent True anyNewEpochState
+  retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 3) $ committeeIsPresent True <$> getEpochStateDetails epochStateView
 
   -- Step 2. Propose motion of no confidence. DRep and SPO voting thresholds must be met.
 
@@ -192,8 +187,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 10) $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   let spoVotes :: [(String, Int)]
       spoVotes =  [("yes", 1), ("yes", 2), ("no", 3)]
@@ -241,7 +235,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) (return . committeeIsPresent False)
+  retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 10) $ committeeIsPresent False <$> getEpochStateDetails epochStateView
 
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()

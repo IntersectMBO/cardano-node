@@ -25,9 +25,8 @@ let
     passthru = { inherit service; };
   };
 
-  # Until complete removal of some iohk-nix deprecated environments which have
-  # dangling dependencies such as shelley_qa, explicitly declare the
-  # environments we we want included.
+  # Allow list envs we specifically want scripts for as others in iohk-nix may
+  # be transient test networks.
   environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" ] environments;
 
   scripts = forEnvironmentsCustom (environment: recurseIntoAttrs {

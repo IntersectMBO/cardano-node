@@ -1,5 +1,8 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 {-# LANGUAGE StrictData #-}
+
+{- HLINT ignore "Use concatMap" -}
+
 module Cardano.Org (module Cardano.Org) where
 
 import Cardano.Prelude

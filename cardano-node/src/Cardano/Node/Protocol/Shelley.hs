@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Node.Protocol.Shelley
   ( mkSomeConsensusProtocolShelley
@@ -22,13 +24,14 @@ module Cardano.Node.Protocol.Shelley
   , checkExpectedGenesisHash
   ) where
 
+import           Cardano.Api hiding (FileError)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Era.Shelley ()
@@ -39,7 +42,9 @@ import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),
+                   PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
 
@@ -48,6 +53,9 @@ import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import           System.Directory (getFileSize)
+import qualified System.IO.MMap as MMap
+
 
 ------------------------------------------------------------------------------
 -- Shelley protocol
@@ -94,12 +102,33 @@ readGenesis :: GenesisFile
                        (ShelleyGenesis, GenesisHash)
 readGenesis = readGenesisAny
 
+-- | Read a genesis file using a memory-safe strategy.
+--
+-- Genesis files are used in testing and benchmarking to create testnets with
+-- large datasets. To be able to read these files in memory constrained
+-- environments we use a conditional loading strategy: if file is below ~10
+-- megabytes it is entirely read into memory, otherwise the 'ByteString' is
+-- created using `mmap` that uses the virtual memory subsystem to do on-demand
+-- loading.
+-- With current usage and how benchmakring is done only Shelley and Conway are
+-- affected (Shelley's `initialFunds` and Conway's "delegs" and "initialDReps").
 readGenesisAny :: FromJSON genesis
                => GenesisFile
                -> Maybe GenesisHash
                -> ExceptT GenesisReadError IO (genesis, GenesisHash)
 readGenesisAny (GenesisFile file) mExpectedGenesisHash = do
-    content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
+    content <- handleIOExceptT (GenesisReadFileError file) $ do
+        -- Size of the file in 8-bit bytes.
+        size <- getFileSize file
+        {-- Mainnet files for reference:
+              -byron-genesis.json:   1056360 (1.1M)
+              -shelley-genesis.json:    2486 (2.5K)
+              -alonzo-genesis.json:     9459 (9.3K)
+              -conway-genesis.json:     4168 (4.1K)
+        --}
+        if size >= 10485760 -- 10 megabytes.
+        then MMap.mmapFileByteString file Nothing -- MMap version.
+        else BS.readFile file                     -- Non-lazy version.
     genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
                  Aeson.eitherDecodeStrict' content
@@ -141,27 +170,38 @@ readLeaderCredentialsSingleton
    ProtocolFilepaths
      { shelleyCertFile      = Nothing,
        shelleyVRFFile       = Nothing,
-       shelleyKESFile       = Nothing
+       shelleyKESSource     = Nothing
      } = pure []
 -- Or to supply all of the files
 readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
-                      shelleyKESFile = Just kesFile
+                      shelleyKESSource = Just kesSource
                     } = do
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
 
-    (opCert, kesSKey) <- opCertKesKeyCheck (File kesFile) (File opCertFile)
+    (credentialsSource, vkey) <- case kesSource of
+      KESKeyFilePath kesFile -> do
+        (OperationalCertificate opCert vkey, KesSigningKey kesKey) <-
+          opCertKesKeyCheck (File kesFile) (File opCertFile)
+        pure (PraosCredentialsUnsound opCert kesKey, vkey)
 
-    return [mkPraosLeaderCredentials opCert vrfSKey kesSKey]
+      -- TODO: minor yikes: when we're using an agent, we don't check that the
+      -- opcert and the key provided by the KES agent match, like we do when
+      -- the key is provided in a file on the command line
+      KESAgentSocketPath socketFile -> do
+        OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
+        pure (PraosCredentialsAgent socketFile, vkey)
+
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
      left OCertNotSpecified
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
      left VRFKeyNotSpecified
-readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
+readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESSource = Nothing} =
      left KESKeyNotSpecified
 
 opCertKesKeyCheck
@@ -200,10 +240,11 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      :: ShelleyCredentials
      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
-     mkPraosLeaderCredentials
-       <$> parseEnvelope scCert
-       <*> parseEnvelope scVrf
-       <*> parseEnvelope scKes
+     OperationalCertificate opCert vkey <- parseEnvelope scCert
+     KesSigningKey kesKey <- parseEnvelope scKes
+     let credentialsSource = PraosCredentialsUnsound opCert kesKey
+     vrfSKey <- parseEnvelope scVrf
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey
 
    readBulkFile
      :: Maybe FilePath
@@ -225,22 +266,21 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
                              (teKes,  loc "kes")
 
 mkPraosLeaderCredentials ::
-     OperationalCertificate
+     PraosCredentialsSource StandardCrypto
+  -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
-  -> SigningKey KesKey
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
-    (OperationalCertificate opcert (StakePoolVerificationKey vkey))
-    (VrfSigningKey vrfKey)
-    (KesSigningKey kesKey) =
+    credentialsSource
+    (StakePoolVerificationKey vkey)
+    (VrfSigningKey vrfKey) =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
-        praosCanBeLeaderOpCert     = opcert,
+          praosCanBeLeaderCredentialsSource = credentialsSource,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
           praosCanBeLeaderSignKeyVRF = vrfKey
         },
-      shelleyLeaderCredentialsInitSignKey = kesKey,
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 

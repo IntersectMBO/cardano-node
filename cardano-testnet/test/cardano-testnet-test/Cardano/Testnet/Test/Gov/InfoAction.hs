@@ -11,10 +11,8 @@ module Cardano.Testnet.Test.Gov.InfoAction
   ( hprop_ledger_events_info_action
   ) where
 
-import           Cardano.Api as Api
-import           Cardano.Api.Internal.Error
+import           Cardano.Api hiding (txId)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
-import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -27,7 +25,6 @@ import           Data.Bifunctor (first)
 import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
-import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
@@ -41,6 +38,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -64,8 +62,10 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
-      fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { genesisEpochLength = 200 }
+      creationOptions = def
+        { creationEra = asbe
+        , creationGenesisOptions = def { genesisEpochLength = 200 }
+        }
 
   TestnetRuntime
     { testnetMagic
@@ -73,7 +73,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
 
   node <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
@@ -90,7 +90,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
-  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  proposalAnchorFile <- H.noteM $ liftIOAnnotated $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   infoActionFp <- H.note $ work </> gov </> "info.action"
 
@@ -190,11 +190,11 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", txbodySignedFp
     ]
 
-  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
+  txId <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString txIdString) anyNewEpochState
+    retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 1)
+      $ maybeExtractGovernanceActionIndex txId <$> getEpochState epochStateView
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -204,8 +204,8 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txIdString
-      , "--governance-action-index", show @Word16 governanceActionIndex
+      , "--governance-action-tx-id", prettyShow txId
+      , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
       ]
@@ -245,7 +245,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", voteTxFp
     ]
 
-  -- We check that info action was succcessfully ratified
+  -- We check that info action was successfully ratified
   !meInfoRatified
     <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
                       configurationFile

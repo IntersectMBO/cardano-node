@@ -1,0 +1,40 @@
+{
+  "_meta": {
+    "owner": "tracing-team",
+    "reason": "Generator does not infer payload fields for NodeInfo, which is traced through its ToJSON instance."
+  },
+  "patch": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "niCommit": {
+          "type": "string"
+        },
+        "niName": {
+          "type": "string"
+        },
+        "niProtocol": {
+          "type": "string"
+        },
+        "niStartTime": {
+          "type": "string"
+        },
+        "niSystemStartTime": {
+          "type": "string"
+        },
+        "niVersion": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "niCommit",
+        "niName",
+        "niProtocol",
+        "niStartTime",
+        "niSystemStartTime",
+        "niVersion"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -10,11 +10,11 @@
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
+{- HLINT ignore "Functor law" -}
+
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
   , ResponderCoreAffinityPolicy (..)
-  , NetworkP2PMode (..)
-  , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , TimeoutOverride (..)
   , defaultPartialNodeConfiguration
@@ -29,20 +29,21 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
+import qualified Cardano.Network.Diffusion.Configuration as Cardano
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
+                   makeRpcConfig)
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
@@ -53,6 +54,8 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionInitDelay (..),
+                   TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -73,28 +76,6 @@ import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-
-data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
-  deriving (Eq, Show, Generic)
-
-data SomeNetworkP2PMode where
-    SomeNetworkP2PMode :: forall p2p.
-                          Consensus.NetworkP2PMode p2p
-                       -> SomeNetworkP2PMode
-
-instance Eq SomeNetworkP2PMode where
-    (==) (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-         (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-       = True
-    (==) (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-         (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-       = True
-    (==) _ _
-       = False
-
-instance Show SomeNetworkP2PMode where
-    show (SomeNetworkP2PMode mode@Consensus.EnabledP2PMode)  = show mode
-    show (SomeNetworkP2PMode mode@Consensus.DisabledP2PMode) = show mode
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
@@ -144,7 +125,7 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
-       , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
+       , ncTraceForwardSocket :: !(Maybe (HowToConnect, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
@@ -165,6 +146,28 @@ data NodeConfiguration
          -- | Timeout override for ChainSync, see
          -- 'Ouroboros.Network.Protocol.ChainSync.Codec.ChainSyncTimeout'
        , ncChainSyncIdleTimeout :: TimeoutOverride
+
+         -- Mempool timeout configurations:
+         -- These configuration control a lightweight "defensive programming"
+         -- feature in the Mempool.
+         -- See documentation in @Ouroboros.Consensus.Mempool.API@ for more info
+
+         -- | If the mempool takes longer than this to validate a tx, then it
+         -- discards the tx instead of adding it.
+       , ncMempoolTimeoutSoft :: DiffTime
+
+         -- | If the mempool takes longer than this to validate a tx, then it
+         -- disconnects from the peer.
+         --
+         -- WARNING: if this is less than 'mempoolTimeoutSoft', then
+         -- 'mempoolTimeoutSoft' is irrelevant. If it's equal or just barely larger,
+         -- then the soft/hard distinction will likely be unreliable.
+       , ncMempoolTimeoutHard :: DiffTime
+
+          -- | If the mempool takes longer than this cumulatively to
+          -- validate when each entered the mempool, then the mempool is at
+          -- capacity, ie it's full, ie no tx can be added.
+       , ncMempoolTimeoutCapacity :: DiffTime
 
          -- | Node AcceptedConnectionsLimit
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
@@ -193,9 +196,6 @@ data NodeConfiguration
          -- in Genesis mode
        , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
-         -- Enable experimental P2P mode
-       , ncEnableP2P :: SomeNetworkP2PMode
-
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
 
@@ -203,6 +203,12 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+         -- gRPC
+       , ncRpcConfig :: RpcConfig
+
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
+       , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -251,7 +257,7 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last PartialTraceOptions)
-       , pncTraceForwardSocket :: !(Last (SocketPath, ForwarderMode))
+       , pncTraceForwardSocket :: !(Last (HowToConnect, ForwarderMode))
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
@@ -265,6 +271,11 @@ data PartialNodeConfiguration
        , pncEgressPollInterval    :: !(Last DiffTime)
 
        , pncChainSyncIdleTimeout      :: !(Last DiffTime)
+
+       -- Mempool timeout configurations:
+       , pncMempoolTimeoutSoft :: !(Last DiffTime)
+       , pncMempoolTimeoutHard :: !(Last DiffTime)
+       , pncMempoolTimeoutCapacity :: !(Last DiffTime)
 
          -- AcceptedConnectionsLimit
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
@@ -284,15 +295,13 @@ data PartialNodeConfiguration
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
+
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
        , pncMinBigLedgerPeersForTrustedState :: !(Last NumberOfBigLedgerPeers)
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
-
-         -- Network P2P mode
-       , pncEnableP2P :: !(Last NetworkP2PMode)
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
@@ -301,6 +310,12 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
+       , pncTxSubmissionInitDelay :: !(Last TxSubmissionInitDelay)
+
+         -- gRPC
+       , pncRpcConfig :: !PartialRpcConfig
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -353,14 +368,16 @@ instance FromJSON PartialNodeConfiguration where
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
         case protocol of
-          CardanoProtocol ->
+          CardanoProtocol -> do
+            hfp <- parseHardForkProtocol v
             fmap (Last . Just) $
               NodeProtocolConfigurationCardano
                 <$> parseByronProtocol v
                 <*> parseShelleyProtocol v
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
-                <*> parseHardForkProtocol v
+                <*> (if npcExperimentalHardForksEnabled hfp then Just <$> parseDijkstraProtocol v else pure Nothing)
+                <*> pure hfp
                 <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
@@ -400,16 +417,11 @@ instance FromJSON PartialNodeConfiguration where
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
-      -- Enable P2P switch
-      p2pSwitch <- v .:? "EnableP2P" .!= Just False
-      let pncEnableP2P =
-            case p2pSwitch of
-              Nothing    -> mempty
-              Just False -> Last $ Just DisabledP2PMode
-              Just True  -> Last $ Just EnabledP2PMode
+      pncMempoolTimeoutSoft <- Last <$> v .:? "MempoolTimeoutSoft"
+      pncMempoolTimeoutHard <- Last <$> v .:? "MempoolTimeoutHard"
+      pncMempoolTimeoutCapacity <- Last <$> v .:? "MempoolTimeoutCapacity"
 
       -- Peer Sharing
-      -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
@@ -420,6 +432,17 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncRpcConfig <-
+        RpcConfig
+          <$> (Last <$> v .:? "EnableRpc")
+          <*> (Last <$> v .:? "RpcSocketPath")
+          <*> pure mempty
+
+      txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
+      let parseInitDelay =
+            maybe (pncTxSubmissionInitDelay defaultPartialNodeConfiguration) (fmap TxSubmissionInitDelay)
+              <$> v .:? "TxSubmissionInitDelay"
+      pncTxSubmissionInitDelay <- parseInitDelay
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -443,6 +466,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
+           , pncMempoolTimeoutSoft
+           , pncMempoolTimeoutHard
+           , pncMempoolTimeoutCapacity
            , pncEgressPollInterval
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
@@ -461,10 +487,12 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfActiveBigLedgerPeers
            , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
-           , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncRpcConfig
+           , pncTxSubmissionLogicVersion = txSubmissionLogicVersion
+           , pncTxSubmissionInitDelay
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -506,9 +534,6 @@ instance FromJSON PartialNodeConfiguration where
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
              selector        <- case backend of
-               "V1InMemory" -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
-                 return $ V1InMemory flush
                "V1LMDB"     -> do
                  flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  mapSize :: Maybe Gigabytes <- o .:? "MapSize"
@@ -516,6 +541,9 @@ instance FromJSON PartialNodeConfiguration where
                  mxReaders :: Maybe Int <- o .:? "MaxReaders"
                  return $ V1LMDB flush lmdbPath mapSize mxReaders
                "V2InMemory" -> return V2InMemory
+               "V2LSM" -> do
+                 lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
+                 pure $ V2LSM lsmPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
              pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector deprecatedOpts
 
@@ -583,6 +611,14 @@ instance FromJSON PartialNodeConfiguration where
              , npcConwayGenesisFileHash
              }
 
+      parseDijkstraProtocol v = do
+        npcDijkstraGenesisFile     <- v .:  "DijkstraGenesisFile"
+        npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
+        pure NodeDijkstraProtocolConfiguration {
+               npcDijkstraGenesisFile
+             , npcDijkstraGenesisFileHash
+             }
+
       parseHardForkProtocol v = do
 
         npcExperimentalHardForksEnabled <- do
@@ -614,6 +650,10 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
+        (npcTestDijkstraHardForkAtEpoch, npcTestDijkstraHardForkAtVersion) <- if npcExperimentalHardForksEnabled
+           then (,) <$>  v .:? "TestDijkstraHardForkAtEpoch" <*> v .:? "TestDijkstraHardForkAtVersion"
+           else pure (Nothing, Nothing)
+
         pure NodeHardForkProtocolConfiguration
           { npcExperimentalHardForksEnabled
 
@@ -634,6 +674,9 @@ instance FromJSON PartialNodeConfiguration where
 
           , npcTestConwayHardForkAtEpoch
           , npcTestConwayHardForkAtVersion
+
+          , npcTestDijkstraHardForkAtEpoch
+          , npcTestDijkstraHardForkAtVersion
           }
 
       parseCheckpoints v = do
@@ -674,53 +717,52 @@ defaultPartialNodeConfiguration =
             DefaultQueryBatchSize
             V2InMemory
             noDeprecatedOptions
-    , pncProtocolIdleTimeout   = Last (Just Ouroboros.defaultProtocolIdleTimeout)
-    , pncTimeWaitTimeout       = Last (Just Ouroboros.defaultTimeWaitTimeout)
-    , pncEgressPollInterval    = Last (Just Ouroboros.defaultEgressPollInterval)
-    , pncAcceptedConnectionsLimit =
-        Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
-    , pncChainSyncIdleTimeout           = mempty
-    , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
-    , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
-    , pncDeadlineTargetOfEstablishedPeers = Last (Just deadlineEstablished)
-    , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
-    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
-    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just deadlineBigEst)
-    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just deadlineBigAct)
-    , pncSyncTargetOfRootPeers          = Last (Just syncRoots)
-    , pncSyncTargetOfKnownPeers         = Last (Just syncKnown)
-    , pncSyncTargetOfEstablishedPeers   = Last (Just syncEstablished)
-    , pncSyncTargetOfActivePeers        = Last (Just syncActive)
-    , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
-    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
-    , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
+    , pncProtocolIdleTimeout      = Last (Just Ouroboros.defaultProtocolIdleTimeout)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultProtocolIdleTimeout
+    , pncTimeWaitTimeout          = Last (Just Ouroboros.defaultTimeWaitTimeout)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultTimeWaitTimeout
+    , pncEgressPollInterval       = Last (Just Ouroboros.defaultEgressPollInterval)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
+    , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
+    , pncChainSyncIdleTimeout     = mempty
+    , pncMempoolTimeoutSoft       = mempty
+    , pncMempoolTimeoutHard       = mempty
+    , pncMempoolTimeoutCapacity   = mempty
+
+    -- these targets are set properly in makeNodeConfiguration below
+    , pncDeadlineTargetOfRootPeers                 = mempty
+    , pncDeadlineTargetOfKnownPeers                = mempty
+    , pncDeadlineTargetOfEstablishedPeers          = mempty
+    , pncDeadlineTargetOfActivePeers               = mempty
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = mempty
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = mempty
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = mempty
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultDeadlineTargets
+
+    , pncSyncTargetOfRootPeers                     = Last (Just $ targetNumberOfRootPeers                 Cardano.defaultSyncTargets)
+    , pncSyncTargetOfKnownPeers                    = Last (Just $ targetNumberOfKnownPeers                Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedPeers              = Last (Just $ targetNumberOfEstablishedPeers          Cardano.defaultSyncTargets)
+    , pncSyncTargetOfActivePeers                   = Last (Just $ targetNumberOfActivePeers               Cardano.defaultSyncTargets)
+    , pncSyncTargetOfKnownBigLedgerPeers           = Last (Just $ targetNumberOfKnownBigLedgerPeers       Cardano.defaultSyncTargets)
+    , pncSyncTargetOfEstablishedBigLedgerPeers     = Last (Just $ targetNumberOfEstablishedBigLedgerPeers Cardano.defaultSyncTargets)
+    , pncSyncTargetOfActiveBigLedgerPeers          = Last (Just $ targetNumberOfActiveBigLedgerPeers      Cardano.defaultSyncTargets)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultSyncTargets
+
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
-    , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
-    , pncEnableP2P     = Last (Just EnabledP2PMode)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
+    , pncConsensusMode = Last (Just defaultConsensusMode)
+      -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
+      -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+    , pncRpcConfig = mempty
+
+    , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1
+    , pncTxSubmissionInitDelay = Last $ Just defaultTxSubmissionInitDelay
     }
-  where
-    PeerSelectionTargets {
-      targetNumberOfRootPeers        = deadlineRoots,
-      targetNumberOfKnownPeers       = deadlineKnown,
-      targetNumberOfEstablishedPeers = deadlineEstablished,
-      targetNumberOfActivePeers      = deadlineActive,
-      targetNumberOfKnownBigLedgerPeers       = deadlineBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
-      targetNumberOfActiveBigLedgerPeers      = deadlineBigAct
-    } = Ouroboros.defaultDeadlineTargets
-    PeerSelectionTargets {
-      targetNumberOfRootPeers        = syncRoots,
-      targetNumberOfKnownPeers       = syncKnown,
-      targetNumberOfEstablishedPeers = syncEstablished,
-      targetNumberOfActivePeers      = syncActive,
-      targetNumberOfKnownBigLedgerPeers       = syncBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
-      targetNumberOfActiveBigLedgerPeers      = syncBigAct
-    } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
@@ -741,27 +783,30 @@ makeNodeConfiguration pnc = do
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
 
-  ncDeadlineTargetOfRootPeers <-
-    lastToEither "Missing TargetNumberOfRootPeers"
-    $ pncDeadlineTargetOfRootPeers pnc
-  ncDeadlineTargetOfKnownPeers <-
-    lastToEither "Missing TargetNumberOfKnownPeers"
-    $ pncDeadlineTargetOfKnownPeers pnc
-  ncDeadlineTargetOfEstablishedPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedPeers"
-    $ pncDeadlineTargetOfEstablishedPeers pnc
-  ncDeadlineTargetOfActivePeers <-
-    lastToEither "Missing TargetNumberOfActivePeers"
-    $ pncDeadlineTargetOfActivePeers pnc
-  ncDeadlineTargetOfKnownBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfKnownBigLedgerPeers"
-    $ pncDeadlineTargetOfKnownBigLedgerPeers pnc
-  ncDeadlineTargetOfEstablishedBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfEstablishedBigLedgerPeers"
-    $ pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
-  ncDeadlineTargetOfActiveBigLedgerPeers <-
-    lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
-    $ pncDeadlineTargetOfActiveBigLedgerPeers pnc
+  let PeerSelectionTargets {
+        targetNumberOfRootPeers, targetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers, targetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers, targetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers
+        } = Ouroboros.defaultDeadlineTargets $ if hasProtocolFile protocolFiles
+              then BlockProducer else Relay
+      (<>!) defaults override = fromJust . getLast $ pure defaults <> override
+
+      ncDeadlineTargetOfRootPeers =
+        targetNumberOfRootPeers <>! pncDeadlineTargetOfRootPeers pnc
+      ncDeadlineTargetOfKnownPeers =
+        targetNumberOfKnownPeers <>! pncDeadlineTargetOfKnownPeers pnc
+      ncDeadlineTargetOfEstablishedPeers =
+        targetNumberOfEstablishedPeers <>! pncDeadlineTargetOfEstablishedPeers pnc
+      ncDeadlineTargetOfActivePeers =
+        targetNumberOfActivePeers <>! pncDeadlineTargetOfActivePeers pnc
+      ncDeadlineTargetOfKnownBigLedgerPeers =
+        targetNumberOfKnownBigLedgerPeers <>! pncDeadlineTargetOfKnownBigLedgerPeers pnc
+      ncDeadlineTargetOfEstablishedBigLedgerPeers =
+        targetNumberOfEstablishedBigLedgerPeers <>! pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
+      ncDeadlineTargetOfActiveBigLedgerPeers =
+        targetNumberOfActiveBigLedgerPeers <>! pncDeadlineTargetOfActiveBigLedgerPeers pnc
+
   ncSyncTargetOfRootPeers <-
     lastToEither "Missing SyncTargetNumberOfRootPeers"
     $ pncSyncTargetOfRootPeers pnc
@@ -804,14 +849,21 @@ makeNodeConfiguration pnc = do
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
-  enableP2P <-
-    lastToEither "Missing EnableP2P"
-    $ pncEnableP2P pnc
   ncChainSyncIdleTimeout <-
     Right
     $ maybe NoTimeoutOverride TimeoutOverride
     $ getLast
     $ pncChainSyncIdleTimeout pnc
+
+  let mempoolTimeouts = ( getLast (pncMempoolTimeoutSoft pnc)
+                        , getLast (pncMempoolTimeoutHard pnc)
+                        , getLast (pncMempoolTimeoutCapacity pnc)
+                        )
+  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <-
+    case mempoolTimeouts of
+      (Just s, Just h, Just c) -> pure (s, h, c)
+      (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)
+      _ -> Left "Mempool timeouts must be either all set or all unset"
 
   let ncPeerSharing =
         case pncPeerSharing pnc of
@@ -830,6 +882,9 @@ makeNodeConfiguration pnc = do
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
 
   ncResponderCoreAffinityPolicy <- lastToEither "Missing ResponderCoreAffinityPolicy" $ pncResponderCoreAffinityPolicy pnc
+
+  ncTxSubmissionLogicVersion <- lastToEither "Missing TxSubmissionLogicVersion" $ pncTxSubmissionLogicVersion pnc
+  ncTxSubmissionInitDelay <- lastToEither "Missing TxSubmissionInitDelay" $ pncTxSubmissionInitDelay pnc
 
   let deadlineTargets =
         PeerSelectionTargets {
@@ -860,6 +915,9 @@ makeNodeConfiguration pnc = do
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
       pncExperimentalProtocolsEnabled pnc
+
+  ncRpcConfig <- makeRpcConfig $ (pncRpcConfig pnc){nodeSocketPath=ncSocketPath socketConfig}
+
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -884,6 +942,9 @@ makeNodeConfiguration pnc = do
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout
+             , ncMempoolTimeoutSoft
+             , ncMempoolTimeoutHard
+             , ncMempoolTimeoutCapacity
              , ncEgressPollInterval
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers
@@ -901,13 +962,13 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
              , ncMinBigLedgerPeersForTrustedState
-             , ncEnableP2P = case enableP2P of
-                 EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
-                 DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncRpcConfig
+             , ncTxSubmissionLogicVersion
+             , ncTxSubmissionInitDelay
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

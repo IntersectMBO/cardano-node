@@ -6,6 +6,7 @@ module Cardano.Tracer.Test.DataPoint.Tests
   ( tests
   ) where
 
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run (doRunCardanoTracer)
@@ -38,9 +39,10 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   savedDPValues :: TVar DataPointValues <- newTVarIO []
-  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
+  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state")
+            (TraceBundle stderrShowTracer stderrShowTracer) stopProtocols dpRequestors) \_ -> do
     sleep 1.0
-    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) \_ -> do
+    withAsync (launchForwardersSimple ts Initiator (Net.LocalPipe localSock) 10000) \_ -> do
       sleep 1.5
       -- We know that there is one single "node" only (and one single requestor too).
       -- requestors ((_, dpRequestor):_) <- M.toList <$> readTVarIO dpRequestors
@@ -81,12 +83,14 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
  where
   config = TracerConfig
     { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
-    , network        = AcceptAt (LocalSocket localSock) -- ConnectTo $ NE.fromList [LocalSocket localSock]
+    , network        = AcceptAt (Net.LocalPipe localSock) -- ConnectTo $ NE.fromList [LocalSocket localSock]
     , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
+    , ekgRequestFreq  = Just 1.0
+    , hasEKG          = Nothing
+    , hasPrometheus   = Nothing
+    , hasRTView       = Nothing
+    , hasTimeseries   = Nothing
+    , tlsCertificate = Nothing
     , logging        = NE.fromList [LoggingParams rootDir FileMode ForHuman]
     , rotation       = Nothing
     , verbosity      = Just Minimum
@@ -95,4 +99,5 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , prometheusLabels = Nothing
     }

@@ -13,7 +13,6 @@ module Cardano.Testnet.Test.Node.Shutdown
 import           Cardano.Api
 
 import           Cardano.Testnet
-import qualified Cardano.Testnet as Testnet
 
 import           Prelude
 
@@ -25,6 +24,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
 import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
@@ -36,11 +36,13 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (interruptProcessGroupOf)
 
-import           Testnet.Components.Configuration
+import qualified Testnet.Components.Configuration as Testnet
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
+import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
+import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 
 import           Hedgehog (Property, (===))
@@ -67,7 +69,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
-      testnetMagic' = 42
+      testnetMagic' = defaultTestnetMagic
       sbe = ShelleyBasedEraConway
 
   -- TODO: We need to uniformly create these directories
@@ -106,8 +108,8 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- Testnet.getDefaultAlonzoGenesis sbe
-  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
+  gen <- liftToIntegration Testnet.getDefaultAlonzoGenesis
+  liftIOAnnotated $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.conway.spec.json"
@@ -121,15 +123,21 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
     , "--start-time", formatIso8601 startTime
     ]
 
-  byronGenesisHash <- getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
+  byronGenesisHash <- liftToIntegration $ Testnet.getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
+
   -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
   H.renameFile (byronGenesisOutputDir </> "genesis.json") (tempAbsPath' </> defaultGenesisFilepath ByronEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
+  -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
+  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
 
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
-  alonzoGenesisHash  <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
+  (shelleyGenesisHash,alonzoGenesisHash)  <-
+    liftToIntegration $ do
+      shelleyGenesisHash <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
+      alonzoGenesisHash  <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
+      return (shelleyGenesisHash, alonzoGenesisHash)
 
   let finalYamlConfig :: LBS.ByteString
       finalYamlConfig = encode . Object
@@ -164,7 +172,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   eProcess <- runExceptT $ initiateProcess process
   case eProcess of
     Left e -> H.failMessage GHC.callStack $ mconcat ["Failed to initiate node process: ", show e]
-    Right (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) -> do
+    Right (mStdin, _mStdout, _mStderr, pHandle, _) -> do
       H.threadDelay $ 10 * 1000000
 
       mExitCodeRunning <- H.evalIO $ IO.getProcessExitCode pHandle
@@ -196,18 +204,18 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   conf <- mkConf tempAbsBasePath'
 
   let maxSlot = 150
-      slotLen = 0.01
-  let fastTestnetOptions = def
-        { cardanoNodes =
-          AutomaticNodeOptions
-            [ SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
-            ]
+      epochLength = 300
+      slotLen = 0.1
+  let creationOptions = def
+        { creationNodes =
+            SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
+        , creationGenesisOptions = def
+            { genesisEpochLength = epochLength
+            , genesisSlotLength = slotLen
+            , genesisActiveSlotsCoeff = 50.0 / fromIntegral epochLength
+            }
         }
-      shelleyOptions = def
-        { genesisEpochLength = 300
-        , genesisSlotLength = slotLen
-        }
-  testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+  testnetRuntime <- createAndRunTestnet creationOptions def conf
   let allNodes = testnetNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
@@ -244,10 +252,11 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = def
-      shelleyOptions = def { genesisEpochLength = 300 }
+  let creationOptions = def
+        { creationGenesisOptions = def { genesisEpochLength = 300 }
+        }
   testnetRuntime
-    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+    <- createAndRunTestnet creationOptions def conf
   TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
 
   -- send SIGINT

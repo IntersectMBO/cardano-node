@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,9 +10,11 @@ module Cardano.Node.Parsers
   , parserHelpHeader
   , parserHelpOptions
   , renderHelpDoc
+  , parseHostPort
   ) where
 
 import           Cardano.Logging.Types
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
@@ -20,19 +23,21 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
+import           Data.Char (isDigit)
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Word (Word32)
+import qualified Data.Text as Text
+import           Data.Word (Word16, Word32)
 import           Options.Applicative hiding (str, switch)
--- Don't use switch.  It will not allow to set an option in a configuration
--- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
+import qualified Prettyprinter.Internal as PP
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
 
@@ -51,14 +56,14 @@ nodeRunParser = do
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseNodeDatabasePaths
   validate <- lastOption parseValidateDB
-  socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  socketFp <- lastOption $ parseSocketPath "socket-path" "Path to a cardano-node socket"
   traceForwardSocket <- lastOption parseTracerSocketMode
   nodeConfigFp <- lastOption parseConfigFile
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
   byronKeyFile    <- optional parseByronSigningKey
-  shelleyKESFile  <- optional parseKesKeyFilePath
+  shelleyKESSource  <- optional parseKesSourceFilePath
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
@@ -78,6 +83,9 @@ nodeRunParser = do
   -- Hidden options (to be removed eventually)
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
+  -- gRPC
+  pncRpcConfig <- parseRpcConfig
+
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
                Last . Just $ SocketConfig
@@ -93,7 +101,7 @@ nodeRunParser = do
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
-             , shelleyKESFile
+             , shelleyKESSource
              , shelleyVRFFile
              , shelleyCertFile
              , shelleyBulkCredsFile
@@ -115,6 +123,9 @@ nodeRunParser = do
            , pncTimeWaitTimeout = mempty
            , pncEgressPollInterval = mempty
            , pncChainSyncIdleTimeout = mempty
+           , pncMempoolTimeoutSoft = mempty
+           , pncMempoolTimeoutHard = mempty
+           , pncMempoolTimeoutCapacity = mempty
            , pncAcceptedConnectionsLimit = mempty
            , pncDeadlineTargetOfRootPeers = mempty
            , pncDeadlineTargetOfKnownPeers = mempty
@@ -132,31 +143,65 @@ nodeRunParser = do
            , pncSyncTargetOfActiveBigLedgerPeers = mempty
            , pncMinBigLedgerPeersForTrustedState = mempty
            , pncConsensusMode = mempty
-           , pncEnableP2P = mempty
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
+           , pncRpcConfig
+           , pncTxSubmissionLogicVersion = mempty
+           , pncTxSubmissionInitDelay = mempty
            }
 
-parseSocketPath :: Text -> Parser SocketPath
-parseSocketPath helpMessage =
+parseSocketPath :: Text -- ^ option name
+                -> Text -- ^ help text
+                -> Parser SocketPath
+parseSocketPath optionName helpMessage =
   fmap File $ strOption $ mconcat
-    [ long "socket-path"
+    [ long (toS optionName)
     , help (toS helpMessage)
     , completer (bashCompleter "file")
     , metavar "FILEPATH"
     ]
 
-parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
+
+-- leave hostname untouched, non-empty
+-- 0 <= port <= 65535
+parseNodeAddress :: Opt.ReadM Net.HowToConnect
+parseNodeAddress = Opt.eitherReader parseHostPort
+
+parseHostPort :: String -> Either String Net.HowToConnect
+parseHostPort str
+  | (portRev, ':' : hostRev) <- break (== ':') (reverse str)
+  = if
+    | null hostRev        -> Left "parseHostPort: Empty host."
+    | null portRev        -> Left "parseHostPort: Empty port."
+    | all isDigit portRev
+    , Just port <- readMaybe @Word16 (reverse portRev) -> if
+      | 0 <= port, port <= 65535 -> Right (Net.RemoteSocket (Text.pack (reverse hostRev)) port)
+      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
+    | otherwise -> Left "parseHostPort: Non-numeric port."
+  | otherwise
+  = Left "parseHostPort: No colon found."
+
+parseTracerSocketMode :: Parser (Net.HowToConnect, ForwarderMode)
 parseTracerSocketMode =
   asum
-    [ fmap ((, Responder) . File) $ strOption $ mconcat
+    [ fmap (, Responder) $ option parseNodeAddress $ mconcat
+      [ long "tracer-socket-network-accept"
+      , help "Accept incoming cardano-tracer connection on HOST:PORT"
+      , metavar "HOST:PORT"
+      ]
+    , fmap (, Initiator) $ option parseNodeAddress $ mconcat
+      [ long "tracer-socket-network-connect"
+      , help "Connect to cardano-tracer listening on HOST:PORT"
+      , metavar "HOST:PORT"
+      ]
+    , fmap (\host -> (Net.LocalPipe host, Responder)) $ strOption $ mconcat
       [ long "tracer-socket-path-accept"
       , help "Accept incoming cardano-tracer connection at local socket"
       , completer (bashCompleter "file")
       , metavar "FILEPATH"
       ]
-    , fmap ((, Initiator) . File) $ strOption $ mconcat
+    , fmap (\host -> (Net.LocalPipe host, Initiator)) $ strOption $ mconcat
       [ long "tracer-socket-path-connect"
       , help "Connect to cardano-tracer listening on a local socket"
       , completer (bashCompleter "file")
@@ -342,15 +387,23 @@ parseBulkCredsFilePath =
         <> completer (bashCompleter "file")
     )
 
---TODO: pass the current KES evolution, not the KES_0
-parseKesKeyFilePath :: Parser FilePath
-parseKesKeyFilePath =
-  strOption
-    ( long "shelley-kes-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the KES signing key."
-        <> completer (bashCompleter "file")
-    )
+parseKesSourceFilePath :: Parser KESSource
+parseKesSourceFilePath = asum
+  [ KESKeyFilePath <$>
+      strOption
+        ( long "shelley-kes-key"
+            <> metavar "FILEPATH"
+            <> help "Path to the KES signing key."
+            <> completer (bashCompleter "file")
+        )
+  , KESAgentSocketPath <$>
+      strOption
+        ( long "shelley-kes-agent-socket"
+            <> metavar "SOCKET_FILEPATH"
+            <> help "Path to the KES Agent socket"
+            <> completer (bashCompleter "file")
+        )
+  ]
 
 parseVrfKeyFilePath :: Parser FilePath
 parseVrfKeyFilePath =
@@ -385,6 +438,23 @@ parseStartAsNonProducingNode =
         ]
     ]
 
+parseRpcConfig :: Parser PartialRpcConfig
+parseRpcConfig = do
+  isEnabled <- lastOption parseRpcToggle
+  socketPath <- lastOption parseRpcSocketPath
+  pure $ RpcConfig isEnabled socketPath mempty
+  where
+    parseRpcToggle :: Parser Bool
+    parseRpcToggle =
+      Opt.flag' True $ mconcat
+        [ long "grpc-enable"
+        , help "[EXPERIMENTAL] Enable node gRPC endpoint."
+        ]
+    parseRpcSocketPath :: Parser SocketPath
+    parseRpcSocketPath =
+      parseSocketPath
+        "grpc-socket-path"
+        "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
@@ -399,4 +469,4 @@ parserHelpOptions = fromMaybe mempty . OptI.unChunk . OptI.fullDesc (Opt.prefs m
 -- | Render the help pretty document.
 renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
-  (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))
+  (`PP.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))

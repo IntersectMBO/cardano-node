@@ -9,9 +9,9 @@
 
 module Main (module Main) where
 
-import           Cardano.Api
+import           Cardano.Api hiding (ShelleyGenesis)
 import qualified Cardano.Api.Ledger as Api
-import           Cardano.Api.Shelley (fromPlutusData, sgNetworkMagic)
+import           Cardano.Api (fromPlutusData, sgNetworkMagic)
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts

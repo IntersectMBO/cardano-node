@@ -7,8 +7,12 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- HLINT ignore "Use any" -}
+
 module Cardano.Tracer.Configuration
-  ( Address (..)
+  ( Address
+  , Certificate (..)
+  , Net.HowToConnect (..)
   , Endpoint (..)
   , setEndpoint
   , FileOrMap (..)
@@ -22,13 +26,16 @@ module Cardano.Tracer.Configuration
   , readTracerConfig
   ) where
 
+import           Cardano.Logging.Types (HowToConnect)
 import qualified Cardano.Logging.Types as Log
+import qualified Cardano.Logging.Types as Net
 
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
+import           Data.Kind (Type)
 import           Data.List (intercalate, nub)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
@@ -37,23 +44,33 @@ import           Data.Map.Strict (Map)
 import           Data.Maybe (catMaybes)
 import           Data.String (fromString)
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
 
--- | Only local socket is supported, to avoid unauthorized connections.
-newtype Address = LocalSocket FilePath
-  deriving stock (Eq, Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+type Address :: Type
+type Address = HowToConnect
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
-  { epHost :: !String
-  , epPort :: !Port
+  { epHost     :: !String
+  , epPort     :: !Port
+  , epForceSSL :: !(Maybe Bool)
+  -- ^ `Nothing' (absent field) and `Just False' (`False' field) both
+  -- disable SSL.
   }
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data Certificate = Certificate
+  { certificateFile    :: !FilePath
+  , certificateKeyFile :: !FilePath
+  , certificateChain   :: !(Maybe [FilePath])
+  }
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Endpoint {host, port} acting on Settings: setting host and port.
@@ -140,26 +157,29 @@ instance FromJSON FileOrMap where
 
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
-  { networkMagic   :: !Word32                       -- ^ Network magic from genesis the node is launched with.
-  , network        :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
-  , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
-  , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
-  , hasEKG         :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
-  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
-  , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  { networkMagic     :: !Word32                       -- ^ Network magic from genesis the node is launched with.
+  , network          :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
+  , loRequestNum     :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
+  , ekgRequestFreq   :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
+  , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
+  , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
+  , hasRTView        :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , hasTimeseries    :: !(Maybe Endpoint)
+  , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
     -- Third member of the triplet is the forwarder config.
   , hasForwarding  :: !(Maybe ( Network
                               , Maybe [[Text]]
                               , Log.TraceOptionForwarder
                               ))
-  , logging         :: !(NonEmpty LoggingParams)    -- ^ Logging parameters.
-  , rotation        :: !(Maybe RotationParams)      -- ^ Rotation parameters.
-  , verbosity       :: !(Maybe Verbosity)           -- ^ Verbosity of the tracer itself.
-  , metricsNoSuffix :: !(Maybe Bool)                -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similiarity with old system names - if desired; default: False
-  , metricsHelp     :: !(Maybe FileOrMap)           -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
-  , resourceFreq    :: !(Maybe Int)                 -- ^ Frequency (1/millisecond) for gathering resource data.
-  , ekgRequestFull  :: !(Maybe Bool)                -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , logging           :: !(NonEmpty LoggingParams)  -- ^ Logging parameters.
+  , rotation          :: !(Maybe RotationParams)    -- ^ Rotation parameters.
+  , verbosity         :: !(Maybe Verbosity)         -- ^ Verbosity of the tracer itself.
+  , metricsNoSuffix   :: !(Maybe Bool)              -- ^ Prometheus ONLY: Dropping metrics name suffixes (like "_int") increases similarity with old system names - if desired; default: False
+  , metricsHelp       :: !(Maybe FileOrMap)         -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
+  , resourceFreq      :: !(Maybe Int)               -- ^ Frequency (1/millisecond) for gathering resource data.
+  , ekgRequestFull    :: !(Maybe Bool)              -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , prometheusLabels  :: !(Maybe (Map Text Text))   -- ^ A common label set for all Prometheus scrape targets (only used in Prometheus HTTP service discovery)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -167,7 +187,7 @@ data TracerConfig = TracerConfig
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
-  decodeFileEither pathToConfig >>= \case
+  decodeFileEither @TracerConfig pathToConfig >>= \case
     Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) ->
       case wellFormed config of
@@ -213,10 +233,11 @@ wellFormed TracerConfig
   check _   False = Nothing
 
   nullAddress :: Address -> Bool
-  nullAddress (LocalSocket address) = null address
+  nullAddress (Net.LocalPipe address)       = null address
+  nullAddress (Net.RemoteSocket host _port) = Text.null host
 
   nullEndpoint :: Endpoint -> Bool
-  nullEndpoint (Endpoint host _port) = null host
+  nullEndpoint (Endpoint host _port _) = null host
 
   invalidFileMode :: LoggingParams -> Bool
   invalidFileMode (LoggingParams root FileMode    _) = null root
