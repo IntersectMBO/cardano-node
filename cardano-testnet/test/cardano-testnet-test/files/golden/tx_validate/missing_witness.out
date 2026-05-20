@@ -1,0 +1,4 @@
+Transaction validation failed.
+Phase 1: FAILED
+  MissingVKeyWitnessesUTXOW: fe8c2213ed33ae44e3629706a3c7d34f0dce29753646602177756a5f
+Phase 2: passed (0 scripts evaluated)

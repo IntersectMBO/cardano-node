@@ -1,0 +1,4 @@
+Transaction validation failed.
+Phase 1: FAILED
+  ValueNotConservedUTxO: supplied 10000000 lovelace, expected = 999999200000 lovelace
+Phase 2: passed (0 scripts evaluated)
