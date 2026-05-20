@@ -34,6 +34,24 @@ constraints:
 package acts
   flags: -finitary
 
+-- BEGIN SRP STANZAS MANAGED BY STANZAMAN --
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 24159b402f7c46b6b93c020c01204aef880d4df0
+  subdir: cardano-cli
+  --sha256: 16cp0icy0qkdqd2bzr5pjbiq1aq5lfh57nm2cpmfhhhyvwp80g70
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 2ae516cb39c71a6192914a5d027e696092b94b61
+  subdir: cardano-api
+  --sha256: 0fj7rkcbmdzbwm13g378q1v728gc0dfr6gzc83692x39ivs6r8rg
+
+-- END SRP STANZAS MANAGED BY STANZAMAN --
+
 packages:
   cardano-node
   cardano-node-capi
@@ -80,6 +98,12 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+
+-- The SRP stanza for cardano-api pins it to a version with plutus-{core,ledger-api} ^>=1.61,
+-- while plutus-scripts-bench requires ^>=1.63. Allow the relaxation.
+allow-newer:
+  , cardano-api:plutus-core
+  , cardano-api:plutus-ledger-api
 
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
