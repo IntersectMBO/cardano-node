@@ -152,12 +152,16 @@ let
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
             packages.fs-api.components.library.doHaddock = false;
+            packages.cardano-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
             packages.cardano-ledger-api.components.library.doHaddock = false;
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
+            packages.cardano-ledger-binary.components.library.doHaddock = false;
             packages.cardano-ledger-core.components.library.doHaddock = false;
             packages.cardano-ledger-conway.components.library.doHaddock = false;
+            packages.cardano-ledger-dijkstra.components.library.doHaddock = false;
+            packages.cardano-ledger-mary.components.library.doHaddock = false;
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
