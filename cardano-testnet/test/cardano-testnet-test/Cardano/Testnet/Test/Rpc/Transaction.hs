@@ -17,7 +17,7 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Rpc.Client (Proto)
 import qualified Cardano.Rpc.Client as Rpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano, items, tx)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
@@ -26,10 +26,8 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad
 import           Control.Monad.Trans.Control (liftBaseOp)
 import           Data.Default.Class
-import qualified Data.Text.Encoding as T
 import           GHC.Stack
 import           Lens.Micro
 
@@ -41,8 +39,6 @@ import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
-
-import           RIO (ByteString)
 
 -- | Run with:
 -- @TASTY_PATTERN='/RPC Transaction Submit/' cabal test cardano-testnet-test@
@@ -84,21 +80,18 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   -- RPC queries
   --------------
   let rpcServer = Rpc.ServerUnix rpcSocket
-  (pparamsResponse, utxosResponse) <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
-    pparams' <- do
-      let req = def
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
+  (pparamsResponse, searchResponse) <- H.noteShowM . H.evalIO . Rpc.withConnection def rpcServer $ \conn -> do
+    pparams' <-
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) def
 
-    utxos' <- do
-      let req = def -- & # U5c.keys .~ [T.encodeUtf8 addrTxt0]
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
-    pure (pparams', utxos')
+    search' <-
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
+        def & U5c.predicate .~ addressPredicate addr0
+    pure (pparams', search')
 
   pparams <- H.leftFail $ utxoRpcPParamsToProtocolParams (convert ceo) $ pparamsResponse ^. U5c.values . U5c.cardano
 
-  txOut0 : _ <- H.noteShowM . flip filterM (utxosResponse ^. U5c.items) $ \utxo -> do
-    utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. U5c.cardano . U5c.address
-    pure $ addr0 == utxoAddress
+  txOut0 : _ <- H.noteShow $ searchResponse ^. U5c.items
   txIn0 <- txoRefToTxIn $ txOut0 ^. U5c.txoRef
 
   outputCoin <- H.leftFail $ txOut0 ^. U5c.cardano . U5c.coin . to utxoRpcBigIntToInteger
@@ -119,7 +112,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   let signedTx = signShelleyTransaction sbe txBody [wit0]
   txId' <- H.noteShow . getTxId $ getTxBody signedTx
 
-  H.noteShowPretty_ utxosResponse
+  H.noteShowPretty_ searchResponse
 
   liftBaseOp (Rpc.withConnection def rpcServer) $ \conn -> do
     submitResponse <- H.noteShowM . H.evalIO $
@@ -131,14 +124,12 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
     H.note_ "Ensure that submitTx returns the same transaction ID as the locally computed signed transaction ID"
     txId' === submittedTxId
 
-    -- TODO use searchUtxos when available
     H.note_ $ "Ensure that there are 2 UTXOs in the address " <> show addrTxt1
     utxosForAddress <- retryUntilM epochStateView (WaitForBlocks 10)
-      (do utxos <- H.evalIO $
-            Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) def
-          flip filterM (utxos ^. U5c.items) $ \utxo -> do
-            utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. U5c.cardano . U5c.address
-            pure $ addr1 == utxoAddress
+      (do searchResult <- H.evalIO $
+            Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
+              def & U5c.predicate .~ addressPredicate addr1
+          pure $ searchResult ^. U5c.items
       )
       (\xs -> length xs == 2)
 
@@ -151,5 +142,11 @@ txoRefToTxIn r = withFrozenCallStack $ do
   txId' <- H.leftFail $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
   pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
 
-deserialiseAddressBs :: (MonadTest m, SerialiseAddress c) => AsType c -> ByteString -> m c
-deserialiseAddressBs addrInEra = H.nothingFail . deserialiseAddress addrInEra <=< H.leftFail . T.decodeUtf8'
+addressPredicate :: IsCardanoEra era => AddressInEra era -> Proto UtxoRpc.UtxoPredicate
+addressPredicate addr =
+  def
+    & U5c.match
+      .~ ( def
+             & U5c.cardano
+               .~ (def & U5c.address .~ (def & U5c.exactAddress .~ serialiseToRawBytes addr))
+         )
