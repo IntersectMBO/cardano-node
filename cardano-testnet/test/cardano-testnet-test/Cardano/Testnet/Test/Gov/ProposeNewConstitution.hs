@@ -261,16 +261,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === fromIntegral numVotes
 
-  -- We check that constitution was successfully ratified
-  void . H.leftFailM . H.evalIO . runExceptT $
-    foldEpochState
-      configurationFile
-      socketPath
-      FullValidation
-      (EpochNo 10)
-      ()
-      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
-
+  -- Query proposals via CLI before ratification - the proposal may be removed after ratification
   proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
                                     [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow txId
                                     , "--governance-action-index", "0"
@@ -337,6 +328,16 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   -- Check the stake pool votes are empty
   proposalsStakePoolVotes <- H.evalMaybe $ proposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
   proposalsStakePoolVotes === mempty
+
+  -- We check that constitution was successfully ratified
+  void . H.leftFailM . H.evalIO . runExceptT $
+    foldEpochState
+      configurationFile
+      socketPath
+      FullValidation
+      (EpochNo 10)
+      ()
+      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
