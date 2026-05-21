@@ -34,6 +34,7 @@ import           Data.Default.Class
 import qualified Data.Map.Strict as M
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
+import           GHC.Exts (toList)
 import           Lens.Micro
 
 import           Testnet.Components.Query
@@ -93,9 +94,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
         ss <- querySystemStart
         eh <- queryEraHistory
         pure $ (,) <$> ss <*> eh
-  expectedTimestamp :: Word64 <- H.leftFail $ do
+  expectedTimestampMs :: Word64 <- H.leftFail $ do
     utcTime <- slotToUTCTime systemStart eraHistory (SlotNo slot)
-    pure (round $ utcTimeToPOSIXSeconds utcTime * 1000)
+    pure . round $ utcTimeToPOSIXSeconds utcTime * 1000
 
   --------------
   -- RPC queries
@@ -107,7 +108,10 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.QueryService "readParams")) req
 
     utxos' <- do
-      let req = Rpc.defMessage
+      let req = Rpc.defMessage & U5c.keys .~
+            [ def & U5c.hash .~ serialiseToRawBytes tid & U5c.index .~ fromIntegral tix
+            | (TxIn tid (TxIx tix), _) <- toList utxos
+            ]
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.QueryService "readUtxos")) req
     pure (pparams', utxos')
 
@@ -117,7 +121,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   pparamsResponse ^. U5c.ledgerTip . U5c.slot === slot
   pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash
   pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNo
-  pparamsResponse ^. U5c.ledgerTip . U5c.timestamp === expectedTimestamp
+  H.assertWithinTolerance (pparamsResponse ^. U5c.ledgerTip . U5c.timestamp) expectedTimestampMs 1000
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
   let chainParams = pparamsResponse ^. U5c.values . U5c.cardano
@@ -125,9 +129,10 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
       ===^ chainParams ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxTxSizeL === chainParams ^. U5c.maxTxSize . to fromIntegral
-    pparams ^. L.ppTxFeeFixedL ===^ chainParams ^. U5c.minFeeCoefficient . to (fmap L.Coin . utxoRpcBigIntToInteger)
-    pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
+    pparams ^. L.ppTxFeeFixedL . to L.unCoin
       ===^ chainParams ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger
+    pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
+      ===^ chainParams ^. U5c.minFeeCoefficient . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxBBSizeL === chainParams ^. U5c.maxBlockBodySize . to fromIntegral
     pparams ^. L.ppMaxBHSizeL === chainParams ^. U5c.maxBlockHeaderSize . to fromIntegral
     pparams ^. L.ppKeyDepositL ===^ chainParams ^. U5c.stakeKeyDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
