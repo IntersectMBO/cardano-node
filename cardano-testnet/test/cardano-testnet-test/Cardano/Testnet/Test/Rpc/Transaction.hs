@@ -17,7 +17,7 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Rpc.Client (Proto)
 import qualified Cardano.Rpc.Client as Rpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano, items, tx)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
@@ -90,8 +90,8 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readParams")) req
 
     utxos' <- do
-      let req = def -- & # U5c.keys .~ [T.encodeUtf8 addrTxt0]
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) req
+      let req = def & U5c.predicate .~ mkAddrPredicate addr0
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) req
     pure (pparams', utxos')
 
   pparams <- H.leftFail $ utxoRpcPParamsToProtocolParams (convert ceo) $ pparamsResponse ^. U5c.values . U5c.cardano
@@ -131,20 +131,27 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
     H.note_ "Ensure that submitTx returns the same transaction ID as the locally computed signed transaction ID"
     txId' === submittedTxId
 
-    -- TODO use searchUtxos when available
     H.note_ $ "Ensure that there are 2 UTXOs in the address " <> show addrTxt1
     utxosForAddress <- retryUntilM epochStateView (WaitForBlocks 10)
-      (do utxos <- H.evalIO $
-            Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "readUtxos")) def
-          flip filterM (utxos ^. U5c.items) $ \utxo -> do
-            utxoAddress <- deserialiseAddressBs addrInEra $ utxo ^. U5c.cardano . U5c.address
-            pure $ addr1 == utxoAddress
+      (do let req = def & U5c.predicate .~ mkAddrPredicate addr1
+          utxos <- H.evalIO $
+            Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) req
+          pure $ utxos ^. U5c.items
       )
       (\xs -> length xs == 2)
 
     let outputsAmounts = map (^. U5c.cardano . U5c.coin) utxosForAddress
     H.note_ $ "Ensure that the output sent is one of the utxos for the address " <> show addrTxt1
     H.assertWith outputsAmounts $ elem (inject amount)
+
+mkAddrPredicate :: SerialiseAsRawBytes addr => addr -> Proto UtxoRpc.UtxoPredicate
+mkAddrPredicate addr =
+  def
+    & U5c.match
+      .~ ( def
+            & U5c.cardano
+              .~ (def & U5c.address .~ (def & U5c.exactAddress .~ serialiseToRawBytes addr))
+         )
 
 txoRefToTxIn :: (HasCallStack, MonadTest m) => Proto UtxoRpc.TxoRef -> m TxIn
 txoRefToTxIn r = withFrozenCallStack $ do
