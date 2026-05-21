@@ -138,7 +138,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.0
+                      , cardano-api ^>= 11.3
                       , cardano-data
                       , cardano-crypto-class ^>=2.3
                       , cardano-crypto-wrapper
@@ -156,7 +156,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
-                      , cardano-rpc ^>= 10.2
+                      , cardano-rpc ^>= 11.0
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
