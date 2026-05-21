@@ -4,15 +4,16 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile.Genesis (
-  Epoch (..), epochTimeline
-, plutusV1CostNames, plutusV2CostNames, plutusV3CostNames
-) where
+module Cardano.Benchmarking.Profile.Genesis
+  ( Epoch (..)
+  , EpochParams (..), CostModel (..)
+  , epochTimeline
+  , plutusV1CostNames, plutusV2CostNames, plutusV3CostNames
+  ) where
 
 --------------------------------------------------------------------------------
 
 import           Prelude
-import           Data.String (fromString)
 import           GHC.Generics
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
@@ -24,74 +25,103 @@ import qualified Paths_cardano_profile as Paths
 
 --------------------------------------------------------------------------------
 
+-- The per-epoch accumulator. The same JSON shape is used by two file sets:
+--
+--   * `data/genesis/epoch-timeline.json`: one entry per epoch, supplying the
+--     protocol-parameters and cost-models defaults that hold from that epoch
+--     onwards. Folded across all entries <= the profile's `pparamsEpoch` to
+--     produce a baseline `Epoch`.
+--
+--   * `data/genesis/overlays/*.json`: optional tweaks. A profile opts in by
+--     listing an overlay's name in its `pparamsOverlays` field;
+--     `Profile.shelleyAlonzoConway` parses each one as an `Epoch` and merges it
+--     on top of the baseline via `<>`. This is how profiles pull in things like
+--     `voting`, `v9-preview`, `blocksize64k`, etc.
+--
+-- Two sub-objects: `epoch_params` (Shelley/Alonzo/Conway protocol params) and
+-- `cost_model` (Plutus V1/V2/V3 named-key cost models). All values are plain
+-- `Maybe (KeyMap Value)` and merge via the same `union` helper.
 data Epoch = Epoch
-  { shelley :: Maybe (KeyMap.KeyMap Aeson.Value)
-  , alonzo :: Maybe (KeyMap.KeyMap Aeson.Value)
-  , conway :: Maybe (KeyMap.KeyMap Aeson.Value)
+  { epoch_params :: EpochParams
+  , cost_model   :: CostModel
   }
   deriving (Eq, Show, Generic)
 
+data EpochParams = EpochParams
+  { shelley :: Maybe (KeyMap.KeyMap Aeson.Value)
+  , alonzo  :: Maybe (KeyMap.KeyMap Aeson.Value)
+  , conway  :: Maybe (KeyMap.KeyMap Aeson.Value)
+  }
+  deriving (Eq, Show, Generic)
+
+data CostModel = CostModel
+  { plutusV1 :: Maybe (KeyMap.KeyMap Aeson.Value)
+  , plutusV2 :: Maybe (KeyMap.KeyMap Aeson.Value)
+  , plutusV3 :: Maybe (KeyMap.KeyMap Aeson.Value)
+  }
+  deriving (Eq, Show, Generic)
+
+instance Semigroup EpochParams where
+  ep1 <> ep2 = EpochParams
+    { shelley = shelley ep1 `union` shelley ep2
+    , alonzo  = alonzo  ep1 `union` alonzo  ep2
+    , conway  = conway  ep1 `union` conway  ep2
+    }
+
+instance Monoid EpochParams where
+  mempty = EpochParams Nothing Nothing Nothing
+  mappend = (<>)
+
+instance Semigroup CostModel where
+  cm1 <> cm2 = CostModel
+    { plutusV1 = plutusV1 cm1 `union` plutusV1 cm2
+    , plutusV2 = plutusV2 cm1 `union` plutusV2 cm2
+    , plutusV3 = plutusV3 cm1 `union` plutusV3 cm2
+    }
+
+instance Monoid CostModel where
+  mempty = CostModel Nothing Nothing Nothing
+  mappend = (<>)
+
 instance Semigroup Epoch where
-  (<>) e1 e2 =
-    Epoch {
-      shelley = shelley e1 `union` shelley e2
-    , alonzo  = alonzo  e1 `union` alonzo  e2
-    , conway  = conway  e1 `union` conway  e2
+  e1 <> e2 = Epoch
+    { epoch_params = epoch_params e1 <> epoch_params e2
+    , cost_model   = cost_model   e1 <> cost_model   e2
     }
 
 instance Monoid Epoch where
-  mempty = Epoch mempty mempty mempty -- Start with an empty "epoch zero"!
+  mempty = Epoch mempty mempty
   mappend = (<>)
 
-instance Aeson.FromJSON Epoch
+-- Both fields are optional; missing means `mempty`. Lets us parse:
+--   * timeline entries: `{ epoch, description, epoch_params, cost_model }`
+--     where `epoch` and `description` are silently ignored.
+--   * overlay files:    `{ epoch_params: ..., cost_model: ... }` (one or the
+--     other may be absent).
+instance Aeson.FromJSON Epoch where
+  parseJSON = Aeson.withObject "Epoch" $ \o -> Epoch
+    <$> o Aeson..:? "epoch_params" Aeson..!= mempty
+    <*> o Aeson..:? "cost_model"   Aeson..!= mempty
+
+instance Aeson.FromJSON EpochParams
+instance Aeson.FromJSON CostModel
 
 instance Aeson.ToJSON Epoch
+instance Aeson.ToJSON EpochParams
+instance Aeson.ToJSON CostModel
 
 --------------------------------------------------------------------------------
 
+-- Collects all properties from epochs lower or equal than the desired one.
 epochTimeline :: Integer -> IO Epoch
 epochTimeline upToEpochNumber = do
-  e <-epochTimeline' upToEpochNumber
-  return $ e {
-      -- The "shelley" object in "epoch-timeline.json" entries is directly the
-      -- "protocolParams" object used in the node's "shelley-genesis.json".
-      shelley =
-        case shelley e of
-          Nothing -> Nothing
-          (Just s) -> Just $ KeyMap.fromList [
-                        ("protocolParams", Aeson.Object s)
-                      ]
-    -- If "plutusV3CostModel" is a JSON object like "PlutusV1" and "PlutusV2"
-    -- convert it to an array with just the values (numbers).
-    , conway =
-       case conway e of
-         Nothing -> Nothing
-         (Just c) ->
-           Just $ KeyMap.mapWithKey
-             (\k v ->
-               if k == "plutusV3CostModel"
-               then case v of
-                      (Aeson.Object costModel) -> Aeson.Array $ foldl
-                        (\acc name ->
-                          case KeyMap.lookup (fromString name) costModel of
-                            (Just int) -> acc <> return int
-                            Nothing -> error $ "No Plutus V3 Cost Model with name \"" ++ name ++ "\" "
-                        )
-                        mempty
-                        (take (KeyMap.size costModel) plutusV3CostNames)
-                      _ -> v
-               else v
-             )
-             c
-  }
-
--- Collects all properties from epochs lower or equal than the desired one.
-epochTimeline' :: Integer -> IO Epoch
-epochTimeline' upToEpochNumber = do
   fp <- Paths.getDataFileName "data/genesis/epoch-timeline.json"
   -- Get the epochs sorted by number.
   -- The key is a string, so we need to use the "epoch" numeric property.
-  eitherValue <- (Aeson.eitherDecodeFileStrict fp :: IO (Either String (Map.Map Integer Epoch)))
+  eitherValue <-
+    (  Aeson.eitherDecodeFileStrict fp
+    :: IO (Either String (Map.Map Integer Epoch))
+    )
   return $ case eitherValue of
     -- If a proper JSON object, collect!
     (Right epochs) -> Map.foldlWithKey'
@@ -120,12 +150,34 @@ unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
 -- If not an object prefer the right value.
 unionWithKey _ _ b = b
 
--- The cost models cost names, the order is important for Plutus V3.
+-- Canonical Plutus cost-parameter names, in canonical order. They are the
+-- bridge between the named-object and positional-array forms of a cost
+-- model. Two consumers, both order-dependent:
+--
+--   * `app/cardano-timeline.hs::addCostsNames`: zips each db-sync positional
+--     cost array with the matching list to recover `{name: value}` JSON
+--     objects.
+--   * `Profile.genesisCostModels`: walks each list with `take n` to emit the
+--     named OBJECT for V1 at `alonzo.costModels.PlutusV1` (mainnet shape) and
+--     positional ARRAYS for V3 at `conway.plutusV3CostModel` and for any
+--     V1/V2/V3 entries that go to `alonzo.extraConfig.costModels`.
+--
+-- Reordering silently mis-prices every cost in that version, so don't. New
+-- costs added upstream go at the END of the relevant list.
+--
+-- Each list's tail is `repeat (error "PlutusVN cost with no name")`, so a read
+-- past the known names crashes loudly instead of silently aliasing onto the
+-- wrong cost parameter, signalling that the list must be extended with the new
+-- upstream names.
 --------------------------------------------------------------------------------
 
+-- Source: Plutus's `PlutusLedgerApi.V1.ParamName` enum,
+--   https://github.com/IntersectMBO/plutus/blob/b6e724e9577419e0cddfaf861ce2d77ea7526d09/plutus-ledger-api/src/PlutusLedgerApi/V1/ParamName.hs
 plutusV1CostNames :: [String]
 plutusV1CostNames =
   [
+  -- Positions 0..165 (166 entries): Alonzo HF (Alonzo era, mainnet epoch 290).
+  -- V1 has never gained a parameter since.
     "addInteger-cpu-arguments-intercept"
   , "addInteger-cpu-arguments-slope"
   , "addInteger-memory-arguments-intercept"
@@ -296,9 +348,13 @@ plutusV1CostNames =
   ++
   repeat (error "PlutusV1 cost with no name")
 
+-- Source: Plutus's `PlutusLedgerApi.V2.ParamName` enum,
+--   https://github.com/IntersectMBO/plutus/blob/b6e724e9577419e0cddfaf861ce2d77ea7526d09/plutus-ledger-api/src/PlutusLedgerApi/V2/ParamName.hs
 plutusV2CostNames :: [String]
 plutusV2CostNames =
   [
+  -- Positions 0..174 (175 entries): Vasil HF (Babbage era, mainnet epoch 366).
+  -- Original V2 init set.
     "addInteger-cpu-arguments-intercept"
   , "addInteger-cpu-arguments-slope"
   , "addInteger-memory-arguments-intercept"
@@ -474,14 +530,30 @@ plutusV2CostNames =
   , "verifySchnorrSecp256k1Signature-cpu-arguments-intercept"
   , "verifySchnorrSecp256k1Signature-cpu-arguments-slope"
   , "verifySchnorrSecp256k1Signature-memory-arguments"
+  -- Positions 175..184 (10 entries):
+  --   post-Vasil on-chain parameter update at mainnet epoch 492
+  --   (integerToByteString, byteStringToInteger).
+  , "integerToByteString-cpu-arguments-c0"
+  , "integerToByteString-cpu-arguments-c1"
+  , "integerToByteString-cpu-arguments-c2"
+  , "integerToByteString-memory-arguments-intercept"
+  , "integerToByteString-memory-arguments-slope"
+  , "byteStringToInteger-cpu-arguments-c0"
+  , "byteStringToInteger-cpu-arguments-c1"
+  , "byteStringToInteger-cpu-arguments-c2"
+  , "byteStringToInteger-memory-arguments-intercept"
+  , "byteStringToInteger-memory-arguments-slope"
   ]
   ++
   repeat (error "PlutusV2 cost with no name")
 
--- https://github.com/IntersectMBO/plutus/blob/3400c4ca44f86b1c3ee135ceb6353b659109172c/plutus-ledger-api/CostModel/Params/CostModelParams/costModelParamNames.txt.golden#L242
+-- Source: Plutus's `PlutusLedgerApi.V3.ParamName` enum,
+--   https://github.com/IntersectMBO/plutus/blob/b6e724e9577419e0cddfaf861ce2d77ea7526d09/plutus-ledger-api/src/PlutusLedgerApi/V3/ParamName.hs
 plutusV3CostNames :: [String]
 plutusV3CostNames =
   [
+  -- Positions 0..250 (251 entries): Chang HF (Conway era, mainnet epoch 507).
+  -- Original V3 init set.
     "addInteger-cpu-arguments-intercept"
   , "addInteger-cpu-arguments-slope"
   , "addInteger-memory-arguments-intercept"
@@ -733,6 +805,9 @@ plutusV3CostNames =
   , "byteStringToInteger-cpu-arguments-c2"
   , "byteStringToInteger-memory-arguments-intercept"
   , "byteStringToInteger-memory-arguments-slope"
+  -- Positions 251..296 (46 entries):
+  --   post-Chang on-chain parameter update at mainnet epoch 526
+  --   (bitwise / byte-string ops, ripemd_160).
   , "andByteString-cpu-arguments-intercept"
   , "andByteString-cpu-arguments-slope1"
   , "andByteString-cpu-arguments-slope2"
@@ -781,4 +856,4 @@ plutusV3CostNames =
   , "ripemd_160-memory-arguments"
   ]
   ++
-  map (("PlutusV3_Unknown_" ++) . show) ([1,2..]::[Int])
+  repeat (error "PlutusV3 cost with no name")

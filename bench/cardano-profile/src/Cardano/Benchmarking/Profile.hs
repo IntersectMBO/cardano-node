@@ -136,8 +136,6 @@ shelleyAlonzoConway profile =
   in genesis (\g -> g {
       Types.pparamsEpoch = epochNumber
     , Types.shelley =
-        -- The "shelley" object in "epoch-timeline.json" entries is directly the
-        -- "protocolParams" object used in the node's "shelley-genesis.json".
         -- We have to add "slotLength", "epochLength", "securityParam" and
         -- "activeSlotsCoeff" that are treated as first class citizens in this
         -- library, instead of JSON/KeyMap.
@@ -150,11 +148,6 @@ shelleyAlonzoConway profile =
             , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
             , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
             , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
-            , ("protocolParams",
-                case KeyMap.lookup "protocolParams" sheyKeyMap of
-                  (Just shey) -> shey
-                  Nothing -> error "No \"protocolParams\" JSON object in \"shelley\" property"
-              )
             ]
           Nothing -> error "No \"shelley\" JSON object from epoch-timeline.json"
     , Types.alonzo  =
