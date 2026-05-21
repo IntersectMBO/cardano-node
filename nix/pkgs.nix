@@ -44,16 +44,19 @@ in with final;
       }
   ;
 
-  cabal = haskell-nix.cabal-install.${compiler-nix-name};
+  cabal = haskell-nix.tool compiler-nix-name "cabal" {
+    version = "latest";
+    index-state = "2026-03-26T20:21:33Z";
+  };
 
-  hlint = haskell-nix.tool "ghc96" "hlint" {
-    version = "3.8";
-    index-state = "2025-04-22T00:00:00Z";
+  hlint = haskell-nix.tool compiler-nix-name "hlint" {
+    version = "latest";
+    index-state = "2026-03-26T20:21:33Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
-    version = "0.8.7";
-    index-state = "2024-12-24T12:56:48Z";
+    version = "latest";
+    index-state = "2026-03-26T20:21:33Z";
   };
 
   # The ghc-hls point release compatibility table is documented at:

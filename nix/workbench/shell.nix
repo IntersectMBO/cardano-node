@@ -106,7 +106,7 @@ project.shellFor {
        moreutils
        nix
        (pkgs.pkg-config or pkgconfig)
-       profiteur
+       # profiteur
        sqlite-interactive
        time
        tmux
