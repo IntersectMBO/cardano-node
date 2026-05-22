@@ -1,0 +1,6 @@
+Transaction validation failed.
+Phase 1: FAILED
+  InsufficientCollateral: actual collateral is 0 lovelace, required collateral is 4500000 lovelace
+  NoCollateralInputs
+Phase 2: passed (1 script evaluated)
+  Spend:0 passed (mem: 500, steps: 64100)
