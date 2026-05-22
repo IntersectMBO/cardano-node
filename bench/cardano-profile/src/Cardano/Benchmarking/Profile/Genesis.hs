@@ -144,11 +144,29 @@ union (Just a) (Just b) = Just $ KeyMap.unionWithKey unionWithKey a b
 
 -- Right-biased merge of both JSON objects at all depths.
 unionWithKey :: KeyMap.Key -> Aeson.Value -> Aeson.Value -> Aeson.Value
--- Recurse if it's an object.
-unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
-  Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
+-- Empty right object wipes the left: a deep merge with `{}` is otherwise a
+-- no-op (the right side adds no keys, the left's content is preserved), so
+-- there'd be no way for an overlay to express "I want this collection empty"
+-- (e.g. `conway.committee.members: {}` to disable the committee).
+-- Treat `{}` on the right as a wholesale replacement.
+unionWithKey _ (Aeson.Object _) (Aeson.Object b)
+  | KeyMap.null b  = Aeson.Object b
+-- Tagged-union (Aeson default sum-type) handling: if both sides are objects and
+-- both carry a `tag` key whose values differ, the right side is a different
+-- constructor. A deep merge would carry stale payload keys from the left
+-- constructor into the right one (e.g. merging Nonce {contents = hex} with
+-- NeutralNonce {} would yield NeutralNonce {contents = hex}). Replace the whole
+-- object instead.
+unionWithKey _ (Aeson.Object a) (Aeson.Object b)
+  | tagsDiffer a b = Aeson.Object b
+  | otherwise      = Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
 -- If not an object prefer the right value.
 unionWithKey _ _ b = b
+
+tagsDiffer :: KeyMap.KeyMap Aeson.Value -> KeyMap.KeyMap Aeson.Value -> Bool
+tagsDiffer a b = case (KeyMap.lookup "tag" a, KeyMap.lookup "tag" b) of
+  (Just av, Just bv) -> av /= bv
+  _                  -> False
 
 -- Canonical Plutus cost-parameter names, in canonical order. They are the
 -- bridge between the named-object and positional-array forms of a cost

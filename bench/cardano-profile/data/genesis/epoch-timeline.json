@@ -1,8 +1,55 @@
 {
   "0": {
     "epoch": 0,
-    "description": "Byron phase",
-    "epoch_params": {},
+    "description": "Byron phase. Mirrors mainnet/byron-genesis.json. Content deviations: (1) avvmDistr empty -- mainnet has 14505 ICO addresses, testnets seed funds via cardano-cli instead; (2) bootStakeholders, heavyDelegation and nonAvvmBalances absent -- dataset fields supplied by the workbench dataset cache (nix/workbench/genesis).",
+    "epoch_params": {
+      "byron": {
+        "avvmDistr": {},
+        "blockVersionData": {
+          "heavyDelThd": "300000000000",
+          "maxBlockSize": "2000000",
+          "maxHeaderSize": "2000000",
+          "maxProposalSize": "700",
+          "maxTxSize": "4096",
+          "mpcThd": "20000000000000",
+          "scriptVersion": 0,
+          "slotDuration": "20000",
+          "softforkRule": {
+            "initThd": "900000000000000",
+            "minThd": "600000000000000",
+            "thdDecrement": "50000000000000"
+          },
+          "txFeePolicy": {
+            "multiplier": "43946000000",
+            "summand": "155381000000000"
+          },
+          "unlockStakeEpoch": "18446744073709551615",
+          "updateImplicit": "10000",
+          "updateProposalThd": "100000000000000",
+          "updateVoteThd": "1000000000000"
+        },
+        "ftsSeed": "76617361206f7061736120736b6f766f726f64612047677572646120626f726f64612070726f766f6461",
+        "protocolConsts": {
+          "k": 2160,
+          "protocolMagic": 764824073,
+          "vssMaxTTL": 6,
+          "vssMinTTL": 2
+        },
+        "startTime": 1506203091,
+        "bootStakeholders": {},
+        "heavyDelegation": {},
+        "nonAvvmBalances": {},
+        "vssCerts": {
+          "6bef444609d6e336cb1fe1daba278918dbc5768e6754c2945dd8d25c":{"expiryEpoch":5,"signature":"2d96e4d4a4c506cc5762128b814ffb20afb97d30eb976334cd241a3935bd155ea1d68772b0903bde4584470359206769d83fa2ce55f56a1027ec3c52cb5e8703","signingKey":"6MA6A8Cy3b6kGVyvOfQeZp99JR7PIh+7LydcCl1+BdGQ3MJG9WyOM6wANwZuL2ZN2qmF6lKECCZDMI3eT1v+3w==","vssKey":"WCED6k6ArqOnhQtfNRg0FSCxWmAtocZcyV33AdjMotjGwxI="},
+          "eb649333a196ecb024a4a5919d3ce86084014136fd3e884e52ecd057":{"expiryEpoch":5,"signature":"0b115a39935ce6008a4bbad0377f35463fd3510e282186ba43492768a02eb000bd4d3bc50799a24c53879ff2f2587179e797ee1c312acaf107cba67f91cb280b","signingKey":"X93u2t4nFNbbL54RBHQ9LY2Bjs3cMG4XYQjbFMqt1EG0V9WEDGD4hAuZyPeMKQriKdT4Qx5ni6elRcNWB7lN2w==","vssKey":"WCECS11PWxybUHKY2hHmBgm/zYaR2YsqsH+f3uPOp2ydz/E="},
+          "5ffca3a329599727e39a7472c5270e54cf59a27b74306cc9f7fd0f5e":{"expiryEpoch":5,"signature":"6cc8d84dd55b41efcf46c4b3086da1fb60c938182b4b66657650839d9fac1e2194a8253dc6d5c107ac0e9e714d1364fff9d2114eae07363d9937ee1d92b69c06","signingKey":"i1Mgdin5ow5LIBUETzN8AXNavmckPBlHDJ2ujHtzJ5gJiHufQg1vcO4enVDBYFKHjlRLZctdRL1pF1ayhM2Cmw==","vssKey":"WCEDca27BxibVjQoA1QJaWx4gAE2MUB0lHfb6jJ3iorXD7s="},
+          "ce1e50f578d3043dc78d8777f5723cc7b6ca512d8cdbe8a09aafc9c3":{"expiryEpoch":5,"signature":"2b830f1a79d2baca791a90c3784d74ec9f00267efac5ccd3cd7082b854234f411c237b59f34736933ba626fadc87fd6b2114c44486de692892d7401343990e01","signingKey":"8U9xLcYA15MFLUhC1QzvpOZYhOps+DcHB564zjAu/IXa6SLV6zg40rkXhPBIJNJnZ7+2W9NqNudP7EbQnZiFjQ==","vssKey":"WCECs1+lg8Lsm15FxfY8bhGyRuwe8yOaSH0wwSajLRYeW/s="},
+          "0efd6f3b2849d5baf25b3e2bf2d46f88427b4e455fc3dc43f57819c5":{"expiryEpoch":5,"signature":"d381d32a18cd12a1c6ff87da0229c9a5b998fd093ac29f5d932bfc918e7dbc6e1dc292a36c46a3e129c5b1ef661124361426b443480534ff51dacc82bf4b630f","signingKey":"kYDYGOac2ZfjRmPEGKZIwHby4ZzUGU5IbhWdhYC8bNqBNERAxq0OUwb9A1vvkoHaXY+9OPWfWI9wgQFu5hET0g==","vssKey":"WCECgow+hJK+BxjNx0gIYrap+onUsRocObQEVzvJsdj68vw="},
+          "1040655f58d5bf2be1c06f983abf66c7f01d28c239f27648a0c73e5d":{"expiryEpoch":5,"signature":"b02e89abb183da7c871bca87a563d38356b44f403348b6a5f24ee4459335290d980db69a6482455aae231a9880defe2fd4212272c4b2ea3da8744a8ba750440a","signingKey":"icKfjErye3rMvliXR4IBNOu6ocrzzpSScKPQx9z9VBsd7zJtLvDbeANByeJh8EiQze7x+cmfbZC47cp9PPwJiA==","vssKey":"WCECQoZjWJSu/6R74CC0ueh7cXmR0sasmTuCqf8X0BtAQ4o="},
+          "1fa56ba63cff50d124b6af42f33b245a30fcd1b0170d7704b0b201c7":{"expiryEpoch":5,"signature":"7bb244c4fa1499021b0f2d36515a1f288a33cf00f1b88b57626998b439dcfb03ad88a7bc93101e4d83cdc75329799fbb2ccb28a7212a3e49737b06287d09b00c","signingKey":"YSYalbdhPua/IGfa13twNJcpsMUNV7wc8w3g20oec6iF0AVK98I/xsN5GdukHGAqV+LQ+TKaeVS4ZzONb7LJRQ==","vssKey":"WCECNXeQRqiTZSPDDyeRJ3gl/QzYMLLtNH0yN+XOl17pu8Y="}
+        }
+      }
+    },
     "cost_model": {}
   },
   "176": {
@@ -13,9 +60,10 @@
   },
   "208": {
     "epoch": 208,
-    "description": "Shelley era (protocol version 2.0)",
+    "description": "Shelley era (protocol version 2.0). Mirrors mainnet/shelley-genesis.json. Content deviations: (1) initialFunds empty -- mainnet seeds Shelley funds, testnets get them from cardano-cli's create-testnet-data dataset; (2) staking absent -- dataset field supplied by the workbench dataset cache (cardano-cli create-testnet-data output).",
     "epoch_params": {
       "shelley": {
+        "activeSlotsCoeff": 0.05,
         "protocolParams": {
           "protocolVersion": {
             "minor": 0,
@@ -37,9 +85,29 @@
           "keyDeposit": 2000000,
           "nOpt": 150,
           "rho": 0.003,
-          "tau": 0.2,
+          "tau": 0.20,
           "a0": 0.3
-        }
+        },
+        "genDelegs": {
+          "ad5463153dc3d24b9ff133e46136028bdc1edbb897f5a7cf1b37950c": {"delegate": "d9e5c76ad5ee778960804094a389f0b546b5c2b140a62f8ec43ea54d", "vrf": "64fa87e8b29a5b7bfbd6795677e3e878c505bc4a3649485d366b50abadec92d7"},
+          "b9547b8a57656539a8d9bc42c008e38d9c8bd9c8adbb1e73ad529497": {"delegate": "855d6fc1e54274e331e34478eeac8d060b0b90c1f9e8a2b01167c048", "vrf": "66d5167a1f426bd1adcc8bbf4b88c280d38c148d135cb41e3f5a39f948ad7fcc"},
+          "60baee25cbc90047e83fd01e1e57dc0b06d3d0cb150d0ab40bbfead1": {"delegate": "7f72a1826ae3b279782ab2bc582d0d2958de65bd86b2c4f82d8ba956", "vrf": "c0546d9aa5740afd569d3c2d9c412595cd60822bb6d9a4e8ce6c43d12bd0f674"},
+          "f7b341c14cd58fca4195a9b278cce1ef402dc0e06deb77e543cd1757": {"delegate": "69ae12f9e45c0c9122356c8e624b1fbbed6c22a2e3b4358cf0cb5011", "vrf": "6394a632af51a32768a6f12dac3485d9c0712d0b54e3f389f355385762a478f2"},
+          "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {"delegate": "4485708022839a7b9b8b639a939c85ec0ed6999b5b6dc651b03c43f6", "vrf": "aba81e764b71006c515986bf7b37a72fbb5554f78e6775f08e384dbd572a4b32"},
+          "2075a095b3c844a29c24317a94a643ab8e22d54a3a3a72a420260af6": {"delegate": "6535db26347283990a252313a7903a45e3526ec25ddba381c071b25b", "vrf": "fcaca997b8105bd860876348fc2c6e68b13607f9bbd23515cd2193b555d267af"},
+          "268cfc0b89e910ead22e0ade91493d8212f53f3e2164b2e4bef0819b": {"delegate": "1d4f2e1fda43070d71bb22a5522f86943c7c18aeb4fa47a362c27e23", "vrf": "63ef48bc5355f3e7973100c371d6a095251c80ceb40559f4750aa7014a6fb6db"}
+        },
+        "updateQuorum": 5,
+        "networkId": "Mainnet",
+        "initialFunds": {},
+        "maxLovelaceSupply": 45000000000000000,
+        "networkMagic": 764824073,
+        "epochLength": 432000,
+        "systemStart": "2017-09-23T21:44:51Z",
+        "slotsPerKESPeriod": 129600,
+        "slotLength": 1,
+        "maxKESEvolutions": 62,
+        "securityParam": 2160
       }
     },
     "cost_model": {}
@@ -532,9 +600,30 @@
   },
   "259": {
     "epoch": 259,
-    "description": "Extra entropy injection",
+    "description": "Extra entropy injection (one-shot: mixed into the next epoch's nonce, then reset at epoch 260)",
     "epoch_params": {
-      "shelley": {}
+      "shelley": {
+        "protocolParams": {
+          "extraEntropy": {
+            "tag": "Nonce",
+            "contents": "d982e06fd33e7440b43cefad529b7ecafbaa255e38178ad4189a37e4ce9bf1fa"
+          }
+        }
+      }
+    },
+    "cost_model": {}
+  },
+  "260": {
+    "epoch": 260,
+    "description": "Extra entropy reset to NeutralNonce after the one-epoch injection at 259",
+    "epoch_params": {
+      "shelley": {
+        "protocolParams": {
+          "extraEntropy": {
+            "tag": "NeutralNonce"
+          }
+        }
+      }
     },
     "cost_model": {}
   },
@@ -845,6 +934,12 @@
   "365": {
     "epoch": 365,
     "description": "Babbage era / Vasil HF (protocol version 7.0)",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0031",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0032",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0033",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0040"
+    ],
     "epoch_params": {
       "shelley": {
         "protocolParams": {
@@ -862,6 +957,12 @@
   "366": {
     "epoch": 366,
     "description": "Vasil HF - Plutus Cost Models",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0031",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0032",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0033",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0040"
+    ],
     "epoch_params": {},
     "cost_model": {
       "plutusV1": {
@@ -1148,6 +1249,9 @@
   "394": {
     "epoch": 394,
     "description": "Valentine HF (protocol version 8.0)",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0049"
+    ],
     "epoch_params": {
       "shelley": {
         "protocolParams": {
@@ -1181,6 +1285,9 @@
   "445": {
     "epoch": 445,
     "description": "Lower min_pool_cost / minPoolCost",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0074"
+    ],
     "epoch_params": {
       "shelley": {
         "protocolParams": {
@@ -1190,33 +1297,67 @@
     },
     "cost_model": {}
   },
-  "492": {
-    "epoch": 492,
-    "description": "V2 Cost Model - new mandatory parameters - speculative/not yet deployed",
-    "epoch_params": {},
-    "cost_model": {
-      "plutusV2": {
-        "byteStringToInteger-cpu-arguments-c0": 1006041,
-        "byteStringToInteger-cpu-arguments-c1": 43623,
-        "byteStringToInteger-cpu-arguments-c2": 251,
-        "byteStringToInteger-memory-arguments-intercept": 0,
-        "byteStringToInteger-memory-arguments-slope": 1,
-        "integerToByteString-cpu-arguments-c0": 1293828,
-        "integerToByteString-cpu-arguments-c1": 28716,
-        "integerToByteString-cpu-arguments-c2": 63,
-        "integerToByteString-memory-arguments-intercept": 0,
-        "integerToByteString-memory-arguments-slope": 1
-      }
-    }
-  },
   "507": {
     "epoch": 507,
     "description": "Conway era / Chang HF (protocol version 9.0)",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-1694"
+    ],
     "epoch_params": {
       "shelley": {
         "protocolParams": {
           "protocolVersion": {
             "major": 9
+          }
+        }
+      },
+      "conway": {
+        "poolVotingThresholds": {
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "hardForkInitiation": 0.51,
+          "motionNoConfidence": 0.51,
+          "ppSecurityGroup": 0.51
+        },
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.67,
+          "committeeNormal": 0.67,
+          "committeeNoConfidence": 0.6,
+          "updateToConstitution": 0.75,
+          "hardForkInitiation": 0.6,
+          "ppNetworkGroup": 0.67,
+          "ppEconomicGroup": 0.67,
+          "ppTechnicalGroup": 0.67,
+          "ppGovGroup": 0.75,
+          "treasuryWithdrawal": 0.67
+        },
+        "committeeMinSize": 7,
+        "committeeMaxTermLength": 146,
+        "govActionLifetime": 6,
+        "govActionDeposit": 100000000000,
+        "dRepDeposit": 500000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 15,
+        "constitution": {
+           "anchor": {
+             "dataHash": "ca41a91f399259bcefe57f9858e91f6d00e1a38d6d9c63d4052914ea7bd70cb2",
+             "url": "ipfs://bafkreifnwj6zpu3ixa4siz2lndqybyc5wnnt3jkwyutci4e2tmbnj3xrdm"
+           },
+           "script": "fa24fb305126805cf2164c161d852a0e7330cf988f1fe558cf7d4a64"
+        },
+        "committee": {
+          "members": {
+            "scriptHash-df0e83bde65416dade5b1f97e7f115cc1ff999550ad968850783fe50": 580,
+            "scriptHash-b6012034ba0a7e4afbbf2c7a1432f8824aee5299a48e38e41a952686": 580,
+            "scriptHash-ce8b37a72b178a37bbd3236daa7b2c158c9d3604e7aa667e6c6004b7": 580,
+            "scriptHash-f0dc2c00d92a45521267be2d5de1c485f6f9d14466d7e16062897cf7": 580,
+            "scriptHash-349e55f83e9af24813e6cb368df6a80d38951b2a334dfcdf26815558": 580,
+            "scriptHash-84aebcfd3e00d0f87af918fc4b5e00135f407e379893df7e7d392c6a": 580,
+            "scriptHash-e8165b3328027ee0d74b1f07298cb092fd99aa7697a1436f5997f625": 580
+          },
+          "threshold": {
+            "numerator": 2,
+            "denominator": 3
           }
         }
       }
@@ -1659,6 +1800,12 @@
   "526": {
     "epoch": 526,
     "description": "Plutus V3 Cost Model",
+    "cips": [
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0058",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0122",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0123",
+      "https://github.com/cardano-foundation/CIPs/tree/2caa9b928a742b53b84d00af999ac1db9de0c88f/CIP-0127"
+    ],
     "epoch_params": {},
     "cost_model": {
       "plutusV3": {

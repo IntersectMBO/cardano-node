@@ -18,7 +18,6 @@
       "govActionLifetime": 10,
       "govActionDeposit": 100000,
       "dRepDeposit": 2000000,
-      "dRepActivity": 20,
       "minFeeRefScriptCostPerByte": 0,
       "committee": {
         "members": {},
@@ -27,3 +26,4 @@
     }
   }
 }
+
