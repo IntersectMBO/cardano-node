@@ -234,8 +234,9 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
-  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
+  ledgerUtxoSize          :: LedgerState blk EmptyMK -> Int
+  ledgerDelegMapSize      :: LedgerState blk EmptyMK -> Int
+  ledgerCumulativeTxBytes :: LedgerState blk EmptyMK -> Word64
 
 class LedgerConwayQueries blk where
   ledgerDRepCount    :: LedgerState blk EmptyMK -> Int
@@ -243,7 +244,8 @@ class LedgerConwayQueries blk where
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
-  ledgerDelegMapSize _ = 0
+  ledgerDelegMapSize      _ = 0
+  ledgerCumulativeTxBytes _ = 0
 
 instance (Ledger.EraAccounts era, Shelley.EraCertState era) => LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
@@ -265,6 +267,7 @@ instance (Ledger.EraAccounts era, Shelley.EraCertState era) => LedgerQueries (Sh
       .   Shelley.certPStateL
       )
     . Shelley.shelleyLedgerState
+  ledgerCumulativeTxBytes = Shelley.shelleyCumulativeTxBytes
 
 instance Conway.ConwayEraCertState era => LedgerConwayQueries (Shelley.ShelleyBlock protocol era) where
   ledgerDRepCount =
@@ -289,8 +292,9 @@ instance Conway.ConwayEraCertState era => LedgerConwayQueries (Shelley.ShelleyBl
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize     = ledgerUtxoSize     . unFlip . project . Flip
-  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
+  ledgerUtxoSize          = ledgerUtxoSize          . unFlip . project . Flip
+  ledgerDelegMapSize      = ledgerDelegMapSize      . unFlip . project . Flip
+  ledgerCumulativeTxBytes = ledgerCumulativeTxBytes . unFlip . project . Flip
 
 instance (LedgerConwayQueries x, NoHardForks x)
       => LedgerConwayQueries (HardForkBlock '[x]) where
@@ -316,6 +320,15 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
     Cardano.LedgerStateDijkstra  ledgerDijkstra  -> ledgerDelegMapSize ledgerDijkstra
+  ledgerCumulativeTxBytes = \case
+    Cardano.LedgerStateByron     ledgerByron    -> ledgerCumulativeTxBytes ledgerByron
+    Cardano.LedgerStateShelley   ledgerShelley  -> ledgerCumulativeTxBytes ledgerShelley
+    Cardano.LedgerStateAllegra   ledgerAllegra  -> ledgerCumulativeTxBytes ledgerAllegra
+    Cardano.LedgerStateMary      ledgerMary     -> ledgerCumulativeTxBytes ledgerMary
+    Cardano.LedgerStateAlonzo    ledgerAlonzo   -> ledgerCumulativeTxBytes ledgerAlonzo
+    Cardano.LedgerStateBabbage   ledgerBabbage  -> ledgerCumulativeTxBytes ledgerBabbage
+    Cardano.LedgerStateConway    ledgerConway   -> ledgerCumulativeTxBytes ledgerConway
+    Cardano.LedgerStateDijkstra  ledgerDijkstra -> ledgerCumulativeTxBytes ledgerDijkstra
 
 instance LedgerConwayQueries (Cardano.CardanoBlock c) where
   ledgerDRepCount = \case

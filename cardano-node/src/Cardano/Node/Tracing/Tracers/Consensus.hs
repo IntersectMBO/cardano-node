@@ -45,7 +45,8 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, LedgerSupportsMempool, TxMeasureMetrics (..), txForgetValidated, txId)
+                   HasTxId, HasTxs (..), LedgerSupportsMempool, TxMeasure,
+                   TxMeasureMetrics (..), txForgetValidated, txId)
 import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..), leiosEbTxs,
                    traceLeiosKernelToObject, traceLeiosPeerToObject)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
@@ -1298,12 +1299,14 @@ instance ( tx ~ GenTx blk
          , HasHeader blk
          , HasKESInfo blk
          , HasTxId (GenTx blk)
+         , HasTxs blk
          , LedgerSupportsProtocol blk
          , LedgerSupportsMempool blk
          , SerialiseNodeToNodeConstraints blk
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
          , Show (TxId (GenTx blk))
+         , TxMeasureMetrics (TxMeasure blk)
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
@@ -1559,9 +1562,32 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot _ _ _ _) =
-    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
-     CounterM "Forge.forged" Nothing]
+  asMetrics (TraceForgedBlock slot _point blk mempoolSize blkMeasure) =
+    let blkTxCount    = length (extractTxs blk)
+        blkTxBytes    = unByteSize32 (txMeasureMetricTxSizeBytes blkMeasure)
+        mempoolTxs    = msNumTxs mempoolSize
+        mempoolBytes  = unByteSize32 (msNumBytes mempoolSize)
+        restTxCount   = fromIntegral mempoolTxs - blkTxCount
+        restTxBytes   = fromIntegral mempoolBytes - fromIntegral blkTxBytes :: Int
+    in [ IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)
+       , CounterM "Forge.forged" Nothing
+       , CounterM "Forge.ranking-block.total-count" Nothing
+       , CounterM "Forge.ranking-block.total-tx-count"
+           (Just $ fromIntegral blkTxCount)
+       , CounterM "Forge.ranking-block.total-tx-bytes"
+           (Just $ fromIntegral blkTxBytes)
+       , CounterM "Forge.ranking-block.total-tx-xu-memory"
+           (Just . fromIntegral $ txMeasureMetricExUnitsMemory blkMeasure)
+       , CounterM "Forge.ranking-block.total-tx-xu-time"
+           (Just . fromIntegral $ txMeasureMetricExUnitsSteps blkMeasure)
+       , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes"
+           (Just . fromIntegral . unByteSize32
+               $ txMeasureMetricRefScriptsSizeBytes blkMeasure)
+       , CounterM "Forge.rest-in-mempool.total-tx-count"
+           (Just $ fromIntegral restTxCount)
+       , CounterM "Forge.rest-in-mempool.total-tx-bytes"
+           (Just $ fromIntegral restTxBytes)
+       ]
   asMetrics (TraceDidntAdoptBlock _slot _) =
     [CounterM "Forge.didnt-adopt" Nothing]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
@@ -1663,8 +1689,25 @@ instance MetaTrace (TraceForgeEvent blk) where
   metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
   metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
   metricsDocFor (Namespace _ ["ForgedBlock"]) =
-    [("forgedSlotLast", "Slot number of the last forged block"),
-     ("Forge.forged", "Counter of forged blocks")]
+    [ ("forgedSlotLast", "Slot number of the last forged block")
+    , ("Forge.forged", "Counter of forged blocks")
+    , ("Forge.ranking-block.total-count",
+       "Counter of forged ranking blocks")
+    , ("Forge.ranking-block.total-tx-count",
+       "Total number of transactions in the forged ranking block")
+    , ("Forge.ranking-block.total-tx-bytes",
+       "Total transaction bytes in the forged ranking block")
+    , ("Forge.ranking-block.total-tx-xu-memory",
+       "Total execution units (memory) in the forged ranking block")
+    , ("Forge.ranking-block.total-tx-xu-time",
+       "Total execution units (time) in the forged ranking block")
+    , ("Forge.ranking-block.total-tx-ref-script-size-bytes",
+       "Total reference script size bytes in the forged ranking block")
+    , ("Forge.rest-in-mempool.total-tx-count",
+       "Number of transactions still in the mempool after forging the ranking block")
+    , ("Forge.rest-in-mempool.total-tx-bytes",
+       "Total transaction bytes still in the mempool after forging the ranking block")
+    ]
   metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
     [("Forge.didnt-adopt", "")]
   metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
