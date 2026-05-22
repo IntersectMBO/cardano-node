@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Rpc.Query
 where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
@@ -50,8 +51,8 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = Exp.ConwayEra
+      sbe = convert era
       eraName = eraToString sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
@@ -65,7 +66,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
 
   execConfig <- mkExecConfig tempAbsPath' nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
-  pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView ceo
+  pparams <- unLedgerProtocolParameters <$> getProtocolParams epochStateView (convert era)
   utxos <- findAllUtxos epochStateView sbe
   H.noteShowPretty_ utxos
   rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
@@ -103,7 +104,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
   let chainParams = pparamsResponse ^. U5c.values . U5c.cardano
-  babbageEraOnwardsConstraints (convert ceo) $ do
+  Exp.obtainCommonConstraints era $ do
     pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
       ===^ chainParams ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxTxSizeL === chainParams ^. U5c.maxTxSize . to fromIntegral
@@ -142,7 +143,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational
       === chainParams ^. U5c.minFeeScriptRefCostPerByte . to inject
     let poolVotingThresholds :: L.PoolVotingThresholds =
-          conwayEraOnwardsConstraints ceo $
+          conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppPoolVotingThresholdsL
     ( L.unboundRational
         <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
@@ -154,7 +155,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       )
       === chainParams ^. U5c.poolVotingThresholds . U5c.thresholds . to (map inject)
     let drepVotingThresholds :: L.DRepVotingThresholds =
-          conwayEraOnwardsConstraints ceo $
+          conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppDRepVotingThresholdsL
     ( L.unboundRational
         <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
@@ -183,7 +184,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- Test readUtxos response
   --------------------------
 
-  utxoFromUtxoRpc <- H.leftFail $ utxosResponse ^. U5c.items . to (anyUtxoDataUtxoRpcToUtxo $ convert ceo)
+  utxoFromUtxoRpc <- H.leftFail $ utxosResponse ^. U5c.items . to (anyUtxoDataUtxoRpcToUtxo era)
   utxos === utxoFromUtxoRpc
 
 (===^) :: (Eq a, Show a, H.MonadTest m) => a -> Either SomeException a -> m ()
