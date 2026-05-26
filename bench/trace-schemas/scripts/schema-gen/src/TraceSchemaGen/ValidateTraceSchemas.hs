@@ -56,7 +56,7 @@ main = do
   runValidator "Validating meta schema..." (validatorArgs ["--check-metaschema", cfgMetaSchema config])
   runValidator
     ("Validating " <> show (length schemaFiles) <> " trace schema files...")
-    (validatorArgs (["--schemafile", cfgMetaSchema config] <> schemaFiles))
+    (validatorArgs (["--schemafile", cfgMetaSchema config, "--"] <> schemaFiles))
 
   putStrLn $
     "Validated "

@@ -9,9 +9,11 @@ module TraceSchemaGen.CheckOverrideCoverage
   , listChangedPaths
   , main
   , overridesRoot
+  , validateRange
   ) where
 
 import Control.Monad (unless, when)
+import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf, sort, stripPrefix)
 import Options.Applicative
   ( Parser
@@ -95,11 +97,16 @@ parserInfo =
 
 listChangedPaths :: Config -> [FilePath] -> IO [FilePath]
 listChangedPaths config paths = do
-  let baseArgs =
-        case cfgRange config of
-          Just r -> ["diff", "--name-only", r, "--"]
-          Nothing -> ["diff", "--name-only", "--"]
-      args = baseArgs <> paths
+  baseArgs <-
+    case cfgRange config of
+      Just r ->
+        case validateRange r of
+          Right safeRange -> pure ["diff", "--name-only", safeRange, "--"]
+          Left err -> do
+            putStrLn err
+            exitFailure
+      Nothing -> pure ["diff", "--name-only", "--"]
+  let args = baseArgs <> paths
   (exitCode, stdoutText, stderrText) <- readCreateProcessWithExitCode (proc "git" args) ""
   case exitCode of
     ExitSuccess -> pure (filter (not . null) (lines stdoutText))
@@ -107,6 +114,22 @@ listChangedPaths config paths = do
       unless (null stdoutText) (putStr stdoutText)
       unless (null stderrText) (putStr stderrText)
       exitFailure
+
+validateRange :: String -> Either String String
+validateRange range
+  | null range = Left "Git range must not be empty."
+  | "-" `isPrefixOf` range = Left "Git range must not start with '-'."
+  | any isSpace range = Left "Git range must not contain whitespace."
+  | any (`notElem` allowedRangeChars) range =
+      Left "Git range contains unsupported characters."
+  | otherwise = Right range
+ where
+  allowedRangeChars :: [Char]
+  allowedRangeChars =
+    ['A' .. 'Z']
+      <> ['a' .. 'z']
+      <> ['0' .. '9']
+      <> ".-_/+@{}~^:"
 
 isGeneratedJson :: FilePath -> Bool
 isGeneratedJson path =

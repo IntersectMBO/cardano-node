@@ -89,6 +89,23 @@ checkOverrideCoverageTests =
     , testCase "generatedToOverride maps generated schema path" $ do
         Coverage.generatedToOverride "bench/trace-schemas/messages/Foo.schema.json"
           @?= "bench/trace-schemas/overrides/messages/Foo.schema.override.json"
+    , testCase "validateRange accepts normal git ranges" $ do
+        Coverage.validateRange "origin/master...HEAD" @?= Right "origin/master...HEAD"
+        Coverage.validateRange "HEAD~1" @?= Right "HEAD~1"
+        Coverage.validateRange "feature/trace-schemas+1" @?= Right "feature/trace-schemas+1"
+    , testCase "validateRange rejects option-like and shell-hostile ranges" $ do
+        assertBool "leading dash should be rejected" $
+          case Coverage.validateRange "--output=/tmp/out" of
+            Left _ -> True
+            Right _ -> False
+        assertBool "whitespace should be rejected" $
+          case Coverage.validateRange "HEAD; touch /tmp/pwn" of
+            Left _ -> True
+            Right _ -> False
+        assertBool "shell metacharacters should be rejected" $
+          case Coverage.validateRange "HEAD$(touch /tmp/pwn)" of
+            Left _ -> True
+            Right _ -> False
     ]
 
 validateTraceSchemasTests :: TestTree
@@ -105,8 +122,8 @@ validateTraceSchemasTests =
           files <- sort <$> Validate.listJsonFilesRecursive root
           files @?= sort [root </> "one.json", nested </> "two.json"]
     , testCase "validatorArgs prepend nix check-jsonschema invocation" $ do
-        Validate.validatorArgs ["--schemafile", "meta.schema.json", "msg.schema.json"]
-          @?= ["run", "nixpkgs#check-jsonschema", "--", "--schemafile", "meta.schema.json", "msg.schema.json"]
+        Validate.validatorArgs ["--schemafile", "meta.schema.json", "--", "msg.schema.json"]
+          @?= ["run", "nixpkgs#check-jsonschema", "--", "--schemafile", "meta.schema.json", "--", "msg.schema.json"]
     , testCase "checkInputs accepts existing files and directories" $
         withSystemTempDirectory "trace-schema-gen" $ \root -> do
           let meta = root </> "meta.schema.json"

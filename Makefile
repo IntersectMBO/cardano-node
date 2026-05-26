@@ -44,8 +44,13 @@ trace-schemas-regenerate: ## Regenerate trace schemas, apply overrides, validate
 trace-schemas-overrides-check: ## Check whether all schema overrides are applied
 	nix run .#apply-schema-overrides -- --check --verbose
 
+export RANGE
 trace-schemas-overrides-coverage: ## Fail when generated schema files change without matching override sidecars (use RANGE=origin/master...HEAD in CI)
-	nix run .#check-override-coverage -- ${if ${RANGE},--range ${RANGE}}
+	@if [ -n "$${RANGE:-}" ]; then \
+	  nix run .#check-override-coverage -- --range "$$RANGE"; \
+	else \
+	  nix run .#check-override-coverage; \
+	fi
 
 trace-schemas-validate: ## Validate trace message schemas against meta.schema.json
 	nix run .#validate-trace-schemas

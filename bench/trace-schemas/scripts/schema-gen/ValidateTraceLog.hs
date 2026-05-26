@@ -86,7 +86,7 @@ main = do
     envelopeOk <-
       validateBatches
         "Validating common trace envelope..."
-        (validatorArgs ["--schemafile", cfgTraceSchema config])
+        (validatorArgs ["--schemafile", cfgTraceSchema config, "--"])
         (map leInstancePath entries)
 
     let (knownEntries, unknownEntries) = partitionKnown namespaceSchemas entries
@@ -258,7 +258,7 @@ validateKnownNamespaces groups = do
             "Validating namespace "
               <> namespaceLabel
               <> " (" <> show (length groupEntries) <> " message(s))..."
-      validateBatches header (validatorArgs ["--schemafile", schemaPath]) (map leInstancePath groupEntries)
+      validateBatches header (validatorArgs ["--schemafile", schemaPath, "--"]) (map leInstancePath groupEntries)
   pure (and results)
 
 reportUnknownNamespaces :: [LogEntry] -> IO Bool

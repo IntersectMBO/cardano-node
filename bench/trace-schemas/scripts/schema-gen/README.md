@@ -96,4 +96,10 @@ Additional checks:
   - `make trace-schemas-overrides-check`
   - `make trace-schemas-overrides-coverage RANGE=origin/master...HEAD`
 
+## Security notes
+
+- `schema-gen` queries GHCi through `cabal repl` and should only be run on trusted repository checkouts. Treat it like building project Haskell code, not like parsing an untrusted source archive.
+- `check-override-coverage --range` accepts only simple Git revision ranges and rejects option-like or shell-hostile values. Use `./`-prefixed paths or normal Git refs when invoking it manually.
+- The validation tools pass discovered JSON files after a `--` separator so filenames are handled as positional inputs by `check-jsonschema`.
+
 See `bench/trace-schemas/overrides/README.md` for override format and file layout.
