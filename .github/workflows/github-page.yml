@@ -1,6 +1,8 @@
 name: "Haddock documentation"
 
 on:
+  workflow_dispatch:
+  pull_request: # TODO: remove
   push:
     branches:
       - master
@@ -14,47 +16,51 @@ jobs:
         shell: bash
 
     steps:
-    - name: Install Nix
-      uses: cachix/install-nix-action@v18
+    - uses: actions/checkout@v6
+
+    - uses: cachix/install-nix-action@v31
       with:
-        # Use last stable nixos channel and the same nix as in channel:
-        nix_path: nixpkgs=channel:nixos-24.05
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
+          accept-flake-config = true
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-          experimental-features = nix-command flakes
-          allow-import-from-derivation = true
-          substituters = https://cache.nixos.org https://cache.iog.io
-          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
-    - uses: actions/checkout@v4
+    # GHC 9.14 avoids the tyConStupidTheta panic in GHC 9.6 haddock
+    - uses: rrbutani/use-nix-shell-action@v1
+      with:
+        devShell: .#ghc914
 
-    - name: Fetch nix cache and update cabal indices
+    - name: Update cabal indices
       run: |
-        nix develop --command \
-          cabal update
+        cabal update
 
     - name: Build whole project
       run: |
-        nix develop --command \
-          cabal build all
+        cabal build all
 
     - name: Build documentation
       run: |
-        nix develop --command \
-          cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
+        cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
 
     - name: Compress haddocks
       run: |
         tar -czf haddocks.tgz -C haddocks .
 
     - name: Upload haddocks artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: ${{ always() }}
       continue-on-error: true
       with:
         name: haddocks
         path: ./haddocks.tgz
+
+    - name: Upload cabal logs
+      uses: actions/upload-artifact@v7
+      if: failure()
+      continue-on-error: true
+      with:
+        name: cabal-haddock-logs
+        path: ~/.cache/cabal/logs/
 
     - name: Deploy documentation to gh-pages 🚀
       if: github.ref == 'refs/heads/master'

@@ -189,6 +189,7 @@
         default = shell.dev;
         cluster = shell;
         profiled = project.profiled.shell;
+        ghc914 = project.projectVariants.ghc914.shell;
       };
 
       # NixOS tests a sandboxed mainnet edge node with submit-api, ensuring

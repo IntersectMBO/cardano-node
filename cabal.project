@@ -87,6 +87,134 @@ allow-newer:
   , io-sim:time
   , io-classes:time
 
+if impl(ghc >= 9.12)
+  allow-newer:
+    -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
+    , io-classes:time
+    , ouroboros-network:time
+    , nothunks:time
+    , network-mux:time
+
+-- cabal-allow-newer
+if impl(ghc >= 9.14)
+  allow-newer:
+    , aeson:QuickCheck
+    , aeson:containers
+    , aeson:template-haskell
+    , aeson:time
+    , bin:QuickCheck
+    , bin:base
+    , binary:containers
+    , binary-orphans:base
+    , blockio:base
+    , blockio:io-classes
+    , boring:base
+    , bytestring-trie:base
+    , canonical-json:containers
+    , cardano-addresses:containers
+    , cardano-addresses:template-haskell
+    , cardano-diffusion:io-classes
+    , cardano-prelude:canonical-json
+    , cborg:base
+    , cborg:containers
+    , cborg-json:base
+    , compact:base
+    , config-ini:containers
+    , constraints:boring
+    , constraints-extras:template-haskell
+    , criterion:microstache
+    , data-elevator:base
+    , dec:base
+    , dependent-map:containers
+    , dictionary-sharing:containers
+    , diff-containers:base
+    , discrimination:ghc-bignum
+    , discrimination-ieee754:base
+    , fin:QuickCheck
+    , fin:base
+    , fin:universe-base
+    , fs-sim:QuickCheck
+    , ghc:binary
+    , ghc:time
+    , grapesy:base
+    , grapesy:containers
+    , grpc-spec:base
+    , grpc-spec:containers
+    , hedgehog-extras:base
+    , hedgehog-quickcheck:QuickCheck
+    , http-api-data:text-iso8601
+    , indexed-traversable:base
+    , indexed-traversable:containers
+    , indexed-traversable-instances:base
+    , io-classes:base
+    , io-sim:io-classes
+    , lens-family:base
+    , lens-family:containers
+    , lens-family:lens-family-core
+    , lens-family-core:containers
+    , lsm-tree:base
+    , lsm-tree:cborg
+    , lsm-tree:containers
+    , lsm-tree:io-classes
+    , microstache:base
+    , microstache:containers
+    , network-mux:io-classes
+    , nonempty-vector:base
+    , ordered-containers:containers
+    , ouroboros-consensus:cborg
+    , ouroboros-consensus:fs-sim
+    , ouroboros-consensus:io-classes
+    , ouroboros-consensus:quickcheck-state-machine
+    , ouroboros-network:io-classes
+    , parsec:base
+    , plutus-core:dependent-map
+    , plutus-ledger-api:plutus-core
+    , proto-lens:base
+    , proto-lens:lens-family
+    , proto-lens-arbitrary:base
+    , proto-lens-discrimination:base
+    , proto-lens-optparse:base
+    , proto-lens-protobuf-types:base
+    , proto-lens-protoc:base
+    , proto-lens-protoc:ghc
+    , proto-lens-runtime:base
+    , proto-lens-setup:base
+    , quickcheck-instances:QuickCheck
+    , quickcheck-instances:array
+    , quickcheck-instances:base
+    , quickcheck-instances:containers
+    , quickcheck-instances:uuid-types
+    , quickcheck-state-machine:QuickCheck
+    , ral:QuickCheck
+    , ral:base
+    , ral:fin
+    , ral:indexed-traversable
+    , safe-wild-cards:template-haskell
+    , semialign:base
+    , semialign:containers
+    , serdoc-core:template-haskell
+    , serialise:base
+    , serialise:containers
+    , serialise:time
+    , text:array
+    , text:base
+    , text:template-haskell
+    , text-iso8601:time
+    , these:base
+    , time-compat:time
+    , trace-dispatcher:aeson
+    , tree-diff:QuickCheck
+    , tree-diff:base
+    , tree-diff:containers
+    , tree-diff:semialign
+    , tree-diff:time
+    , typed-protocols:io-classes
+    , universe-base:base
+    , universe-base:containers
+    , unix:time
+    , uuid-types:template-haskell
+    , with-utf8:base
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.

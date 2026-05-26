@@ -23,8 +23,8 @@ let
       src = ../.;
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then windowsCompilerNixName else "ghc967");
-      # Extra-compilers
-      # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
+      # Used for haddock generation (avoids GHC 9.6 tyConStupidTheta panic)
+      flake.variants = lib.genAttrs ["ghc914"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
