@@ -27,6 +27,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void, absurd)
 import qualified Network.Mux as Mux
+import           Network.Mux.Channel (Reception)
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
@@ -115,7 +116,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
   myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-                ByteString
+                ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
@@ -173,14 +174,14 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     => NodeToNodeVersion
     -> remotePeer
     -> Channel IO ByteString
-    -> IO ((), Maybe ByteString)
+    -> IO ((), Maybe (Reception ByteString))
   kaClient _version them channel = do
     keepAliveRng <- newStdGen
     peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
     runPeerWithLimits
       mempty
       (cKeepAliveCodec myCodecs)
-      (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
+      byteLimitsKeepAlive -- TODO: Real Bytelimits, see #1727
       timeLimitsKeepAlive
       channel
       $ keepAliveClientPeer
