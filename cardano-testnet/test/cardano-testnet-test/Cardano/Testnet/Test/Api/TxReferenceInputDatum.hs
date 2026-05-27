@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Api.TxReferenceInputDatum
   ( hprop_tx_refin_datum
@@ -11,10 +12,13 @@ module Cardano.Testnet.Test.Api.TxReferenceInputDatum
 where
 
 import           Cardano.Api hiding (txId)
+import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Network as Net
 import qualified Cardano.Api.UTxO as Utxo
 
+import           Cardano.Ledger.Plutus.Data (hashData)
 import           Cardano.Testnet
 
 import           Prelude
@@ -25,6 +29,7 @@ import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro
@@ -53,9 +58,10 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsConway
+  let era = Exp.ConwayEra
+      sbe = convert era
+      ceo = convert era
       beo = convert ceo
-      sbe = convert ceo
       eraProxy = proxyToAsType Proxy
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
 
@@ -115,6 +121,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
     -- prepare txout
     let txOutValue = lovelaceToTxOutValue sbe 100_000_000
+        txOuts :: [TxOut CtxTx ConwayEra]
         txOuts =
           [ TxOut addr1 txOutValue txDatum1 ReferenceScriptNone
           , TxOut addr1 txOutValue txDatum2 ReferenceScriptNone
@@ -122,28 +129,40 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
           ]
 
         -- build a transaction
+        expTxOuts = map (Exp.TxOut . toShelleyTxOut sbe . toCtxUTxOTxOut) txOuts
+        -- toCtxUTxOTxOut strips the TxOutSupplementalDatum marker, so we must pass
+        -- supplemental datums explicitly
+        supplementalDatums = Exp.obtainCommonConstraints era $ M.fromList
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra ConwayEra) sd
+            in (hashData ledgerData, ledgerData)
+          | sd <- [scriptData3]
+          ]
         content =
-          defaultTxBodyContent sbe
-            & setTxIns [(txIn, pure $ KeyWitness KeyWitnessForSpending)]
-            & setTxOuts txOuts
-            & setTxProtocolParams (pure $ pure pparams)
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+            & Exp.setTxOuts expTxOuts
+            & Exp.setTxProtocolParams (unLedgerProtocolParameters pparams)
+            & Exp.setTxSupplementalDatums supplementalDatums
 
     utxo <- findAllUtxos epochStateView sbe
+    let ledgerUtxo = Utxo.toShelleyUTxO sbe utxo
 
-    BalancedTxBody _ txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) _ fee <-
+    (unsignedTx@(Exp.UnsignedTx ledgerTx), _finalContent) <-
       H.leftFail $
-        makeTransactionBodyAutoBalance
-          sbe
+        Exp.makeTransactionBodyAutoBalance @ConwayEra
           systemStart
           epochInfo
-          pparams
+          (unLedgerProtocolParameters pparams)
           mempty
           mempty
           mempty
-          utxo
+          ledgerUtxo
           content
           addr0
           Nothing -- keys override
+
+    let lbody = ledgerTx ^. L.bodyTxL
+        fee = Exp.getUnsignedTxFee unsignedTx
     H.noteShow_ fee
 
     H.noteShowPretty_ lbody
@@ -151,17 +170,20 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     -- sanity check that the integrity hash was calculated
     lbody ^. L.scriptIntegrityHashTxBodyL /== L.SNothing
 
-    let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
+    let L.TxDats datums = ledgerTx ^. L.witsTxL . L.datsTxWitsL
+        bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
 
     -- Only supplemental datums are included here
     [ scriptData3 ] === bodyScriptData
 
-    let tx = signShelleyTransaction sbe txBody [wit0]
-    txId <- H.noteShow . getTxId $ getTxBody tx
+    let keyWit = Exp.makeKeyWitness era unsignedTx wit0
+        Exp.SignedTx signedLedgerTx = Exp.signTx era [] [keyWit] unsignedTx
+    txId <- H.noteShow . Exp.obtainCommonConstraints era . TxId $ Exp.hashTxBody (signedLedgerTx ^. L.bodyTxL)
 
-    H.noteShowPretty_ tx
+    let signedTx = ShelleyTx sbe signedLedgerTx
+    H.noteShowPretty_ signedTx
 
-    expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
+    expectTxSubmissionSuccess =<< submitTx sbe connectionInfo signedTx
 
     -- wait till transaction gets included in the block
     txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
@@ -196,33 +218,42 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
         -- manually balance
         txOutValue = lovelaceToTxOutValue sbe (100_000_000 - txFee)
         txOut = TxOut addr0 txOutValue txDatum ReferenceScriptNone
-        -- add actual datum values for the two reference inputs
-        txInsReference = TxInsReference beo [txIn1, txIn3] $ pure [scriptData1, scriptData3]
+        -- add actual datum values for the two reference inputs via supplemental datums
+        ledgerPparams = unLedgerProtocolParameters pparams
+        supplementalDatums = Exp.obtainCommonConstraints era $ M.fromList
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra ConwayEra) sd
+            in (hashData ledgerData, ledgerData)
+          | sd <- [scriptData1, scriptData3, scriptData4]
+          ]
 
     let content =
-          defaultTxBodyContent sbe
-            & setTxIns [(txIn2, pure $ KeyWitness KeyWitnessForSpending)]
-            & setTxInsReference txInsReference
-            & setTxFee (TxFeeExplicit sbe txFee)
-            & setTxOuts [txOut]
-            & setTxProtocolParams (pure $ pure pparams)
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns [(txIn2, Exp.AnyKeyWitnessPlaceholder)]
+            & Exp.setTxInsReference (Exp.TxInsReference [txIn1, txIn3] Set.empty)
+            & Exp.setTxFee txFee
+            & Exp.setTxOuts [Exp.TxOut . toShelleyTxOut sbe $ toCtxUTxOTxOut txOut]
+            & Exp.setTxProtocolParams ledgerPparams
+            & Exp.setTxSupplementalDatums supplementalDatums
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
-      H.leftFail $ createTransactionBody sbe content
+    unsignedTx@(Exp.UnsignedTx ledgerTx) <-
+      H.leftFail $ Exp.makeUnsignedTx era content
 
-    let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
+    let lbody = ledgerTx ^. L.bodyTxL
+        L.TxDats datums = ledgerTx ^. L.witsTxL . L.datsTxWitsL
+        bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
     -- only hashes (1 & 3) and supplemental (4) are present here
     [scriptData1, scriptData3, scriptData4] === bodyScriptData
 
-    H.noteShowPretty_ txBody
+    H.noteShowPretty_ lbody
 
     -- make sure that the script integrity hash was calculated
     lbody ^. L.scriptIntegrityHashTxBodyL /== L.SNothing
 
-    let tx = signShelleyTransaction sbe txBody [wit1]
-    txId <- H.noteShow . getTxId $ getTxBody tx
+    let keyWit = Exp.makeKeyWitness era unsignedTx wit1
+        Exp.SignedTx signedLedgerTx = Exp.signTx era [] [keyWit] unsignedTx
+    txId <- H.noteShow . Exp.obtainCommonConstraints era . TxId $ Exp.hashTxBody (signedLedgerTx ^. L.bodyTxL)
 
-    expectTxSubmissionSuccess =<< submitTx sbe connectionInfo tx
+    expectTxSubmissionSuccess =<< submitTx sbe connectionInfo (ShelleyTx sbe signedLedgerTx)
 
     -- wait till transaction gets included in the block
     txUtxo <- retryUntilM epochStateView (WaitForBlocks 5)
@@ -244,34 +275,43 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
         txOutValue = lovelaceToTxOutValue sbe (99_999_500 - txFee)
         txOut = TxOut addr0 txOutValue TxOutDatumNone ReferenceScriptNone
         -- add one reference input with datum hash and its datum, and one superfluous datum
-        txInsReference = TxInsReference beo [txIn1] $ pure [scriptData1, scriptData3]
+        ledgerPparams3 = unLedgerProtocolParameters pparams
+        supplementalDatums3 = Exp.obtainCommonConstraints era $ M.fromList
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra ConwayEra) sd
+            in (hashData ledgerData, ledgerData)
+          | sd <- [scriptData1, scriptData3]
+          ]
 
     let content =
-          defaultTxBodyContent sbe
-            & setTxIns [(tx2In1, pure $ KeyWitness KeyWitnessForSpending)]
-            & setTxInsReference txInsReference
-            & setTxFee (TxFeeExplicit sbe txFee)
-            & setTxOuts [txOut]
-            & setTxProtocolParams (pure $ pure pparams)
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns [(tx2In1, Exp.AnyKeyWitnessPlaceholder)]
+            & Exp.setTxInsReference (Exp.TxInsReference [txIn1] Set.empty)
+            & Exp.setTxFee txFee
+            & Exp.setTxOuts [Exp.TxOut . toShelleyTxOut sbe $ toCtxUTxOTxOut txOut]
+            & Exp.setTxProtocolParams ledgerPparams3
+            & Exp.setTxSupplementalDatums supplementalDatums3
 
-    txBody@(ShelleyTxBody _ lbody _ (TxBodyScriptData _ (L.TxDats datums) _) _ _) <-
-      H.leftFail $ createTransactionBody sbe content
+    unsignedTx3@(Exp.UnsignedTx ledgerTx3) <-
+      H.leftFail $ Exp.makeUnsignedTx era content
 
-    let bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
+    let lbody = ledgerTx3 ^. L.bodyTxL
+        L.TxDats datums = ledgerTx3 ^. L.witsTxL . L.datsTxWitsL
+        bodyScriptData = fromList . map fromAlonzoData $ M.elems datums :: Set HashableScriptData
     -- all hashes of datums supplied to reference inputs (1 & 3) are present here
     [scriptData1, scriptData3] === bodyScriptData
 
-    H.noteShowPretty_ txBody
+    H.noteShowPretty_ lbody
 
     -- make sure that the script integrity hash was calculated
     lbody ^. L.scriptIntegrityHashTxBodyL /== L.SNothing
 
-    let tx = signShelleyTransaction sbe txBody [wit0]
-    -- H.noteShowPretty_ tx
-    H.noteShow_ . getTxId $ getTxBody tx
+    let keyWit = Exp.makeKeyWitness era unsignedTx3 wit0
+        Exp.SignedTx signedLedgerTx = Exp.signTx era [] [keyWit] unsignedTx3
+    Exp.obtainCommonConstraints era $
+      H.noteShow_ . TxId $ Exp.hashTxBody (signedLedgerTx ^. L.bodyTxL)
 
     -- transaction contains not allowed supplemental datum, submission has to fail
-    submitTx sbe connectionInfo tx >>= \case
+    submitTx sbe connectionInfo (ShelleyTx sbe signedLedgerTx) >>= \case
       Right () -> do
         H.note_ "Transaction submission succeeded, but it should fail!"
         H.failure

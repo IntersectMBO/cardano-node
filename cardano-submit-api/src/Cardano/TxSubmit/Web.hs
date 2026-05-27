@@ -17,8 +17,8 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType 
                    IsCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    NetworkId, SerialiseAsCBOR (..), ShelleyBasedEra (..), ShelleyEra, SocketPath,
-                   ToJSON, Tx, TxId (..), TxInMode (TxInMode), TxValidationErrorInCardanoMode (..),
-                   getTxBody, getTxId, submitTxToNodeLocal)
+                   ToJSON, Tx (Tx), TxId (..), TxInMode (TxInMode),
+                   TxValidationErrorInCardanoMode (..), getTxId, submitTxToNodeLocal)
 import qualified Cardano.Api
 
 import           Cardano.Binary (DecoderError (..))
@@ -144,7 +144,8 @@ txSubmitPost trace p@(CardanoModeParams cModeParams) networkId socketPath txByte
     case res of
       Cardano.Api.TxSubmitSuccess -> do
         liftIO $ T.putStrLn "Transaction successfully submitted."
-        return $ getTxId (getTxBody tx)
+        let Tx txBody _ = tx
+        return $ getTxId txBody
       Cardano.Api.TxSubmitFail e ->
         left $ TxCmdTxSubmitValidationError e
       Cardano.Api.TxSubmitError e ->
