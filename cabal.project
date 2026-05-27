@@ -38,17 +38,45 @@ package acts
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 24159b402f7c46b6b93c020c01204aef880d4df0
-  subdir: cardano-cli
-  --sha256: 16cp0icy0qkdqd2bzr5pjbiq1aq5lfh57nm2cpmfhhhyvwp80g70
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 13b452f32cf053a803988f455551a697726c65cc
+  subdir: cardano-api
+  --sha256: 1fq901pjq1k3hiqygnmifw6w9pydqb4xr4i987n69r2jp1k3025m
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 2ae516cb39c71a6192914a5d027e696092b94b61
-  subdir: cardano-api
-  --sha256: 0fj7rkcbmdzbwm13g378q1v728gc0dfr6gzc83692x39ivs6r8rg
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 65da1ad619473f9467d3336a6d6e9a2a8714913d
+  subdir: network-mux
+  --sha256: 1r5y5px0kj4nhb65s9i7pr0sikxghfqwfkzmsgiql2maic4nglwi
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 65da1ad619473f9467d3336a6d6e9a2a8714913d
+  subdir: cardano-diffusion
+  --sha256: 1r5y5px0kj4nhb65s9i7pr0sikxghfqwfkzmsgiql2maic4nglwi
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 65da1ad619473f9467d3336a6d6e9a2a8714913d
+  subdir: ouroboros-network
+  --sha256: 1r5y5px0kj4nhb65s9i7pr0sikxghfqwfkzmsgiql2maic4nglwi
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: c632e6e114b1f2d7715afd34ec44750a0595efc1
+  subdir: cardano-cli
+  --sha256: 0d4vs59z3wlhnl2ns8g8lqrc7xgm2nfid5cfyq0kms2jgmi89wiz
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: bca18fd361d8342bdbfb8a08366e86479677ce30
+  subdir: .
+  --sha256: 11znnl9zk59bxr6dn76zrni6i0q32bqnlxqf4wprvxikg4r666pa
 
 -- END SRP STANZAS MANAGED BY STANZAMAN --
 
@@ -110,6 +138,10 @@ allow-newer:
 allow-newer:
   , io-sim:time
   , io-classes:time
+
+allow-newer:
+  , cardano-diffusion:trace-dispatcher
+  , ouroboros-network:trace-dispatcher
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
