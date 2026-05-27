@@ -1368,6 +1368,7 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion13 = String "ShelleyNodeToClientVersion13"
   toJSON ShelleyNodeToClientVersion14 = String "ShelleyNodeToClientVersion14"
   toJSON ShelleyNodeToClientVersion15 = String "ShelleyNodeToClientVersion15"
+  toJSON ShelleyNodeToClientVersion16 = String "ShelleyNodeToClientVersion16"
 
 --------------------------------------------------------------------------------
 -- Conway related
