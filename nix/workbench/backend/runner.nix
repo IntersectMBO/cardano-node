@@ -45,7 +45,6 @@ let
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
     export WB_BACKEND=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
-    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}

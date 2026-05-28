@@ -240,8 +240,7 @@ empty = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 0
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = []
-    , Types.createTestnetDataArgs = []
+      Types.createTestnetDataArgs = []
     , Types.pools = []
   }
   , Types.preset = mempty

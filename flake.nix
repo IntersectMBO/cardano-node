@@ -254,11 +254,11 @@
           # This is a very light profile, no caching and pinning needed.
           workbench-ci-test = workbenchTest {
             profileName = "ci-test-hydra-coay";
-            workbenchStartArgs = ["--create-testnet-data"];
+            workbenchStartArgs = [];
           };
           workbench-ci-test-trace = workbenchTest {
             profileName = "ci-test-hydra-coay";
-            workbenchStartArgs = ["--create-testnet-data" "--trace"];
+            workbenchStartArgs = ["--trace"];
           };
 
           inherit (pkgs) all-profiles-json profile-data-nomadperf;

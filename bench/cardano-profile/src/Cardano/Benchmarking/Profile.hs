@@ -389,25 +389,6 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
       fmtDecimal i =
            Scientific.formatScientific Scientific.Fixed (Just 0) (fromInteger i / 100000)
         ++ "00000"
-      createStakedArgs =
-        [
-          Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
-        , Aeson.String "--supply",           Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis
-        , Aeson.String "--gen-utxo-keys",    Aeson.Number $ fromInteger $ Types.utxo_keys gsis
-        , Aeson.String "--gen-genesis-keys", Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
-        , Aeson.String "--supply-delegated", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
-        , Aeson.String "--gen-pools",        Aeson.Number $ fromInteger $ Types.n_pools comp
-        , Aeson.String "--gen-stake-delegs", Aeson.Number $ fromInteger $ Types.delegators_effective dved
-        , Aeson.String "--num-stuffed-utxo", Aeson.String $ Text.pack $ fmtDecimal $ Types.utxo_stuffed dved
-        ]
-        ++
-        if Types.dense_pool_density comp /= 1
-        then
-          [ 
-            Aeson.String "--bulk-pool-cred-files", Aeson.Number $ fromInteger $ Types.n_dense_hosts comp
-          , Aeson.String "--bulk-pools-per-file",  Aeson.Number $ fromInteger $ Types.dense_pool_density comp
-          ]
-        else []
       createTestnetDataArgs =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
@@ -426,8 +407,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
         , Aeson.String "initialPoolCoin",    Aeson.String $ Text.pack $ fmtDecimal $ Types.pool_coin gsis
         ]
   in  p {Types.cli_args = Types.CliArgs {
-            Types.createStakedArgs = createStakedArgs
-          , Types.createTestnetDataArgs = createTestnetDataArgs
+            Types.createTestnetDataArgs = createTestnetDataArgs
           , Types.pools = poolsArgs
         }}
 

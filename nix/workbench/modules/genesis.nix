@@ -243,11 +243,6 @@ in
         default = { };
       };
 
-      create-staked-args = mkOption {
-        description = "Arguments to cardano-cli genesis create-staked";
-        type = types.separatedString " ";
-      };
-
       create-testnet-data-args = mkOption {
         description = "Arguments to cardano-cli genesis create-testnet-data";
         type = types.separatedString " ";
@@ -289,21 +284,6 @@ in
     genesis = {
 
       total_supply = genesis.funds_balance + derived.supply_delegated;
-
-      create-staked-args = concatStringsSep " " ([
-        "--supply ${toString genesis.funds_balance}"
-        "--gen-utxo-keys ${toString genesis.utxo_keys}"
-        "--gen-genesis-keys ${toString composition.n_bft_hosts}"
-        "--supply-delegated ${toString derived.supply_delegated}"
-        "--gen-pools ${toString composition.n_pools}"
-        "--gen-stake-delegs ${toString derived.delegators_effective}"
-        "--num-stuffed-utxo ${toString derived.utxo_stuffed}"
-        "--testnet-magic ${toString genesis.network_magic}"
-      ]
-      ++ optional (composition.dense_pool_density != 1) [
-        "--bulk-pool-cred-files ${toString composition.n_dense_hosts}"
-        "--bulk-pools-per-file ${toString composition.dense_pool_density}"
-      ]);
 
       create-testnet-data-args = concatStringsSep " " [
         "--total-supply ${toString genesis.total_supply}"

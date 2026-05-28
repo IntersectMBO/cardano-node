@@ -35,7 +35,6 @@ project.shellFor {
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
-    progress "WB_CREATE_TESTNET_DATA=" $WB_CREATE_TESTNET_DATA
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
 
     function parse_git_branch() {

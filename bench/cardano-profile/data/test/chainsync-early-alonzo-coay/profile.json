@@ -348,24 +348,6 @@
     "generator_blocks_lower_bound": 3121175
   },
   "cli_args": {
-    "createStakedArgs": [
-      "--testnet-magic",
-      42,
-      "--supply",
-      "10000000000000",
-      "--gen-utxo-keys",
-      1,
-      "--gen-genesis-keys",
-      0,
-      "--supply-delegated",
-      "000000",
-      "--gen-pools",
-      0,
-      "--gen-stake-delegs",
-      0,
-      "--num-stuffed-utxo",
-      "000000"
-    ],
     "createTestnetDataArgs": [
       "--testnet-magic",
       42,

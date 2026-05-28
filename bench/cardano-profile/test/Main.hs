@@ -419,17 +419,7 @@ ciTestBage = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 40
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = [
-          Aeson.String "--testnet-magic", Aeson.Number 42.0
-        , Aeson.String "--supply", Aeson.String "10000000000000"
-        , Aeson.String "--gen-utxo-keys", Aeson.Number 1.0
-        , Aeson.String "--gen-genesis-keys", Aeson.Number 0.0
-        , Aeson.String "--supply-delegated", Aeson.String "2000000000000000"
-        , Aeson.String "--gen-pools", Aeson.Number 2.0
-        , Aeson.String "--gen-stake-delegs", Aeson.Number 2.0
-        , Aeson.String "--num-stuffed-utxo", Aeson.String "000000"
-      ]
-    , Types.createTestnetDataArgs = [
+      Types.createTestnetDataArgs = [
           Aeson.String "--testnet-magic", Aeson.Number 42.0
         , Aeson.String "--total-supply", Aeson.String "2010000000000000"
         , Aeson.String "--utxo-keys", Aeson.Number 1.0

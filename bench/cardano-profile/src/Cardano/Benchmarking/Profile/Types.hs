@@ -841,8 +841,7 @@ instance Aeson.FromJSON Derived where
 --------------------------------------------------------------------------------
 
 data CliArgs = CliArgs
-  { createStakedArgs :: [Aeson.Value]
-  , createTestnetDataArgs :: [Aeson.Value]
+  { createTestnetDataArgs :: [Aeson.Value]
   , pools :: [Aeson.Value]
   }
   deriving (Eq, Show, Generic)

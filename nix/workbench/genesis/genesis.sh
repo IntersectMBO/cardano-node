@@ -38,10 +38,6 @@ if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
     info genesis "$(red using modular configuration)"
 fi
 
-if [[ $WB_CREATE_TESTNET_DATA -ne 1 ]]; then
-    info genesis "$(red falling back to create-staked)"
-fi
-
 case "$op" in
 
     # Called by: run.sh (line 433)
@@ -201,7 +197,7 @@ case "$op" in
         fi
         ;;
 
-    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
+    # Called by: genesis-jq.sh (genesis-create-jq).
     # $1: era name (byron, shelley, alonzo, conway, dijkstra).
     # $2: profile JSON file path.
     # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).
@@ -209,7 +205,7 @@ case "$op" in
         "spec-$genesis_backend" "$@"
         ;;
 
-    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
+    # Called by: genesis-jq.sh (genesis-create-jq).
     # $1: profile JSON file path.
     # Returns: JSON pool relays on stdout.
     pool-relays )

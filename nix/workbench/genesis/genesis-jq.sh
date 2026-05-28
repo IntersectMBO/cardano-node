@@ -150,45 +150,6 @@ genesis-byron-jq() {
 
 # Entry point for genesis creation.
 genesis-create-jq() {
-    if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
-        genesis-create-testnet-data "$@"
-    else
-        genesis-create-staked "$@"
-    fi
-}
-
-genesis-create-staked() {
-    local profile_json=$1
-    local dir=$2
-
-    rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
-    mkdir -p "$dir"
-
-    genesis spec shelley "$profile_json" >"$dir/genesis.spec.json"
-    genesis spec alonzo  "$profile_json" >"$dir/genesis.alonzo.spec.json"
-    genesis spec conway  "$profile_json" >"$dir/genesis.conway.spec.json"
-    genesis pool-relays  "$profile_json" >"$dir/pool-relays.json"
-
-    read -r -a args <<<"$(jq --raw-output '.cli_args.createStakedArgs | join(" ")' "$profile_json")"
-    create_staked_args=(
-        --genesis-dir "$dir"
-        --relay-specification-file "$dir/pool-relays.json"
-        "${args[@]}"
-    )
-    progress "genesis" "$(colorise cardano-cli genesis create-staked "${create_staked_args[@]}")"
-    cardano-cli genesis create-staked "${create_staked_args[@]}"
-
-    mv "$dir"/genesis.json "$dir"/genesis-shelley.json
-    mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
-
-    info genesis "removing delegator keys."
-    rm "$dir"/stake-delegator-keys -rf
-
-    info genesis "moving keys"
-    Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
-}
-
-genesis-create-testnet-data() {
     local profile_json=$1
     local dir=$2
 
