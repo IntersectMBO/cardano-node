@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -25,15 +24,18 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   ) where
 
 import           Cardano.Api hiding (Active)
+import           Cardano.Api.Experimental (IsEra, SignedTx (..))
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Cardano.TxGenerator.Utils (txIdFromSignedTx)
+import qualified Cardano.TxGenerator.Utils as Utils
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block
-                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdByron, GenTxIdConway, GenTxIdDijkstra, GenTxIdMary, GenTxIdShelley))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -66,24 +68,24 @@ data TxSource era
   = Exhausted
   | Active (ProduceNextTxs era)
 
-type ProduceNextTxs era = (forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [Tx era]))
+type ProduceNextTxs era = (forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [SignedTx era]))
 
-produceNextTxs :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> LocalState era -> m (LocalState era, [Tx era])
+produceNextTxs :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> LocalState era -> m (LocalState era, [SignedTx era])
 produceNextTxs blocking req (txProducer, unack, stats) = do
   (newTxProducer, txList) <- produceNextTxs' blocking req txProducer
   return ((newTxProducer, unack, stats), txList)
 
-produceNextTxs' :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> TxSource era -> m (TxSource era, [Tx era])
+produceNextTxs' :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> TxSource era -> m (TxSource era, [SignedTx era])
 produceNextTxs' _ _ Exhausted = return (Exhausted, [])
 produceNextTxs' blocking req (Active callback) = callback blocking req
 
-type LocalState era = (TxSource era, UnAcked (Tx era), SubmissionThreadStats)
+type LocalState era = (TxSource era, UnAcked (SignedTx era), SubmissionThreadStats)
 type EndOfProtocolCallback m = SubmissionThreadStats -> m ()
 
 txSubmissionClient
   :: forall m era.
      ( MonadIO m, MonadFail m
-     , IsShelleyBasedEra era
+     , IsEra era
      )
   => Trace m NodeToNodeSubmissionTrace
   -> Trace m (TraceBenchTxSubmit TxId)
@@ -102,10 +104,10 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
       fail (T.unpack err)
     let (stillUnacked, acked) = L.splitAtEnd ack unAcked
     let newStats = stats { stsAcked = stsAcked stats + Ack ack }
-    traceWith bmtr $ SubmissionClientDiscardAcknowledged  (getTxId . getTxBody <$> acked)
+    traceWith bmtr $ SubmissionClientDiscardAcknowledged  (txIdFromSignedTx <$> acked)
     return (txSource, UnAcked stillUnacked, newStats)
 
-  queueNewTxs :: [Tx era] -> LocalState era -> LocalState era
+  queueNewTxs :: [SignedTx era] -> LocalState era -> LocalState era
   queueNewTxs newTxs (txSource, UnAcked unAcked, stats)
     = (txSource, UnAcked (newTxs <> unAcked), stats)
 
@@ -131,8 +133,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     let stateC@(_, UnAcked outs , stats) = queueNewTxs newTxs stateB
 
     traceWith tr $ idListTrace (ToAnnce newTxs) blocking
-    traceWith bmtr $ SubmissionClientReplyTxIds (getTxId . getTxBody <$> newTxs)
-    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> outs)
+    traceWith bmtr $ SubmissionClientReplyTxIds (txIdFromSignedTx <$> newTxs)
+    traceWith bmtr $ SubmissionClientUnAcked (txIdFromSignedTx <$> outs)
 
     case blocking of
       SingBlocking -> case NE.nonEmpty newTxs of
@@ -156,12 +158,12 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
          reqTxIds = fmap fromGenTxId txIds
     traceWith tr $ ReqTxs (length reqTxIds)
     let UnAcked ua = unAcked
-        uaIds = getTxId . getTxBody <$> ua
-        (toSend, _retained) = L.partition ((`L.elem` reqTxIds) . getTxId . getTxBody) ua
+        uaIds = txIdFromSignedTx <$> ua
+        (toSend, _retained) = L.partition ((`L.elem` reqTxIds) . txIdFromSignedTx) ua
         missIds = reqTxIds L.\\ uaIds
 
     traceWith tr $ TxList (length toSend)
-    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> ua)
+    traceWith bmtr $ SubmissionClientUnAcked (txIdFromSignedTx <$> ua)
     traceWith bmtr $ TraceBenchTxSubServReq reqTxIds
     unless (L.null missIds) $
       traceWith bmtr $ TraceBenchTxSubServUnav missIds
@@ -172,15 +174,14 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
               , stsUnavailable =
                 stsUnavailable stats + Unav (length missIds)}))
 
-  txToIdSize :: Tx era -> (GenTxId CardanoBlock, SizeInBytes)
+  txToIdSize :: SignedTx era -> (GenTxId CardanoBlock, SizeInBytes)
   txToIdSize = (Mempool.txId . toGenTx) &&& (SizeInBytes . fromInteger . getTxSize)
     where
-      getTxSize :: Tx era -> Integer
-      getTxSize (ShelleyTx sbe tx) =
-        shelleyBasedEraConstraints sbe $ toInteger (tx ^. Ledger.sizeTxF)
+      getTxSize :: SignedTx era -> Integer
+      getTxSize (SignedTx tx) = toInteger (tx ^. Ledger.sizeTxF)
 
-  toGenTx :: Tx era -> GenTx CardanoBlock
-  toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx
+  toGenTx :: SignedTx era -> GenTx CardanoBlock
+  toGenTx = toConsensusGenTx . Utils.mkTxInModeCardano
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
@@ -189,7 +190,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId _ = error "TODO: fix incomplete match"
+  fromGenTxId (Block.GenTxIdDijkstra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdByron _) = error "TODO: fix incomplete match"
 
   tokIsBlocking :: SingBlockingStyle a -> Bool
   tokIsBlocking = \case
