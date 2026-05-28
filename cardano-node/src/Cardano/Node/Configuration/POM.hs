@@ -51,6 +51,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (.
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
+import           Ouroboros.Network.OrphanInstances ()
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionInitDelay (..),
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
@@ -63,7 +64,6 @@ import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
@@ -369,7 +369,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- AcceptedConnectionsLimit
       pncAcceptedConnectionsLimit
-        <- Last <$> optionalField parseAcceptedConnectionsLimit v "AcceptedConnectionsLimit"
+        <- Last <$> v .:? "AcceptedConnectionsLimit"
 
       -- P2P Governor parameters, with conservative defaults.
       pncDeadlineTargetOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
@@ -399,7 +399,7 @@ instance FromJSON PartialNodeConfiguration where
       pncMempoolTimeoutCapacity <- Last <$> v .:? "MempoolTimeoutCapacity"
 
       -- Peer Sharing
-      pncPeerSharing <- Last . fmap peerSharingFromBool <$> v .:? "PeerSharing"
+      pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
       pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
@@ -415,7 +415,7 @@ instance FromJSON PartialNodeConfiguration where
           <*> (Last <$> v .:? "RpcSocketPath")
           <*> pure mempty
 
-      txSubmissionLogicVersion <- Last <$> optionalField parseTxSubmissionLogicVersion v "TxSubmissionLogicVersion"
+      txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
       let parseInitDelay =
             maybe (pncTxSubmissionInitDelay defaultPartialNodeConfiguration) (fmap TxSubmissionInitDelay)
               <$> v .:? "TxSubmissionInitDelay"
@@ -740,27 +740,6 @@ lastOption = fmap Last . optional
 
 lastToEither :: String -> Last a -> Either String a
 lastToEither msg = maybe (Left msg) Right . getLast
-
-optionalField :: (Value -> Aeson.Parser a) -> Object -> Key -> Aeson.Parser (Maybe a)
-optionalField parseValue obj key =
-  obj .:? key >>= traverse parseValue
-
-peerSharingFromBool :: Bool -> PeerSharing
-peerSharingFromBool True = PeerSharingEnabled
-peerSharingFromBool False = PeerSharingDisabled
-
-parseAcceptedConnectionsLimit :: Value -> Aeson.Parser AcceptedConnectionsLimit
-parseAcceptedConnectionsLimit = withObject "AcceptedConnectionsLimit" $ \v ->
-  AcceptedConnectionsLimit
-    <$> v .: "acceptedConnectionsHardLimit"
-    <*> v .: "acceptedConnectionsSoftLimit"
-    <*> v .: "acceptedConnectionsDelay"
-
-parseTxSubmissionLogicVersion :: Value -> Aeson.Parser TxSubmissionLogicVersion
-parseTxSubmissionLogicVersion = withText "TxSubmissionLogicVersion" $ \case
-  "TxSubmissionLogicV1" -> pure TxSubmissionLogicV1
-  "TxSubmissionLogicV2" -> pure TxSubmissionLogicV2
-  invalid -> fail $ "Invalid TxSubmissionLogicVersion: " <> Text.unpack invalid
 
 makeNodeConfiguration :: PartialNodeConfiguration -> Either String NodeConfiguration
 makeNodeConfiguration pnc = do

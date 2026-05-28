@@ -27,7 +27,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
-import           Cardano.Node.Queries (HasKESInfo (..))
+import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -65,6 +65,7 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -665,9 +666,9 @@ instance (Show peer, ToJSON peer, LogFormatting peer, HasHeader blk)
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
-  forMachine _dtal (PeersFetch xs) =
+  forMachine dtal (PeersFetch xs) =
     mconcat [ "kind" .= String "PeerFetch"
-            , "decisions" .= List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs
+            , "decisions" .= map (forMachine dtal) xs
             ]
   forMachine _dtal (PeerStarvedUs peer) =
     mconcat [ "kind" .= String "PeerStarvedUs"
@@ -775,7 +776,7 @@ instance (HasHeader header, ConvertRawHash header) =>
                                   (AF.headHash af))
               , "length" .= toJSON (fragmentLength' af)]
               ++
-              [ "deltaq" .= String (Text.pack $ show gsv) | dtal >= DDetailed ]
+              [ "deltaq" .= toJSON gsv | dtal >= DDetailed ]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
@@ -1104,6 +1105,7 @@ instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
   , Show (GenTxId blk)
+  , ConvertTxId blk
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
   ) => LogFormatting (TraceEventMempool blk) where
@@ -1142,7 +1144,7 @@ instance
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsRemoved" .= map (String . Text.pack . show) (toList txs0)
+      , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]

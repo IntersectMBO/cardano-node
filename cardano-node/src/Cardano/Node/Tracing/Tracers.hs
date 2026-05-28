@@ -20,9 +20,9 @@ module Cardano.Node.Tracing.Tracers
 import           Cardano.Logging
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Network.NodeToClient (LocalAddress)
-import           Cardano.Network.NodeToClient.Version (NodeToClientVersionData)
+import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
-import           Cardano.Network.NodeToNode.Version (NodeToNodeVersionData)
+import           Cardano.Network.NodeToNode.Version ()
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
@@ -61,18 +61,13 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (Tracer (..))
-import           Data.Aeson (ToJSON (..), Value (..))
+import           Cardano.Network.OrphanInstances ()
+import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
-import qualified Data.Text as Text
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
 
-instance ToJSON NodeToNodeVersionData where
-  toJSON = String . Text.pack . show
-
-instance ToJSON NodeToClientVersionData where
-  toJSON = String . Text.pack . show
 
 -- | Construct tracers for all system components.
 --

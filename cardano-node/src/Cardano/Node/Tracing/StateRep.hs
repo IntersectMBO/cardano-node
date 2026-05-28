@@ -36,10 +36,9 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
+import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson hiding (Result (..))
-import           Data.Aeson.Types (Parser)
 import           Data.Text as T (Text, pack)
-import qualified Data.Text as Text
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
@@ -50,23 +49,6 @@ deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
 
-instance ToJSON NPV.NodeToNodeVersion where
-  toJSON = String . pack . show
-
-instance FromJSON NPV.NodeToNodeVersion where
-  parseJSON = parseBoundedEnum "NodeToNodeVersion"
-
-instance ToJSON NPV.NodeToClientVersion where
-  toJSON = String . pack . show
-
-instance FromJSON NPV.NodeToClientVersion where
-  parseJSON = parseBoundedEnum "NodeToClientVersion"
-
-parseBoundedEnum :: (Bounded a, Enum a, Show a) => String -> Value -> Parser a
-parseBoundedEnum name = withText name $ \value ->
-  case filter ((== value) . Text.pack . show) [minBound .. maxBound] of
-    [version] -> pure version
-    _ -> fail $ "Invalid " <> name <> ": " <> Text.unpack value
 
 deriving instance Generic  TracePrometheusSimple
 deriving instance FromJSON TracePrometheusSimple

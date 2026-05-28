@@ -92,7 +92,7 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters, TracePeerSelection)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.PublicRootPeers (PublicRootPeers)
+import           Ouroboros.Network.PeerSelection.PublicRootPeers ()
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
@@ -115,7 +115,7 @@ import           Network.Mux.Tracing ()
 import qualified Network.Mux as Mux
 
 import           Control.Monad (forM_)
-import           Data.Aeson (ToJSON (..), Value (..))
+import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import qualified Data.Text.IO as T
@@ -176,8 +176,6 @@ parseTraceDocumentationCmd =
 instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
 
-instance ToJSON (PublicRootPeers extraPeers addr) where
-  toJSON _ = String "PublicRootPeers"
 
 runTraceDocumentationCmd
   :: TraceDocumentationCmd

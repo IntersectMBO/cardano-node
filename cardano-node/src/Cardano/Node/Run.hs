@@ -1,5 +1,4 @@
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
