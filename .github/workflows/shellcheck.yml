@@ -25,6 +25,8 @@ jobs:
             extra-substituters = https://cache.iog.io/
       # Make the Nix environment available to next steps
       - uses: rrbutani/use-nix-shell-action@f97339023a09121113e5a58ad88fe0e9fde3406b # v1
+        with:
+          flakes: nixpkgs#shellcheck
       - name: shellcheck
         run: |
           for file in $(git ls-files "*.sh")
