@@ -1,6 +1,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Cardano.Benchmarking.Script.Ogmios
@@ -61,7 +62,8 @@ module Cardano.Benchmarking.Script.Ogmios
   , withOgmiosTransport
   ) where
 
-import           Cardano.Api (IsShelleyBasedEra, Tx, serialiseToCBOR)
+import           Cardano.Api (serialiseToRawBytes)
+import           Cardano.Api.Experimental (IsEra (useEra), SignedTx, obtainCommonConstraints)
 
 import           Cardano.Benchmarking.Script.Submission (SubmitTransport (..))
 import           Cardano.TxGenerator.Types (TxGenError (..))
@@ -73,6 +75,7 @@ import           Control.Monad (unless, when)
 import           Data.Aeson (Value (..), object, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either.Extra (maybeToEither)
@@ -128,7 +131,7 @@ instance Exception OgmiosProtocolError
 -- surfaced as a 'Left' 'TxGenError'; the connection lifecycle is reported
 -- through the given tracer, so a healthy run leaves evidence too.
 withOgmiosTransport
-  :: forall era a. IsShelleyBasedEra era
+  :: forall era a. IsEra era
   => (String -> IO ())
      -- ^ progress tracer for backend events (connection lifecycle)
   -> URI
@@ -162,8 +165,8 @@ withOgmiosTransport traceProgress uri use =
 -- a rejection as 'Left'. A protocol-level fault throws 'OgmiosProtocolError'
 -- (caught by 'withOgmiosTransport').
 ogmiosSubmitOne
-  :: IsShelleyBasedEra era
-  => WS.Connection -> IORef Int -> Tx era -> IO (Either OgmiosRejection Text)
+  :: IsEra era
+  => WS.Connection -> IORef Int -> SignedTx era -> IO (Either OgmiosRejection Text)
 ogmiosSubmitOne conn reqIdRef tx = do
   reqId <- atomicModifyIORef' reqIdRef $ \n -> (n + 1, n)
   -- the send can stall too (a wedged peer with full TCP buffers), so it
@@ -219,17 +222,20 @@ parseOgmiosUrl uri = do
     Just n | n >= 1 && n <= 65_535 -> Right n
     _ -> Left $ "Invalid port in Ogmios URL: " ++ urlStr
 
-mkSubmitRequest :: IsShelleyBasedEra era => Tx era -> Int -> Value
+mkSubmitRequest :: forall era. IsEra era => SignedTx era -> Int -> Value
 mkSubmitRequest tx reqId = object
   [ "jsonrpc" .= ("2.0" :: Text)
   , "method"  .= ("submitTransaction" :: Text)
   , "params"  .= object
       [ "transaction" .= object
-          [ "cbor" .= Text.decodeUtf8 (Base16.encode (serialiseToCBOR tx))
+          [ "cbor" .= Text.decodeUtf8 (Base16.encode cbor)
           ]
       ]
   , "id"      .= reqId
   ]
+ where
+  cbor :: ByteString
+  cbor = obtainCommonConstraints (useEra @era) $ serialiseToRawBytes tx
 
 -- | Outcome of a single @submitTransaction@ call, as decoded from the
 -- JSON-RPC response.
