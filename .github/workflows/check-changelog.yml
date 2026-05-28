@@ -39,9 +39,11 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
 
+      - uses: rrbutani/use-nix-shell-action@v1
+        if: steps.filter.outputs.cardano == 'true'
+        with:
+          flakes: nixpkgs#scriv
       - name: Check scriv fragments are correct
         if: steps.filter.outputs.cardano == 'true'
-        uses: rrbutani/use-nix-shell-action@v1
-        with:
-          script: cd cardano-testnet && scriv collect --version "CI-CHECK" --keep
+        run: cd cardano-testnet && scriv collect --version "CI-CHECK" --keep
 

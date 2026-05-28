@@ -20,8 +20,9 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-      # Make the Nix environment available to next steps
       - uses: rrbutani/use-nix-shell-action@v1
+        with:
+          flakes: nixpkgs#shellcheck
       - name: shellcheck
         run: |
           for file in $(git ls-files "*.sh")
