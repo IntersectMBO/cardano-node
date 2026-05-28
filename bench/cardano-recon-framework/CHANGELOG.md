@@ -1,5 +1,9 @@
 # Revision history for cardano-trace-ltl
 
+## 1.2.1 -- May 2026
+
+* Replace positional `FILE` and `FILES` arguments in `cardano-recon` with named `--formulas` and `--traces` options.
+
 ## 1.2.0 -- May 2026
 
 * Add `ContinuousFormula` — the temporal-operator-free fragment of `Formula`, with `retract` for
