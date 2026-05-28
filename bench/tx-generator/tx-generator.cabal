@@ -113,28 +113,20 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 11.1
                       , cardano-crypto-class
-                      , cardano-crypto-wrapper
                       , cardano-data
                       , cardano-diffusion ^>= 1.0
                       , cardano-git-rev ^>= 0.2.2
-                      , cardano-ledger-alonzo
                       , cardano-ledger-api
-                      , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
-                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
-                      , constraints-extras
                       , directory
                       , dlist
                       , extra
                       , filepath
-                      , formatting
-                      , generic-monoid
-                      , ghc-prim
                       , io-classes:{io-classes, strict-stm}
                       , microlens
                       , mtl
@@ -158,7 +150,6 @@ library
                       , trace-forward
                       , transformers
                       , transformers-except
-                      , unordered-containers
                       , yaml
                       -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
                       , either
@@ -189,21 +180,19 @@ executable calibrate-script
   ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-                        -Wno-deprecations
 
   build-depends:        base
                       , aeson
                       , aeson-pretty
                       , bytestring
+                      , cardano-api
+                      , cardano-ledger-core
                       , containers
                       , directory
                       , extra
                       , filepath
                       , optparse-applicative
-                      , cardano-api
                       , text
-                      , transformers
-                      , transformers-except
                       , tx-generator
 
   default-extensions:   ViewPatterns
@@ -223,7 +212,6 @@ test-suite tx-generator-apitest
   ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-                        -Wno-deprecations
 
   build-depends:        base
                       , aeson
@@ -234,11 +222,8 @@ test-suite tx-generator-apitest
                       , filepath
                       , optparse-applicative
                       , cardano-api
-                      , cardano-cli
                       , cardano-node
                       , plutus-tx
-                      , transformers
-                      , transformers-except
                       , tx-generator
 
   other-modules:        Cardano.TxGenerator.Calibrate.Utils
