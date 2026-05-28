@@ -203,7 +203,6 @@ defaultEra = ShelleyBasedEraConway
 defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
-    <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -276,31 +275,6 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
                 ]
                 )
-  traceOptions = Aeson.Object mempty
-  -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
-  -- N.B. Every testnet node will start trying to listen on PrometheusSimple endpoint
-  -- meaning you can only run a one-node testnet, otherwise there will be a port collision.
-  -- This is because all testnet nodes share config with each other.
-  -- For a proper solution, use cardano-tracer to consume all the logs and just expose a single
-  -- stream of traces from all testnet nodes.
-  -- See also:
-  -- * https://developers.cardano.org/docs/get-started/infrastructure/node/new-tracing-system/cardano-tracer/
-  -- * ./cardano-tracer/docs/cardano-tracer.md
-  --
-  -- traceOptions = do
-  --   Aeson.object
-  --     [ "" .= Aeson.object
-  --       [ "backends" .= Aeson.Array
-  --         [ "EKGBackend"
-  --         , "PrometheusSimple suffix 0.0.0.0 12798"
-  --         -- , "Stdout MachineFormat"
-  --         , "Stdout HumanFormatColoured"
-  --         ]
-  --       , "detail" .= ("DNormal" :: Aeson.Value)
-  --       -- , "severity" .= ("Notice" :: Aeson.Value)
-  --       , "severity" .= ("Debug" :: Aeson.Value)
-  --       ]
-  --     ]
 
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
@@ -313,20 +287,11 @@ defaultYamlConfig =
     , ("SocketPath", "db/node.socket")
     , ("PBftSignatureThreshold", Aeson.Number (fromFloatDigits (0.6 :: Double)))
 
-    -- Global logging severity filter. Messages must have at least this severity to pass.
-    , ("minSeverity", "Debug")
-
-    , ("EnableLogMetrics", Aeson.Bool False)
-    , ("TurnOnLogMetrics", Aeson.Bool False)
-
     -- The maximum number of used peers during bulk sync.
     , ("MaxConcurrencyBulkSync", Aeson.Number 1)
 
     -- The maximum number of used peers when fetching newly forged blocks.
     , ("MaxConcurrencyDeadline", Aeson.Number 2)
-
-    -- Turn logging on or off
-    , ("EnableLogging", Aeson.Bool True)
 
     -- Genesis filepaths
     , ("ByronGenesisFile", genesisPath ByronEra)
@@ -340,44 +305,12 @@ defaultYamlConfig =
 
     , ("PeerSharing", Aeson.Bool False)
 
-    -- Logging related
-    , ("setupScribes", setupScribes)
-    , ("rotation", rotationObject)
-    , ("defaultScribes", defaultScribes)
-    , ("setupBackends", Aeson.Array ["KatipBK"])
-    , ("defaultBackends", Aeson.Array ["KatipBK"])
-    , ("options", Aeson.object mempty)
+    -- New tracing system: empty map = use all defaults.
+    -- Mandatory: trace-dispatcher's FromJSON parses "TraceOptions" at the root.
+    , ("TraceOptions", Aeson.object mempty)
     ]
   where
     genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
-    defaultScribes :: Aeson.Value
-    defaultScribes =
-      Aeson.Array
-        [ Aeson.Array ["FileSK","logs/mainnet.log"]
-        , Aeson.Array ["StdoutSK","stdout"]
-        ]
-    rotationObject :: Aeson.Value
-    rotationObject =
-      Aeson.Object $
-        mconcat $ map (uncurry Aeson.singleton)
-          [ ("rpLogLimitBytes", Aeson.Number 5_000_000)
-          , ("rpKeepFilesNum", Aeson.Number 3)
-          , ("rpMaxAgeHours", Aeson.Number 24)
-          ]
-    setupScribes :: Aeson.Value
-    setupScribes =
-      Aeson.Array
-        [ Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "FileSK")
-            , ("scName", "logs/node.log")
-            , ("scFormat", "ScJson")
-            ]
-        , Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "StdoutSK")
-            , ("scName", "stdout")
-            , ("scFormat", "ScJson")
-            ]
-        ]
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined
