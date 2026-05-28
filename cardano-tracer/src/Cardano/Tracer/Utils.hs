@@ -33,6 +33,7 @@ module Cardano.Tracer.Utils
   , modifyRegistry_
   , readRegistry
   , getProcessId
+  , sanitizeNodeName
   , sequenceConcurrently_
   ) where
 
@@ -54,6 +55,7 @@ import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO
 import           Control.Exception (SomeException, finally, throwTo, try)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
+import           Data.Char (isAlphaNum, isSpace)
 import           Data.Word (Word32)
 import qualified Data.Bimap as BM
 import           Data.Bimap (Bimap)
@@ -108,6 +110,15 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
     . replace "LocalAddress" "" -- There are only local addresses by design.
     $ show remoteAddress
 
+sanitizeNodeName :: T.Text -> T.Text
+sanitizeNodeName =
+    T.dropWhile    (not . isAlphaNum)
+  . T.dropWhileEnd (not . isAlphaNum)
+  . T.replace "?" ""
+  . T.replace "*" ""
+  . T.map (\c -> if c == '"' || c == '\'' || c == ':' || c == '@' || isSpace c then '_' else c)
+{-# INLINEABLE sanitizeNodeName #-}
+
 initConnectedNodes :: IO ConnectedNodes
 initConnectedNodes = newTVarIO S.empty
 
@@ -146,7 +157,7 @@ askNodeNameRaw tracer connectedNodesNames dpRequestors currentDPLock nodeId@(Nod
       nodeName <-
         askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
           Nothing -> return anId
-          Just NodeInfo{niName} -> return $ if T.null niName then anId else niName
+          Just NodeInfo{niName} -> return $ if T.null niName then anId else sanitizeNodeName niName
 
       -- Overlapping node names are considered a misconfiguration.
       -- However using the unique node ID as a fallback still ensures no

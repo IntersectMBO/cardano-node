@@ -2,6 +2,8 @@
 
 ## NEXT
 
+* Sanitize `nodeName` string when used as a target directory for log output.
+
 ## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
   since Node 10.6.2; fixes the RTView-enabled build.
