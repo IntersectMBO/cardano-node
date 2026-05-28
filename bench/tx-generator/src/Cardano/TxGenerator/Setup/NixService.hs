@@ -59,6 +59,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_sigKey               :: SigningKeyFile In
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeDescription
+  , _nix_ogmiosUrl            :: Maybe String
   } deriving (Show, Eq)
 
 deriving instance Generic NixServiceOptions

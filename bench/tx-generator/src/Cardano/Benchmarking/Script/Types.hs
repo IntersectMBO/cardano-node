@@ -33,7 +33,7 @@ module Cardano.Benchmarking.Script.Types (
         , ScriptBudget(AutoScript, StaticScriptBudget)
         , ScriptSpec(..)
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode)
+                NodeToNode, Ogmios)
         , TargetNodes
         , TxList(..)
 ) where
@@ -185,6 +185,7 @@ data SubmitMode where
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
+  Ogmios      :: !String -> SubmitMode
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

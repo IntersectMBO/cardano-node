@@ -82,8 +82,9 @@ importGenesisFunds = do
   wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
   txParams <- askNixOption txGenTxParams
+  setupMode <- getSetupSubmitMode
   cmd1 (ReadSigningKey keyNameGenesisInputFund) _nix_sigKey
-  emit $ Submit era LocalSocket txParams $ SecureGenesis wallet keyNameGenesisInputFund keyNameTxGenFunds
+  emit $ Submit era setupMode txParams $ SecureGenesis wallet keyNameGenesisInputFund keyNameTxGenFunds
   delay
   logMsg "Importing Genesis Fund. Done."
   return wallet
@@ -102,7 +103,8 @@ addCollaterals src = do
                         (PayToAddr keyNameCollaterals collateralWallet)
                         (PayToAddr keyNameTxGenFunds src)
                         [ safeCollateral ]
-      emit $ Submit era LocalSocket txParams generator
+      setupMode <- getSetupSubmitMode
+      emit $ Submit era setupMode txParams generator
       logMsg "Create collaterals. Done."
       return $ Just collateralWallet
 
@@ -129,7 +131,8 @@ splittingPhase srcWallet = do
     let generator = case split of
           SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-    emit $ Submit era LocalSocket txParams generator
+    setupMode <- getSetupSubmitMode
+    emit $ Submit era setupMode txParams generator
     delay
     logMsg "Splitting step: Done"
 
@@ -195,16 +198,19 @@ benchmarkingPhase wallet collateralWallet = do
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
   txParams <- askNixOption txGenTxParams
+  ogmiosUrl <- askNixOption _nix_ogmiosUrl
   doneWallet <- newWallet "done_wallet"
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
-    submitMode = if debugMode
-        then LocalSocket
-        else Benchmark targetNodes tps txCount
+    submitMode
+      | Just url <- ogmiosUrl = Ogmios url
+      | debugMode         = LocalSocket
+      | otherwise         = Benchmark targetNodes tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
   emit $ Submit era submitMode txParams generator
-  unless debugMode $ do
-    emit WaitBenchmark
+  case submitMode of
+    Benchmark {} -> emit WaitBenchmark
+    _            -> return ()
   return doneWallet
 
 data Fees = Fees {
@@ -245,6 +251,11 @@ cmd1 cmd arg = emit . cmd =<< askNixOption arg
 
 askNixOption :: (NixServiceOptions -> v) -> Compiler v
 askNixOption = asks
+
+getSetupSubmitMode :: Compiler SubmitMode
+getSetupSubmitMode = do
+  ogmiosUrl <- askNixOption _nix_ogmiosUrl
+  return $ maybe LocalSocket Ogmios ogmiosUrl
 
 delay :: Compiler ()
 delay = cmd1 Delay _nix_init_cooldown

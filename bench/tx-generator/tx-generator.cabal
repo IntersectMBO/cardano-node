@@ -70,6 +70,7 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.Ogmios
                         Cardano.Benchmarking.Script.Selftest
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
@@ -140,6 +141,7 @@ library
                       , mtl
                       , network
                       , network-mux
+                      , network-uri
                       , optparse-applicative
                       , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
                       , ouroboros-network:{api, framework, framework-tracing, ouroboros-network, protocols} >= 1.1
@@ -159,6 +161,7 @@ library
                       , transformers
                       , transformers-except
                       , unordered-containers
+                      , websockets
                       , yaml
                       -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
                       , either

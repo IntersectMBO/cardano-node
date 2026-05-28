@@ -30,6 +30,7 @@ import           Cardano.Benchmarking.LogTypes as Core (AsyncBenchmarkControl (.
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
+import qualified Cardano.Benchmarking.Script.Ogmios as Ogmios
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
@@ -244,6 +245,7 @@ submitInEra submitMode generator txParams era = do
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
+    Ogmios url -> Ogmios.submitAllOgmios url txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
