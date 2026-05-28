@@ -2,8 +2,7 @@
 
 ## NEXT
 
-## 0.5.0 (May 2026)
-
+## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an
   `application/x-www-form-urlencoded` body (Prometheus wire format).
 * Timeseries query endpoint: `GET /timeseries/query` added alongside `POST`,
@@ -21,6 +20,7 @@
   are stripped. This aligns stored names with Prometheus label conventions.
 * JSON wire format of query responses aligned with Prometheus conventions
   (see `cardano-timeseries-io` 1.1.0 changelog for details).
+* Sanitize `nodeName` string when used as a target directory for log output.
 
 ## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
