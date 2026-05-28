@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
@@ -9,15 +9,20 @@ module  Cardano.TxGenerator.Tx
 
 import           Cardano.Api hiding (txId)
 
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey))
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO (ToUTxOList)
 
-import           Data.Bifunctor (bimap, second)
+import           Data.Bifunctor (second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
+import           Lens.Micro ((.~), (^.))
 
 
 -- | 'CreateAndStore' is meant to represent building a transaction
@@ -165,22 +170,33 @@ genTx :: forall era. ()
   -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
-  = bimap
-      ApiError
-      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
- where
-  allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent sbe
-    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
-    & setTxInsCollateral collateral
-    & setTxOuts outputs
-    & setTxFee fee
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
-    & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+genTx sbe _ledgerParameters (collateral, collFunds) fee metadata inFunds outputs =
+  shelleyBasedEraConstraints sbe $ do
+    let allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
+        setCollateral = case collateral of
+          TxInsCollateralNone -> id
+          TxInsCollateral eon _ -> collateralInputsTxBodyL eon .~ convCollateralTxIns collateral
+        txInputs = map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds
+        txAuxData = toAuxiliaryData sbe metadata TxAuxScriptsNone
+        ledgerTxBody =
+          mkCommonTxBody sbe txInputs outputs fee TxWithdrawalsNone txAuxData
+            & invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (defaultTxValidityUpperBound sbe)
+            & setCollateral
+        rawBody = ledgerTxBody ^. txBodyL
+        unsignedLedgerTx = Ledger.mkBasicTx rawBody
+        txHash = Ledger.extractHash $ Ledger.hashAnnotated rawBody
+        witVKeys = Set.fromList
+          [ WitVKey
+              (getShelleyKeyWitnessVerificationKey sk)
+              (makeShelleySignature txHash sk)
+          | sk <- map (toShelleySigningKey . WitnessPaymentKey) allKeys
+          ]
+        signedLedgerTx = unsignedLedgerTx
+          & Ledger.witsTxL .~ (Ledger.mkBasicTxWits & Ledger.addrTxWitsL .~ witVKeys)
+          & Ledger.auxDataTxL .~ maybeToStrictMaybe txAuxData
+        tx = ShelleyTx sbe signedLedgerTx
+        txId = fromShelleyTxId $ Ledger.txIdTxBody rawBody
+    Right (tx, txId)
 
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
