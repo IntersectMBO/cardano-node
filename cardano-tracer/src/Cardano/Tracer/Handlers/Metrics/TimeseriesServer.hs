@@ -21,21 +21,18 @@ import           Cardano.Tracer.Handlers.Utils (askDataPoint)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Time (getTimeMs)
 import           Cardano.Tracer.Types (NodeId (..))
-#if RTVIEW
-import           Cardano.Tracer.Handlers.RTView.Update.NodeState (NodeStateWrapper (..))
-#endif
+import           Cardano.Tracer.Utils (NodeStateWrapper (..))
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (join)
-import           Data.Time.Clock (getCurrentTime, diffUTCTime)
 import           Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy as BL
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import qualified Data.Text.Encoding as T
 import           Data.Text.Read (decimal, double)
+import           Data.Time.Clock (diffUTCTime, getCurrentTime)
 import           Data.Word (Word64)
 import           Network.HTTP.Types
 import           Network.Wai
@@ -74,8 +71,6 @@ oneDurationQueryItem :: Request
 oneDurationQueryItem request =
   asum (readDurationQueryItem <$> queryToQueryText request.queryString)
 
-encodeUtf8 :: Text -> BL.ByteString
-encodeUtf8 = BL.fromStrict . T.encodeUtf8
 
 data InputSanitationConfig = InputSanitationConfig {
   minimumRetentionMillis :: Word64,
@@ -120,7 +115,7 @@ timeseriesApp inputSanCfg tracerEnv handle request send = do
           send malformed
       | request.requestMethod == methodGet -> do
         v <- (.retentionMillis) <$> readConfig handle
-        send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
+        send $ responseLBS status200 contentHdrJSON $ encode $ object ["retentionMillis" .= v]
     ["timeseries", "config", "pruning"]
       | request.requestMethod == methodPost ->
         let v = oneDurationQueryItem request in
@@ -131,7 +126,7 @@ timeseriesApp inputSanCfg tracerEnv handle request send = do
           send malformed
       | request.requestMethod == methodGet -> do
         v <- (.pruningPeriodMillis) <$> readConfig handle
-        send $ responseLBS status200 contentHdrUtf8Text (encodeUtf8 (showT v))
+        send $ responseLBS status200 contentHdrJSON $ encode $ object ["pruningPeriodMillis" .= v]
     ["timeseries", "nodes"]
       | request.requestMethod == methodGet -> do
           nodes <- readTVarIO tracerEnv.teConnectedNodes
@@ -161,8 +156,7 @@ timeseriesApp inputSanCfg tracerEnv handle request send = do
           case (mNsi :: Maybe NodeStartupInfo) of
             Nothing  -> send notFound
             Just nsi -> send $ responseLBS status200 contentHdrJSON (encode nsi)
-#if RTVIEW
-    ["timeseries", "node", rawId, "state"]
+    ["timeseries", "node", rawId, "sync-progress"]
       | request.requestMethod == methodGet -> do
           let nodeId = NodeId rawId
           mState <- askDataPoint tracerEnv.teDPRequestors tracerEnv.teCurrentDPLock nodeId "NodeAddBlock"
@@ -170,7 +164,6 @@ timeseriesApp inputSanCfg tracerEnv handle request send = do
             Nothing                     -> send notFound
             Just (NodeStateWrapper pct) -> send $ responseLBS status200 contentHdrJSON $ encode $
               object ["syncProgress" .= pct]
-#endif
     _ -> send notFound
 
 runTimeseriesServer :: TracerEnv -> Endpoint -> TimeseriesHandle -> IO ()

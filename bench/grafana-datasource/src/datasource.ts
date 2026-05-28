@@ -56,7 +56,8 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
               .replace(/\$__from/g, `epoch + ${from}ms`)
               .replace(/\$__to/g,   `epoch + ${to}ms`);
             const interpolated = getTemplateSrv().replace(preProcessed, options.scopedVars);
-            frames.push(...(await this.runQuery(interpolated)));
+            const legendFormat = getTemplateSrv().replace(target.legendFormat ?? '', options.scopedVars);
+            frames.push(...(await this.runQuery(interpolated, legendFormat)));
             break;
           }
           case 'nodes':
@@ -72,9 +73,9 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
             frames.push(...(await this.fetchNodeStartup(nid)));
             break;
           }
-          case 'node-state': {
+          case 'node-sync-progress': {
             const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
-            frames.push(...(await this.fetchNodeState(nid)));
+            frames.push(...(await this.fetchNodeSyncProgress(nid)));
             break;
           }
         }
@@ -87,7 +88,7 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     return { data: frames, error };
   }
 
-  private async runQuery(queryText: string) {
+  private async runQuery(queryText: string, legendFormat = '') {
     try {
       // `.toPromise()` avoids the rxjs-version conflict that arises when
       // @grafana/data bundles its own rxjs alongside the top-level one.
@@ -98,7 +99,7 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           data: new URLSearchParams({ query: queryText }).toString(),
         }) as any).toPromise() as FetchResponse<QueryResponse>;
-      return valueToDataFrames(response.data.data);
+      return valueToDataFrames(response.data.data, legendFormat);
     } catch (err: any) {
       // Server returns { status: "error", errorType: "...", error: "..." } as JSON.
       // Grafana's proxy wraps 4xx bodies as { data: { ... } }.
@@ -171,13 +172,13 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     })];
   }
 
-  private async fetchNodeState(nodeId: string): Promise<DataFrame[]> {
+  private async fetchNodeSyncProgress(nodeId: string): Promise<DataFrame[]> {
     const ns = await this.fetchJson<NodeStateResponse>(
-      `/timeseries/node/${encodeURIComponent(nodeId)}/state`
+      `/timeseries/node/${encodeURIComponent(nodeId)}/sync-progress`
     );
     if (!ns) { return []; }
     return [toDataFrame({
-      name: 'node-state',
+      name: 'node-sync-progress',
       fields: [
         { name: 'Sync Progress (%)', type: FieldType.number, values: [ns.syncProgress] },
       ],

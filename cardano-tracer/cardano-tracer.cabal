@@ -161,7 +161,6 @@ library
                       , string-qq
                       , threepenny-gui
                       , utf8-string
-                      , vector
 
   if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
@@ -201,6 +200,7 @@ library
                       , trace-dispatcher ^>= 2.12.0
                       , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
+                      , vector
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , warp-tls

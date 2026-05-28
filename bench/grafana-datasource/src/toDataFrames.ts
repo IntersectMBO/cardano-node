@@ -2,11 +2,8 @@ import { DataFrame, FieldType, MutableDataFrame } from '@grafana/data';
 
 import { Value, TimeseriesItem, InstantItem, SeriesIdentifier } from './types';
 
-function seriesName(labels: SeriesIdentifier): string {
-  const entries = Object.entries(labels);
-  return entries.length === 0
-    ? '(no labels)'
-    : entries.map(([k, v]) => `${k}="${v}"`).join(', ');
+function applyLegendFormat(format: string, labels: SeriesIdentifier): string {
+  return format.replace(/\{\{(\w+)\}\}/g, (_, key) => labels[key] ?? '');
 }
 
 // Best-effort: extract a numeric value from any Value constructor.
@@ -22,12 +19,15 @@ function extractScalar(v: Value): number | null {
   }
 }
 
-function rangeToFrame(ts: TimeseriesItem): DataFrame {
+function rangeToFrame(ts: TimeseriesItem, legendFormat: string): DataFrame {
+  // displayNameFromDS takes full precedence in Grafana's legend — it is shown as-is without
+  // appending labels. Setting frame.name instead would cause Grafana to append the label set,
+  // producing e.g. 'node-5 {node_id=…, node_name="node-5"}' for legend: '{{node_name}}'.
+  const displayNameFromDS = legendFormat ? applyLegendFormat(legendFormat, ts.metric) : undefined;
   const frame = new MutableDataFrame({
-    name: seriesName(ts.metric),
     fields: [
-      { name: 'Time', type: FieldType.time },
-      { name: 'Value', type: FieldType.number },
+      { name: 'Time',  type: FieldType.time },
+      { name: 'Value', type: FieldType.number, labels: ts.metric, config: { displayNameFromDS } },
     ],
   });
   for (const [t, v] of ts.values) {
@@ -36,26 +36,20 @@ function rangeToFrame(ts: TimeseriesItem): DataFrame {
   return frame;
 }
 
-function instantVectorToFrame(instants: InstantItem[]): DataFrame {
+function instantToFrame(inst: InstantItem, legendFormat: string): DataFrame {
+  // Same reasoning as rangeToFrame — use displayNameFromDS to avoid label appending.
+  const displayNameFromDS = legendFormat ? applyLegendFormat(legendFormat, inst.metric) : undefined;
   const frame = new MutableDataFrame({
-    name: 'instant_vector',
     fields: [
-      { name: 'Time', type: FieldType.time },
-      { name: 'Labels', type: FieldType.string },
-      { name: 'Value', type: FieldType.number },
+      { name: 'Time',  type: FieldType.time },
+      { name: 'Value', type: FieldType.number, labels: inst.metric, config: { displayNameFromDS } },
     ],
   });
-  for (const inst of instants) {
-    frame.add({
-      Time: inst.value[0] * 1000,
-      Labels: seriesName(inst.metric),
-      Value: parseFloat(inst.value[1]),
-    });
-  }
+  frame.add({ Time: inst.value[0] * 1000, Value: parseFloat(inst.value[1]) });
   return frame;
 }
 
-export function valueToDataFrames(value: Value): DataFrame[] {
+export function valueToDataFrames(value: Value, legendFormat = ''): DataFrame[] {
   switch (value.resultType) {
     case 'scalar': {
       const frame = new MutableDataFrame({
@@ -67,10 +61,10 @@ export function valueToDataFrames(value: Value): DataFrame[] {
     }
 
     case 'matrix':
-      return value.result.map(rangeToFrame);
+      return value.result.map(ts => rangeToFrame(ts, legendFormat));
 
     case 'vector':
-      return [instantVectorToFrame(value.result)];
+      return value.result.map(inst => instantToFrame(inst, legendFormat));
 
     case 'pair': {
       const fst = valueToDataFrames(value.fst).map((f, i) => ({ ...f, name: `pair.fst[${i}]` }));

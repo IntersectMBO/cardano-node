@@ -1,6 +1,6 @@
 {
-  "title": "Cardano Node (RTView)",
-  "uid": "cardano-rtview",
+  "title": "Cardano Node (RTView port)",
+  "uid": "cardano-node-rtview-port",
   "schemaVersion": 38,
   "version": 1,
   "refresh": "15s",
@@ -155,7 +155,7 @@
       "targets": [
         {
           "refId": "A",
-          "queryType": "node-state",
+          "queryType": "node-sync-progress",
           "queryText": "",
           "nodeId": "$node_id",
           "datasource": {
@@ -233,7 +233,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Mem_resident_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Mem_resident_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -259,7 +260,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Stat_cputicks_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Stat_cputicks_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -285,7 +287,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_threads_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_threads_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -311,7 +314,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_gcLiveBytes_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_gcLiveBytes_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -337,7 +341,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_gcMajorNum_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_gcMajorNum_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -363,7 +368,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_gcMinorNum_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_gcMinorNum_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -389,7 +395,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_gcticks_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_gcticks_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -415,7 +422,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_RTS_mutticks_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_RTS_mutticks_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -453,7 +461,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_density_real[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_density_real[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -479,7 +488,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_slotNum_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_slotNum_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -505,7 +515,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_blockNum_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_blockNum_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -531,7 +542,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_slotInEpoch_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_slotInEpoch_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -557,7 +569,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_epoch_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_epoch_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -595,7 +608,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Forge_node_is_leader_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Forge_node_is_leader_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -621,7 +635,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Forge_node_not_leader_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Forge_node_not_leader_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -647,7 +662,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Forge_about_to_lead_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Forge_about_to_lead_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -673,7 +689,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Forge_forged_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Forge_forged_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -699,7 +716,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_Forge_adopted_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_Forge_adopted_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -725,7 +743,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_nodeCannotForge_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_nodeCannotForge_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -763,7 +782,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_txsInMempool_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_txsInMempool_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -789,7 +809,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_mempoolBytes_int[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_mempoolBytes_int[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {
@@ -815,7 +836,8 @@
       "targets": [
         {
           "refId": "A",
-          "queryText": "cardano_node_metrics_txsProcessedNum_counter[$__from; $__to : $__interval]"
+          "queryText": "cardano_node_metrics_txsProcessedNum_counter[$__from; $__to : $__interval]",
+          "legendFormat": "{{node_name}}"
         }
       ],
       "fieldConfig": {

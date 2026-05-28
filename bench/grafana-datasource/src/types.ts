@@ -60,18 +60,20 @@ export interface NodeStateResponse {
   syncProgress: number; // percentage 0–100
 }
 
-export type QueryType = 'timeseries' | 'nodes' | 'node-info' | 'node-startup' | 'node-state';
+export type QueryType = 'timeseries' | 'nodes' | 'node-info' | 'node-startup' | 'node-sync-progress';
 
 export interface CardanoTimeseriesQuery extends DataQuery {
   queryType: QueryType;
   queryText: string;
   nodeId: string;
+  legendFormat: string;
 }
 
 export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
   queryType: 'timeseries',
   queryText: '',
   nodeId: '',
+  legendFormat: '',
 };
 
 // No custom jsonData fields — the server URL is the standard Grafana datasource URL field.

@@ -34,9 +34,10 @@ module Cardano.Tracer.Utils
   , readRegistry
   , getProcessId
   , sequenceConcurrently_
+  , NodeStateWrapper (..)
   ) where
 
-import           Cardano.Logging.Types.NodeInfo (NodeInfo(..))
+import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Logging.Utils (showT)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
@@ -46,23 +47,26 @@ import           Cardano.Tracer.Types
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Control.Concurrent (mkWeakThreadId, myThreadId)
-import           Control.Concurrent.Async (Concurrently(..))
+import           Control.Concurrent.Async (Concurrently (..))
 import           Control.Concurrent.Extra (Lock)
-import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
+import           Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar, swapMVar, tryReadMVar)
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO, newTVarIO)
+import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO, stateTVar)
 import           Control.Exception (SomeException, finally, throwTo, try)
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, unless)
 import           Control.Monad.Extra (whenJustM)
-import           Data.Word (Word32)
-import qualified Data.Bimap as BM
+import           Data.Aeson.Types
 import           Data.Bimap (Bimap)
+import qualified Data.Bimap as BM
 import           Data.Foldable (for_, traverse_)
-import           Data.Functor ((<&>), void)
+import           Data.Functor (void, (<&>))
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as S
+import           Data.Text as T (Text, unpack)
 import qualified Data.Text as T
+import qualified Data.Vector as V
+import           Data.Word (Word32)
 import           System.Exit (ExitCode (ExitSuccess))
 import           System.IO (hClose, hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
@@ -267,3 +271,36 @@ getProcessId =
 
 sequenceConcurrently_ :: Traversable t => t (IO a) -> IO ()
 sequenceConcurrently_ = runConcurrently . traverse_ Concurrently
+
+-- | This is to avoid creating a dependency on `cardano-node's `NodeState'.
+--
+-- Before: Pattern matching on `NodeState' to access a single Double:
+--
+-- @
+--   NodeAddBlock (AddedToCurrentChain _ _ syncPct) -> setSyncProgress nodeId syncPct
+--   _ -> return ()
+-- @
+--
+-- Now: We pattern match on a newtype wrapper for a `Double' and parse
+-- it from a JSON object if it matches the serialization of
+-- `NodeAddBlock (AddedToCurrentChain _ _ syncPct)'.
+--
+-- @
+--   \(NodeStateWrapper syncPct) -> setSyncProgress nodeId syncPct
+-- @
+newtype NodeStateWrapper = NodeStateWrapper
+  { getNodeStateWrapper :: Double }
+
+instance FromJSON NodeStateWrapper where
+  parseJSON :: Value -> Parser NodeStateWrapper
+  parseJSON = withObject "NodeState" \obj -> do
+    -- Check if this is a NodeAddBlock constructor, verify that it's
+    -- AddedToCurrentChain and extract the Double.
+    tag :: Text <- obj .: "tag"
+    unless (tag == "NodeAddBlock") do
+      fail ("parseJSON @NodeStateWrapper: Expected tag 'NodeAddBlock', but got: " ++ unpack tag)
+    arr <- obj .: "contents"
+    unless (V.length arr == 3) do
+      fail ("parseJSON @NodeStateWrapper: Expected contents array of length 3, but got: " ++ show arr)
+    double <- parseJSON (arr V.! 2)
+    pure (NodeStateWrapper double)

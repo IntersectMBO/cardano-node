@@ -3,8 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.NodeState
-  ( NodeStateWrapper (..)
-  , askNSetNodeState
+  ( askNSetNodeState
   ) where
 
 import           Cardano.Tracer.Environment
@@ -13,12 +12,10 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils (NodeStateWrapper (..))
 
-import           Control.Monad.Extra (unless, whenJustM)
-import           Data.Aeson
-import           Data.Aeson.Types (Parser)
-import           Data.Text (Text, pack, unpack)
-import qualified Data.Vector as V (length, (!))
+import           Control.Monad.Extra (whenJustM)
+import           Data.Text (pack)
 import           Text.Printf (printf)
 
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
@@ -43,36 +40,3 @@ askNSetNodeState tracerEnv displayed =
       then setDisplayedValue nodeId displayed nodeSyncProgressElId $
              pack (printf "%.2f" syncPct) <> "&nbsp;%"
       else setTextAndClasses nodeSyncProgressElId "100&nbsp;%" "rt-view-percent-done"
-
--- | This is to avoid creating a dependency on `cardano-node's `NodeState'.
---
--- Before: Pattern matching on `NodeState' to access a single Double:
---
--- @
---   NodeAddBlock (AddedToCurrentChain _ _ syncPct) -> setSyncProgress nodeId syncPct
---   _ -> return ()
--- @
---
--- Now: We pattern match on a newtype wrapper for a `Double' and parse
--- it from a JSON object if it matches the serialization of
--- `NodeAddBlock (AddedToCurrentChain _ _ syncPct)'.
---
--- @
---   \(NodeStateWrapper syncPct) -> setSyncProgress nodeId syncPct
--- @
-newtype NodeStateWrapper = NodeStateWrapper
-  { getNodeStateWrapper :: Double }
-
-instance FromJSON NodeStateWrapper where
-  parseJSON :: Value -> Parser NodeStateWrapper
-  parseJSON = withObject "NodeState" \obj -> do
-    -- Check if this is a NodeAddBlock constructor, verify that it's
-    -- AddedToCurrentChain and extract the Double.
-    tag :: Text <- obj .: "tag"
-    unless (tag == "NodeAddBlock") do
-      fail ("parseJSON @NodeStateWrapper: Expected tag 'NodeAddBlock', but got: " ++ unpack tag)
-    arr <- obj .: "contents"
-    unless (V.length arr == 3) do
-      fail ("parseJSON @NodeStateWrapper: Expected contents array of length 3, but got: " ++ show arr)
-    double <- parseJSON (arr V.! 2)
-    pure (NodeStateWrapper double)

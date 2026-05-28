@@ -29,7 +29,7 @@ import           Cardano.Tracer.Utils
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import qualified Data.Bimap as BM
 import           Data.Foldable
 import qualified Data.Map.Strict as M
@@ -126,7 +126,13 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
   storeMetrics resp ekgStore localStore
   for_ (teTimeseriesHandle tracerEnv) $ \h -> do
     ts <- getTimeMs
-    Timeseries.insert h "node_id" nodeId (fromIntegral ts) (map (first sanitiseMetricName) $ mapMaybe parseMetric ms)
+    nodeNames <- readTVarIO (teConnectedNodesNames tracerEnv)
+    -- COMMENT: (@russoul) shall we log the case when no node name has been found?
+    for_ (BM.lookup (NodeId nodeId) nodeNames :: Maybe NodeName) $ \nodeName ->
+      Timeseries.insert h
+        (S.fromList [("node_id", nodeId), ("node_name", nodeName)])
+        (fromIntegral ts)
+        (map (first sanitiseMetricName) $ mapMaybe parseMetric ms)
 
   where
     numeralOnly :: MetricValue -> Maybe Double
