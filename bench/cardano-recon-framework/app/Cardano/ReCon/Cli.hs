@@ -77,7 +77,7 @@ parseTimeunit = option readTimeunit $
   <> metavar "<hour|minute|second|millisecond|microsecond>"
   <> showDefault
   <> value Second
-  <> help "timeunit"
+  <> help "unit in which numeric arguments of temporal operators in input formulas are measured"
 
 parseEventDuration :: Parser Word
 parseEventDuration = option auto (long "duration" <> metavar "INT" <> help "temporal event duration (μs)")

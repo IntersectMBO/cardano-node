@@ -43,7 +43,9 @@ Available options:
   --seek-to-end BOOL       seek to the end of the trace file before ingesting it
                            (default: True)
   --timeunit <hour|minute|second|millisecond|microsecond>
-                           timeunit (default: second)
+                           unit in which numeric arguments of temporal
+                           operators in input formulas are measured
+                           (default: second)
   --on-missing-key <crash|bottom>
                            behaviour when a formula atom references a missing
                            event property key (default: bottom)
