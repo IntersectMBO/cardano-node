@@ -77,7 +77,7 @@ parseTimeunit = option readTimeunit $
   <> metavar "<hour|minute|second|millisecond|microsecond>"
   <> showDefault
   <> value Second
-  <> help "timeunit"
+  <> help "unit in which numeric arguments of temporal operators in input formulas are measured"
 
 parseEventDuration :: Parser Word
 parseEventDuration = option auto (long "duration" <> metavar "INT" <> help "temporal event duration (μs)")
@@ -91,7 +91,7 @@ parseDumpMetrics = option readBool $
   <> help "enable periodic metric dumps to stdout"
 
 parseFormulasFile :: Parser FilePath
-parseFormulasFile = argument str (metavar "FILE")
+parseFormulasFile = option str (long "formulas" <> metavar "FILE" <> help "YAML file with a list of formulas to check")
 
 parseTraceDispatcherCfgFile :: Parser (Maybe FilePath)
 parseTraceDispatcherCfgFile =
@@ -102,7 +102,7 @@ parseContext =
   option (optional str) (long "context" <> value Nothing <> metavar "FILE" <> help "context variables")
 
 parseTraceFiles :: Parser [FilePath]
-parseTraceFiles = some (argument str (metavar "FILES"))
+parseTraceFiles = some (option str (long "traces" <> metavar "FILE" <> help "trace log file (repeatable)"))
 
 parseRetention :: Parser Word
 parseRetention = option auto $
