@@ -64,18 +64,18 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
             frames.push(...(await this.fetchNodes()));
             break;
           case 'node-info': {
-            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
-            frames.push(...(await this.fetchNodeInfo(nid)));
+            const nm = getTemplateSrv().replace(target.nodeName ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeInfo(nm)));
             break;
           }
           case 'node-startup': {
-            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
-            frames.push(...(await this.fetchNodeStartup(nid)));
+            const nm = getTemplateSrv().replace(target.nodeName ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeStartup(nm)));
             break;
           }
           case 'node-sync-progress': {
-            const nid = getTemplateSrv().replace(target.nodeId ?? '', options.scopedVars);
-            frames.push(...(await this.fetchNodeSyncProgress(nid)));
+            const nm = getTemplateSrv().replace(target.nodeName ?? '', options.scopedVars);
+            frames.push(...(await this.fetchNodeSyncProgress(nm)));
             break;
           }
         }
@@ -130,16 +130,16 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
   }
 
   private async fetchNodes(): Promise<DataFrame[]> {
-    const nodeIds = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
+    const nodeNames = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
     return [toDataFrame({
       name: 'nodes',
-      fields: [{ name: 'Node ID', type: FieldType.string, values: nodeIds }],
+      fields: [{ name: 'Node Name', type: FieldType.string, values: nodeNames }],
     })];
   }
 
-  private async fetchNodeInfo(nodeId: string): Promise<DataFrame[]> {
+  private async fetchNodeInfo(nodeName: string): Promise<DataFrame[]> {
     const ni = await this.fetchJson<NodeInfoResponse>(
-      `/timeseries/node/${encodeURIComponent(nodeId)}/info`
+      `/timeseries/node/${encodeURIComponent(nodeName)}/info`
     );
     if (!ni) { return []; }
     return [toDataFrame({
@@ -156,9 +156,9 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     })];
   }
 
-  private async fetchNodeStartup(nodeId: string): Promise<DataFrame[]> {
+  private async fetchNodeStartup(nodeName: string): Promise<DataFrame[]> {
     const nsi = await this.fetchJson<NodeStartupInfoResponse>(
-      `/timeseries/node/${encodeURIComponent(nodeId)}/startup`
+      `/timeseries/node/${encodeURIComponent(nodeName)}/startup`
     );
     if (!nsi) { return []; }
     return [toDataFrame({
@@ -172,9 +172,9 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
     })];
   }
 
-  private async fetchNodeSyncProgress(nodeId: string): Promise<DataFrame[]> {
+  private async fetchNodeSyncProgress(nodeName: string): Promise<DataFrame[]> {
     const ns = await this.fetchJson<NodeStateResponse>(
-      `/timeseries/node/${encodeURIComponent(nodeId)}/sync-progress`
+      `/timeseries/node/${encodeURIComponent(nodeName)}/sync-progress`
     );
     if (!ns) { return []; }
     return [toDataFrame({
@@ -186,8 +186,8 @@ export class CardanoTimeseriesDatasource extends DataSourceApi<
   }
 
   async metricFindQuery(_query: string): Promise<MetricFindValue[]> {
-    const nodeIds = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
-    return nodeIds.map((id) => ({ text: id, value: id }));
+    const nodeNames = await this.fetchJson<string[]>('/timeseries/nodes') ?? [];
+    return nodeNames.map((nm) => ({ text: nm, value: nm }));
   }
 
   async testDatasource() {

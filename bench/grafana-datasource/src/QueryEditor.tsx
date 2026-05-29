@@ -22,7 +22,7 @@ const QUERY_TYPES: Array<SelectableValue<QueryType>> = [
 export function QueryEditor({ query, onChange, onRunQuery }: Props) {
   const queryType    = query.queryType ?? 'timeseries';
   const queryText    = query.queryText ?? defaultQuery.queryText ?? '';
-  const nodeId       = query.nodeId ?? '';
+  const nodeName     = query.nodeName ?? '';
   const legendFormat = query.legendFormat ?? '';
 
   const onQueryTypeChange = (v: SelectableValue<QueryType>) => {
@@ -34,15 +34,15 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     onChange({ ...query, queryText: e.target.value });
   };
 
-  const onNodeIdChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...query, nodeId: e.target.value });
+  const onNodeNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...query, nodeName: e.target.value });
   };
 
   const onLegendFormatChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange({ ...query, legendFormat: e.target.value });
   };
 
-  const needsNodeId =
+  const needsNodeName =
     queryType === 'node-info' || queryType === 'node-startup' || queryType === 'node-sync-progress';
 
   return (
@@ -56,12 +56,12 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
             onChange={onQueryTypeChange}
           />
         </InlineField>
-        {needsNodeId && (
-          <InlineField label="Node ID" labelWidth={10} grow>
+        {needsNodeName && (
+          <InlineField label="Node Name" labelWidth={10} grow>
             <Input
-              value={nodeId}
-              placeholder="e.g. 127.0.0.1:3001"
-              onChange={onNodeIdChange}
+              value={nodeName}
+              placeholder="e.g. node-1"
+              onChange={onNodeNameChange}
               onBlur={onRunQuery}
             />
           </InlineField>

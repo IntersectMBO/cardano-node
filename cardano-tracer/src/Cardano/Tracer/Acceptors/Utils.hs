@@ -130,7 +130,7 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
     -- COMMENT: (@russoul) shall we log the case when no node name has been found?
     for_ (BM.lookup (NodeId nodeId) nodeNames :: Maybe NodeName) $ \nodeName ->
       Timeseries.insert h
-        (S.fromList [("node_id", nodeId), ("node_name", nodeName)])
+        (S.fromList [("node_name", nodeName)])
         (fromIntegral ts)
         (map (first sanitiseMetricName) $ mapMaybe parseMetric ms)
 

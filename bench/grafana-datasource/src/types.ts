@@ -65,14 +65,14 @@ export type QueryType = 'timeseries' | 'nodes' | 'node-info' | 'node-startup' | 
 export interface CardanoTimeseriesQuery extends DataQuery {
   queryType: QueryType;
   queryText: string;
-  nodeId: string;
+  nodeName: string;
   legendFormat: string;
 }
 
 export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
   queryType: 'timeseries',
   queryText: '',
-  nodeId: '',
+  nodeName: '',
   legendFormat: '',
 };
 

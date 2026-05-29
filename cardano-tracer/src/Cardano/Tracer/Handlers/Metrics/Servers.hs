@@ -45,7 +45,7 @@ runMetricsServers tracerEnv = do
   servers = catMaybes
     [ runPrometheusServer tracerEnv <$> hasPrometheus
     , runMonitoringServer tracerEnv <$> hasEKG
-    , const <$> (runTimeseriesServer tracerEnv <$> hasTimeseries <*> teTimeseriesHandle)
+    , runTimeseriesServer tracerEnv <$> hasTimeseries <*> teTimeseriesHandle
     ]
 
   TracerEnv

@@ -40,7 +40,7 @@
           "refId": "A",
           "queryType": "nodes",
           "queryText": "",
-          "nodeId": "",
+          "nodeName": "",
           "datasource": {
             "type": "iog-cardanotimeseries-datasource",
             "uid": "cardano-timeseries"
@@ -60,8 +60,8 @@
     {
       "id": 102,
       "type": "table",
-      "title": "Node Info \u2014 $node_id",
-      "repeat": "node_id",
+      "title": "Node Info \u2014 $node_name",
+      "repeat": "node_name",
       "repeatDirection": "h",
       "maxPerRow": 2,
       "gridPos": {
@@ -79,7 +79,7 @@
           "refId": "A",
           "queryType": "node-info",
           "queryText": "",
-          "nodeId": "$node_id",
+          "nodeName": "$node_name",
           "datasource": {
             "type": "iog-cardanotimeseries-datasource",
             "uid": "cardano-timeseries"
@@ -99,8 +99,8 @@
     {
       "id": 103,
       "type": "table",
-      "title": "Startup \u2014 $node_id",
-      "repeat": "node_id",
+      "title": "Startup \u2014 $node_name",
+      "repeat": "node_name",
       "repeatDirection": "h",
       "maxPerRow": 3,
       "gridPos": {
@@ -118,7 +118,7 @@
           "refId": "A",
           "queryType": "node-startup",
           "queryText": "",
-          "nodeId": "$node_id",
+          "nodeName": "$node_name",
           "datasource": {
             "type": "iog-cardanotimeseries-datasource",
             "uid": "cardano-timeseries"
@@ -138,8 +138,8 @@
     {
       "id": 104,
       "type": "stat",
-      "title": "Sync \u2014 $node_id",
-      "repeat": "node_id",
+      "title": "Sync \u2014 $node_name",
+      "repeat": "node_name",
       "repeatDirection": "h",
       "maxPerRow": 6,
       "gridPos": {
@@ -157,7 +157,7 @@
           "refId": "A",
           "queryType": "node-sync-progress",
           "queryText": "",
-          "nodeId": "$node_id",
+          "nodeName": "$node_name",
           "datasource": {
             "type": "iog-cardanotimeseries-datasource",
             "uid": "cardano-timeseries"
@@ -849,8 +849,8 @@
     {
       "id": 105,
       "type": "stat",
-      "title": "Uptime \u2014 $node_id",
-      "repeat": "node_id",
+      "title": "Uptime \u2014 $node_name",
+      "repeat": "node_name",
       "repeatDirection": "h",
       "maxPerRow": 6,
       "gridPos": {
@@ -868,7 +868,7 @@
           "refId": "A",
           "queryType": "node-info",
           "queryText": "",
-          "nodeId": "$node_id",
+          "nodeName": "$node_name",
           "datasource": {
             "type": "iog-cardanotimeseries-datasource",
             "uid": "cardano-timeseries"
@@ -910,7 +910,7 @@
   "templating": {
     "list": [
       {
-        "name": "node_id",
+        "name": "node_name",
         "label": "Node",
         "type": "query",
         "datasource": {
