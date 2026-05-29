@@ -101,8 +101,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 0bd6aac59bbc2e47c5df28fa0b32154ff348129a
-  --sha256: sha256-6j2AiXyOwdzVZYNIz0EY1abvwWWzM/MknTsRP1e8Srw=
+  tag: eddb8b78de9e5f0d45dbf1410289f8e491c515ab
+  --sha256: sha256-T8OXHl55WH9uqYP2Ja9zGzyuPEfP7b2XpJcH+aJ5gMY=
 
 -- Pin cardano-ledger at the Leios prototype remake branch — adds
 -- 'Maybe LeiosCert' on the Dijkstra block body (Dijkstra-only).
