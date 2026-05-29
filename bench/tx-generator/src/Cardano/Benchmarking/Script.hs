@@ -14,19 +14,18 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
-import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (..), Error (TxGenError),
+import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (..), Error,
                    getEnvThreads, runActionMEnv, traceError)
 import           Cardano.Benchmarking.Script.Types
-import qualified Cardano.TxGenerator.Types as Types (TxGenError (..))
 
 import           Prelude
 
 import           Control.Concurrent (threadDelay)
+import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.STM.TVar as STM (readTVar)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM as STM (atomically)
-import           Control.Monad.Trans.Except as Except (throwE)
 import qualified Data.List as List (unwords)
 import           System.Mem (performGC)
 
@@ -61,11 +60,22 @@ runScript env script constants@EnvConsts { .. } = do
           forM_ script action
           abcMaybe <- Env.getEnvThreads
           case abcMaybe of
-            Nothing  -> throwE $ Env.TxGenError $ Types.TxGenError $
-              List.unwords
-                  [ "Cardano.Benchmarking.Script.runScript:"
-                  , "AsyncBenchmarkControl absent from map in execScript" ]
             Just abc -> pure abc
+            Nothing  -> liftIO noopBenchmarkControl
+
+noopBenchmarkControl :: IO AsyncBenchmarkControl
+noopBenchmarkControl = do
+  feeder <- Async.async (return ())
+  pure AsyncBenchmarkControl
+    { abcFeeder   = feeder
+    , abcWorkers  = []
+    , abcSummary  = pure SubmissionSummary
+        { ssTxSent = 0, ssTxUnavailable = 0
+        , ssElapsed = 0, ssEffectiveTps = 0
+        , ssThreadwiseTps = [], ssFailures = []
+        }
+    , abcShutdown = return ()
+    }
 
 shutDownLogging :: Env.ActionM ()
 shutDownLogging = do
