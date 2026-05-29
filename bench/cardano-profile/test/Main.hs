@@ -326,6 +326,7 @@ ciTestBage = Types.Profile {
     , ("maxValueSize",Aeson.Number 5000.0)
     ]
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 1
     , Types.epoch_length = 600
     , Types.active_slots_coeff = 0.05
@@ -546,21 +547,23 @@ testGroupMap = Tasty.testGroup
             )
             -- Map.Map to keep the key / profile name.
             (zip
-              -- Everything except "shelley", "alonzo" and "conway".
+              -- Everything except "shelley", "alonzo", "conway" and "dijkstra".
               (Map.assocs $ Map.map
                 (\p -> (Types.genesis p) {
-                  Types.shelley = mempty
-                , Types.alonzo = mempty
-                , Types.conway = mempty
+                  Types.shelley  = mempty
+                , Types.alonzo   = mempty
+                , Types.conway   = mempty
+                , Types.dijkstra = mempty
                 })
                 allProfiles
               )
-              -- Everything except "shelley", "alonzo" and "conway".
+              -- Everything except "shelley", "alonzo", "conway" and "dijkstra".
               (Map.assocs $ Map.map
                 (\p -> (Types.genesis p) {
-                  Types.shelley = mempty
-                , Types.alonzo = mempty
-                , Types.conway = mempty
+                  Types.shelley  = mempty
+                , Types.alonzo   = mempty
+                , Types.conway   = mempty
+                , Types.dijkstra = mempty
                 })
                 profiles
               )
@@ -600,6 +603,18 @@ testGroupMap = Tasty.testGroup
             (zip
               (Map.assocs $ Map.map (Types.conway . Types.genesis) allProfiles)
               (Map.assocs $ Map.map (Types.conway . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Dijkstra).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Dijkstra)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.dijkstra . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.dijkstra . Types.genesis) profiles)
             )
           ----------------------------------------------------------------------
           -- Show first profile with differences in the ChainDB type.

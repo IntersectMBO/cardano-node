@@ -158,6 +158,7 @@ shelleyAlonzoConway profile =
                        (Just $ Types.shelley  $ Types.genesis profile)
                        (Just $ Types.alonzo   $ Types.genesis profile)
                        (       Types.conway   $ Types.genesis profile)
+                       (       Types.dijkstra $ Types.genesis profile)
                      )
                      -- Cost models don't come from the profile, only from
                      -- epochTimeline + overlays, they contribute nothing here.
@@ -217,8 +218,9 @@ genesisParams epochParams g =
         case Genesis.alonzo epochParams of
           (Just a) -> a
           Nothing  -> error "No \"alonzo\" JSON object from epoch-timeline.json"
-    -- Optional "conway".
+    -- Optional "conway" and "dijkstra".
     , Types.conway = Genesis.conway epochParams
+    , Types.dijkstra = Genesis.dijkstra epochParams
     }
 
 -- Step 2b.
