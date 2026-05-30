@@ -1,0 +1,43 @@
+cabal-version: 3.8
+name:          generate-release-changelog-links
+version:       0.1.0.0
+synopsis:      Generate a changelog table for a cardano-node release
+description:
+  Reads a cabal plan.json (from plan-nix) and produces a Markdown table of
+  CHANGELOG.md links for every CHaP-hosted package in the build plan.
+license:       Apache-2.0
+author:        IOHK
+maintainer:    operations@iohk.io
+
+executable generate-release-changelog-links
+  main-is:          Main.hs
+  hs-source-dirs:   .
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wextra -Wcompat -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+    BlockArguments
+    DataKinds
+    ImportQualifiedPost
+    LambdaCase
+    OverloadedStrings
+    RecordWildCards
+    ScopedTypeVariables
+  build-depends:
+    , base
+    , aeson
+    , bytestring
+    , cabal-plan
+    , case-insensitive
+    , containers
+    , foldl
+    , github         ^>= 0.29
+    , http-client
+    , http-types
+    , network-uri
+    , optparse-applicative ^>= 0.18
+    , ansi-wl-pprint >= 1
+    , prettyprinter
+    , req
+    , text
+    , turtle          ^>= 1.6.0
+    , uri-encode
