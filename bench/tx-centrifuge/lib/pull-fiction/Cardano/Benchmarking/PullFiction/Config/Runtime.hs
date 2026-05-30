@@ -41,6 +41,8 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
   , targetAddr, targetPort
     -- * Resolution.
   , resolve
+    -- * Helpers.
+  , partitionInputs
   ) where
 
 --------------------------------------------------------------------------------
