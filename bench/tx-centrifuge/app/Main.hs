@@ -515,9 +515,11 @@ discoverInitialFunds raw signingKeyPrefix signingKeyBase networkId = do
   -- UTxOs out at discovery time so they never enter the input queue.
   let dustThreshold = maxConfiguredFee raw
 
-  -- Build per-address (spendable, dust) split.
+  -- Build per-address (spendable, dust) split. The query returns results
+  -- keyed by 'AddressAny' (era-agnostic), so convert our ConwayEra-typed
+  -- addresses for lookup.
   let toAddrSummary (i, (skey, addr)) =
-        case Map.lookup addr utxosByAddr of
+        case Map.lookup (addressInEraToAny addr) utxosByAddr of
           Nothing    -> Nothing
           Just utxos ->
             let (spendableU, dustU) = partition
@@ -573,6 +575,13 @@ discoverInitialFunds raw signingKeyPrefix signingKeyBase networkId = do
   where
     -- Match the era used everywhere else in tx-centrifuge.
     eraSubcommand = "conway"
+
+-- | Erase the era index of an 'AddressInEra' for matching against the
+-- 'AddressAny' keys returned by 'UTxOQuery.queryUTxOsAtAddresses'. Address
+-- bytes are identical across Shelley-based eras; the era index is purely
+-- type-level.
+addressInEraToAny :: Api.AddressInEra era -> Api.AddressAny
+addressInEraToAny (Api.AddressInEra _ addr) = Api.toAddressAny addr
 
 -- | Maximum @fee@ across every configured builder (top-level + per-workload).
 -- This is the conservative dust threshold: a UTxO at or below this value
