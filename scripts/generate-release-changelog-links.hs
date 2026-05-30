@@ -30,8 +30,10 @@
   ghc-options: -Wall -Wextra -Wcompat
 -}
 
--- `nix build .#project.x86_64-linux.plan-nix.json` is a reliable way to
--- generate the `plan.json` to be fed to this script.
+-- `nix build .#project.x86_64-linux.plan-nix` generates the plan-nix output;
+-- the plan.json is available at result-json.
+-- Nix devshell users should prefer the `generate-release-changelog-links`
+-- binary instead of running this script directly.
 
 module Main (main) where
 
