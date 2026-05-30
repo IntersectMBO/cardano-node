@@ -34,8 +34,6 @@ executable generate-release-changelog-links
     , http-client
     , http-types
     , network-uri
-    , optparse-applicative ^>= 0.18
-    , ansi-wl-pprint >= 1
     , prettyprinter
     , req
     , text

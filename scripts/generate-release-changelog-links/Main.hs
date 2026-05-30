@@ -20,7 +20,6 @@ import           Network.HTTP.Types.Header (hLocation)
 import           Network.HTTP.Types.Status (found302)
 import qualified Network.URI as URI
 import qualified Network.URI.Encode as URIE
-import           Options.Applicative
 import           Prettyprinter
 import qualified Prettyprinter.Util as PP
 
