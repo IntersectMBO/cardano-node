@@ -66,7 +66,11 @@ This is the release process for node releases.
 9. QA runs the final integration test suite (`cardano-node-tests`).
 10. Performance testing is run against the final tag
     (see [Performance Testing](#performance-testing)).
-11. QA Lead and Performance Lead sign off → the GitHub release is
+11. SRE escalates deployments through all remaining environments up to
+    mainnet and monitors for issues. No new SRE sign-off is required —
+    their pre-release approval carries over — but any issues observed
+    during this window are reported back and can block promotion.
+12. QA Lead and Performance Lead sign off → the GitHub release is
     **promoted from pre-release to full release**.
 
 This is the release process for node release hot fixes:
