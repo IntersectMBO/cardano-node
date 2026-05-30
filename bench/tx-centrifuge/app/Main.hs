@@ -23,6 +23,7 @@ import Data.List (partition)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Last(..))
+import Numeric (readHex)
 import Numeric.Natural (Natural)
 import System.Environment (getArgs)
 import System.Exit (die, exitSuccess)
@@ -136,7 +137,7 @@ main = do
   ----------
 
   ( validated, codecConfig, networkId, networkMagic, tracers
-   , signingKeyPrefix, preflight ) <- loadConfig
+   , signingKeyPrefix, signingKeyBase, preflight ) <- loadConfig
 
   -- Callbacks.
   -------------
@@ -221,8 +222,9 @@ main = do
         -- From JSON/Aeson.Value to the cardano-node specific builder.
         builder <- interpretBuilder rawBuilder
         -- Based on index we create a new unique address/key for each builder.
-        let (signingKey, signingAddr) = createSigningKeyAndAddress
+        let (signingKey, signingAddr) = recycleKeyForWorkload
                                           signingKeyPrefix
+                                          signingKeyBase
                                           networkId
                                           builderIndex
         pure Runtime.BuilderHandle
@@ -423,15 +425,19 @@ interpretObserver raw = case Raw.observerType raw of
 --------------------------------------------------------------------------------
 
 -- | Load the operator-supplied recycle signing key and return the 61-char
--- hex prefix used for per-workload key derivation.
+-- hex prefix plus the workload-0 base suffix (as an integer in @0..4095@).
 --
 -- Reads a standard cardano-cli text-envelope @.skey@ file (payment or genesis
--- UTxO key type), hex-encodes the 32-byte raw secret, and validates that the
--- trailing 3 hex characters are @"000"@. The first 61 hex characters become
--- the prefix; @'createSigningKeyAndAddress'@ then appends the workload index
--- (@%03d@) as the last 3 characters, so workload 0 reproduces the supplied
--- key exactly while workloads 1..N derive distinct keys from the same prefix.
-loadSigningKeyPrefix :: FilePath -> IO String
+-- UTxO key type), hex-encodes the 32-byte raw secret, and splits it into a
+-- 61-char prefix + 3-char hex suffix. Any 3-hex-char suffix is accepted; the
+-- supplied key always corresponds to workload 0, and workload N's recycle
+-- key uses suffix @(base + N) mod 0x1000@.
+--
+-- This means cardano-cli-generated keys can be used as-is: the operator does
+-- not need to engineer a particular suffix. Discovery scans all 4096 possible
+-- addresses regardless of base, so previously-funded UTxOs at any suffix are
+-- picked up automatically.
+loadSigningKeyPrefix :: FilePath -> IO (String, Int)
 loadSigningKeyPrefix path = do
   eKey <- Fund.readSigningKey path
   skey <- case eKey of
@@ -443,12 +449,15 @@ loadSigningKeyPrefix path = do
        ++ ": expected 64 hex chars (32-byte ed25519 key), got "
        ++ show (length hex)
   let (prefix, suffix) = splitAt 61 hex
-  when (suffix /= "000") $
-    die $ "signing_key_file " ++ show path
-       ++ ": trailing 3 hex chars of the raw key must be \"000\", got "
-       ++ show suffix
-       ++ " — supply a key whose 32-byte secret ends in 0x000"
-  pure prefix
+  base <- case readHex suffix of
+    [(n, "")] | n >= 0 && n <= 0xfff -> pure n
+    _ -> die $ "signing_key_file " ++ show path
+            ++ ": trailing 3 hex chars not a valid hex value: "
+            ++ show suffix
+  hPutStrLn stderr $
+    "  Workload 0 base suffix: '" ++ suffix
+    ++ "' (index " ++ show base ++ ")"
+  pure (prefix, base)
 
 --------------------------------------------------------------------------------
 -- Initial UTxO discovery
@@ -468,22 +477,27 @@ loadSigningKeyPrefix path = do
 -- coupling lets tx-centrifuge rely on the operator's existing N2C node connection
 -- rather than introducing a separate top-level socket field.
 --
--- Dies if the *total* across all 1000 addresses is zero, printing workload 0's
--- bech32 address so the operator knows where to send the funding transaction.
+-- Dies if the *total* across all scanned addresses is zero, printing
+-- workload 0's bech32 address so the operator knows where to send the
+-- funding transaction.
 discoverInitialFunds
   :: Raw.Config
   -> String          -- ^ 61-char signing-key prefix.
+  -> Int             -- ^ Workload-0 base suffix (0..4095).
   -> Api.NetworkId
   -> IO (NE.NonEmpty Fund.Fund)
-discoverInitialFunds raw signingKeyPrefix networkId = do
-  -- Derive all 1000 candidate (skey, addr) pairs up front. Cheap: just 1000
-  -- ed25519 derivations.
-  let recycleKeys =
-        [ (n, createSigningKeyAndAddress signingKeyPrefix networkId n)
-        | n <- [0 .. 999]
+discoverInitialFunds raw signingKeyPrefix signingKeyBase networkId = do
+  -- Derive every (skey, addr) pair in the 3-hex-char suffix space (4096
+  -- entries). Cheap: just ed25519 derivations.
+  let scanEntries =
+        [ (i, keyForSuffixIndex signingKeyPrefix networkId i)
+        | i <- [0 .. suffixSpace - 1]
         ]
-      recycleAddrs = map (\(_, (_, addr)) -> addr) recycleKeys
-      workload0Addr = snd (snd (head recycleKeys))
+      scanAddrs = map (\(_, (_, addr)) -> addr) scanEntries
+      -- Workload 0's address (the supplied skey's address — what the
+      -- operator should fund if starting fresh).
+      workload0Addr = snd (keyForSuffixIndex signingKeyPrefix networkId
+                            signingKeyBase)
 
   -- Find the first 'nodetoclient' observer's socket path. By Map order
   -- (alphabetical by observer name) — document this in the README.
@@ -492,7 +506,7 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
   hPutStrLn stderr $
     "Querying UTxOs via N2C socket: " ++ queryObsSocket
   utxosByAddr <- UTxOQuery.queryUTxOsAtAddresses
-    queryObsSocket networkId recycleAddrs
+    queryObsSocket networkId scanAddrs
     >>= either (\e -> die $ "UTxO query failed: " ++ e) pure
 
   -- Compute the dust threshold: a UTxO with value <= maxFee cannot produce
@@ -502,7 +516,7 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
   let dustThreshold = maxConfiguredFee raw
 
   -- Build per-address (spendable, dust) split.
-  let toAddrSummary (n, (skey, addr)) =
+  let toAddrSummary (i, (skey, addr)) =
         case Map.lookup addr utxosByAddr of
           Nothing    -> Nothing
           Just utxos ->
@@ -515,15 +529,16 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
                     , Fund.fundSignKey = skey
                     })
                   spendableU
-            in Just (n, addr, spendableFunds, length dustU)
-      addrSummaries = mapMaybe toAddrSummary recycleKeys
+            in Just (i, addr, spendableFunds, length dustU)
+      addrSummaries = mapMaybe toAddrSummary scanEntries
       allFunds      = concatMap (\(_, _, fs, _) -> fs) addrSummaries
       totalSpend    = length allFunds
       totalDust     = sum (map (\(_, _, _, d) -> d) addrSummaries)
 
   case allFunds of
     [] -> die $ unlines $
-      [ "No spendable UTxOs found at any of the 1000 recycle addresses."
+      [ "No spendable UTxOs found at any of the "
+        ++ show suffixSpace ++ " scanned recycle addresses."
       ]
       ++ (if totalDust > 0
             then [ "(" ++ show totalDust
@@ -531,10 +546,11 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
                    ++ show dustThreshold ++ " lovelace were skipped.)" ]
             else [])
       ++
-      [ "Fund at least one of them (workload 0 is the natural default) via:"
+      [ "Fund workload 0's address:"
+      , "  " ++ T.unpack (Api.serialiseAddress workload0Addr)
+      , "e.g.:"
       , "  cardano-cli " ++ eraSubcommand ++ " transaction build \\"
-      , "    --tx-out " ++ T.unpack (Api.serialiseAddress workload0Addr)
-            ++ "+<lovelace> \\"
+      , "    --tx-out <addr-above>+<lovelace> \\"
       , "    ..."
       , "Then restart tx-centrifuge."
       ]
@@ -542,12 +558,12 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
       hPutStrLn stderr $
         "Discovered UTxOs (dust threshold = "
         ++ show dustThreshold ++ " lovelace):"
-      forM_ addrSummaries $ \(n, addr, fs', dustCount) ->
+      forM_ addrSummaries $ \(i, addr, fs', dustCount) ->
         let count  = length fs'
             totAda = sum (map Fund.fundValue fs') `div` 1_000_000
         in hPutStrLn stderr $
-             printf "  %03d  %s  %d UTxOs, %d ADA  (%d dust skipped)"
-               n (T.unpack (Api.serialiseAddress addr))
+             printf "  %03x  %s  %d UTxOs, %d ADA  (%d dust skipped)"
+               i (T.unpack (Api.serialiseAddress addr))
                count totAda dustCount
       hPutStrLn stderr $
         "Total: " ++ show totalSpend
@@ -623,30 +639,35 @@ findFirstNodeToClientSocket raw = case Raw.maybeObservers raw of
 -- Builder address derivation
 --------------------------------------------------------------------------------
 
--- | Derive workload index @n@'s signing key and address from the
--- operator-supplied 61-char hex prefix. Workload 0 reproduces the supplied
--- key exactly; higher indices derive distinct keys by varying the trailing
--- 3 hex characters.
-createSigningKeyAndAddress
+-- | Number of distinct keys/addresses derivable from the prefix. 3 hex
+-- chars → 4096 unique suffixes.
+suffixSpace :: Int
+suffixSpace = 0x1000
+
+-- | Derive the signing key + address for the address-space index @i@
+-- (@0..4095@), using the prefix + a 3-hex-char suffix. This is the
+-- address-level derivation; see 'recycleKeyForWorkload' for the
+-- workload-index mapping.
+keyForSuffixIndex
   :: String
   -- ^ 61-char hex prefix from 'loadSigningKeyPrefix'.
   -> Api.NetworkId
   -> Int
-  -- Signing key used for all generated transactions.
-  -- Destination address derived from the signing key.
+  -- ^ Suffix index (@0..4095@, encoded as 3-hex-char suffix).
   -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)
-createSigningKeyAndAddress prefix networkId n
-  | n < 0 || n > 999 =
-    error $ "createSigningKeyAndAddress: out of range (0-999): " ++ show n
+keyForSuffixIndex prefix networkId i
+  | i < 0 || i >= suffixSpace =
+    error $ "keyForSuffixIndex: out of range (0-"
+         ++ show (suffixSpace - 1) ++ "): " ++ show i
   | otherwise =
-      let suffix = printf "%03d" n
+      let suffix = printf "%03x" i
           hex = prefix ++ suffix
           eitherSkey = Api.deserialiseFromRawBytesHex
                         @(Api.SigningKey Api.PaymentKey)
                         (BS8.pack hex)
       in case eitherSkey of
         Left err -> error $
-                      "createSigningKeyAndAddress: Failed to deserialise: "
+                      "keyForSuffixIndex: Failed to deserialise: "
                       ++ show err
         Right signingKey ->
           let signingAddr =
@@ -658,6 +679,20 @@ createSigningKeyAndAddress prefix networkId n
                       (Api.getVerificationKey signingKey)))
                   Api.NoStakeAddress
           in (signingKey, signingAddr)
+
+-- | Recycle key + address for workload index @n@, given the workload-0 base
+-- suffix from the supplied skey. Workload 0 reproduces the supplied key
+-- exactly; workload N uses suffix @(base + n) mod 4096@.
+recycleKeyForWorkload
+  :: String
+  -> Int
+  -- ^ Workload-0 base suffix (from 'loadSigningKeyPrefix').
+  -> Api.NetworkId
+  -> Int
+  -- ^ Workload index.
+  -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)
+recycleKeyForWorkload prefix base networkId n =
+  keyForSuffixIndex prefix networkId ((base + n) `mod` suffixSpace)
 
 --------------------------------------------------------------------------------
 -- Cardano parameters
@@ -786,8 +821,11 @@ loadConfig
           -- | Logging / metrics tracers.
         , Tracing.Tracers
           -- | 61-char hex prefix derived from the operator-supplied recycle
-          -- signing key. Workload index is appended as @%03d@ at use sites.
+          -- signing key. Workload N's suffix is @(base + N) mod 4096@.
         , String
+          -- | Workload-0 base suffix (the supplied key's last 3 hex chars,
+          -- parsed as a hex integer in @0..4095@).
+        , Int
           -- | Preflight mode flag (from @--preflight@ CLI arg).
         , Bool
         )
@@ -829,13 +867,13 @@ loadConfig = do
 
   -- Load operator-supplied recycle signing key.
   hPutStrLn stderr $ "Loading signing key from: " ++ signingKeyPath
-  signingKeyPrefix <- loadSigningKeyPrefix signingKeyPath
+  (signingKeyPrefix, signingKeyBase) <- loadSigningKeyPrefix signingKeyPath
 
   -- Discover initial UTxOs on-chain.
   -- Stateless restart: the live fund set is whatever UTxOs sit at our
   -- recycle addresses right now, queried via N2C LocalStateQuery. The
   -- legacy funds.json/initial_inputs pathway no longer exists.
-  funds <- discoverInitialFunds raw signingKeyPrefix networkId
+  funds <- discoverInitialFunds raw signingKeyPrefix signingKeyBase networkId
 
   -- Validate config (pull-fiction validation; funds were obtained out-of-band).
   validated <- either die pure $ Validated.validate raw funds
@@ -844,7 +882,7 @@ loadConfig = do
   tracers <- Tracing.setupTracers configFile
 
   pure ( validated, codecConfig, networkId, networkMagic, tracers
-       , signingKeyPrefix, preflight
+       , signingKeyPrefix, signingKeyBase, preflight
        )
 
 --------------------------------------------------------------------------------
