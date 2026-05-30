@@ -35,6 +35,7 @@ package acts
   flags: -finitary
 
 packages:
+  scripts/generate-release-changelog-links
   cardano-node
   cardano-node-capi
   cardano-node-chairman

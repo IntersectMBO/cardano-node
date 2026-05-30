@@ -21,6 +21,7 @@ result*
 stack.yaml.lock
 .ghcid
 .claude/settings.local.json
+.direnv
 
 /.cache
 /db

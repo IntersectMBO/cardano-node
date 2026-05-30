@@ -1,40 +1,3 @@
-#!/usr/bin/env -S cabal --verbose=1 --index-state=2025-04-16T18:30:40Z run --
-{- cabal:
-  build-depends:
-    base,
-    aeson,
-    bytestring,
-    cabal-plan,
-    case-insensitive,
-    containers,
-    foldl,
-    github ^>= 0.29,
-    http-client,
-    http-types,
-    network-uri,
-    optparse-applicative ^>= 0.18,
-    ansi-wl-pprint >= 1,
-    prettyprinter,
-    req,
-    text,
-    turtle ^>= 1.6.0,
-    uri-encode,
-  default-extensions:
-    BlockArguments,
-    DataKinds,
-    ImportQualifiedPost,
-    LambdaCase,
-    OverloadedStrings,
-    RecordWildCards,
-    ScopedTypeVariables
-  ghc-options: -Wall -Wextra -Wcompat
--}
-
--- `nix build .#project.x86_64-linux.plan-nix` generates the plan-nix output;
--- the plan.json is available at result-json.
--- Nix devshell users should prefer the `generate-release-changelog-links`
--- binary instead of running this script directly.
-
 module Main (main) where
 
 import qualified Control.Foldl as Foldl
@@ -99,10 +62,10 @@ main = sh do
 generateReleaseChangelogLinksDescription :: Description
 generateReleaseChangelogLinksDescription = Description $
   mconcat
-    [ "generate-release-changelog-links.hs"
+    [ "generate-release-changelog-links"
     , line, line
     , fillSep $ PP.words
-        "This script requires a GitHub personal access token, which can be \
+        "This tool requires a GitHub personal access token, which can be \
         \generated either at https://github.com/settings/tokens or retrieved \
         \using the GitHub CLI tool with `gh auth token` (after logging in)"
     ]
