@@ -112,12 +112,12 @@ resolveConfig path inputs = do
     -- input as output.
     (\_ _ _ -> pure Runtime.BuilderHandle
       { Runtime.bhInputsPerBatch = 1
-      , Runtime.bhBuildPayload   = \is -> pure ((), head is, is)
+      , Runtime.bhBuildPayload   = \is -> pure (Just ((), head is, is))
       })
     -- mkObserver: no test config uses observers.
     (\_ name _ -> fail $ "resolveConfig: unexpected observer: " ++ name)
-    -- onRecycle: no-op.
-    (\_ _ -> pure ())
+    -- onRecycle: no-op (String -> key -> Bool -> [input] -> IO ()).
+    (\_ _ _ _ -> pure ())
     validated
 
 -- | Load a generator config from a JSON file with dummy inputs and resolve into

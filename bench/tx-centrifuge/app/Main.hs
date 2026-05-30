@@ -19,6 +19,7 @@ import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch, finally)
 import Control.Monad (forM_, when)
 import Data.Bifunctor (first)
+import Data.List (partition)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Last(..))
@@ -234,7 +235,19 @@ main = do
                                  inputFunds (outputsPerTx builder)
                                  (L.Coin (fee builder))
               case buildTxAns of
-                Left err -> die $ "TxAssembly.buildTx: " ++ err
+                Left err -> do
+                  -- Drop the inputs instead of dying. Most common cause is
+                  -- dust: a UTxO whose value <= fee cannot produce a valid
+                  -- (non-zero) change output, so the tx cannot be built.
+                  -- Logged here for visibility; the runtime treats Nothing
+                  -- as "drop and continue" without recycling these inputs.
+                  hPutStrLn stderr $
+                    "[" ++ builderName ++ "] dropping inputs: " ++ err
+                  forM_ inputFunds $ \f ->
+                    hPutStrLn stderr $
+                      "  - " ++ show (Fund.fundTxIn f)
+                      ++ " (" ++ show (Fund.fundValue f) ++ " lovelace)"
+                  pure Nothing
                 Right (tx, outputFunds) -> do
                   -- Trace the building action.
                   Tracing.traceWith
@@ -244,7 +257,7 @@ main = do
                     )
                   -- The TxID is needed for the "on_confirm" recycling strategy.
                   let txId = Api.getTxId (Api.getTxBody tx)
-                  pure (txId, tx, outputFunds)
+                  pure (Just (txId, tx, outputFunds))
           }
 
   -- IOManager: no-op on POSIX, required on Windows for IOCP. All network I/O
@@ -482,28 +495,43 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
     queryObsSocket networkId recycleAddrs
     >>= either (\e -> die $ "UTxO query failed: " ++ e) pure
 
-  -- Build flat fund list. Each fund's signing key matches the address that
-  -- held its TxIn, so the tx can always be signed.
-  let toFunds (n, (skey, addr)) =
+  -- Compute the dust threshold: a UTxO with value <= maxFee cannot produce
+  -- a valid non-zero change output for the most expensive configured
+  -- builder, so it is unspendable by at least one workload. Filter such
+  -- UTxOs out at discovery time so they never enter the input queue.
+  let dustThreshold = maxConfiguredFee raw
+
+  -- Build per-address (spendable, dust) split.
+  let toAddrSummary (n, (skey, addr)) =
         case Map.lookup addr utxosByAddr of
           Nothing    -> Nothing
           Just utxos ->
-            let fs = map
-                       (\(txin, val) -> Fund.Fund
-                         { Fund.fundTxIn    = txin
-                         , Fund.fundValue   = val
-                         , Fund.fundSignKey = skey
-                         })
-                       utxos
-            in Just (n, addr, fs)
-      nonzero    = mapMaybe toFunds recycleKeys
-      allFunds   = concatMap (\(_, _, fs) -> fs) nonzero
-      totalCount = length allFunds
+            let (spendableU, dustU) = partition
+                  (\(_, val) -> val > dustThreshold) utxos
+                spendableFunds = map
+                  (\(txin, val) -> Fund.Fund
+                    { Fund.fundTxIn    = txin
+                    , Fund.fundValue   = val
+                    , Fund.fundSignKey = skey
+                    })
+                  spendableU
+            in Just (n, addr, spendableFunds, length dustU)
+      addrSummaries = mapMaybe toAddrSummary recycleKeys
+      allFunds      = concatMap (\(_, _, fs, _) -> fs) addrSummaries
+      totalSpend    = length allFunds
+      totalDust     = sum (map (\(_, _, _, d) -> d) addrSummaries)
 
   case allFunds of
-    [] -> die $ unlines
-      [ "No UTxOs found at any of the 1000 recycle addresses."
-      , "Fund at least one of them (workload 0 is the natural default) via:"
+    [] -> die $ unlines $
+      [ "No spendable UTxOs found at any of the 1000 recycle addresses."
+      ]
+      ++ (if totalDust > 0
+            then [ "(" ++ show totalDust
+                   ++ " dust UTxO(s) at or below the configured fee of "
+                   ++ show dustThreshold ++ " lovelace were skipped.)" ]
+            else [])
+      ++
+      [ "Fund at least one of them (workload 0 is the natural default) via:"
       , "  cardano-cli " ++ eraSubcommand ++ " transaction build \\"
       , "    --tx-out " ++ T.unpack (Api.serialiseAddress workload0Addr)
             ++ "+<lovelace> \\"
@@ -511,18 +539,47 @@ discoverInitialFunds raw signingKeyPrefix networkId = do
       , "Then restart tx-centrifuge."
       ]
     (f:fs) -> do
-      hPutStrLn stderr "Discovered UTxOs:"
-      forM_ nonzero $ \(n, addr, fs') ->
-        let count   = length fs'
-            totAda  = sum (map Fund.fundValue fs') `div` 1_000_000
-        in hPutStrLn stderr $ printf "  %03d  %s  %d UTxOs, %d ADA"
-             n (T.unpack (Api.serialiseAddress addr)) count totAda
-      hPutStrLn stderr $ "Total: " ++ show totalCount
-        ++ " UTxOs across " ++ show (length nonzero) ++ " address(es)"
+      hPutStrLn stderr $
+        "Discovered UTxOs (dust threshold = "
+        ++ show dustThreshold ++ " lovelace):"
+      forM_ addrSummaries $ \(n, addr, fs', dustCount) ->
+        let count  = length fs'
+            totAda = sum (map Fund.fundValue fs') `div` 1_000_000
+        in hPutStrLn stderr $
+             printf "  %03d  %s  %d UTxOs, %d ADA  (%d dust skipped)"
+               n (T.unpack (Api.serialiseAddress addr))
+               count totAda dustCount
+      hPutStrLn stderr $
+        "Total: " ++ show totalSpend
+        ++ " spendable UTxOs across " ++ show (length addrSummaries)
+        ++ " address(es); " ++ show totalDust ++ " dust skipped"
       pure (f NE.:| fs)
   where
     -- Match the era used everywhere else in tx-centrifuge.
     eraSubcommand = "conway"
+
+-- | Maximum @fee@ across every configured builder (top-level + per-workload).
+-- This is the conservative dust threshold: a UTxO at or below this value
+-- cannot produce a valid change output for *any* configured workload.
+-- Defaults to 1 ADA (1_000_000 lovelace) if no builder declares a fee. This
+-- matches the codebase's convention of integer-ADA fees in the examples
+-- (real-network minimums for a simple value tx are ~0.2 ADA; 1 ADA rounds
+-- up cleanly and keeps recycled UTxO values on integer-ADA boundaries).
+maxConfiguredFee :: Raw.Config -> Integer
+maxConfiguredFee raw = case configuredFees of
+  [] -> 1_000_000
+  fs -> maximum fs
+  where
+    topBuilders = maybe [] (:[]) (Raw.maybeTopLevelBuilder raw)
+    wlBuilders  = case Raw.maybeWorkloads raw of
+      Nothing -> []
+      Just wls -> mapMaybe Raw.maybeBuilder (Map.elems wls)
+    configuredFees =
+      mapMaybe
+        (\b -> Aeson.Types.parseMaybe
+                 (Aeson.withObject "ValueParams" (.: "fee"))
+                 (Raw.builderParams b))
+        (topBuilders ++ wlBuilders)
 
 -- | Locate the @socket_path@ of the first @nodetoclient@ observer in the
 -- raw config. Picks alphabetically by observer name when multiple are
