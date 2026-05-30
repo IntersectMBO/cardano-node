@@ -113,8 +113,12 @@ data ObserverHandle key confirmed = ObserverHandle
 data BuilderHandle key input payload = BuilderHandle
   { -- | How many inputs the builder needs per call to 'bhBuildPayload'.
     bhInputsPerBatch :: !Natural
-    -- | Returns @(confirmation key, payload, recyclable outputs)@.
-  , bhBuildPayload   :: [input] -> IO (key, payload, [input])
+    -- | Returns @Just (confirmation key, payload, recyclable outputs)@ on
+    -- success. Returns 'Nothing' to drop the consumed inputs without
+    -- enqueueing a payload or recycling — e.g. when an input is dust the
+    -- builder cannot turn into a valid output. The runtime loops on
+    -- 'Nothing'; the inputs are simply gone from the pipeline.
+  , bhBuildPayload   :: [input] -> IO (Maybe (key, payload, [input]))
   }
 
 --------------------------------------------------------------------------------
@@ -362,8 +366,14 @@ resolveBuilder
       inputs <- STM.atomically $
         replicateM (fromIntegral (bhInputsPerBatch builderHandle))
           (STM.readTQueue (pipeInputQueue thePipe))
-      (key, payload, outputInputs) <- bhBuildPayload builderHandle inputs
-      enqueue inputs key payload outputInputs
+      mResult <- bhBuildPayload builderHandle inputs
+      case mResult of
+        Just (key, payload, outputInputs) ->
+          enqueue inputs key payload outputInputs
+        Nothing ->
+          -- Builder dropped the inputs (e.g. dust). Nothing to enqueue
+          -- and nothing to recycle; the inputs are gone from the pipeline.
+          pure ()
   Async.link async
   -- Link the recycler async (consistent with builder async linking above).
   case mRecycler of
