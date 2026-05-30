@@ -29,13 +29,11 @@ executable generate-release-changelog-links
     , cabal-plan
     , case-insensitive
     , containers
-    , foldl
     , github         ^>= 0.29
     , http-client
     , http-types
     , network-uri
-    , prettyprinter
+    , optparse-applicative
     , req
     , text
-    , turtle          ^>= 1.6.0
     , uri-encode
