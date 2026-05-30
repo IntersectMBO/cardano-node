@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,16 +17,20 @@ module Main (main) where
 ----------
 import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
-import Control.Monad (when)
+import Control.Monad (forM_, when)
 import Data.Bifunctor (first)
 import Data.List.NonEmpty qualified as NE
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Last(..))
 import Numeric.Natural (Natural)
 import System.Environment (getArgs)
 import System.Exit (die)
 import System.IO (hPutStrLn, stderr)
 import Text.Printf (printf)
+----------
+-- text --
+----------
+import Data.Text qualified as T
 -----------
 -- aeson --
 -----------
@@ -119,6 +124,7 @@ import Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxSubmission
 import Cardano.Benchmarking.TxCentrifuge.Fund qualified as Fund
 import Cardano.Benchmarking.TxCentrifuge.Tracing qualified as Tracing
 import Cardano.Benchmarking.TxCentrifuge.TxAssembly qualified as TxAssembly
+import Cardano.Benchmarking.TxCentrifuge.UTxOQuery qualified as UTxOQuery
 
 --------------------------------------------------------------------------------
 
@@ -316,27 +322,10 @@ main = do
 --------------------------------------------------------------------------------
 -- Initial funds.
 --------------------------------------------------------------------------------
-
--- | How to load initial funds for the generator.
 --
--- This type is node-specific (it references signing keys and network magic),
--- so it lives here rather than in the @pull-fiction@ sub-library. The raw JSON
--- config stores this as an opaque 'Aeson.Value'; @Main@ parses it into this ADT
--- and loads funds before passing them to 'Validated.validate'.
-data InitialFunds
-  = GenesisUTxOKeys
-      !Natural  -- ^ Network magic.
-      !FilePath -- ^ Path to signing keys file.
-
-instance Aeson.FromJSON InitialFunds where
-  parseJSON = Aeson.withObject "InitialFunds" $ \o -> do
-    ty <- o .: "type" :: Aeson.Types.Parser String
-    case ty of
-      "genesis_utxo_keys" -> do
-        p <- o .: "params"
-        GenesisUTxOKeys <$> p .: "network_magic" <*> p .: "signing_keys_file"
-      _ -> fail $ "InitialFunds: unknown type " ++ show ty
-                ++ ", expected \"genesis_utxo_keys\""
+-- Initial UTxOs are discovered on-chain at startup via 'UTxOQuery'. See
+-- 'loadInitialFunds' below for the workflow. The legacy @funds.json@-based
+-- 'InitialFunds' ADT was removed in favour of stateless on-chain discovery.
 
 --------------------------------------------------------------------------------
 -- Builder interpretation.
@@ -443,6 +432,135 @@ loadSigningKeyPrefix path = do
        ++ " — supply a key whose 32-byte secret ends in 0x000"
   pure prefix
 
+--------------------------------------------------------------------------------
+-- Initial UTxO discovery
+--------------------------------------------------------------------------------
+
+-- | Discover the live set of UTxOs spendable by this tx-centrifuge instance.
+--
+-- Derives all 1000 @(skey, addr)@ pairs from the operator's seed prefix
+-- (indices @000..999@), then queries the local node for UTxOs at every one of
+-- those addresses in a single @QueryUTxOByAddress@ call. UTxOs found at index
+-- @n@'s address are tagged with index @n@'s signing key, so they can later be
+-- spent regardless of which workload's input queue they land in.
+--
+-- The query socket is the @socket_path@ of the first declared @nodetoclient@
+-- observer (alphabetical by observer name). At least one such observer is
+-- required; tx-centrifuge dies clearly if none is configured. This intentional
+-- coupling lets tx-centrifuge rely on the operator's existing N2C node connection
+-- rather than introducing a separate top-level socket field.
+--
+-- Dies if the *total* across all 1000 addresses is zero, printing workload 0's
+-- bech32 address so the operator knows where to send the funding transaction.
+discoverInitialFunds
+  :: Raw.Config
+  -> String          -- ^ 61-char signing-key prefix.
+  -> Api.NetworkId
+  -> IO (NE.NonEmpty Fund.Fund)
+discoverInitialFunds raw signingKeyPrefix networkId = do
+  -- Derive all 1000 candidate (skey, addr) pairs up front. Cheap: just 1000
+  -- ed25519 derivations.
+  let recycleKeys =
+        [ (n, createSigningKeyAndAddress signingKeyPrefix networkId n)
+        | n <- [0 .. 999]
+        ]
+      recycleAddrs = map (\(_, (_, addr)) -> addr) recycleKeys
+      workload0Addr = snd (snd (head recycleKeys))
+
+  -- Find the first 'nodetoclient' observer's socket path. By Map order
+  -- (alphabetical by observer name) — document this in the README.
+  queryObsSocket <- findFirstNodeToClientSocket raw
+
+  hPutStrLn stderr $
+    "Querying UTxOs via N2C socket: " ++ queryObsSocket
+  utxosByAddr <- UTxOQuery.queryUTxOsAtAddresses
+    queryObsSocket networkId recycleAddrs
+    >>= either (\e -> die $ "UTxO query failed: " ++ e) pure
+
+  -- Build flat fund list. Each fund's signing key matches the address that
+  -- held its TxIn, so the tx can always be signed.
+  let toFunds (n, (skey, addr)) =
+        case Map.lookup addr utxosByAddr of
+          Nothing    -> Nothing
+          Just utxos ->
+            let fs = map
+                       (\(txin, val) -> Fund.Fund
+                         { Fund.fundTxIn    = txin
+                         , Fund.fundValue   = val
+                         , Fund.fundSignKey = skey
+                         })
+                       utxos
+            in Just (n, addr, fs)
+      nonzero    = mapMaybe toFunds recycleKeys
+      allFunds   = concatMap (\(_, _, fs) -> fs) nonzero
+      totalCount = length allFunds
+
+  case allFunds of
+    [] -> die $ unlines
+      [ "No UTxOs found at any of the 1000 recycle addresses."
+      , "Fund at least one of them (workload 0 is the natural default) via:"
+      , "  cardano-cli " ++ eraSubcommand ++ " transaction build \\"
+      , "    --tx-out " ++ T.unpack (Api.serialiseAddress workload0Addr)
+            ++ "+<lovelace> \\"
+      , "    ..."
+      , "Then restart tx-centrifuge."
+      ]
+    (f:fs) -> do
+      hPutStrLn stderr "Discovered UTxOs:"
+      forM_ nonzero $ \(n, addr, fs') ->
+        let count   = length fs'
+            totAda  = sum (map Fund.fundValue fs') `div` 1_000_000
+        in hPutStrLn stderr $ printf "  %03d  %s  %d UTxOs, %d ADA"
+             n (T.unpack (Api.serialiseAddress addr)) count totAda
+      hPutStrLn stderr $ "Total: " ++ show totalCount
+        ++ " UTxOs across " ++ show (length nonzero) ++ " address(es)"
+      pure (f NE.:| fs)
+  where
+    -- Match the era used everywhere else in tx-centrifuge.
+    eraSubcommand = "conway"
+
+-- | Locate the @socket_path@ of the first @nodetoclient@ observer in the
+-- raw config. Picks alphabetically by observer name when multiple are
+-- declared (see README). Dies with a helpful message if none is configured.
+findFirstNodeToClientSocket :: Raw.Config -> IO FilePath
+findFirstNodeToClientSocket raw = case Raw.maybeObservers raw of
+  Nothing -> die noN2CMsg
+  Just obsMap ->
+    let entries = Map.toAscList obsMap
+        pick (name, obs) = case Raw.observerType obs of
+          "nodetoclient" ->
+            case Aeson.Types.parseEither
+                   (Aeson.withObject "N2C ObserverParams" (.: "socket_path"))
+                   (Raw.observerParams obs) of
+              Right path -> Just (name, path :: FilePath)
+              Left  _    -> Nothing
+          _ -> Nothing
+    in case mapMaybe pick entries of
+      []                  -> die noN2CMsg
+      ((name, path) : _ ) -> do
+        hPutStrLn stderr $
+          "Using N2C observer '" ++ name
+          ++ "' for initial UTxO discovery"
+        pure path
+  where
+    noN2CMsg = unlines
+      [ "tx-centrifuge requires at least one 'nodetoclient' observer for"
+      , "initial UTxO discovery. Add one to your config, e.g.:"
+      , "  \"observers\": {"
+      , "    \"local-follower\": {"
+      , "      \"type\": \"nodetoclient\","
+      , "      \"params\": {"
+      , "        \"socket_path\": \"/run/cardano-node/node.socket\","
+      , "        \"confirmation_depth\": 2"
+      , "      }"
+      , "    }"
+      , "  }"
+      ]
+
+--------------------------------------------------------------------------------
+-- Builder address derivation
+--------------------------------------------------------------------------------
+
 -- | Derive workload index @n@'s signing key and address from the
 -- operator-supplied 61-char hex prefix. Workload 0 reproduces the supplied
 -- key exactly; higher indices derive distinct keys by varying the trailing
@@ -545,26 +663,9 @@ loadConfig = do
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
 
-  -- Load initial funds.
-  -- Parse the opaque initialInputs JSON into the node-level InitialFunds ADT,
-  -- then load actual UTxO funds before validation.
-  funds <- case Aeson.fromJSON (Raw.initialInputs raw) of
-    Aeson.Error err -> die $ "initialInputs: " ++ err
-    Aeson.Success (GenesisUTxOKeys magic path) -> do
-      hPutStrLn stderr $ "Loading funds from: " ++ path
-      result <- Fund.loadFunds (magicToNetworkId magic) path
-      case result of
-        Left err -> die ("Fund.loadFunds: " ++ err)
-        Right [] -> die "Fund.loadFunds: no funds loaded"
-        Right (f:fs) -> do
-          let allFunds = f NE.:| fs
-          hPutStrLn stderr $ "  Loaded " ++ show (NE.length allFunds) ++ " funds"
-          pure allFunds
-  -- Validate config.
-  -- Pipeline: Raw → Validated (with pre-loaded funds).
-  validated <- either die pure $ Validated.validate raw funds
-
   -- Load node configuration and create consensus protocol.
+  -- NetworkId/NetworkMagic are derived here; they are needed before the UTxO
+  -- query (for both address derivation and the LocalStateQuery connection).
   hPutStrLn stderr $ "Loading node config from: " ++ nodeConfigPath
   nodeConfig <- mkNodeConfig nodeConfigPath >>= either die pure
   protocol   <- mkConsensusProtocol nodeConfig >>= either die pure
@@ -575,6 +676,15 @@ loadConfig = do
   -- Load operator-supplied recycle signing key.
   hPutStrLn stderr $ "Loading signing key from: " ++ signingKeyPath
   signingKeyPrefix <- loadSigningKeyPrefix signingKeyPath
+
+  -- Discover initial UTxOs on-chain.
+  -- Stateless restart: the live fund set is whatever UTxOs sit at our
+  -- recycle addresses right now, queried via N2C LocalStateQuery. The
+  -- legacy funds.json/initial_inputs pathway no longer exists.
+  funds <- discoverInitialFunds raw signingKeyPrefix networkId
+
+  -- Validate config (pull-fiction validation; funds were obtained out-of-band).
+  validated <- either die pure $ Validated.validate raw funds
 
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
@@ -641,8 +751,3 @@ protocolToNetworkMagic
 protocolToNetworkMagic _ =
   error "protocolToNetworkMagic: non-Cardano protocol"
 
--- | Convert a raw network magic number to a 'Api.NetworkId'.
--- Mainnet uses the well-known magic 764824073; everything else is a testnet.
-magicToNetworkId :: Natural -> Api.NetworkId
-magicToNetworkId 764824073 = Api.Mainnet
-magicToNetworkId n         = Api.Testnet (Api.NetworkMagic (fromIntegral n))

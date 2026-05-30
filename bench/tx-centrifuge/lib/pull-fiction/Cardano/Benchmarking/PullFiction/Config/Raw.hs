@@ -92,7 +92,9 @@ noUnknownFields name obj known =
 data Config = Config
   { -- | Raw JSON value describing how to load initial inputs.
     -- Interpretation is left to the caller (e.g. @Main.hs@).
-    initialInputs :: !Aeson.Value
+    -- Optional: callers may discover inputs out-of-band (e.g. via on-chain
+    -- UTxO query) and pass them directly to 'Validated.validate'.
+    initialInputs :: !(Maybe Aeson.Value)
     -- | Optional @\"observers\"@ map (keyed by name).
     -- Because Aeson decodes JSON objects into a 'Map', duplicate observer names
     -- are silently discarded (last value wins).
@@ -117,7 +119,7 @@ instance Aeson.FromJSON Config where
   -- parsed by the caller (tracing, nodeConfig, protocol_parameters, etc.).
   parseJSON = Aeson.withObject "Config" $ \o ->
     Config
-      <$> o .:  "initial_inputs"
+      <$> o .:? "initial_inputs"
       <*> o .:? "observers"
       <*> o .:? "builder"
       <*> Aeson.Types.explicitParseFieldMaybe parseTopLevelRateLimit o
