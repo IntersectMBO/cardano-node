@@ -128,7 +128,8 @@ main = do
   -- Config.
   ----------
 
-  (validated, codecConfig, networkId, networkMagic, tracers) <- loadConfig
+  (validated, codecConfig, networkId, networkMagic, tracers, signingKeyPrefix) <-
+    loadConfig
 
   -- Callbacks.
   -------------
@@ -214,6 +215,7 @@ main = do
         builder <- interpretBuilder rawBuilder
         -- Based on index we create a new unique address/key for each builder.
         let (signingKey, signingAddr) = createSigningKeyAndAddress
+                                          signingKeyPrefix
                                           networkId
                                           builderIndex
         pure Runtime.BuilderHandle
@@ -413,25 +415,51 @@ interpretObserver raw = case Raw.observerType raw of
 -- Signing key loading
 --------------------------------------------------------------------------------
 
--- | Load a signing key from a hex string, applying an integer suffix to the
--- last 3 hex characters, and derive its address.
+-- | Load the operator-supplied recycle signing key and return the 61-char
+-- hex prefix used for per-workload key derivation.
+--
+-- Reads a standard cardano-cli text-envelope @.skey@ file (payment or genesis
+-- UTxO key type), hex-encodes the 32-byte raw secret, and validates that the
+-- trailing 3 hex characters are @"000"@. The first 61 hex characters become
+-- the prefix; @'createSigningKeyAndAddress'@ then appends the workload index
+-- (@%03d@) as the last 3 characters, so workload 0 reproduces the supplied
+-- key exactly while workloads 1..N derive distinct keys from the same prefix.
+loadSigningKeyPrefix :: FilePath -> IO String
+loadSigningKeyPrefix path = do
+  eKey <- Fund.readSigningKey path
+  skey <- case eKey of
+    Left  err -> die $ "signing_key_file " ++ show path ++ ": " ++ err
+    Right k   -> pure k
+  let hex = BS8.unpack (Api.serialiseToRawBytesHex skey)
+  when (length hex /= 64) $
+    die $ "signing_key_file " ++ show path
+       ++ ": expected 64 hex chars (32-byte ed25519 key), got "
+       ++ show (length hex)
+  let (prefix, suffix) = splitAt 61 hex
+  when (suffix /= "000") $
+    die $ "signing_key_file " ++ show path
+       ++ ": trailing 3 hex chars of the raw key must be \"000\", got "
+       ++ show suffix
+       ++ " — supply a key whose 32-byte secret ends in 0x000"
+  pure prefix
+
+-- | Derive workload index @n@'s signing key and address from the
+-- operator-supplied 61-char hex prefix. Workload 0 reproduces the supplied
+-- key exactly; higher indices derive distinct keys by varying the trailing
+-- 3 hex characters.
 createSigningKeyAndAddress
-  :: Api.NetworkId
+  :: String
+  -- ^ 61-char hex prefix from 'loadSigningKeyPrefix'.
+  -> Api.NetworkId
   -> Int
   -- Signing key used for all generated transactions.
   -- Destination address derived from the signing key.
   -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)
-createSigningKeyAndAddress networkId n
+createSigningKeyAndAddress prefix networkId n
   | n < 0 || n > 999 =
     error $ "createSigningKeyAndAddress: out of range (0-999): " ++ show n
   | otherwise =
-      let -- Hex string (32 bytes = 64 hex chars).
-          -- We use 61 chars + 3 chars suffix = 64 chars total.
-          -- If the input string is a CBOR-encoded hex string (e.g. from an
-          -- .skey file), strip the first 4 characters ("5820") which represent
-          -- the CBOR type and length prefix for 32 bytes of raw data.
-          prefix = "bed03030fd08a600647d99fa7cd94dae3ddab99b199c3f08f81949db3e422"
-          suffix = printf "%03d" n
+      let suffix = printf "%03d" n
           hex = prefix ++ suffix
           eitherSkey = Api.deserialiseFromRawBytesHex
                         @(Api.SigningKey Api.PaymentKey)
@@ -488,6 +516,9 @@ loadConfig
         , Api.NetworkMagic
           -- | Logging / metrics tracers.
         , Tracing.Tracers
+          -- | 61-char hex prefix derived from the operator-supplied recycle
+          -- signing key. Workload index is appended as @%03d@ at use sites.
+        , String
         )
 loadConfig = do
   args <- getArgs
@@ -508,7 +539,8 @@ loadConfig = do
         case Aeson.Types.parseEither (Aeson.withObject "Config" (.: field)) rawValue of
           Left err -> die $ "Config: " ++ err
           Right v  -> pure v
-  nodeConfigPath <- parseField "nodeConfig"
+  nodeConfigPath  <- parseField "nodeConfig"
+  signingKeyPath  <- parseField "signing_key_file"
   raw <- case Aeson.fromJSON rawValue of
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
@@ -540,10 +572,16 @@ loadConfig = do
       networkId    = protocolToNetworkId protocol
       networkMagic = protocolToNetworkMagic protocol
 
+  -- Load operator-supplied recycle signing key.
+  hPutStrLn stderr $ "Loading signing key from: " ++ signingKeyPath
+  signingKeyPrefix <- loadSigningKeyPrefix signingKeyPath
+
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
 
-  pure ( validated, codecConfig, networkId, networkMagic, tracers )
+  pure ( validated, codecConfig, networkId, networkMagic, tracers
+       , signingKeyPrefix
+       )
 
 --------------------------------------------------------------------------------
 -- Protocol helpers (inlined from NodeConfig.hs and OuroborosImports.hs)
