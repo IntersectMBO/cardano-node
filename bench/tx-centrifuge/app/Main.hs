@@ -16,7 +16,7 @@ module Main (main) where
 -- base --
 ----------
 import Control.Concurrent (threadDelay)
-import Control.Exception (finally)
+import Control.Exception (SomeException, catch, finally)
 import Control.Monad (forM_, when)
 import Data.Bifunctor (first)
 import Data.List.NonEmpty qualified as NE
@@ -24,7 +24,7 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Last(..))
 import Numeric.Natural (Natural)
 import System.Environment (getArgs)
-import System.Exit (die)
+import System.Exit (die, exitSuccess)
 import System.IO (hPutStrLn, stderr)
 import Text.Printf (printf)
 ----------
@@ -134,8 +134,8 @@ main = do
   -- Config.
   ----------
 
-  (validated, codecConfig, networkId, networkMagic, tracers, signingKeyPrefix) <-
-    loadConfig
+  ( validated, codecConfig, networkId, networkMagic, tracers
+   , signingKeyPrefix, preflight ) <- loadConfig
 
   -- Callbacks.
   -------------
@@ -262,6 +262,11 @@ main = do
           (Tracing.mkBuilderRecycle name txId isOrphan funds)
       )
       validated
+    -- Preflight: brief observer connection check + partition summary, then
+    -- exit before spawning workers (so no traffic is generated). Builder
+    -- asyncs may produce a few payloads before being cancelled — they have
+    -- nowhere to send them (no workers).
+    when preflight $ preflightExit runtime validated
     -- The 'TargetWorker' callback, called once per 'Target'.
     let targetWorker target fetchTx tryFetchTx = do
           addrInfo <- resolveAddr
@@ -615,6 +620,95 @@ instance Aeson.FromJSON ProtocolParameters where
 --}
 
 --------------------------------------------------------------------------------
+-- Preflight
+--------------------------------------------------------------------------------
+
+-- | Brief observer connection check + per-workload partition summary, then
+-- 'exitSuccess'. Cancels every async spawned by 'Runtime.resolve' (observers,
+-- builders, recyclers) so the process exits cleanly without leaking threads.
+--
+-- The 2-second observer settle window is intentionally short: long enough for
+-- a healthy local N2C ChainSync handshake to complete, short enough that an
+-- ops health check is cheap.
+preflightExit
+  :: Runtime.Runtime Fund.Fund payload
+  -> Validated.Config Fund.Fund
+  -> IO a
+preflightExit runtime validated = do
+  hPutStrLn stderr ""
+  hPutStrLn stderr "=== Preflight ==="
+
+  -- Give observers a brief moment to connect; then check none died.
+  let observerCount = length (Runtime.observers runtime)
+  when (observerCount > 0) $ do
+    hPutStrLn stderr $
+      "Waiting for " ++ show observerCount
+      ++ " observer connection(s) to settle..."
+    -- 'Runtime.resolve' links observer asyncs to the main thread, so a
+    -- connection failure during the wait surfaces here as a linked-thread
+    -- exception. Catch it explicitly to produce a preflight-shaped error
+    -- message instead of an unhandled crash.
+    threadDelay 2_000_000 `catch` \(ex :: SomeException) ->
+      die $ "Preflight: observer failed during settle: " ++ show ex
+    forM_ (Runtime.observers runtime) $ \obs -> do
+      status <- Async.poll (Runtime.observerAsync obs)
+      case status of
+        Just (Left ex) ->
+          die $ "Observer '" ++ Runtime.observerName obs
+             ++ "' failed during preflight: " ++ show ex
+        Just (Right ()) ->
+          die $ "Observer '" ++ Runtime.observerName obs
+             ++ "' exited unexpectedly during preflight"
+        Nothing -> pure ()
+    hPutStrLn stderr "Observer(s) connected OK"
+
+  -- Per-workload partition summary. Mirrors what 'Runtime.resolve' actually
+  -- did: a round-robin chunking via 'partitionInputs'.
+  let workloadNames = Map.keys (Validated.workloads validated)
+      workloadCount = length workloadNames
+      allFunds      = NE.toList (Validated.initialInputs validated)
+      chunks        = Runtime.partitionInputs workloadCount allFunds
+  hPutStrLn stderr ""
+  hPutStrLn stderr $
+    "Partitioning " ++ show (length allFunds)
+    ++ " UTxOs across " ++ show workloadCount ++ " workload(s):"
+  forM_ (zip workloadNames chunks) $ \(name, chunk) ->
+    let count = length chunk
+        ada   = sum (map Fund.fundValue chunk) `div` 1_000_000
+    in hPutStrLn stderr $
+         printf "  %-20s  %d UTxOs, %d ADA" name count ada
+
+  hPutStrLn stderr ""
+  hPutStrLn stderr "Preflight OK"
+  mapM_ Async.cancel (Runtime.asyncs runtime)
+  exitSuccess
+
+--------------------------------------------------------------------------------
+-- CLI argument parsing
+--------------------------------------------------------------------------------
+
+-- | Accept either:
+--
+-- > tx-centrifuge <config.json>
+-- > tx-centrifuge <config.json> --preflight
+-- > tx-centrifuge --preflight <config.json>
+--
+-- In preflight mode, tx-centrifuge runs all initialization (config parsing,
+-- protocol setup, signing-key load, UTxO discovery, runtime resolution,
+-- observer connection check, partition summary) and then exits @0@ before
+-- any worker threads connect to target nodes. Useful for verifying ops
+-- changes (new skey, fresh funding, node-config tweaks) without producing
+-- traffic.
+parseArgs :: [String] -> Maybe (FilePath, Bool)
+parseArgs = go False []
+  where
+    go pf positional [] = case positional of
+      [f] -> Just (f, pf)
+      _   -> Nothing
+    go _  positional ("--preflight" : rest) = go True positional rest
+    go pf positional (x            : rest) = go pf (positional ++ [x]) rest
+
+--------------------------------------------------------------------------------
 -- Initialization
 --------------------------------------------------------------------------------
 
@@ -637,14 +731,17 @@ loadConfig
           -- | 61-char hex prefix derived from the operator-supplied recycle
           -- signing key. Workload index is appended as @%03d@ at use sites.
         , String
+          -- | Preflight mode flag (from @--preflight@ CLI arg).
+        , Bool
         )
 loadConfig = do
   args <- getArgs
-  configFile <- case args of
-    [f] -> pure f
-    _   -> die "Usage: tx-centrifuge <config.json>"
+  (configFile, preflight) <- case parseArgs args of
+    Just r  -> pure r
+    Nothing -> die "Usage: tx-centrifuge <config.json> [--preflight]"
 
   hPutStrLn stderr "=== Tx Centrifuge ==="
+  when preflight $ hPutStrLn stderr "(preflight mode)"
   hPutStrLn stderr ""
 
   -- Decode the full JSON object once; extract node-specific paths here (like
@@ -690,7 +787,7 @@ loadConfig = do
   tracers <- Tracing.setupTracers configFile
 
   pure ( validated, codecConfig, networkId, networkMagic, tracers
-       , signingKeyPrefix
+       , signingKeyPrefix, preflight
        )
 
 --------------------------------------------------------------------------------
