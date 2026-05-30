@@ -6,15 +6,18 @@ Unlike traditional load generators that "push" data at a fixed rate, this system
 
 ### Minimal Configuration Example
 
-A basic configuration defines how to load initial resources, how to build payloads, the desired rate, and where to send the results:
+A basic configuration defines the recycle signing key, the local node socket used for UTxO discovery, how to build payloads, the desired rate, and where to send the results:
 
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "network_magic": 42,
-      "signing_keys_file": "funds.json"
+  "signing_key_file": "/run/secrets/tx-centrifuge.skey",
+  "observers": {
+    "local-follower": {
+      "type": "nodetoclient",
+      "params": {
+        "socket_path": "/run/cardano-node/node.socket",
+        "confirmation_depth": 2
+      }
     }
   },
   "builder": {
@@ -34,6 +37,8 @@ A basic configuration defines how to load initial resources, how to build payloa
   "nodeConfig": "node-config.json"
 }
 ```
+
+> **Initial UTxOs are discovered on-chain at startup**, not loaded from a JSON file. The operator funds the recycle addresses derived from `signing_key_file`; tx-centrifuge queries the local node (via the `nodetoclient` observer's socket) for the live UTxO set at every restart. See [Recycle Signing Key](#recycle-signing-key) and [Funding Recycle Addresses](#funding-recycle-addresses) below.
 
 ## Core Concepts: The Pull-Fiction Engine
 
@@ -140,34 +145,37 @@ To enable indefinite-duration runs with finite resources, inputs must be returne
 
 ## Configuration
 
-### Initial Inputs (`initial_inputs`)
-The generator requires a set of initial UTxOs, configured in the `initial_inputs` section of the main configuration file.
+### Recycle Signing Key (`signing_key_file`)
 
-- **`type`**: The input loader variant (e.g., `"genesis_utxo_keys"`).
-- **`params`**:
-  - **`network_magic`**: Required for deriving UTxO references from keys (e.g., `42` for testnet).
-  - **`signing_keys_file`**: Path to a JSON file (e.g., `funds.json`) containing the actual fund data.
+The operator supplies a single secret payment key in a standard cardano-cli text envelope (`PaymentSigningKey_ed25519` or `GenesisUTxOSigningKey_ed25519`). tx-centrifuge uses it as the **recycle key**: the key signing every transaction's outputs, and whose addresses hold the live UTxO pool between restarts.
 
-#### `funds.json` entry types
-The file contains an array of fund objects. Each object has two required fields (`signing_key`, `value`) and one optional field (`tx_in`):
+- **Format**: standard cardano-cli `.skey` file.
+- **Required suffix**: the raw 32-byte secret must end in `0x000` (last 3 hex characters of the hex-encoded key). This guarantees workload 0's derived key is the operator-supplied key exactly.
+- **Per-workload derivation**: tx-centrifuge replaces the trailing 3 hex characters with the workload index (`%03d`), yielding distinct keys for workloads 0..999. Multiple workloads thus get distinct recycle addresses, derived deterministically from the one seed key.
+- **Deployment tip**: store at a path the service has read access to but is otherwise restricted, e.g. `/run/secrets/tx-centrifuge.skey` for systemd `LoadCredential` or container secret mounts.
 
-| Field         | Required | Description |
-|---------------|----------|-------------|
-| `signing_key` | Yes      | Path to a `.skey` file (payment or genesis UTxO key) |
-| `value`       | Yes      | Lovelace amount |
-| `tx_in`       | No       | Explicit UTxO reference in `"txid#ix"` format |
+### Initial UTxOs (on-chain discovery)
 
-When `tx_in` is **present**, the fund uses the explicit UTxO reference:
-```json
-{ "signing_key": "payment.skey", "value": 1000000, "tx_in": "df6...#0" }
+tx-centrifuge does **not** read initial UTxOs from a config file. At every startup it derives all 1000 recycle addresses from the seed key (`000..999`) and issues a single `QueryUTxOByAddress` against the local node to find every spendable UTxO across those addresses. This makes restarts stateless — there is no on-disk state to corrupt, and any UTxOs at any of the 1000 addresses are picked up automatically (including leftovers from a previous configuration with more workloads).
+
+- **Where the query socket comes from**: the `socket_path` of the **first** `nodetoclient` observer in the `observers` map, alphabetical by observer name. Declare at least one such observer; tx-centrifuge dies at startup if none is present and prints a config example.
+- **Empty UTxO set behaviour**: if *no* UTxOs are found at any of the 1000 addresses, tx-centrifuge dies with a clear message including workload 0's bech32 address and a sample `cardano-cli` funding command. Partial funding (e.g. only `000` funded with 3 workloads declared) is fine — the round-robin partition spreads the available UTxOs across active workloads.
+
+### Funding Recycle Addresses
+
+To bootstrap or top up, send ADA to one or more recycle addresses derived from the seed. Workload 0's address is the natural default. tx-centrifuge prints all derived addresses with non-zero balances at startup, so you can read them straight from the logs.
+
+```bash
+# Fund workload 0's address.
+cardano-cli conway transaction build \
+  --tx-in <some-funded-utxo> \
+  --tx-out <addr from tx-centrifuge logs>+<lovelace> \
+  ...
+cardano-cli conway transaction sign ...
+cardano-cli conway transaction submit ...
 ```
 
-When `tx_in` is **omitted**, the fund is treated as a genesis UTxO: the `TxId` is derived deterministically from the signing key's verification key hash via `genesisUTxOPseudoTxIn`, and the `TxIx` is always 0.
-```json
-{ "signing_key": "genesis.skey", "value": 1500000000000 }
-```
-
-**Design Note**: The `funds.json` format is designed to be compatible with the output of `cardano-cli conway create-testnet-data --utxo-keys`. This allows you to immediately use an arbitrary large set of Shelley genesis keys created during testnet bootstrapping as the initial fund pool for the generator, without needing to manually create UTxOs once the network is live.
+After the funding transaction confirms, restart tx-centrifuge; it will discover the new UTxOs on the next query.
 
 ### Rate Limiting (`rate_limit`)
 The `rate_limit` field can be set at the **top level** or at the **workload level** (but not both — setting it at both levels is a validation error). If omitted entirely, targets run **unlimited** (no rate ceiling).
@@ -224,11 +232,14 @@ Optimized for maximum TPS using simple 1-in/1-out transactions. Outputs are recy
 **`config.json` snippet:**
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "network_magic": 42,
-      "signing_keys_file": "funds.1.json"
+  "signing_key_file": "/run/secrets/tx-centrifuge.skey",
+  "observers": {
+    "local-follower": {
+      "type": "nodetoclient",
+      "params": {
+        "socket_path": "/run/cardano-node/node.socket",
+        "confirmation_depth": 0
+      }
     }
   },
   "builder": {
@@ -256,25 +267,20 @@ Optimized for maximum TPS using simple 1-in/1-out transactions. Outputs are recy
 }
 ```
 
-**`funds.1.json` snippet:**
-```json
-[
-  {"signing_key": "utxo1.skey", "value": 1500000000000},
-  {"signing_key": "utxo2.skey", "value": 1500000000000}
-]
-```
-
 ### 2. Large Transactions (Target-Specific Limits)
 Uses complex transactions with independent rate limits for each target connection. Outputs are recycled on fetch (`on_pull`).
 
 **`config.json` snippet:**
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "network_magic": 42,
-      "signing_keys_file": "funds.2.json"
+  "signing_key_file": "/run/secrets/tx-centrifuge.skey",
+  "observers": {
+    "local-follower": {
+      "type": "nodetoclient",
+      "params": {
+        "socket_path": "/run/cardano-node/node.socket",
+        "confirmation_depth": 0
+      }
     }
   },
   "builder": {
@@ -302,15 +308,6 @@ Uses complex transactions with independent rate limits for each target connectio
   },
   "nodeConfig": "node-config.json"
 }
-```
-
-**`funds.2.json` snippet:**
-```json
-[
-  {"signing_key": "utxo1.skey", "value": 1000000000},
-  {"signing_key": "utxo2.skey", "value": 1000000000},
-  {"signing_key": "utxo3.skey", "value": 1000000000}
-]
 ```
 
 ### 3. Confirmation-Based Recycling (On-Confirm with Observer)
@@ -381,13 +378,7 @@ Both emit the same `BlockTx` events on the same broadcast channel type, so the d
 
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "network_magic": 42,
-      "signing_keys_file": "funds.3.json"
-    }
-  },
+  "signing_key_file": "/run/secrets/tx-centrifuge.skey",
   "observers": {
     "local-follower": {
       "type": "nodetoclient",
@@ -424,16 +415,7 @@ Both emit the same `BlockTx` events on the same broadcast channel type, so the d
 }
 ```
 
-**`funds.3.json` snippet:**
-```json
-[
-  {"signing_key": "utxo1.skey", "value": 1500000000000},
-  {"signing_key": "utxo2.skey", "value": 1500000000000},
-  {"signing_key": "utxo3.skey", "value": 1500000000000}
-]
-```
-
-With `on_confirm`, the generator needs enough initial funds to cover the in-flight transactions between submission and confirmation. At 50 TPS with a 2-block confirmation depth (~40 seconds on a 20-second slot), roughly 2000 transactions will be pending at any time, so the initial fund pool should have at least that many UTxOs.
+With `on_confirm`, the generator needs enough initial funds at its recycle addresses to cover the in-flight transactions between submission and confirmation. At 50 TPS with a 2-block confirmation depth (~40 seconds on a 20-second slot), roughly 2000 transactions will be pending at any time, so the on-chain UTxO pool should have at least that many entries.
 
 ## Internals
 
