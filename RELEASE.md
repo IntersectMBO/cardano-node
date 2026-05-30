@@ -211,30 +211,31 @@ The previous release's notes are typically used as a starting template.
 
 ## Detailed Changelog Table
 
-The script `scripts/generate-release-changelog-links.hs` generates a table of
-changelogs for every package version in a given `cardano-node` build plan. It
-takes a cabal-generated `plan.json` and a GitHub API access token.
+`generate-release-changelog-links` generates a table of changelogs for every
+package version in a given `cardano-node` build plan. It reads `GITHUB_TOKEN`
+from the environment (generate one at https://github.com/settings/tokens or
+run `gh auth token`).
 
-Nix users can run it directly from the devshell:
+Nix devshell users have the binary available directly:
 
 ```shellsession
 $ nix build .#project.x86_64-linux.plan-nix
-$ generate-release-changelog-links -o links.md result-json $GITHUB_API_TOKEN
+$ export GITHUB_TOKEN=$(gh auth token)
+$ generate-release-changelog-links -o links.md
 ```
 
-`result-json` is the extra output produced by the `plan-nix` build.
+`result/plan.json` is the default plan path. Pass an explicit path as the
+first argument to override it.
 
-Non-nix users can still run the cabal script directly, though it will build
-its dependencies from scratch (requires `zlib` via your OS package manager):
+Non-nix users can build and run via cabal:
 
 ```shellsession
-$ scripts/generate-release-changelog-links.hs -- -o links.md result-json $GITHUB_API_TOKEN
+$ export GITHUB_TOKEN=$(gh auth token)
+$ cabal run generate-release-changelog-links -- -o links.md
 ```
 
-For full usage, including how to generate a GitHub API token:
+For full usage:
 
 ```shellsession
 $ generate-release-changelog-links --help
-# or, without nix:
-$ scripts/generate-release-changelog-links.hs -- --help
 ```
