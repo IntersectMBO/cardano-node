@@ -214,10 +214,19 @@ testSetup = do
 mkDummyFund :: Api.SigningKey Api.PaymentKey -> Word -> Integer -> Fund.Fund
 mkDummyFund signKey index lovelace = Fund.Fund
   { Fund.fundTxIn =
-      let Api.TxIn txId _ = Fund.genesisTxIn
-            (Api.Testnet (Api.NetworkMagic 42))
-            signKey
+      let Api.TxIn txId _ = dummyGenesisTxIn signKey
       in Api.TxIn txId (Api.TxIx index)
   , Fund.fundValue = lovelace
   , Fund.fundSignKey = signKey
   }
+
+-- | Deterministically derive a 'TxIn' from a payment signing key, for use
+-- in test fixtures. Mirrors the (removed) Fund.genesisTxIn helper.
+dummyGenesisTxIn :: Api.SigningKey Api.PaymentKey -> Api.TxIn
+dummyGenesisTxIn (Api.PaymentSigningKey skey) =
+  Api.genesisUTxOPseudoTxIn
+    (Api.Testnet (Api.NetworkMagic 42))
+    ( Api.verificationKeyHash
+    . Api.getVerificationKey
+    $ Api.GenesisUTxOSigningKey skey
+    )

@@ -68,6 +68,7 @@ executable tx-centrifuge
                     , ouroboros-consensus:{ouroboros-consensus,cardano}
                     , ouroboros-network:{framework}
                     , stm
+                    , text
                     , transformers
                     , tx-centrifuge:pull-fiction
                     , tx-centrifuge:tx-centrifuge-lib
@@ -116,6 +117,7 @@ library tx-centrifuge-lib
                       Cardano.Benchmarking.TxCentrifuge.Tracing
                       Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans
                       Cardano.Benchmarking.TxCentrifuge.TxAssembly
+                      Cardano.Benchmarking.TxCentrifuge.UTxOQuery
   build-depends:      base >=4.12 && <5
                     , aeson
                     , bytestring
@@ -137,6 +139,7 @@ library tx-centrifuge-lib
                     , text
                     , time
                     , trace-dispatcher
+                    , transformers
                     , typed-protocols:{typed-protocols, stateful}
 
 --------------------------------------------------------------------------------
