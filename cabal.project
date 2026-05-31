@@ -93,20 +93,14 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Pin ouroboros-consensus at the Leios prototype remake branch — five chunks
--- on top of upstream main: mempool access + forging, diffusion (LeiosNotify +
--- LeiosFetch + Reception migration), resolving + chain inclusion, voting,
--- and the ImmDBServer schedule-driven demo.
--- See IntersectMBO/ouroboros-consensus#2041.
+-- Points to ouroboros-consensus/leios-prototype-remake
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: eddb8b78de9e5f0d45dbf1410289f8e491c515ab
-  --sha256: sha256-T8OXHl55WH9uqYP2Ja9zGzyuPEfP7b2XpJcH+aJ5gMY=
+  tag: cb3a21d17f236bfa3de0d2b658f8cec9cd7b919e
+  --sha256: sha256-rx1lCtjDUtbSxZh7iqwj4JKIwp4ssYH2kqg+RsjV0oQ=
 
--- Pin cardano-ledger at the Leios prototype remake branch — adds
--- 'Maybe LeiosCert' on the Dijkstra block body (Dijkstra-only).
--- See IntersectMBO/cardano-ledger#5839.
+-- Points to cardano-ledger/leios-prototype-remake
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
@@ -116,9 +110,7 @@ source-repository-package
     libs/cardano-ledger-core
     eras/dijkstra/impl
 
--- Pin ouroboros-network at the Leios prototype remake branch — adds the
--- 'BearerBytes' class and arrival-time 'Reception' on recv.
--- See IntersectMBO/ouroboros-network#5370.
+-- Points to ouroboros-network/leios-prototype-remake
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
@@ -129,21 +121,17 @@ source-repository-package
     cardano-diffusion
     network-mux
 
--- Pin cardano-api at the Leios prototype remake branch — wires Dijkstra arms
--- for ledger queries AND simple value tx construction (build-raw / sign /
--- submit).
+-- Points to cardano-api/leios-prototype-remake
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: a8e3c65a8aac58dbfce9b7192bafd74c1acaf37a
-  --sha256: sha256-CNbeh049QjpUe8AwC9zgO87A16ImnI1lmEImQbbZRNs=
+  tag: 38add439ea702046e0633eae8cf828b3c1215162
+  --sha256: sha256-2oj+NW6SQjcBNZcQc7p/g0iR/DJLeZZ0Xn8ZUN8LxN4=
   subdir:
     cardano-api
     cardano-api-gen
 
--- Pin cardano-cli at the matching Leios prototype remake branch — wires
--- the dijkstra subcommand to the full pCmds parser and accepts Tx
--- DijkstraEra envelopes.
+-- Points to cardano-cli/leios-prototype-remake
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
