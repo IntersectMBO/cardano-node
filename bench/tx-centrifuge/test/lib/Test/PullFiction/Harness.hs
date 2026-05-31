@@ -118,6 +118,8 @@ resolveConfig path inputs = do
     (\_ name _ -> fail $ "resolveConfig: unexpected observer: " ++ name)
     -- onRecycle: no-op (String -> key -> Bool -> [input] -> IO ()).
     (\_ _ _ _ -> pure ())
+    -- onStats: no-op (String -> Stats -> IO ()).
+    (\_ _ -> pure ())
     validated
 
 -- | Load a generator config from a JSON file with dummy inputs and resolve into

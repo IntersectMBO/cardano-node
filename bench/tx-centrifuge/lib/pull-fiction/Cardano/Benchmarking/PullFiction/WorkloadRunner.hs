@@ -253,6 +253,7 @@ runWorkload workload targetWorker =
                       (Runtime.onExhaustion target)
                       (Runtime.rateLimiter target)
           pipe    = Runtime.targetPipe target
+          submittedTVar = Runtime.cSubmitted (Runtime.pipeCounters pipe)
           -- Fetch one payload (blocking), write its [input] back, return payload.
           fetchPayload = do
             (payload, recycledInputs) <-
@@ -271,7 +272,13 @@ runWorkload workload targetWorker =
             -- inputs are lost. This is acceptable; recycling happens on
             -- delivery, not on downstream confirmation (see
             -- 'Runtime.pipeRecycle' for the full rationale).
-            STM.atomically $ Runtime.pipeRecycle pipe recycledInputs
+            --
+            -- Folds the submitted-counter increment into the recycle
+            -- transaction so it is one extra TVar write, not a separate STM
+            -- round-trip.
+            STM.atomically $ do
+              Runtime.pipeRecycle pipe recycledInputs
+              STM.modifyTVar' submittedTVar (+ 1)
             pure payload
           -- Try to fetch one payload (non-blocking).
           tryFetchPayload = do
@@ -280,8 +287,10 @@ runWorkload workload targetWorker =
               Nothing -> pure Nothing
               Just (payload, recycledInputs) -> do
                 -- See fetchPayload above for why recycle is a separate
-                -- transaction.
-                STM.atomically $ Runtime.pipeRecycle pipe recycledInputs
+                -- transaction; the submitted increment rides along here too.
+                STM.atomically $ do
+                  Runtime.pipeRecycle pipe recycledInputs
+                  STM.modifyTVar' submittedTVar (+ 1)
                 pure (Just payload)
           -- Always labeled threads.
           threadLabel =

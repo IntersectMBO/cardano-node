@@ -281,6 +281,12 @@ main = do
             (Tracing.trBuilder tracers)
             (Tracing.mkBuilderRecycle name txId isOrphan funds)
       )
+      (\name stats ->
+        unless preflight $
+          Tracing.traceWith
+            (Tracing.trBuilder tracers)
+            (Tracing.mkBuilderQueueDepth name stats)
+      )
       validated
     -- Preflight: brief observer connection check + partition summary, then
     -- exit before spawning workers (so no traffic is generated). Builder
