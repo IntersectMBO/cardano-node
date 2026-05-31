@@ -174,8 +174,8 @@ txSubmissionLimits = NetMux.MiniProtocolLimits
 mkBlockFetchMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
   -> TxIdSync.BlockFetchClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -196,8 +196,8 @@ mkBlockFetchMiniProtocol codecs client = NetMux.MiniProtocol
 mkChainSyncMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
   -> TxIdSync.ChainSyncClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -218,8 +218,8 @@ mkChainSyncMiniProtocol codecs client = NetMux.MiniProtocol
 mkKeepAliveMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
   -> Tracing.Tracers
   -> KeepAlive.KeepAliveClient
   -> NetMux.MiniProtocol
@@ -236,7 +236,7 @@ mkKeepAliveMiniProtocol codecs tracers client = NetMux.MiniProtocol
           Driver.runPeerWithLimits
             (Tracing.trKeepAlive tracers)
             (NetN2N.cKeepAliveCodec codecs)
-            (KACodec.byteLimitsKeepAlive (const 0))
+            KACodec.byteLimitsKeepAlive
             KACodec.timeLimitsKeepAlive
             channel
             $ KAClient.keepAliveClientPeer client
@@ -246,8 +246,8 @@ mkKeepAliveMiniProtocol codecs tracers client = NetMux.MiniProtocol
 mkTxSubmissionMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
   -> Tracing.Tracers
   -> TxSubmission.TxSubmissionClient
   -> NetMux.MiniProtocol
@@ -362,8 +362,8 @@ connect
     protocolBundle
       :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
            Serialise.DeserialiseFailure IO
+           BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
            BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-           BSL.ByteString BSL.ByteString BSL.ByteString
       -> NetMux.OuroborosBundle
            'Mux.InitiatorMode
            (NetCtx.MinimalInitiatorContext NtN.RemoteAddress)
