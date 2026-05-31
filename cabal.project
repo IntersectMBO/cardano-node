@@ -90,6 +90,73 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- Pin ouroboros-consensus at the Leios prototype remake branch — five chunks
+-- on top of upstream main: mempool access + forging, diffusion (LeiosNotify +
+-- LeiosFetch + Reception migration), resolving + chain inclusion, voting,
+-- and the ImmDBServer schedule-driven demo.
+-- See IntersectMBO/ouroboros-consensus#2041.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: eddb8b78de9e5f0d45dbf1410289f8e491c515ab
+  --sha256: sha256-ypNFYzmf6RcdQIuVPh8dPYSQEPoVlLyU1OCnjPAP2cc=
+
+-- Pin cardano-ledger at the Leios prototype remake branch.
+-- See IntersectMBO/cardano-ledger#5839.
+-- Minimal pin: only the subdirs whose SRP versions are not yet on CHAP.
+-- Pinning more (e.g. eras/conway/impl) forces older sibling versions that
+-- cardano-node 11.0.1 won't accept (it requires conway >= 1.22.1.0 which
+-- CHAP carries but the SRP source hasn't bumped to).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: c47305fcf47bd77437b837d0dfb9cb4181bfbc77
+  --sha256: 1db2xc2gs44g5035srqzgqkbv3a2yacmvnwchd1jnjrfkibnxnak
+  subdir:
+    eras/dijkstra/impl
+    libs/cardano-ledger-core
+
+-- See IntersectMBO/ouroboros-network#5370.
+-- All five touched subdirs are pinned: ouroboros-network's `framework`
+-- sublibrary depends on MkReception introduced in network-mux, and
+-- cardano-diffusion / cardano-ping / ntp-client are pulled in transitively.
+-- Mismatched CHAP versions for any of these break the build.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: c66e9a27961da4b2550e0c91974e31aebd76fc9d
+  --sha256: 1ybawvmwvxh23i92dikaa7qsvid3zaybv1cwnirw0gqx6k15gcnw
+  subdir:
+    cardano-diffusion
+    cardano-ping
+    network-mux
+    ntp-client
+    ouroboros-network
+
+-- Pin cardano-api at the Leios prototype remake branch — wires Dijkstra arms
+-- for ledger queries AND simple value tx construction (build-raw / sign /
+-- submit). The CHAP 11.0.0.0 release has TODO stubs for Dijkstra in
+-- caseByronOrShelleyBasedEra and friends; this pin replaces those.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 05d9c2de3925d7d4648eb5e6457886d590db0e7e
+  --sha256: sha256-Aqywiznvw3jrCU/yyLmQQBbxdY34NzPP50r1QgRz9AQ=
+  subdir:
+    cardano-api
+    cardano-api-gen
+
+-- Pin cardano-cli at the matching Leios prototype remake branch — wires
+-- the dijkstra subcommand to the full pCmds parser and accepts Tx
+-- DijkstraEra envelopes.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: b28efce6591ef07b0b866a4f13bee3bd1b6e4f37
+  --sha256: sha256-X18lCxUqovnUM6QHiVapJPLT5ylNMSqCt9KcmDv9Kyc=
+  subdir:
+    cardano-cli
+
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
   source-repository-package
