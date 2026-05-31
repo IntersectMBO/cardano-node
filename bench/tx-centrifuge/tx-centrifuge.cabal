@@ -140,6 +140,7 @@ library tx-centrifuge-lib
                     , time
                     , trace-dispatcher
                     , transformers
+                    , tx-centrifuge:pull-fiction
                     , typed-protocols:{typed-protocols, stateful}
 
 --------------------------------------------------------------------------------

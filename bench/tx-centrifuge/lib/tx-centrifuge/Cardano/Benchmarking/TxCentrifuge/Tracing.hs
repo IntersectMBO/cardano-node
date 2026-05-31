@@ -15,6 +15,7 @@ module Cardano.Benchmarking.TxCentrifuge.Tracing
   , BuilderTrace (..)
   , mkBuilderNewTx
   , mkBuilderRecycle
+  , mkBuilderQueueDepth
   , TxSubmission (..)
     -- * Re-exports
   , traceWith
@@ -42,6 +43,10 @@ import Data.Map.Strict qualified as Map
 -- contra-tracer --
 -------------------
 import "contra-tracer" Control.Tracer (Tracer (..), traceWith)
+------------------
+-- pull-fiction --
+------------------
+import Cardano.Benchmarking.PullFiction.Config.Runtime (Stats (..))
 ---------------------------------
 -- ouroboros-consensus:cardano --
 ---------------------------------
@@ -253,6 +258,14 @@ data BuilderTrace
     --   recycle that makes the outputs available to use for `BuilderNewTx`.
     -- * @['Fund.Fund']@: the recycled funds.
   | BuilderRecycle !String !Api.TxId !Bool [Fund.Fund]
+    -- | Periodic snapshot of pipeline queue depths and cumulative counters
+    -- for this builder.
+    --
+    -- * 'String': builder name (the workload name, see 'Runtime.builderName').
+    -- * 'Stats':  three queue depths (input, payload, pendingRecycle) and
+    --   five cumulative counters (built, recycledConfirmed, recycledOrphan,
+    --   dropped, submitted). Deltas between consecutive events give rates.
+  | BuilderQueueDepth !String !Stats
 
 -- | Build a 'BuilderNewTx' trace from the builder name, a signed transaction,
 -- and its input and output funds. Extracts the 'Api.TxId' from the transaction
@@ -271,6 +284,12 @@ mkBuilderRecycle :: String      -- ^ Builder name.
                  -> [Fund.Fund] -- ^ Recycled funds.
                  -> BuilderTrace
 mkBuilderRecycle = BuilderRecycle
+
+-- | Build a 'BuilderQueueDepth' trace from the periodic 'Stats' snapshot.
+mkBuilderQueueDepth :: String -- ^ Builder name.
+                    -> Stats  -- ^ Snapshot of depths + counters.
+                    -> BuilderTrace
+mkBuilderQueueDepth = BuilderQueueDepth
 
 -- | Machine-readable ('forMachine') and human-readable ('forHuman') rendering
 -- of 'BuilderTrace' messages.
@@ -313,6 +332,17 @@ instance Logging.LogFormatting BuilderTrace where
     , "orphan"  .= isOrphan
     , "funds"   .= map (renderFund dtal) funds
     ]
+  forMachine _ (BuilderQueueDepth name s) = mconcat
+    [ "builder"           .= name
+    , "inputQueue"        .= statsInputQueue        s
+    , "payloadQueue"      .= statsPayloadQueue      s
+    , "pendingRecycle"    .= statsPendingRecycle    s
+    , "built"             .= statsBuilt             s
+    , "recycledConfirmed" .= statsRecycledConfirmed s
+    , "recycledOrphan"    .= statsRecycledOrphan    s
+    , "dropped"           .= statsDropped           s
+    , "submitted"         .= statsSubmitted         s
+    ]
   forHuman (BuilderNewTx name txId inputs outputs) =
        "NewTx [" <> Text.pack name <> "] "
     <> Api.serialiseToRawBytesHexText txId
@@ -323,6 +353,16 @@ instance Logging.LogFormatting BuilderTrace where
     <> " txId=" <> Api.serialiseToRawBytesHexText txId
     <> if isOrphan then " (orphan)" else " (confirmed)"
     <> " funds=[" <> renderFundTxIns funds <> "]"
+  forHuman (BuilderQueueDepth name s) =
+       "QueueDepth [" <> Text.pack name <> "]"
+    <> " input="     <> Text.pack (show (statsInputQueue        s))
+    <> " payload="   <> Text.pack (show (statsPayloadQueue      s))
+    <> " pending="   <> Text.pack (show (statsPendingRecycle    s))
+    <> " built="     <> Text.pack (show (statsBuilt             s))
+    <> " confirmed=" <> Text.pack (show (statsRecycledConfirmed s))
+    <> " orphan="    <> Text.pack (show (statsRecycledOrphan    s))
+    <> " dropped="   <> Text.pack (show (statsDropped           s))
+    <> " submitted=" <> Text.pack (show (statsSubmitted         s))
 
 -- | Render a single fund for 'forMachine' output.
 --
@@ -347,19 +387,25 @@ renderFundTxIns = Text.intercalate "," . map (Api.renderTxIn . Fund.fundTxIn)
 -- The outer prefix @[\"TxCentrifuge\", \"Builder\"]@ is set when creating the
 -- tracer via 'Logging.mkCardanoTracer' in 'setupTracers'.
 instance Logging.MetaTrace BuilderTrace where
-  namespaceFor BuilderNewTx{}   = Logging.Namespace [] ["NewTx"]
-  namespaceFor BuilderRecycle{} = Logging.Namespace [] ["Recycle"]
-  severityFor (Logging.Namespace _ ["NewTx"])   _ = Just Logging.Info
-  severityFor (Logging.Namespace _ ["Recycle"]) _ = Just Logging.Info
+  namespaceFor BuilderNewTx{}       = Logging.Namespace [] ["NewTx"]
+  namespaceFor BuilderRecycle{}     = Logging.Namespace [] ["Recycle"]
+  namespaceFor BuilderQueueDepth{}  = Logging.Namespace [] ["QueueDepth"]
+  severityFor (Logging.Namespace _ ["NewTx"])      _ = Just Logging.Info
+  severityFor (Logging.Namespace _ ["Recycle"])    _ = Just Logging.Info
+  severityFor (Logging.Namespace _ ["QueueDepth"]) _ = Just Logging.Info
   severityFor _ _ = Nothing
   documentFor (Logging.Namespace _ ["NewTx"]) = Just
     "A new transaction was built from input UTxOs, producing output UTxOs."
   documentFor (Logging.Namespace _ ["Recycle"]) = Just
     "Output UTxOs were recycled back to the workload's input queue for reuse."
+  documentFor (Logging.Namespace _ ["QueueDepth"]) = Just
+    "Periodic pipeline queue depths: input queue, payload queue, and \
+    \pending-recycle map (in-flight tx count)."
   documentFor _ = Nothing
   allNamespaces =
     [ Logging.Namespace [] ["NewTx"]
     , Logging.Namespace [] ["Recycle"]
+    , Logging.Namespace [] ["QueueDepth"]
     ]
 
 --------------------------------------------------------------------------------
