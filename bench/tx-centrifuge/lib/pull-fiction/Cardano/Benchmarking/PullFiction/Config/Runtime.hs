@@ -20,13 +20,17 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
   , BuilderHandle (..)
     -- * Pipe.
   , Pipe
-  , pipeInputQueue, pipePayloadQueue, pipeRecycle
+  , pipeInputQueue, pipeInputCount, pipePayloadQueue, pipeRecycle
+  , pipeCounters
+    -- * Counters and Stats.
+  , Counters (..)
+  , Stats (..)
     -- * Observer.
   , Observer
   , observerName, observerAsync
     -- * Builder.
   , Builder
-  , builderName, builderPipe, builderAsync, recyclerAsync
+  , builderName, builderPipe, builderAsync, recyclerAsync, statsAsync
     -- * Workload.
   , Workload
   , workloadName, targets
@@ -50,7 +54,7 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
 ----------
 -- base --
 ----------
-import Control.Concurrent (myThreadId)
+import Control.Concurrent (myThreadId, threadDelay)
 import Control.Monad (forever, replicateM)
 import Data.Foldable (foldlM, toList)
 import GHC.Conc (labelThread)
@@ -136,10 +140,52 @@ data Pipe input payload = Pipe
   { -- | Unbounded: must never block on write (bulk-load at startup, recycle
     -- bursts at steady-state). Backpressure comes from 'pipePayloadQueue'.
     pipeInputQueue   :: !(STM.TQueue input)
+    -- | Cached size of @pipeInputQueue@. 'STM.TQueue' has no length operation,
+    -- so we maintain a counter alongside it (updated atomically with every
+    -- read/write) for the queue-depth tracer.
+  , pipeInputCount   :: !(STM.TVar Int)
     -- | Bounded (capacity 8192); sole source of backpressure.
   , pipePayloadQueue :: !(STM.TBQueue (payload, [input]))
     -- | Recycle consumed inputs back to 'pipeInputQueue'.
   , pipeRecycle      :: [input] -> STM.STM ()
+    -- | Cumulative counters (built / recycled / dropped / submitted),
+    -- snapshotted by the queue-depth stats async and reported in 'Stats'.
+  , pipeCounters     :: !Counters
+  }
+
+-- | Per-workload cumulative counters. Written on the hot paths (build loop,
+-- recycler async, dust drop, worker submit) and read by the stats async.
+data Counters = Counters
+  { -- | Increments on every successful @bhBuildPayload@ that produced a
+    -- 'Just' result (i.e. a payload was enqueued).
+    cBuilt             :: !(STM.TVar Int)
+    -- | Increments on every @Right@ event from the chain follower that
+    -- matched a 'pendingRecycle' entry (normal confirmation path).
+  , cRecycledConfirmed :: !(STM.TVar Int)
+    -- | Increments on every @Left@ event from the chain follower that
+    -- matched a 'pendingRecycle' entry (orphan path, original inputs
+    -- recovered after rollback).
+  , cRecycledOrphan    :: !(STM.TVar Int)
+    -- | Increments every time @bhBuildPayload@ returns 'Nothing' (dust
+    -- drop). These inputs leave the pipeline silently otherwise.
+  , cDropped           :: !(STM.TVar Int)
+    -- | Increments on every payload pulled from 'pipePayloadQueue' by a
+    -- worker (any target). \"Submitted\" here means \"handed to the
+    -- TxSubmission2 protocol client\", not \"acknowledged by the remote\".
+  , cSubmitted         :: !(STM.TVar Int)
+  }
+
+-- | A snapshot of the queue depths and counters for one workload, produced
+-- every 'statsIntervalMicros' microseconds by the stats async.
+data Stats = Stats
+  { statsInputQueue        :: !Int
+  , statsPayloadQueue      :: !Int
+  , statsPendingRecycle    :: !Int
+  , statsBuilt             :: !Int
+  , statsRecycledConfirmed :: !Int
+  , statsRecycledOrphan    :: !Int
+  , statsDropped           :: !Int
+  , statsSubmitted         :: !Int
   }
 
 -- | Builder resources for one workload (exactly one per workload).
@@ -152,6 +198,8 @@ data Builder input payload = Builder
   , builderAsync  :: !(Async ())
     -- | 'Raw.RecycleOnConfirm' recycler; 'Nothing' for other strategies.
   , recyclerAsync :: !(Maybe (Async ()))
+    -- | Periodic queue-depth tracer async.
+  , statsAsync    :: !(Async ())
   }
 
 -- | Fully resolved workload. Builder resources live in 'Builder' on the
@@ -205,9 +253,14 @@ resolve
   -- Receives the builder name, the recycled transaction's key, whether
   -- this is an orphan recycle, and the recycled inputs.
   -> (String -> key -> Bool -> [input] -> IO ())
+  -- | Stats callback fired every 'statsIntervalMicros' microseconds.
+  -- Receives the builder name and a snapshot of the three queue depths
+  -- plus the five cumulative counters (see 'Stats'). A no-op suppresses
+  -- the trace; the periodic async still runs.
+  -> (String -> Stats -> IO ())
   -> Validated.Config input
   -> IO (Runtime input payload)
-resolve mkBuilderFn mkObserverFn onRecycle validatedConfig = do
+resolve mkBuilderFn mkObserverFn onRecycle onStats validatedConfig = do
   -- Create all observers via the factory callback.
   handleResults <- Map.fromAscList <$> mapM
     (\(ix, (obsName, rawObs)) -> do
@@ -256,6 +309,7 @@ resolve mkBuilderFn mkObserverFn onRecycle validatedConfig = do
                    mkBuilderFn
                    observerHandles
                    onRecycle
+                   onStats
                    ix
                    validatedWorkload
                    workloadBuilder
@@ -280,11 +334,13 @@ resolve mkBuilderFn mkObserverFn onRecycle validatedConfig = do
       )
       (Map.empty, Map.empty)
       (Map.toAscList validatedWorkloadsMap)
-  -- Collect all asyncs: observers + builders + recyclers.
+  -- Collect all asyncs: observers + builders + recyclers + stats.
   let builderList = Map.elems resolvedBuilders
       observerAsyncs = map observerAsync (Map.elems resolvedObservers)
       builderAsyncs = concatMap
-        (\b -> builderAsync b : maybe [] pure (recyclerAsync b))
+        (\b -> builderAsync b
+             : statsAsync b
+             : maybe [] pure (recyclerAsync b))
         builderList
   -- Assemble the final runtime.
   pure Runtime
@@ -309,6 +365,9 @@ resolveBuilder
   -> Map String (ObserverHandle key confirmed)
   -- | Recycle callback (e.g. for tracing).
   -> (String -> key -> Bool -> [input] -> IO ())
+  -- | Stats callback (e.g. for tracing). Receives builder name and a
+  -- snapshot of the three queue depths plus five cumulative counters.
+  -> (String -> Stats -> IO ())
   -- | Zero-based builder index.
   -> Int
   -- | Validated workload configuration.
@@ -322,6 +381,7 @@ resolveBuilder
   mkBuilderFn
   observerHandles
   onRecycle
+  onStats
   builderIndex
   validatedWorkload
   validatedBuilder
@@ -329,19 +389,38 @@ resolveBuilder
   -- Input queue: unbounded (TQueue) so that bulk-loading initial inputs and
   -- recycling outputs never block. See 'Pipe' for the full rationale.
   inputQueue <- STM.newTQueueIO
+  -- Counter mirroring the input queue size; TQueue has no length op.
+  -- Initialised outside STM so we don't recompute 'length initialInputs'
+  -- per atomically retry.
+  let initialCount = length initialInputs
+  inputCount <- STM.newTVarIO initialCount
   STM.atomically $ mapM_ (STM.writeTQueue inputQueue) initialInputs
   -- Payload queue: bounded (TBQueue, capacity 8192); the sole source of
   -- backpressure. The builder blocks here when workers cannot consume fast
   -- enough. The capacity must be large enough to absorb GC pauses at high TPS
   -- (e.g. 100k TPS drains 256 entries in ~2.5 ms).
   payloadQ <- STM.newTBQueueIO 8192
+  -- Cumulative counters live alongside the queues so workers (submitted),
+  -- the builder loop (built / dropped), and the recycler async (confirmed /
+  -- orphan) can all reach them via 'pipeCounters'.
+  counters <- Counters
+    <$> STM.newTVarIO 0
+    <*> STM.newTVarIO 0
+    <*> STM.newTVarIO 0
+    <*> STM.newTVarIO 0
+    <*> STM.newTVarIO 0
   let thePipe = Pipe
         { pipeInputQueue   = inputQueue
+        , pipeInputCount   = inputCount
         , pipePayloadQueue = payloadQ
           -- pipeRecycle: write recycled inputs back to the unbounded input
           -- queue. Because TQueue has no capacity limit, this can never stall
-          -- the worker thread inside STM.
-        , pipeRecycle       = \is -> mapM_ (STM.writeTQueue inputQueue) is
+          -- the worker thread inside STM. Bumps 'pipeInputCount' in the same
+          -- transaction so the cached size stays consistent.
+        , pipeRecycle       = \is -> do
+            mapM_ (STM.writeTQueue inputQueue) is
+            STM.modifyTVar' inputCount (+ length is)
+        , pipeCounters     = counters
         }
   let name    = Validated.workloadName validatedWorkload
       recycle = Raw.builderRecycle validatedBuilder
@@ -354,37 +433,69 @@ resolveBuilder
         Just handle -> pure (Just handle)
     _ -> pure Nothing
   -- Set up recycling and get the enqueue action + optional recycler async.
-  (enqueue, mRecycler) <-
+  -- 'pendingRecycle' is also returned so the stats async below can read its
+  -- size (the third diagnostic depth, alongside input and payload queues).
+  -- 'builderRunner' is also given the confirmed/orphan counters to bump
+  -- inside the recycler async's STM transaction.
+  (enqueue, mRecycler, pendingRecycle) <-
     builderRunner recycle thePipe name mObserverHandle (onRecycle name)
   -- Create the caller's build handle.
   builderHandle <- mkBuilderFn builderIndex name validatedBuilder
+  let batchSize = fromIntegral (bhInputsPerBatch builderHandle) :: Int
   -- Spawn the builder async: forever pull inputs, build, enqueue.
   async <- Async.async $ do
     tid <- myThreadId
     labelThread tid name
     forever $ do
-      inputs <- STM.atomically $
-        replicateM (fromIntegral (bhInputsPerBatch builderHandle))
-          (STM.readTQueue (pipeInputQueue thePipe))
+      inputs <- STM.atomically $ do
+        is <- replicateM batchSize (STM.readTQueue inputQueue)
+        STM.modifyTVar' inputCount (subtract batchSize)
+        pure is
       mResult <- bhBuildPayload builderHandle inputs
       case mResult of
-        Just (key, payload, outputInputs) ->
+        Just (key, payload, outputInputs) -> do
           enqueue inputs key payload outputInputs
+          STM.atomically $ STM.modifyTVar' (cBuilt counters) (+ 1)
         Nothing ->
           -- Builder dropped the inputs (e.g. dust). Nothing to enqueue
           -- and nothing to recycle; the inputs are gone from the pipeline.
-          pure ()
+          STM.atomically $ STM.modifyTVar' (cDropped counters) (+ 1)
   Async.link async
   -- Link the recycler async (consistent with builder async linking above).
   case mRecycler of
     Just r  -> Async.link r
     Nothing -> pure ()
+  -- Spawn the stats async: every 'statsIntervalMicros' microseconds,
+  -- snapshot the three pipeline depths and the five counters in one STM
+  -- transaction and hand them to the caller's callback. Always linked so a
+  -- callback exception surfaces immediately.
+  stats <- Async.async $ do
+    tid <- myThreadId
+    labelThread tid (name ++ "/stats")
+    forever $ do
+      snap <- STM.atomically $ Stats
+        <$> STM.readTVar inputCount
+        <*> (fromIntegral <$> STM.lengthTBQueue payloadQ)
+        <*> (Map.size  <$> STM.readTVar pendingRecycle)
+        <*> STM.readTVar (cBuilt             counters)
+        <*> STM.readTVar (cRecycledConfirmed counters)
+        <*> STM.readTVar (cRecycledOrphan    counters)
+        <*> STM.readTVar (cDropped           counters)
+        <*> STM.readTVar (cSubmitted         counters)
+      onStats name snap
+      threadDelay statsIntervalMicros
+  Async.link stats
   pure Builder
     { builderName   = name
     , builderPipe   = thePipe
     , builderAsync  = async
     , recyclerAsync = mRecycler
+    , statsAsync    = stats
     }
+
+-- | How often the queue-depth tracer fires (5 seconds).
+statsIntervalMicros :: Int
+statsIntervalMicros = 5 * 1_000_000
 
 --------------------------------------------------------------------------------
 -- Workload resolution.
@@ -497,9 +608,14 @@ builderRunner
   -> Maybe (ObserverHandle key confirmed)
   -- | Callback invoked each time inputs are recycled (e.g. for tracing).
   -> (key -> Bool -> [input] -> IO ())
-  -- | Returns the enqueue action (see 'mkEnqueue') and an optional recycler
-  -- async (only for 'RecycleOnConfirm').
-  -> IO ([input] -> key -> payload -> [input] -> IO (), Maybe (Async ()))
+  -- | Returns the enqueue action (see 'mkEnqueue'), an optional recycler
+  -- async (only for 'RecycleOnConfirm'), and the pending-recycle TVar.
+  -- The TVar is exposed so callers (e.g. the queue-depth stats async in
+  -- 'resolveBuilder') can read its size without owning the strategy logic.
+  -> IO ( [input] -> key -> payload -> [input] -> IO ()
+        , Maybe (Async ())
+        , STM.TVar (Map key ([input], [input]))
+        )
 builderRunner strategy pipe name mObserverHandle onRecycle = do
   pendingRecycle <- STM.newTVarIO Map.empty
   -- For RecycleOnConfirm, spawn a recycler that reads confirmations and
@@ -528,11 +644,16 @@ builderRunner strategy pipe name mObserverHandle onRecycle = do
               let (isOrphan, toRecycle) = case event of
                     Left  _ -> (True,  originalInputs)
                     Right _ -> (False, outputInputs)
-              STM.atomically $ pipeRecycle pipe toRecycle
+                  counter = if isOrphan
+                    then cRecycledOrphan    (pipeCounters pipe)
+                    else cRecycledConfirmed (pipeCounters pipe)
+              STM.atomically $ do
+                pipeRecycle pipe toRecycle
+                STM.modifyTVar' counter (+ 1)
               onRecycle k isOrphan toRecycle
       pure (Just recycler)
     _ -> pure Nothing
-  pure (mkEnqueue strategy pipe pendingRecycle onRecycle, mRecycler)
+  pure (mkEnqueue strategy pipe pendingRecycle onRecycle, mRecycler, pendingRecycle)
 
 -- | Enqueue a built payload and handle input recycling.
 --
