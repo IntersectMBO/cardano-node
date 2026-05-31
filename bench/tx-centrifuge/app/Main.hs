@@ -17,7 +17,7 @@ module Main (main) where
 ----------
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch, finally)
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, unless, when)
 import Data.Bifunctor (first)
 import Data.List (partition)
 import Data.List.NonEmpty qualified as NE
@@ -137,7 +137,8 @@ main = do
   ----------
 
   ( validated, codecConfig, networkId, networkMagic, tracers
-   , signingKeyPrefix, signingKeyBase, preflight ) <- loadConfig
+   , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs
+   ) <- loadConfig
 
   -- Callbacks.
   -------------
@@ -251,12 +252,15 @@ main = do
                       ++ " (" ++ show (Fund.fundValue f) ++ " lovelace)"
                   pure Nothing
                 Right (tx, outputFunds) -> do
-                  -- Trace the building action.
-                  Tracing.traceWith
-                    (Tracing.trBuilder tracers)
-                    (Tracing.mkBuilderNewTx
-                      builderName tx inputFunds outputFunds
-                    )
+                  -- Trace the building action. Suppressed in preflight to
+                  -- avoid flooding stderr while the builder runs briefly
+                  -- between Runtime.resolve and preflightExit's cancel.
+                  unless preflight $
+                    Tracing.traceWith
+                      (Tracing.trBuilder tracers)
+                      (Tracing.mkBuilderNewTx
+                        builderName tx inputFunds outputFunds
+                      )
                   -- The TxID is needed for the "on_confirm" recycling strategy.
                   let txId = Api.getTxId (Api.getTxBody tx)
                   pure (Just (txId, tx, outputFunds))
@@ -272,9 +276,10 @@ main = do
       mkBuilder
       (mkObserver ioManager)
       (\name txId isOrphan funds ->
-        Tracing.traceWith
-          (Tracing.trBuilder tracers)
-          (Tracing.mkBuilderRecycle name txId isOrphan funds)
+        unless preflight $
+          Tracing.traceWith
+            (Tracing.trBuilder tracers)
+            (Tracing.mkBuilderRecycle name txId isOrphan funds)
       )
       validated
     -- Preflight: brief observer connection check + partition summary, then
@@ -303,12 +308,13 @@ main = do
             Right () -> pure ()
     -- Cooldown: builders are running and pre-filling payload queues.
     -- Wait for the cluster to stabilise before opening connections so that
-    -- transmission begins at the target TPS immediately.
-    let cooldownSeconds = 300 :: Int -- 5 minutes
-    hPutStrLn stderr $ "Cooldown: waiting " ++ show cooldownSeconds
-      ++ " seconds (builders pre-filling queues)..."
-    threadDelay (cooldownSeconds * 1_000_000)
-    hPutStrLn stderr "Cooldown complete, connecting to targets."
+    -- transmission begins at the target TPS immediately. Configured via the
+    -- top-level @cooldown_seconds@ JSON field; default 0 (no wait).
+    when (cooldownSecs > 0) $ do
+      hPutStrLn stderr $ "Cooldown: waiting " ++ show cooldownSecs
+        ++ " seconds (builders pre-filling queues)..."
+      threadDelay (cooldownSecs * 1_000_000)
+      hPutStrLn stderr "Cooldown complete, connecting to targets."
     -- For each 'Workload'.
     workers <- concat <$> mapM
       (\workload -> runWorkload workload targetWorker)
@@ -837,6 +843,9 @@ loadConfig
         , Int
           -- | Preflight mode flag (from @--preflight@ CLI arg).
         , Bool
+          -- | Cooldown seconds before workers connect (top-level config
+          -- field @cooldown_seconds@; default 0).
+        , Int
         )
 loadConfig = do
   args <- getArgs
@@ -858,8 +867,13 @@ loadConfig = do
         case Aeson.Types.parseEither (Aeson.withObject "Config" (.: field)) rawValue of
           Left err -> die $ "Config: " ++ err
           Right v  -> pure v
+      parseOptField field def =
+        case Aeson.Types.parseEither (Aeson.withObject "Config" (.:? field)) rawValue of
+          Left err -> die $ "Config: " ++ err
+          Right mv -> pure (fromMaybe def mv)
   nodeConfigPath  <- parseField "nodeConfig"
   signingKeyPath  <- parseField "signing_key_file"
+  cooldownSecs    <- parseOptField "cooldown_seconds" (0 :: Int)
   raw <- case Aeson.fromJSON rawValue of
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
@@ -891,7 +905,7 @@ loadConfig = do
   tracers <- Tracing.setupTracers configFile
 
   pure ( validated, codecConfig, networkId, networkMagic, tracers
-       , signingKeyPrefix, signingKeyBase, preflight
+       , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs
        )
 
 --------------------------------------------------------------------------------

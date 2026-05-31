@@ -177,6 +177,14 @@ cardano-cli conway transaction submit ...
 
 After the funding transaction confirms, restart tx-centrifuge; it will discover the new UTxOs on the next query.
 
+### Cooldown (`cooldown_seconds`)
+
+Optional top-level integer (default `0`). When set, tx-centrifuge waits the configured number of seconds **after** the builders have started pre-filling the payload queue and **before** any worker connects to its target node. Use this for multi-node benchmark deployments where you want the cluster to stabilise before traffic begins, so that transmission ramps to the target TPS instantly rather than racing node startup. For single-node ops / iterative testing, leave it at the default.
+
+```json
+{ "cooldown_seconds": 300 }
+```
+
 ### Rate Limiting (`rate_limit`)
 The `rate_limit` field can be set at the **top level** or at the **workload level** (but not both — setting it at both levels is a validation error). If omitted entirely, targets run **unlimited** (no rate ceiling).
 
