@@ -27,6 +27,7 @@ module Cardano.Node.Run
 import           Cardano.Api (File (..), FileDirection (..))
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
+import           LeiosDemoDb (newLeiosDBInMemory)
 import           System.Random (randomIO)
 
 import           Cardano.BM.Data.LogItem (LogObject (..))
@@ -487,8 +488,12 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
                                             (const . pure $ ())
     rpcConfigVar <- newTVarIO (ncRpcConfig nc)
 
+    -- In-memory Leios DB; we don't need persistence for tx-centrifuge use.
+    leiosDbHandle <- newLeiosDBInMemory
+
     let nodeArgs = RunNodeArgs
           { rnGenesisConfig  = ncGenesisConfig nc
+          , rnLeiosDb        = leiosDbHandle
           , rnTraceConsensus = consensusTracers tracers
           , rnTraceNTN       = nodeToNodeTracers tracers
           , rnTraceNTC       = nodeToClientTracers tracers
