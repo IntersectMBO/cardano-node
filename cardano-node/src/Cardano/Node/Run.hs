@@ -493,6 +493,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
+                writeIORef nodeKernelAccessRef . Just $ mkNodeKernelAccess blockType nodeKernel
           }
           StdRunNodeArgs
             { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
@@ -769,7 +770,7 @@ rpcServerLoop :: Tracer IO (StartupTrace blk)
               -> Tracer IO TraceRpc
               -> StrictTVar IO RpcConfig
               -> NetworkMagic
-              -> IORef (Maybe (NodeKernelAccess IO))
+              -> IORef (Maybe NodeKernelAccess)
               -> IO ()
 rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccessRef = go
   where
