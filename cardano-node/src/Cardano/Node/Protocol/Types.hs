@@ -29,7 +29,7 @@ data Protocol = CardanoProtocol
   deriving (Eq, Generic)
 
 instance Show Protocol where
-  show CardanoProtocol = "Byron; Shelley"
+  show CardanoProtocol = "Cardano"
 
 deriving instance NFData Protocol
 deriving instance NoThunks Protocol
