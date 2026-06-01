@@ -130,7 +130,10 @@ timeseriesApp inputSanCfg tracerEnv handle getRoutes request send = do
     ["timeseries", "nodes"]
       | request.requestMethod == methodGet -> do
           routeDict <- getRoutes
-          send $ responseLBS status200 contentHdrJSON $ encode (map fst (getRouteDictionary routeDict))
+          let nodes = [ object ["nodeName" .= nodeName, "slug" .= slug]
+                      | (slug, (_, nodeName)) <- getRouteDictionary routeDict
+                      ]
+          send $ responseLBS status200 contentHdrJSON $ encode nodes
     ["timeseries", "node", slug, "info"]
       | request.requestMethod == methodGet ->
           resolveSlug slug >>= \case

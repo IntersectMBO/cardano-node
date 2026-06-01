@@ -60,19 +60,25 @@ export interface NodeStateResponse {
   syncProgress: number; // percentage 0–100
 }
 
+// /timeseries/nodes array element
+export interface NodeEntry {
+  nodeName: string;
+  slug: string;
+}
+
 export type QueryType = 'timeseries' | 'nodes' | 'node-info' | 'node-startup' | 'node-sync-progress';
 
 export interface CardanoTimeseriesQuery extends DataQuery {
   queryType: QueryType;
   queryText: string;
-  nodeName: string;
+  nodeNameSlug: string;
   legendFormat: string;
 }
 
 export const defaultQuery: Partial<CardanoTimeseriesQuery> = {
   queryType: 'timeseries',
   queryText: '',
-  nodeName: '',
+  nodeNameSlug: '',
   legendFormat: '',
 };
 

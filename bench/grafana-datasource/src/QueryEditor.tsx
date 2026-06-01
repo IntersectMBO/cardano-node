@@ -22,7 +22,7 @@ const QUERY_TYPES: Array<SelectableValue<QueryType>> = [
 export function QueryEditor({ query, onChange, onRunQuery }: Props) {
   const queryType    = query.queryType ?? 'timeseries';
   const queryText    = query.queryText ?? defaultQuery.queryText ?? '';
-  const nodeName     = query.nodeName ?? '';
+  const nodeNameSlug     = query.nodeNameSlug ?? '';
   const legendFormat = query.legendFormat ?? '';
 
   const onQueryTypeChange = (v: SelectableValue<QueryType>) => {
@@ -35,7 +35,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
   };
 
   const onNodeNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...query, nodeName: e.target.value });
+    onChange({ ...query, nodeNameSlug: e.target.value });
   };
 
   const onLegendFormatChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -57,10 +57,10 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
           />
         </InlineField>
         {needsNodeName && (
-          <InlineField label="Node Name" labelWidth={10} grow>
+          <InlineField label="Node Name (slug)" labelWidth={14} grow tooltip="Slugified node name, e.g. from the $node_name_slug variable">
             <Input
-              value={nodeName}
-              placeholder="e.g. node-1"
+              value={nodeNameSlug}
+              placeholder="e.g. node-1 or $node_name_slug"
               onChange={onNodeNameChange}
               onBlur={onRunQuery}
             />
