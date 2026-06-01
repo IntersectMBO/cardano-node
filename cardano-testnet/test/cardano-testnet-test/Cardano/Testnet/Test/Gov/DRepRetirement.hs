@@ -85,7 +85,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
   checkDRepsNumber epochStateView sbe sizeBefore
 
   -- Deregister first DRep
-  let dreprRetirementCertFile = gov </> "drep-keys" <> "drep1.retirementcert"
+  let dreprRetirementCertFile = gov </> defaultDRepKeysDir <> "drep1.retirementcert"
 
   H.noteM_ $ execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
