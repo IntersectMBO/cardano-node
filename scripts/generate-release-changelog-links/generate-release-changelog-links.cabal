@@ -13,7 +13,7 @@ executable generate-release-changelog-links
   main-is:          Main.hs
   hs-source-dirs:   .
   default-language: Haskell2010
-  ghc-options:      -Wall -Wextra -Wcompat -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:      -Wall -Wextra -Wcompat -O2 -flate-specialise -optl-s -threaded -rtsopts "-with-rtsopts=-A64m -I0"
   default-extensions:
     BlockArguments
     DataKinds

@@ -66,7 +66,6 @@ let
           shellcheck
           scriv
           stylish-haskell
-        ] ++ [
           config.hsPkgs.generate-release-changelog-links.components.exes.generate-release-changelog-links
         ];
 
