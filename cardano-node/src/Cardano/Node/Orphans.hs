@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Cardano.Node.Orphans () where
 

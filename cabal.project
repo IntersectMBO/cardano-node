@@ -93,12 +93,12 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to ouroboros-consensus/leios-prototype-remake
+-- Points to ouroboros-consensus/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: cb3a21d17f236bfa3de0d2b658f8cec9cd7b919e
-  --sha256: sha256-rx1lCtjDUtbSxZh7iqwj4JKIwp4ssYH2kqg+RsjV0oQ=
+  tag: 22dbfaf3811149e9f74bfab792ffad1f067c1b6a
+  --sha256: sha256-cH+wWrkc4rNRIPPf8i9VsP2oKmg4YamyJ1wY5WF1ucQ=
 
 -- Points to cardano-ledger/leios-prototype-remake
 source-repository-package
