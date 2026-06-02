@@ -15,6 +15,7 @@ import           Cardano.Api
 import           Cardano.Testnet
 
 import           Prelude
+import           Control.Monad (void)
 
 import           Data.Default.Class
 import qualified Data.Text as Text
@@ -84,14 +85,16 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
   let sizeBefore = 3
   checkDRepsNumber epochStateView sbe sizeBefore
 
+  void $ H.createDirectoryIfMissing $ gov </> defaultDRepKeysDir
+
   -- Deregister first DRep
-  let dreprRetirementCertFile = gov </> defaultDRepKeysDir <> "drep1.retirementcert"
+  let drepRetirementCertFile = gov </> defaultDRepKeysDir </> "drep1.retirementcert"
 
   H.noteM_ $ execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair 1
      , "--deposit-amt", show @Int 1_000_000
-     , "--out-file", dreprRetirementCertFile
+     , "--out-file", drepRetirementCertFile
      ]
 
   H.noteM_ $ execCli' execConfig
@@ -110,7 +113,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--certificate-file", dreprRetirementCertFile
+    , "--certificate-file", drepRetirementCertFile
     , "--witness-override", "2"
     , "--out-file", drepRetirementRegTxbodyFp
     ]
