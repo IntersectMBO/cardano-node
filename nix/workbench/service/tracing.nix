@@ -7,16 +7,11 @@ cfg:
 
 with lib;
 let
-  selectedTracingBackend =
-    if tracing_backend == "iohk-monitoring"
-    then "trace-dispatcher"
-    else tracing_backend;
 
   trace-dispatcher =
     recursiveUpdate
-    (removeAttrs (removeLegacyTracingOptions cfg) ["TraceOptionForwarder"])
+    (removeAttrs cfg ["TraceOptionForwarder"])
   {
-    UseTraceDispatcher   = true;
     TraceOptionResourceFrequency = 1000;
     TraceOptionNodeName = nodeSpec.name;
 
@@ -118,79 +113,7 @@ let
       };
   };
 
-
-
-  ##
-  ## removeLegacyTracingOptions :: NodeConfig -> NodeConfig
-  ##
-  removeLegacyTracingOptions = cfg:
-    removeAttrs cfg
-    [
-      "TraceAcceptPolicy"
-      "TraceBlockchainTime"
-      "TraceBlockFetchClient"
-      "TraceBlockFetchDecisions"
-      "TraceBlockFetchProtocol"
-      "TraceBlockFetchProtocolSerialised"
-      "TraceBlockFetchServer"
-      "TraceChainDb"
-      "TraceChainSyncClient"
-      "TraceChainSyncBlockServer"
-      "TraceChainSyncHeaderServer"
-      "TraceChainSyncProtocol"
-      "TraceConnectionManager"
-      "TraceConnectionManagerCounters"
-      "TraceConnectionManagerTransitions"
-      "DebugPeerSelectionInitiator"
-      "DebugPeerSelectionInitiatorResponder"
-      "TraceDiffusionInitialization"
-      "TraceDnsResolver"
-      "TraceDnsSubscription"
-      "TraceErrorPolicy"
-      "TraceForge"
-      "TraceForgeStateInfo"
-      "TraceHandshake"
-      "TraceIpSubscription"
-      "TraceKeepAliveClient"
-      "TraceLedgerPeers"
-      "TraceLocalChainSyncProtocol"
-      "TraceLocalConnectionManager"
-      "TraceLocalErrorPolicy"
-      "TraceLocalHandshake"
-      "TraceLocalInboundGovernor"
-      "TraceLocalRootPeers"
-      "TraceLocalServer"
-      "TraceLocalStateQueryProtocol"
-      "TraceLocalTxMonitorProtocol"
-      "TraceLocalTxSubmissionProtocol"
-      "TraceLocalTxSubmissionServer"
-      "TraceMempool"
-      "TraceMux"
-      "TraceLocalMux"
-      "TracePeerSelection"
-      "TracePeerSelectionCounters"
-      "TracePeerSelectionActions"
-      "TracePublicRootPeers"
-      "TraceServer"
-      "TraceInboundGovernor"
-      "TraceInboundGovernorCounters"
-      "TraceInboundGovernorTransitions"
-      "TraceTxInbound"
-      "TraceTxOutbound"
-      "TraceTxSubmissionProtocol"
-      "TraceTxSubmission2Protocol"
-      "TracingVerbosity"
-      "defaultBackends"
-      "defaultScribes"
-      "hasEKG"
-      "hasPrometheus"
-      "minSeverity"
-      "options"
-      "rotation"
-      "setupBackends"
-      "setupScribes"
-    ];
 in
 {
   inherit trace-dispatcher;
-}.${selectedTracingBackend}
+}.${tracing_backend}

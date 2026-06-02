@@ -96,14 +96,7 @@ let
             ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
-          (baseConfig //
-           { minSeverity = "Critical";
-             setupScribes = [];
-             setupBackends = [];
-             defaultScribes = [];
-             defaultBackends = [];
-             options = {};
-           })
+          baseConfig
             // optionalAttrs (cfg.withUtxoHdLsmt i){
               LedgerDB = {
                 Backend = "V2LSM";
