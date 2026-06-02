@@ -65,7 +65,6 @@ let
           actionlint
           shellcheck
           stylish-haskell
-        ] ++ [
           config.hsPkgs.generate-release-changelog-links.components.exes.generate-release-changelog-links
         ] ++ lib.optional (herald != null) herald;
 
