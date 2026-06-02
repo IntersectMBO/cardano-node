@@ -98,6 +98,7 @@ pool-relays-jq() {
 }
 
 # Entry point for genesis creation.
+# Keeps in the provided directory all the output of `create-testnet-data`.
 genesis-create-jq() {
     local profile_json=$1
     local dir=$2
@@ -124,186 +125,7 @@ genesis-create-jq() {
     )
     progress genesis "$(colorise cardano-cli "$era" create-testnet-data "${create_testnet_data_args[@]}")"
     cardano-cli "$era" genesis create-testnet-data "${create_testnet_data_args[@]}"
-
-    # for comparison/compatibility
-
-    # genesis specs and finals
-    jq_fmutate "$dir/byron.genesis.spec.json"   -S .
-    jq_fmutate "$dir/byron-genesis.json"        -S .
-    jq_fmutate "$dir/shelley-genesis.spec.json" -S .
-    jq_fmutate "$dir/shelley-genesis.json"      -S .
-    jq_fmutate "$dir/alonzo-genesis.spec.json"  -S .
-    jq_fmutate "$dir/alonzo-genesis.json"       -S .
-    jq_fmutate "$dir/conway-genesis.spec.json"  -S .
-    jq_fmutate "$dir/conway-genesis.json"       -S .
-    jq_fmutate "$dir/dijkstra-genesis.json"     -S .
-
-    ln -sf byron.genesis.spec.json   "$dir/genesis-byron.spec.json"
-    ln -sf byron-genesis.json        "$dir/genesis-byron.json"
-    ln -sf shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
-    ln -sf shelley-genesis.json      "$dir/genesis-shelley.json"
-    ln -sf alonzo-genesis.spec.json  "$dir/genesis.alonzo.spec.json"
-    ln -sf alonzo-genesis.json       "$dir/genesis.alonzo.json"
-    ln -sf conway-genesis.spec.json  "$dir/genesis.conway.spec.json"
-    ln -sf conway-genesis.json       "$dir/genesis.conway.json"
-    ln -sf dijkstra-genesis.json     "$dir/genesis.dijkstra.json"
-
-    shopt -s extglob
-
-    function link_keys() {
-        local from=${1}
-        local to=${2}
-
-        for k in "$dir/$from"/*/*; do
-            local path=${k//"$dir/"/}
-            local elems
-            IFS=/ read -a elems -r <<<"$path"
-            local no=${elems[1]##*([[:alpha:]])}
-            local keyname=${elems[2]%.*}
-            local keyext=${elems[2]##*.}
-            ln -sf "../${path}" "$dir/${to}/${keyname}${no}.${keyext}"
-        done
-    }
-
-    mkdir -p "$dir/pools"
-    link_keys pools-keys pools
-
-    mkdir -p "$dir/utxo-keys"
-    link_keys utxo-keys utxo-keys
-
-    local is_voting
-    is_voting=$(jq --raw-output '.workloads | any( .name == "voting")' "$profile_json")
-    if [[ "$is_voting" == "true" ]];
-    then
-        info genesis "voting workload specified - keeping one stake key per producer"
-        mv "$dir/stake-delegators" "$dir/stake-delegators.bak"
-        mkdir "$dir/stake-delegators"
-        local pools
-        pools="$(jq --raw-output '.composition.n_pools' "${profile_json}")"
-        for i in $(seq 1 "$pools")
-        do
-          if test -d "$dir/stake-delegators.bak/delegator${i}"
-          then
-            local from_dir to_dir
-            from_dir="$dir/stake-delegators.bak/delegator${i}"
-            to_dir="$dir/stake-delegators/delegator$((i - 1))"
-            mkdir "$to_dir"
-            cp "$from_dir"/{payment,staking}.{skey,vkey} "$to_dir"/
-          fi
-        done
-        rm "$dir/stake-delegators.bak" -rf
-        info genesis "voting workload specified - skipping deletion of DRep keys"
-    else
-      info genesis "removing delegator keys."
-      rm "$dir/stake-delegators" -rf
-      info genesis "removing dreps keys."
-      rm "$dir"/drep-keys -rf
-    fi
-
-    info genesis "moving keys"
-    Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
-
     info genesis "create-testnet-data genesis available in $dir"
-}
-
-__KEY_ROOT=
-Massage_the_key_file_layout_to_match_AWS() {
-    local profile_json=${1:?$usage}
-    local node_specs=${2:?$usage}
-    local dir=${3:?$usage}
-    local ids
-    local pool_density_map
-
-    pool_density_map=$(topology density-map "$node_specs")
-    if [[ -z "$pool_density_map" ]]; then
-      fatal "failed: topology density-map '$node_specs'"
-    fi
-    info genesis "pool density map:  $pool_density_map"
-
-    __KEY_ROOT=$dir
-
-    read -r -a ids <<< "$(jq 'keys | join(" ")' -cr <<< "$pool_density_map")"
-
-    local bid=1 pid=1 did=1 ## (B)FT, (P)ool, (D)ense pool
-    for id in "${ids[@]}"; do
-        mkdir -p "$dir"/node-keys/cold
-
-        #### cold keys (do not copy to production system)
-        if   jqtest ".composition.dense_pool_density > 1" "$profile_json" &&
-             jqtest ".[\"$id\"]  > 1" <<<"$pool_density_map"
-        then ## Dense/bulk pool
-           info genesis "bulk pool $did -> node-$id"
-           cp -f "$(key_genesis bulk      bulk "$did")" "$(key_depl bulk   bulk "$id")"
-           did=$((did + 1))
-        elif jqtest ".[\"$id\"] != 0" <<<"$pool_density_map"
-        then ## Singular pool
-           info genesis "pool $pid -> node-$id"
-           cp -f "$(key_genesis cold       sig "$pid")" "$(key_depl cold    sig "$id")"
-           cp -f "$(key_genesis cold       ver "$pid")" "$(key_depl cold    ver "$id")"
-           cp -f "$(key_genesis opcert    cert "$pid")" "$(key_depl opcert none "$id")"
-           cp -f "$(key_genesis opcert   count "$pid")" "$(key_depl cold  count "$id")"
-           cp -f "$(key_genesis KES        sig "$pid")" "$(key_depl KES     sig "$id")"
-           cp -f "$(key_genesis KES        ver "$pid")" "$(key_depl KES     ver "$id")"
-           cp -f "$(key_genesis VRF        sig "$pid")" "$(key_depl VRF     sig "$id")"
-           cp -f "$(key_genesis VRF        ver "$pid")" "$(key_depl VRF     ver "$id")"
-           pid=$((pid + 1))
-        else ## BFT node
-           info genesis "BFT $bid -> node-$id"
-           cp -f "$(key_genesis deleg      sig "$bid")" "$(key_depl cold    sig "$id")"
-           cp -f "$(key_genesis deleg      ver "$bid")" "$(key_depl cold    ver "$id")"
-           cp -f "$(key_genesis delegCert cert "$bid")" "$(key_depl opcert none "$id")"
-           cp -f "$(key_genesis deleg    count "$bid")" "$(key_depl cold  count "$id")"
-           cp -f "$(key_genesis delegKES   sig "$bid")" "$(key_depl KES     sig "$id")"
-           cp -f "$(key_genesis delegKES   ver "$bid")" "$(key_depl KES     ver "$id")"
-           cp -f "$(key_genesis delegVRF   sig "$bid")" "$(key_depl VRF     sig "$id")"
-           cp -f "$(key_genesis delegVRF   ver "$bid")" "$(key_depl VRF     ver "$id")"
-           bid=$((bid + 1))
-        fi
-    done
-}
-
-key_depl() {
-    local type=$1 kind=$2 id=$3
-    case "$kind" in
-            bulk )     suffix='.creds';;
-            cert )     suffix='.cert';;
-            count )    suffix='.counter';;
-            none )     suffix=;;
-            sig )      suffix='.skey';;
-            ver )      suffix='.vkey';;
-            * )        fatal "key_depl: unknown key kind: '$kind'";; esac
-    case "$type" in
-            bulk )     stem=node-keys/bulk$id;;
-            cold )     stem=node-keys/cold/operator$id;;
-            opcert )   stem=node-keys/node$id.opcert;;
-            KES )      stem=node-keys/node-kes$id;;
-            VRF )      stem=node-keys/node-vrf$id;;
-            * )        fatal "key_depl: unknown key type: '$type'";; esac
-    echo "$__KEY_ROOT/$stem$suffix"
-}
-
-key_genesis() {
-    local type=$1 kind=$2 id=$3
-    case "$kind" in
-            bulk )     suffix='.creds';;
-            cert )     suffix='.cert';;
-            count )    suffix='.counter';;
-            none )     suffix=;;
-            sig )      suffix='.skey';;
-            ver )      suffix='.vkey';;
-            * )        fatal "key_genesis: unknown key kind: '$kind'";; esac
-    case "$type" in
-            bulk )     stem=pools/bulk$id;;
-            cold )     stem=pools/cold$id;;
-            opcert )   stem=pools/opcert$id;;
-            KES )      stem=pools/kes$id;;
-            VRF )      stem=pools/vrf$id;;
-            deleg )    stem=delegate-keys/delegate$id;;
-            delegCert )stem=delegate-keys/opcert$id;;
-            delegKES ) stem=delegate-keys/delegate$id.kes;;
-            delegVRF ) stem=delegate-keys/delegate$id.vrf;;
-            * )        fatal "key_genesis: unknown key type: '$type'";; esac
-    echo "$__KEY_ROOT/$stem$suffix"
 }
 
 derive-from-cache-jq() {
@@ -311,7 +133,7 @@ derive-from-cache-jq() {
     local profile_json=${1:?$usage}
     local timing=${2:?$usage}
     local cache_entry=${3:?$usage}
-    local outdir=${4:?$usage}
+    local outdir=${4:?$usage} # output directory (run dir's genesis/, e.g. run/current/genesis).
 
     mkdir -p "$outdir"
 
@@ -323,22 +145,25 @@ derive-from-cache-jq() {
     ln -s "$cache_entry"/cache.key.input      "$outdir"
     ln -s "$cache_entry"/layout.version       "$outdir"
 
-    # create-testnet-data does not create these directories if there are no keys in them
-    [[ -d "$dir"/delegate-keys ]] && ln -s "$cache_entry"/delegate-keys "$outdir"
-    [[ -d "$dir"/genesis-keys  ]] && ln -s "$cache_entry"/genesis-keys  "$outdir"
+    # Directories: everything create-testnet-data can produce as symlinks.
+    for keydir in byron-gen-command delegate-keys drep-keys genesis-keys pools-keys stake-delegators utxo-keys
+    do
+      if [[ -d "$cache_entry/$keydir" ]]; then
+        ln -s "$cache_entry/$keydir" "$outdir/$keydir"
+      else
+        # Create an empty entry if directory does not exist.
+        mkdir -p "$outdir/$keydir"
+      fi
+    done
 
-    cp -a "$cache_entry"/node-keys            "$outdir"
-    chmod -R go-rwx                           "$outdir"/node-keys
-
-    ln -s "$cache_entry"/pools                "$outdir"
-    ln -s "$cache_entry"/stake-delegator-keys "$outdir"
-    ln -s "$cache_entry"/utxo-keys            "$outdir"
-    [[ -d "$cache_entry"/stake-delegators ]] && ln -s "$cache_entry"/stake-delegators "$outdir"
-    [[ -d "$cache_entry"/drep-keys ]]        && ln -s "$cache_entry"/drep-keys        "$outdir"
-
-    ## genesis
-    cp    "$cache_entry"/genesis*.json        "$outdir"
-    chmod u+w                                 "$outdir"/genesis*.json
+    ## Files: all the genesis JSON files create-testnet-data produces.
+    # Normalize create-testnet-data output names to genesis.<era>.json
+    cp    "$cache_entry"/byron-genesis.json    "$outdir"/genesis.byron.json
+    cp    "$cache_entry"/shelley-genesis.json  "$outdir"/genesis.shelley.json
+    cp    "$cache_entry"/alonzo-genesis.json   "$outdir"/genesis.alonzo.json
+    cp    "$cache_entry"/conway-genesis.json   "$outdir"/genesis.conway.json
+    cp    "$cache_entry"/dijkstra-genesis.json "$outdir"/genesis.dijkstra.json
+    chmod u+w                                  "$outdir"/genesis.*.json
 
     progress "genesis" "finalizing retrieved cache entry in:  $outdir"
 
@@ -357,8 +182,8 @@ derive-from-cache-jq() {
     local system_start_epoch
     system_start_epoch="$(jq '.start' -r <<<"$timing")"
     jq --argjson start "$system_start_epoch" '.startTime = $start' \
-      "$outdir"/genesis-byron.json |
-      sponge "$outdir"/genesis-byron.json
+      "$outdir"/genesis.byron.json |
+      sponge "$outdir"/genesis.byron.json
 
     # Shelley: startTime, protocolVersion, maxBlockBodySize
     jq '$prof[0].genesis.shelley as $shey
@@ -369,8 +194,8 @@ derive-from-cache-jq() {
          | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
       --argjson timing "$timing" \
       --slurpfile prof "$profile_json" \
-      "$outdir"/genesis-shelley.json |
-      sponge "$outdir"/genesis-shelley.json
+      "$outdir"/genesis.shelley.json |
+      sponge "$outdir"/genesis.shelley.json
 
     # Alonzo: Execution budgets
     # NB. PlutusV1 and PlutusV2 cost models are *NOT* covered here; they're encoded
@@ -395,5 +220,6 @@ derive-from-cache-jq() {
       --slurpfile prof "$profile_json" \
       "$outdir"/genesis.conway.json |
       sponge "$outdir"/genesis.conway.json
+
 }
 

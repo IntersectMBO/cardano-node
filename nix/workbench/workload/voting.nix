@@ -26,8 +26,8 @@ let
     else throw "Conway genesis needed!"
   ;
   # Where to obtain the genesis funds from.
-  genesis_funds_vkey = "../../genesis/utxo-keys/utxo2.vkey";
-  genesis_funds_skey = "../../genesis/utxo-keys/utxo2.skey";
+  genesis_funds_vkey = "../../genesis/utxo-keys/utxo2/utxo.vkey";
+  genesis_funds_skey = "../../genesis/utxo-keys/utxo2/utxo.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 
@@ -951,7 +951,7 @@ function governance_create_constitution {
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
-    --deposit-return-stake-verification-key-file ../../genesis/stake-delegators/delegator0/staking.vkey \
+    --deposit-return-stake-verification-key-file ../../genesis/stake-delegators/delegator1/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -1024,8 +1024,8 @@ function governance_create_withdrawal {
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
-    --deposit-return-stake-verification-key-file  ../../genesis/stake-delegators/"delegator''${node_i}"/staking.vkey \
-    --funds-receiving-stake-verification-key-file ../../genesis/stake-delegators/"delegator''${node_i}"/staking.vkey \
+    --deposit-return-stake-verification-key-file  ../../genesis/stake-delegators/"delegator$((node_i + 1))"/staking.vkey \
+    --funds-receiving-stake-verification-key-file ../../genesis/stake-delegators/"delegator$((node_i + 1))"/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \

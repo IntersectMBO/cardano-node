@@ -40,7 +40,7 @@ let
   finaliseGeneratorService =
     profile: svc: recursiveUpdate svc
       ({
-        sigKey              = "../genesis/utxo-keys/utxo1.skey";
+        sigKey              = "../genesis/utxo-keys/utxo1/utxo.skey";
         runScriptFile       = "run-script.json";
         ## path to the config and socket of the locally running node.
         nodeConfigFile      = "../${runningNode}/config.json";

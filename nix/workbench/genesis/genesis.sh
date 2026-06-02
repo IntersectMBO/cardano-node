@@ -140,15 +140,14 @@ case "$op" in
         info genesis "profile uses preset genesis: $preset"
 
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
-        mkdir -p "$dir/byron"
-        local fs=(
-            byron/genesis.json
-            genesis-shelley.json
-            genesis.alonzo.json
-        )
-        for f in "${fs[@]}"; do
-          cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/"$f")" "$dir/$f"
-        done;;
+        mkdir -p "$dir"
+
+        # Copy preset files into the cache entry, normalizing the source.
+        cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/byron/genesis.json)"   "$dir/genesis.byron.json"
+        cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis-shelley.json)" "$dir/genesis.shelley.json"
+        cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis.alonzo.json)"  "$dir/genesis.alonzo.json"
+        cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis.conway.json)"  "$dir/genesis.conway.json"
+        ;;
 
     actually-genesis )
         local usage="USAGE: wb genesis $op PROFILE-JSON NODE-SPECS DIR"

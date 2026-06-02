@@ -874,11 +874,51 @@ deploy-genesis-nomadcloud() {
   # Create genesis tar file
   local genesis_file_name="${nomad_job_name}.tar.zst"
   msg "$(blue Creating) $(yellow "\"${genesis_file_name}\"") ..."
-  # TODO: These files are link to file that don't exist!
+  # TODO: This file is a symlink to a file that does not exist!
   rm "${dir}"/genesis/profile.json
-  rm "${dir}"/genesis/stake-delegator-keys
+  # The remote nodes only need a small subset of what `create-testnet-data`
+  # generates in ${dir}/genesis. See nix/workbench/genesis/zero/README.md
+  # ("Used by the workbench") for the inventory and the per-file rationale.
+  local is_voting
+  is_voting=$(jq --raw-output '.workloads | any( .name == "voting")' "${dir}"/profile.json)
+  # `-name` matches just the basename and is enough for files whose basename is
+  # unique in the tree (the genesis JSON files, the guardrails script).
+  # `-path "*/genesis/..."` is used everywhere else: `kes.skey`, `utxo.skey`
+  # etc. appear under more than one directory and the containing dir is what
+  # tells them apart. Anchoring on `*/genesis/` also makes the patterns robust
+  # against the run-dir layout: anything under the cache subdir
+  # (`cache-entry/dataset/pools-keys/...` today, anything else tomorrow) is
+  # automatically excluded, so we do not have to keep a literal cache-dir name
+  # in sync with this file.
+  local include_args=(
+    # Five genesis JSON files referenced by the node config via
+    # Byron/Shelley/Alonzo/Conway/DijkstraGenesisFile.
+        -name "genesis.byron.json"
+    -o  -name "genesis.shelley.json"
+    -o  -name "genesis.alonzo.json"
+    -o  -name "genesis.conway.json"
+    -o  -name "genesis.dijkstra.json"
+    # Per-pool runtime keys read by service/nodes.nix.
+    -o  -path "*/genesis/pools-keys/pool*/opcert.cert"
+    -o  -path "*/genesis/pools-keys/pool*/kes.skey"
+    -o  -path "*/genesis/pools-keys/pool*/vrf.skey"
+    # All utxo-keys: ship every utxoN unconditionally so additional consumers of
+    # utxo-keys/* do not silently break.
+    -o  -path "*/genesis/utxo-keys/utxo*/utxo.skey"
+    -o  -path "*/genesis/utxo-keys/utxo*/utxo.vkey"
+  )
+  if test "${is_voting}" == "true"
+  then
+    # Extras read only by workload/voting.nix.
+    include_args+=(
+      -o  -name "guardrails-script.plutus"
+      -o  -path "*/genesis/stake-delegators/delegator*/staking.vkey"
+      -o  -path "*/genesis/drep-keys/drep*/drep.skey"
+      -o  -path "*/genesis/drep-keys/drep*/drep.vkey"
+    )
+  fi
   find -L "${dir}"/genesis                              \
-    -not -name cache-entry -not -path "*/cache-entry/*" \
+    \( "${include_args[@]}" \)                          \
     -printf "%P\n"                                      \
     | tar --create --zstd                               \
       --dereference --hard-dereference                  \

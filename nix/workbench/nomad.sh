@@ -1092,11 +1092,8 @@ EOF
               --file="${document_root}"/"${run_tag}".tar.zst    \
               --owner=65534 --group=65534 --mode="u=rwx"        \
               --directory="${genesis_dir}" --files-from=-
-          # And remember the correct permissions when extracting:
-          #> VRF private key file at: ../genesis/node-keys/node-vrf0.skey has
-          #  "other" file permissions. Please remove all "other" file permissions.
-          #> VRF private key file at: ../genesis/node-keys/node-vrf0.skey has
-          #  "group" file permissions. Please remove all "group" file permissions.
+          # cardano-node rejects pools-keys/poolN/vrf.skey if any "other"
+          # perm bit is set. Extraction must chmod go= on the keys.
           true
         ;;
         pid-filepath )

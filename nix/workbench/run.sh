@@ -263,9 +263,9 @@ EOF
         local run=${1:?$usage}
         local dir=$(run compute-path "$run")
 
-        if test ! -f "$dir"/genesis-shelley.json
+        if test ! -f "$dir"/genesis/genesis.shelley.json -a -f "$dir"/genesis.json
         then msg "fixing up genesis naming in:  $dir"
-             mv "$dir"/genesis.json "$dir"/genesis-shelley.json; fi
+             mv "$dir"/genesis.json "$dir"/genesis/genesis.shelley.json; fi
 
         if test -z "$(ls -d "$dir"/node-* 2>/dev/null)"
         then msg "fixing up a legacy cardano-ops run in:  $dir"
@@ -323,7 +323,7 @@ EOF
              then return 1
              else fatal "run $run (at $dir) missing a file:  meta.json"; fi; fi
 
-        test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
+        test -f "$dir"/profile.json -a -f "$dir"/genesis/genesis.shelley.json ||
             run fix-legacy-run-structure "$run";;
 
     get-path | get )
@@ -534,9 +534,6 @@ EOF
                      "$genesis_cache_entry" \
                      "$dir"/genesis
         fi
-        ## Record geneses
-        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
-        cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
         ## Add global_basedir Voltaire Plutus guardrails script
         cp "$global_basedir"/genesis/guardrails-script.plutus "$dir"/genesis/
@@ -650,7 +647,7 @@ EOF
         local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
         local dir=$global_rundir/$run
-        local genesis="$dir"/genesis-shelley.json
+        local genesis="$dir"/genesis/genesis.shelley.json
         local geneses_orig_dir=$global_rundir/.geneses.orig
         local genesis_orig="$geneses_orig_dir"/$run.orig.json
 
@@ -669,7 +666,7 @@ EOF
                .initialFunds = {}
              | .staking      = {}
              ' "$genesis_orig"; fi
-        cp -f "$dir"/genesis-shelley.json "$dir"/genesis/genesis-shelley.json;;
+        ;;
 
     package | pack )
         local usage="USAGE: wb run $op RUN"
@@ -808,8 +805,8 @@ run_remote_get() {
     jq . <<<$meta > $dir/meta.json
 
     local common_run_files=(
-        genesis.alonzo.json
-        genesis-shelley.json
+        genesis/genesis.alonzo.json
+        genesis/genesis.shelley.json
         profile.json
         generator/protocol-parameters-queried.json
         generator/plutus-budget-summary.json

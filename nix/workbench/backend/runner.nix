@@ -179,12 +179,19 @@ let
 
         ${workbench-envars}
 
+        # cardano-node rejects vrf.skey if any "other" perm bit is set, but Nix
+        # forces every store file to 0444. Copy out and chmod go= so the run
+        # dir's symlinks resolve to 0600.
+        genesis_cache_entry=$out/cache/genesis-cache-entry
+        cp -rL ${genesisFiles} "$genesis_cache_entry"
+        chmod -R u+rwX,go= "$genesis_cache_entry"
+
         cmd=(
           wb
           start
           --profile-data        ${profileDataDir}
           --backend-data        ${backendDataDir}
-          --genesis-cache-entry ${genesisFiles}
+          --genesis-cache-entry "$genesis_cache_entry"
           --batch-name          smoke-test
           --base-port           ${toString basePort}
           --node-source         ${haskellProject.args.src}
