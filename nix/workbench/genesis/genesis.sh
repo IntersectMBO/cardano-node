@@ -1,12 +1,11 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 
-global_genesis_format_version=October-13-2025
+global_genesis_format_version=June-22-2026
 
 # Resolve genesis backend once (at source time, no output).
 # Each backend file defines: spec-*, pool-relays-*, profile-cache-key-*,
-# profile-cache-key-input-*, genesis-byron-*, genesis-create-*,
-# derive-from-cache-*
+# profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
 if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
 else                                          genesis_backend=jq
 fi
@@ -249,14 +248,5 @@ case "$op" in
       ;;
 
     esac
-}
-
-genesis-byron() {
-    set -euo pipefail
-    if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-      genesis-byron-modular "$@"
-    else
-      genesis-byron-jq "$@"
-    fi
 }
 

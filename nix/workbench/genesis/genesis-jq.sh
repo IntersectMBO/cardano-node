@@ -7,7 +7,6 @@
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,
 #   spec-jq, pool-relays-jq,
-#   genesis-byron-jq,
 #   genesis-create-jq, derive-from-cache-jq
 
 profile-cache-key-input-jq() {
@@ -98,56 +97,6 @@ pool-relays-jq() {
        ' "$node_specs"
 }
 
-genesis-byron-jq() {
-    local system_start_epoch=$1
-    local dir=$2
-    local profile_json=$3
-
-    jq '
-      { heavyDelThd:       "300000"
-      , maxBlockSize:      "641000"
-      , maxHeaderSize:     "200000"
-      , maxProposalSize:   "700"
-      , maxTxSize:         "4096"
-      , mpcThd:            "200000"
-      , scriptVersion:     0
-      , slotDuration:      "20000"
-      , softforkRule:
-        { initThd:         "900000"
-        , minThd:          "600000"
-        , thdDecrement:    "100000"
-        }
-      , txFeePolicy:
-        { multiplier:      "439460"
-        , summand:         "155381"
-        }
-      , unlockStakeEpoch:  "184467"
-      , updateImplicit:    "10000"
-      , updateProposalThd: "100000"
-      , updateVoteThd:     "100000"
-      }
-    ' --null-input > "$dir"/byron-protocol-params.json
-
-    cli_args=(
-        ## Note that these parameters are irrelevant by now.
-        --genesis-output-dir         "$dir"/byron
-        --protocol-parameters-file   "$dir"/byron-protocol-params.json
-        --start-time                 "$system_start_epoch"
-        --k                          "$(jq '.genesis.parameter_k' "$profile_json")"
-        --protocol-magic             "$(jq '.genesis.network_magic' "$profile_json")"
-        --n-poor-addresses           1
-        --n-delegate-addresses       1
-        --total-balance              300000
-        --delegate-share             0.9
-        --avvm-entry-count           0
-        --avvm-entry-balance         0
-    )
-    rm -rf "$dir"/byron
-
-    verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
-    cardano-cli byron genesis genesis "${cli_args[@]}"
-}
-
 # Entry point for genesis creation.
 genesis-create-jq() {
     local profile_json=$1
@@ -179,6 +128,8 @@ genesis-create-jq() {
     # for comparison/compatibility
 
     # genesis specs and finals
+    jq_fmutate "$dir/byron.genesis.spec.json"   -S .
+    jq_fmutate "$dir/byron-genesis.json"        -S .
     jq_fmutate "$dir/shelley-genesis.spec.json" -S .
     jq_fmutate "$dir/shelley-genesis.json"      -S .
     jq_fmutate "$dir/alonzo-genesis.spec.json"  -S .
@@ -187,6 +138,8 @@ genesis-create-jq() {
     jq_fmutate "$dir/conway-genesis.json"       -S .
     jq_fmutate "$dir/dijkstra-genesis.json"     -S .
 
+    ln -sf byron.genesis.spec.json   "$dir/genesis-byron.spec.json"
+    ln -sf byron-genesis.json        "$dir/genesis-byron.json"
     ln -sf shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
     ln -sf shelley-genesis.json      "$dir/genesis-shelley.json"
     ln -sf alonzo-genesis.spec.json  "$dir/genesis.alonzo.spec.json"
@@ -389,11 +342,6 @@ derive-from-cache-jq() {
 
     progress "genesis" "finalizing retrieved cache entry in:  $outdir"
 
-    local system_start_epoch
-    system_start_epoch="$(jq '.start' -r <<<"$timing")"
-
-    genesis-byron "$system_start_epoch" "$outdir" "$profile_json"
-
     # The genesis cache entry in $outdir needs post-processing:
     # * the system start date might get an adjustment offset into the future
     # * some workbench profile content not captured by the genesis cache key will be patched in
@@ -404,6 +352,13 @@ derive-from-cache-jq() {
     # These modifications are small deltas to base profiles, which do not, and should
     # not, result in recreation of the entire staked genesis, as that is large on-disk
     # and takes long to create.
+
+    # Byron: patch startTime (same approach as shelley's systemStart below)
+    local system_start_epoch
+    system_start_epoch="$(jq '.start' -r <<<"$timing")"
+    jq --argjson start "$system_start_epoch" '.startTime = $start' \
+      "$outdir"/genesis-byron.json |
+      sponge "$outdir"/genesis-byron.json
 
     # Shelley: startTime, protocolVersion, maxBlockBodySize
     jq '$prof[0].genesis.shelley as $shey

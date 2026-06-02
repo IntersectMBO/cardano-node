@@ -212,44 +212,8 @@ in
         default = { };
       };
 
-      byron = mkOption {
-        description = "Byron protocol parameters";
-        type = types.submodule {
-          freeformType = json.type;
-          config = mkDefault {
-            heavyDelThd = "300000";
-            maxBlockSize = "641000";
-            maxHeaderSize = "200000";
-            maxProposalSize = "700";
-            maxTxSize = "4096";
-            mpcThd = "200000";
-            scriptVersion = 0;
-            slotDuration = "20000";
-            softforkRule = {
-              initThd = "900000";
-              minThd = "600000";
-              thdDecrement = "100000";
-            };
-            txFeePolicy = {
-              multiplier = "439460";
-              summand = "155381";
-            };
-            unlockStakeEpoch = "184467";
-            updateImplicit = "10000";
-            updateProposalThd = "100000";
-            updateVoteThd = "100000";
-          };
-        };
-        default = { };
-      };
-
       create-testnet-data-args = mkOption {
         description = "Arguments to cardano-cli genesis create-testnet-data";
-        type = types.separatedString " ";
-      };
-
-      byron-genesis-args = mkOption {
-        description = "Arguments to cardano-cli byron genesis genesis";
         type = types.separatedString " ";
       };
 
@@ -297,17 +261,6 @@ in
         "--testnet-magic ${toString genesis.network_magic}"
       ];
 
-      byron-genesis-args = concatStringsSep " " ([
-        "--k ${toString genesis.parameter_k}"
-        "--protocol-magic ${toString genesis.network_magic}"
-        "--n-poor-addresses 1"
-        "--n-delegate-addresses 1"
-        "--total-balance 300000"
-        "--delegate-share 0.9"
-        "--avvm-entry-count 0"
-        "--avvm-entry-balance 0"
-      ]);
-
       cache-key-input = {
         inherit (composition) n_pools n_bft_hosts n_dense_hosts dense_pool_density;
         inherit (derived) utxo_stuffed;
@@ -322,6 +275,7 @@ in
             ++ optional (genesis.dreps != 0) [ "${toString genesis.dreps}Dr" ]
             ++ [
             "${toString (derived.utxo_stuffed / 1000)}kU"
+            "v2"
             (substring 0 7 (builtins.hashString "sha1" (builtins.toJSON genesis.cache-key-input)))
           ]);
 

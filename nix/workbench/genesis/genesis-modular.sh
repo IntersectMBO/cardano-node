@@ -6,7 +6,6 @@
 # Implements the backend interface:
 #   profile-cache-key-input-modular, profile-cache-key-modular,
 #   spec-modular, pool-relays-modular,
-#   genesis-byron-modular,
 #   genesis-create-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
@@ -59,29 +58,6 @@ pool-relays-modular() {
 
     # NOTE: jq is only used for to keep the same formatting as the jq version
     evaluate --profile "$profile_json" --node-specs "$node_specs" genesis.pool-relays | jq
-}
-
-genesis-byron-modular() {
-    local system_start_epoch=$1
-    local dir=$2
-    local profile_json=$3
-
-    # nix wants absolute paths
-    profile_json=$(realpath "$profile_json")
-
-    evaluate --profile "$profile_json" genesis.byron > "$dir"/byron-protocol-params.json
-    read -r -a args <<< "$(evaluate --profile "${profile_json}" genesis.byron-genesis-args | jq -r)"
-
-    cli_args=(
-        --genesis-output-dir         "$dir"/byron
-        --protocol-parameters-file   "$dir"/byron-protocol-params.json
-        --start-time                 "$system_start_epoch"
-        "${args[@]}"
-    )
-    rm -rf "$dir"/byron
-
-    verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
-    cardano-cli byron genesis genesis "${cli_args[@]}"
 }
 
 # Entry point for genesis creation (delegates to legacy; modular only

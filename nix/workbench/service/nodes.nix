@@ -119,7 +119,7 @@ let
                   TargetNumberOfActivePeers          = max 15 valency;
                   TargetNumberOfEstablishedPeers     = max 40 valency;
 
-                  ByronGenesisFile             = "../genesis/byron/genesis.json";
+                  ByronGenesisFile             = "../genesis/genesis-byron.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
