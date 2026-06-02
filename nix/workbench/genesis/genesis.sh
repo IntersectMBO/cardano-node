@@ -3,6 +3,13 @@
 
 global_genesis_format_version=October-13-2025
 
+# Resolve genesis backend once (at source time, no output).
+# Each backend file defines: spec-*, pool-relays-*, profile-cache-key-*,
+# profile-cache-key-input-*, genesis-byron-*, genesis-create-*
+if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
+else                                          genesis_backend=jq
+fi
+
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
     $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
@@ -38,6 +45,13 @@ if [[ $WB_CREATE_TESTNET_DATA -ne 1 ]]; then
 fi
 
 case "$op" in
+
+    # Called by: run.sh (line 433)
+    # [--force]: optional, forces cache regeneration
+    # $1: profile JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/profile.json)
+    # $2: node-specs JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/node-specs.json)
+    # $3: cache directory (e.g. ~/.cache/cardano-workbench, defaults to envjqr 'cacheDir')
+    # Returns: absolute path to the genesis cache entry on stdout
     prepare-cache-entry )
         local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
 
@@ -78,7 +92,7 @@ case "$op" in
         if genesis cache-test "$cache_path"; then
           cache_hit=t
           cache_hit_desc='hit'
-        else 
+        else
           cache_hit=
           cache_hit_desc='miss'
         fi
@@ -125,22 +139,6 @@ case "$op" in
         return 0
         ;;
 
-    profile-cache-key)
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          profile-cache-key-modular "$@"
-        else
-          profile-cache-key-jq "$@"
-        fi
-        ;;
-
-    profile-cache-key-input )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          profile-cache-key-input-modular "$@"
-        else
-          profile-cache-key-input-jq "$@"
-        fi
-        ;;
-
     genesis-from-preset )
         local usage="USAGE: wb genesis $op PRESET GENESIS-DIR"
         local preset=${1:?$usage}
@@ -159,22 +157,6 @@ case "$op" in
           cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/"$f")" "$dir/$f"
         done;;
 
-    spec )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          spec-modular "$@"
-        else
-          spec-jq "$@"
-        fi
-        ;;
-
-    pool-relays )
-        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-          pool-relays-modular "$@"
-        else
-          pool-relays-jq "$@"
-        fi
-        ;;
-
     actually-genesis )
         local usage="USAGE: wb genesis $op PROFILE-JSON NODE-SPECS DIR"
         local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
@@ -185,16 +167,51 @@ case "$op" in
 
         progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
 
-        if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
-            genesis-create-testnet-data "$profile_json" "$dir"
-        else
-            genesis-create-staked "$profile_json" "$dir"
-        fi
+        genesis create "$profile_json" "$dir"
 
         info genesis "sealing"
         cat <<<"$cache_key_input"               > "$dir"/cache.key.input
         cat <<<"$cache_key"                     > "$dir"/cache.key
         cat <<<"$global_genesis_format_version" > "$dir"/layout.version
+        ;;
+
+    # -- Dispatched to backend -------------------------------------------------
+
+    # Called by: genesis.sh prepare-cache-entry.
+    # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
+    # Returns: JSON or string written to cache.key.input for debugging.
+    profile-cache-key-input )
+        "profile-cache-key-input-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis.sh prepare-cache-entry.
+    # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
+    # Returns: short cache directory name (e.g. "ci-test-coay-1c5c3ba-8444286").
+    profile-cache-key )
+        "profile-cache-key-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
+    # $1: era name (byron, shelley, alonzo, conway, dijkstra).
+    # $2: profile JSON file path.
+    # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).
+    spec )
+        "spec-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
+    # $1: profile JSON file path.
+    # Returns: JSON pool relays on stdout.
+    pool-relays )
+        "pool-relays-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis.sh (actually-genesis).
+    # $1: profile JSON file path.
+    # $2: output directory.
+    # Creates the genesis files in the directory.
+    create )
+        "genesis-create-$genesis_backend" "$@"
         ;;
 
     derive-from-cache )

@@ -6,7 +6,8 @@
 # Implements the backend interface:
 #   profile-cache-key-input-modular, profile-cache-key-modular,
 #   spec-modular, pool-relays-modular,
-#   genesis-byron-modular
+#   genesis-byron-modular,
+#   genesis-create-modular
 
 profile-cache-key-input-modular() {
     set -euo pipefail
@@ -81,5 +82,11 @@ genesis-byron-modular() {
 
     verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
     cardano-cli byron genesis genesis "${cli_args[@]}"
+}
+
+# Entry point for genesis creation (delegates to legacy; modular only
+# replaces spec/cache-key/byron generation, not the create-testnet-data call).
+genesis-create-modular() {
+    genesis-create-jq "$@";
 }
 

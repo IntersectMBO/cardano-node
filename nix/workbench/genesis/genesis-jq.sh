@@ -7,8 +7,8 @@
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,
 #   spec-jq, pool-relays-jq,
-#   genesis-byron-jq
-# And functions genesis-create-staked and genesis-create-testnet-data
+#   genesis-byron-jq,
+#   genesis-create-jq
 
 profile-cache-key-input-jq() {
     set -euo pipefail
@@ -146,6 +146,15 @@ genesis-byron-jq() {
 
     verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
     cardano-cli byron genesis genesis "${cli_args[@]}"
+}
+
+# Entry point for genesis creation.
+genesis-create-jq() {
+    if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
+        genesis-create-testnet-data "$@"
+    else
+        genesis-create-staked "$@"
+    fi
 }
 
 genesis-create-staked() {
