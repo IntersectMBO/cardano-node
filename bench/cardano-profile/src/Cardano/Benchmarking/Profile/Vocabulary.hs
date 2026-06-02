@@ -148,7 +148,7 @@ valueLocal = valueBase . P.tps 15
 
 -- nomad_perf_tps_saturation_value
 -- Helper base for the common value workload case.
--- Also used by non-cloud profiles "default" and "oldtracing".
+-- Also used by non-cloud profile "default".
 valueCloud :: Types.Profile -> Types.Profile
 valueCloud = valueBase . P.tps 12
 

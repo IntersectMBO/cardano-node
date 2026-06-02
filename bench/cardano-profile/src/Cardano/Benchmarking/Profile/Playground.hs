@@ -80,7 +80,7 @@ profilesNoEraPlayground =
           P.empty & M.base . P.dreps 0
         . P.uniCircle . P.loopback . V.hosts 2
         . M.benchDuration
-        . P.traceForwardingOn . P.newTracing
+        . P.traceForwardingOn
         . V.genesisVariantVoltaire
         -- Cloud Plutus workload
         . V.plutusTypeLoop . V.plutusBase . P.tps 0.85
@@ -108,5 +108,5 @@ profilesNoEraPlayground =
   , voting & P.name "development-voting"
            . P.dreps 1000
            . P.workloadAppend W.votingWorkloadx2
-           . P.traceForwardingOn . P.newTracing
+           . P.traceForwardingOn
   ]

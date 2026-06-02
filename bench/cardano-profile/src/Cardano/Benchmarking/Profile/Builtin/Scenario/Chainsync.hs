@@ -58,11 +58,9 @@ profilesNoEraChainsync =
       alonzo = chainsync & P.shutdownOnSlot 38901589 . P.chaindb (1800,1799) (38901589,37173650)
   in [
   -- Byron
-    byron & P.name "chainsync-early-byron"               . P.traceForwardingOff . P.newTracing
-  , byron & P.name "chainsync-early-byron-notracer"      . P.traceForwardingOff . P.newTracing
-  , byron & P.name "chainsync-early-byron-oldtracing"    . P.traceForwardingOff . P.oldTracing
+    byron & P.name "chainsync-early-byron"               . P.traceForwardingOn
+  , byron & P.name "chainsync-early-byron-notracer"      . P.traceForwardingOff
   -- Alonzo
-  , alonzo  & P.name "chainsync-early-alonzo"            . P.traceForwardingOff . P.newTracing
-  , alonzo  & P.name "chainsync-early-alonzo-notracer"   . P.traceForwardingOff . P.newTracing
-  , alonzo  & P.name "chainsync-early-alonzo-oldtracing" . P.traceForwardingOff . P.oldTracing
+  , alonzo  & P.name "chainsync-early-alonzo"            . P.traceForwardingOn
+  , alonzo  & P.name "chainsync-early-alonzo-notracer"   . P.traceForwardingOff
   ]

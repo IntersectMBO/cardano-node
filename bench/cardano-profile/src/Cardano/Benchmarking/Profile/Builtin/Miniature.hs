@@ -83,24 +83,23 @@ profilesNoEraMiniature =
       ripemd   = V.plutusDoublePlusSaturation . V.plutusTypeRIPEMD   . P.analysisSizeSmall
   in [
   -- 2 nodes, local
-    ciBench02Value    & P.name "ci-bench"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lmdb . P.ssdDirectory "/tmp"
-  , ciBench02Value    & P.name "ci-bench-lsmt"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.lsmt . P.ssdDirectory "/tmp"
-  , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.tracerRtview
-
-  , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
-  , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn  . P.newTracing
-  , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02Plutus   & P.name "ci-bench-plutus24"               . loop2024     . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"          . blst         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.budgetBlockStepsDouble
+    ciBench02Value    & P.name "ci-bench"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn
+  , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.lmdb . P.ssdDirectory "/tmp"
+  , ciBench02Value    & P.name "ci-bench-lsmt"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.lsmt . P.ssdDirectory "/tmp"
+  , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.tracerRtview
+  , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff
+  , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn
+  , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn
+  , ciBench02Plutus   & P.name "ci-bench-plutus24"               . loop2024     . P.dreps  0 . P.traceForwardingOn
+  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn
+  , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"          . blst         . P.dreps  0 . P.traceForwardingOn
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"        . ripemd       . P.dreps  0 . P.traceForwardingOn
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd-step2x" . ripemd       . P.dreps  0 . P.traceForwardingOn  . P.budgetBlockStepsDouble
   -- 10 nodes, local
-  , ciBench10Value    & P.name "10"                              . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing
-  , ciBench10Value    & P.name "10-notracer"                     . V.valueLocal . P.dreps  0 . P.traceForwardingOff . P.newTracing
-  , ciBench10Plutus   & P.name "10-plutus"                       . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing
+  , ciBench10Value    & P.name "10"                              . V.valueLocal . P.dreps  0 . P.traceForwardingOn
+  , ciBench10Value    & P.name "10-notracer"                     . V.valueLocal . P.dreps  0 . P.traceForwardingOff
+  , ciBench10Plutus   & P.name "10-plutus"                       . loop         . P.dreps  0 . P.traceForwardingOn
   ]
   ++
   ---------------------------------------------------------------------------------------
@@ -115,11 +114,11 @@ profilesNoEraMiniature =
         . P.dreps 0
         . P.analysisSizeFull . P.analysisUnitary
   in [
-    dense & P.name "6-dense"            . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing
-  , dense & P.name "6-dense-rtsprof"    . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
-  , dense & P.name "6-dense-1h"         . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing
-  , dense & P.name "6-dense-1h-rtsprof"      . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
-  , dense & P.name "6-dense-timeseries-1h"   . V.valueCloud . duration60  . P.traceForwardingOn . P.newTracing . P.tracerRtview . P.tracerTimeseries
-  , dense & P.name "6-dense-4h"         . V.valueCloud . duration240 . P.traceForwardingOn . P.newTracing
-  , dense & P.name "6-dense-4h-rtsprof" . V.valueCloud . duration240 . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
+    dense & P.name "6-dense"                . V.valueCloud . duration30  . P.traceForwardingOn
+  , dense & P.name "6-dense-rtsprof"        . V.valueCloud . duration30  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
+  , dense & P.name "6-dense-1h"             . V.valueCloud . duration60  . P.traceForwardingOn
+  , dense & P.name "6-dense-1h-rtsprof"     . V.valueCloud . duration60  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
+  , dense & P.name "6-dense-1h-timeseries"  . V.valueCloud . duration60  . P.traceForwardingOn . P.tracerRtview . P.tracerTimeseries
+  , dense & P.name "6-dense-4h"             . V.valueCloud . duration240 . P.traceForwardingOn
+  , dense & P.name "6-dense-4h-rtsprof"     . V.valueCloud . duration240 . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   ]

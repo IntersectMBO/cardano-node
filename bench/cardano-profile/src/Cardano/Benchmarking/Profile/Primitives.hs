@@ -74,8 +74,6 @@ module Cardano.Benchmarking.Profile.Primitives (
   , lmdb, lsmt
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
-  -- Node's tracer type.
-  , newTracing, oldTracing
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
@@ -181,7 +179,9 @@ empty = Types.Profile {
     , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
-    , Types.tracing_backend = ""
+    -- There's only this one tracing backend left. We keep this field for the workbench
+    -- to be backwards-compatible for the time being.
+    , Types.tracing_backend = "trace-dispatcher"
     , Types.rts_flags_override = []
     , Types.heap_limit = Nothing
     , Types.shutdown_on_slot_synced = Nothing
@@ -609,22 +609,6 @@ traceForwardingOn = node (\n -> n {Types.trace_forwarding = True})
 
 traceForwardingOff :: Types.Profile -> Types.Profile
 traceForwardingOff = node (\n -> n {Types.trace_forwarding = False})
-
-newTracing :: HasCallStack => Types.Profile -> Types.Profile
-newTracing = node
-  (\n ->
-    if Types.tracing_backend n /= ""
-    then error "newTracing: `tracing_backend` already set (not empty)."
-    else n {Types.tracing_backend = "trace-dispatcher"}
-  )
-
-oldTracing :: HasCallStack => Types.Profile -> Types.Profile
-oldTracing = node
-  (\n ->
-    if Types.tracing_backend n /= ""
-    then error "oldTracing: `tracing_backend` already set (not empty)."
-    else n {Types.tracing_backend = "trace-dispatcher"}
-  )
 
 -- "--shutdown-on-*".
 ---------------------
