@@ -7,7 +7,7 @@
 #   profile-cache-key-input-modular, profile-cache-key-modular,
 #   spec-modular, pool-relays-modular,
 #   genesis-byron-modular,
-#   genesis-create-modular
+#   genesis-create-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
     set -euo pipefail
@@ -88,5 +88,10 @@ genesis-byron-modular() {
 # replaces spec/cache-key/byron generation, not the create-testnet-data call).
 genesis-create-modular() {
     genesis-create-jq "$@";
+}
+
+# Same derive-from-cache as legacy.
+derive-from-cache-modular() {
+    derive-from-cache-jq "$@";
 }
 

@@ -8,7 +8,7 @@
 #   profile-cache-key-input-jq, profile-cache-key-jq,
 #   spec-jq, pool-relays-jq,
 #   genesis-byron-jq,
-#   genesis-create-jq
+#   genesis-create-jq, derive-from-cache-jq
 
 profile-cache-key-input-jq() {
     set -euo pipefail
@@ -390,5 +390,108 @@ key_genesis() {
             delegVRF ) stem=delegate-keys/delegate$id.vrf;;
             * )        fatal "key_genesis: unknown key type: '$type'";; esac
     echo "$__KEY_ROOT/$stem$suffix"
+}
+
+derive-from-cache-jq() {
+    local usage="USAGE: wb genesis derive-from-cache PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
+    local profile_json=${1:?$usage}
+    local timing=${2:?$usage}
+    local cache_entry=${3:?$usage}
+    local outdir=${4:?$usage}
+
+    mkdir -p "$outdir"
+
+    local preset
+    preset=$(profile preset "$profile_json")
+    if [[ -n "$preset" ]]; then
+      progress "genesis" "instantiating from preset $(with_color white "$preset"):  $cache_entry"
+      mkdir -p "$outdir"/byron
+      cp -f "$cache_entry"/genesis*.json "$outdir"
+      cp -f "$cache_entry"/byron/*.json  "$outdir"/byron
+      return
+    fi
+
+    progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
+
+    ln -s "$profile_json"                     "$outdir"/profile.json
+    ln -s "$cache_entry"                      "$outdir"/cache-entry
+    ln -s "$cache_entry"/cache.key            "$outdir"
+    ln -s "$cache_entry"/cache.key.input      "$outdir"
+    ln -s "$cache_entry"/layout.version       "$outdir"
+
+    # create-testnet-data does not create these directories if there are no keys in them
+    [[ -d "$dir"/delegate-keys ]] && ln -s "$cache_entry"/delegate-keys "$outdir"
+    [[ -d "$dir"/genesis-keys  ]] && ln -s "$cache_entry"/genesis-keys  "$outdir"
+
+    cp -a "$cache_entry"/node-keys            "$outdir"
+    chmod -R go-rwx                           "$outdir"/node-keys
+
+    ln -s "$cache_entry"/pools                "$outdir"
+    ln -s "$cache_entry"/stake-delegator-keys "$outdir"
+    ln -s "$cache_entry"/utxo-keys            "$outdir"
+    [[ -d "$cache_entry"/stake-delegators ]] && ln -s "$cache_entry"/stake-delegators "$outdir"
+    [[ -d "$cache_entry"/drep-keys ]]        && ln -s "$cache_entry"/drep-keys        "$outdir"
+
+    ## genesis
+    cp    "$cache_entry"/genesis*.json        "$outdir"
+    chmod u+w                                 "$outdir"/genesis*.json
+
+    if profile has-preset "$profile_json"; then
+      return
+    fi
+
+    progress "genesis" "finalizing retrieved cache entry in:  $outdir"
+
+    local system_start_epoch
+    system_start_epoch="$(jq '.start' -r <<<"$timing")"
+
+    genesis-byron "$system_start_epoch" "$outdir" "$profile_json"
+
+    # The genesis cache entry in $outdir needs post-processing:
+    # * the system start date might get an adjustment offset into the future
+    # * some workbench profile content not captured by the genesis cache key will be patched in
+
+    # For devs: this should cover all fields modified by
+    # * nix/workbench/profile/pparams/delta-*.jq (workbench)
+    # * bench/cardano-profile/data/genesis/overlays/*.json (cardano-profile)
+    # These modifications are small deltas to base profiles, which do not, and should
+    # not, result in recreation of the entire staked genesis, as that is large on-disk
+    # and takes long to create.
+
+    # Shelley: startTime, protocolVersion, maxBlockBodySize
+    jq '$prof[0].genesis.shelley as $shey
+         | $shey.protocolParams.protocolVersion   as $pver
+         | $shey.protocolParams.maxBlockBodySize  as $bsize
+         | . * { systemStart: $timing.systemStart }
+         | if $pver  != null then . * { protocolParams: { protocolVersion:  $pver  } } else . end
+         | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
+      --argjson timing "$timing" \
+      --slurpfile prof "$profile_json" \
+      "$outdir"/genesis-shelley.json |
+      sponge "$outdir"/genesis-shelley.json
+
+    # Alonzo: Execution budgets
+    # NB. PlutusV1 and PlutusV2 cost models are *NOT* covered here; they're encoded
+    #     as key-value-map in the profile, but need to be [Integer] in genesis.
+    jq '$prof[0].genesis.alonzo as $alzo
+         | $alzo.maxBlockExUnits.exUnitsMem   as $bl_mem
+         | $alzo.maxBlockExUnits.exUnitsSteps as $bl_steps
+         | $alzo.maxTxExUnits.exUnitsMem      as $tx_mem
+         | $alzo.maxTxExUnits.exUnitsSteps    as $tx_steps
+         | if $bl_mem   != null then . * { maxBlockExUnits: { memory: $bl_mem}   } else . end
+         | if $bl_steps != null then . * { maxBlockExUnits: { steps:  $bl_steps} } else . end
+         | if $tx_mem   != null then . * { maxTxExUnits:    { memory: $tx_mem}   } else . end
+         | if $tx_steps != null then . * { maxTxExUnits:    { steps:  $tx_steps} } else . end' \
+      --slurpfile prof "$profile_json" \
+      "$outdir"/genesis.alonzo.json |
+      sponge "$outdir"/genesis.alonzo.json
+
+    # Conway: plutusV3CostModel
+    jq '$prof[0].genesis.conway as $coay
+         | $coay.plutusV3CostModel as $pv3cost
+         | if $pv3cost != null then . * { plutusV3CostModel: $pv3cost } else . end' \
+      --slurpfile prof "$profile_json" \
+      "$outdir"/genesis.conway.json |
+      sponge "$outdir"/genesis.conway.json
 }
 
