@@ -118,19 +118,7 @@ import           Data.Word (Word64)
 import           Lens.Micro
 import           Numeric.Natural
 import           Test.Cardano.Ledger.Core.Rational
-import           Cardano.Node.Testnet.Paths (defaultCommitteeKeysDir, defaultCommitteeName,
-                   defaultCommitteeSkeyFp, defaultCommitteeVkeyFp, defaultDRepDir, defaultDRepKeysDir,
-                   defaultDRepName, defaultDRepSkeyFp, defaultDRepVkeyFp,
-                   defaultDelegatorName, defaultDelegatorStakeDir, defaultDelegatorStakeKeysDir,
-                   defaultDelegatorStakeSKeyFp, defaultDelegatorStakeVKeyFp,
-                   defaultGenesisFilepath, defaultNodeDataDir, defaultNodeName,
-                   defaultSpoByronDelegateKeyFp, defaultSpoByronDelegationCertFp,
-                   defaultSpoColdSKeyFp, defaultSpoColdVKeyFp, defaultSpoKesSKeyFp,
-                   defaultSpoKesVKeyFp, defaultSpoKeysDir, defaultSpoName,
-                   defaultSpoOpcertCertFp, defaultSpoOpcertCounterFp,
-                   defaultSpoStakingRewardSKeyFp, defaultSpoStakingRewardVKeyFp,
-                   defaultSpoVrfSKeyFp, defaultSpoVrfVKeyFp, defaultUtxoSKeyPath,
-                   defaultUtxoVKeyPath)
+import           Cardano.Node.Testnet.Paths
 import           Testnet.Start.Types
 import           Testnet.Types
 
