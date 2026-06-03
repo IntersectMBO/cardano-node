@@ -50,6 +50,8 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
+import           Cardano.Rpc.Server.Internal.Env (NodeKernelAccess)
+import           Cardano.Rpc.Server.NodeKernelAccess.Internal (mkNodeKernelAccess)
 import           Data.IORef
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
