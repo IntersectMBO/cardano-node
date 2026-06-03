@@ -6,7 +6,7 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,
-#   spec-jq, pool-relays-jq,
+#   spec-jq,
 #   genesis-create-jq, derive-from-cache-jq
 
 profile-cache-key-input-jq() {
@@ -75,28 +75,6 @@ spec-jq() {
     esac
 }
 
-pool-relays-jq() {
-    set -euo pipefail
-    local profile_json=${1:?missing profile_json}
-    # not needed in the jq version
-    # local node_specs=${2:?missing node_specs}
-
-    jq ' to_entries
-       | map( select(.value.kind == "pool") )
-       | map
-         ({ key:   (.value.i | tostring)
-          , value:
-            [{ "single host name":
-               { dnsName: .key
-               , port:    .value.port
-               }
-             }
-            ]
-          })
-       | from_entries
-       ' "$node_specs"
-}
-
 # Entry point for genesis creation.
 # Keeps in the provided directory all the output of `create-testnet-data`.
 genesis-create-jq() {
@@ -108,7 +86,6 @@ genesis-create-jq() {
     genesis spec shelley "$profile_json" >"$dir/shelley-genesis.spec.json"
     genesis spec alonzo  "$profile_json" >"$dir/alonzo-genesis.spec.json"
     genesis spec conway  "$profile_json" >"$dir/conway-genesis.spec.json"
-    genesis pool-relays  "$profile_json" >"$dir/pool-relays.json"
 
     local era
     era=$(jq --raw-output '.era' "$profile_json")
@@ -119,7 +96,6 @@ genesis-create-jq() {
         --spec-shelley "$dir/shelley-genesis.spec.json"
         --spec-alonzo  "$dir/alonzo-genesis.spec.json"
         --spec-conway  "$dir/conway-genesis.spec.json"
-        --relays       "$dir/pool-relays.json"
         --out-dir      "$dir"
         "${args[@]}"
     )

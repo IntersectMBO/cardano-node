@@ -5,7 +5,7 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-modular, profile-cache-key-modular,
-#   spec-modular, pool-relays-modular,
+#   spec-modular,
 #   genesis-create-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
@@ -45,19 +45,6 @@ spec-modular() {
     # TODO: check for errors
     # NOTE: jq is only used for to keep the same formatting as the jq version
     evaluate --profile "$profile_json" --node-specs "$node_specs" "genesis.$era" | jq
-}
-
-pool-relays-modular() {
-    set -euo pipefail
-    local profile_json=${1:?missing profile_json}
-    local node_specs=${2:?missing node_specs}
-
-    # nix wants absolute paths
-    profile_json=$(realpath "$profile_json")
-    node_specs=$(realpath "$node_specs")
-
-    # NOTE: jq is only used for to keep the same formatting as the jq version
-    evaluate --profile "$profile_json" --node-specs "$node_specs" genesis.pool-relays | jq
 }
 
 # Entry point for genesis creation (delegates to legacy; modular only

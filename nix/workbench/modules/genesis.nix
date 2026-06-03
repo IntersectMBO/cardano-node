@@ -217,11 +217,6 @@ in
         type = types.separatedString " ";
       };
 
-      pool-relays = mkOption {
-        description = "pool-relays.json";
-        type = types.submodule { freeformType = json.type; };
-      };
-
       cache-key = mkOption {
         type = types.str;
         readOnly = true;
@@ -279,12 +274,6 @@ in
             (substring 0 7 (builtins.hashString "sha1" (builtins.toJSON genesis.cache-key-input)))
           ]);
 
-      pool-relays = mapAttrs'
-        (name: value: {
-          name = toString value.i;
-          value = [{ "single host name" = { dnsName = name; port = value.port; }; }];
-        })
-        config.node-specs;
     };
   };
 }

@@ -4,7 +4,7 @@
 global_genesis_format_version=June-22-2026
 
 # Resolve genesis backend once (at source time, no output).
-# Each backend file defines: spec-*, pool-relays-*, profile-cache-key-*,
+# Each backend file defines: spec-*, profile-cache-key-*,
 # profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
 if [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
 else                                          genesis_backend=jq
@@ -201,13 +201,6 @@ case "$op" in
     # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).
     spec )
         "spec-$genesis_backend" "$@"
-        ;;
-
-    # Called by: genesis-jq.sh (genesis-create-jq).
-    # $1: profile JSON file path.
-    # Returns: JSON pool relays on stdout.
-    pool-relays )
-        "pool-relays-$genesis_backend" "$@"
         ;;
 
     # Called by: genesis.sh (actually-genesis).
