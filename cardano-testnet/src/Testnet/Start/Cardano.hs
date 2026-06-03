@@ -329,12 +329,11 @@ cardanoTestnet
       Nothing -> throwString $ "Port not found for node " <> show i
     let nodeName = Defaults.defaultNodeName i
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-        nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
     (mKeys, spoNodeCliArgs) <- if not isSpo then pure (Nothing, []) else do
       -- depending on testnet configuration, either start a 'kes-agent' or use a key from disk
       kesSourceCliArg <-
         case cardanoKESSource of
-          UseKesKeyFile -> pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+          UseKesKeyFile -> pure ["--shelley-kes-key", tmpAbsPath </> Defaults.defaultSpoKesSKeyFp i]
           UseKesSocket -> do
             -- wait startTimeOffsetSeconds so that the startTime from shelly-genesis.json is not in the future,
             -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
@@ -342,24 +341,24 @@ cardanoTestnet
             kesAgent <- runExceptT $
               initAndStartKesAgent (TmpAbsolutePath tmpAbsPath) nodeName
                 TestnetKesAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile
-                                   , tkaaColdVKeyFile = nodePoolKeysDir </> "cold.vkey"
-                                   , tkaaColdSKeyFile = nodePoolKeysDir </> "cold.skey"
-                                   , tkaaKesVKeyFile = nodePoolKeysDir </> "kes.vkey"
-                                   , tkaaOpcertCounterFile = nodePoolKeysDir </> "opcert.counter"
-                                   , tkaaOpcertFile = nodePoolKeysDir </> "opcert.cert"
+                                   , tkaaColdVKeyFile = tmpAbsPath </> Defaults.defaultSpoColdVKeyFp i
+                                   , tkaaColdSKeyFile = tmpAbsPath </> Defaults.defaultSpoColdSKeyFp i
+                                   , tkaaKesVKeyFile = tmpAbsPath </> Defaults.defaultSpoKesVKeyFp i
+                                   , tkaaOpcertCounterFile = tmpAbsPath </> Defaults.defaultSpoOpcertCounterFp i
+                                   , tkaaOpcertFile = tmpAbsPath </> Defaults.defaultSpoOpcertCertFp i
                                    }
             case kesAgent of
               Left e -> do
                 -- TODO: fail if could not start KES agent
                 liftIOAnnotated . putStrLn $ "Could not start KES agent: " <> show e
-                pure ["--shelley-kes-key", nodePoolKeysDir </> "kes.skey"]
+                pure ["--shelley-kes-key", tmpAbsPath </> Defaults.defaultSpoKesSKeyFp i]
               Right (TestnetKesAgent{kesAgentServiceSprocket}) ->
                 pure ["--shelley-kes-agent-socket", sprocketSystemName kesAgentServiceSprocket]
       let shelleyCliArgs = [ "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
-                           , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
+                           , "--shelley-operational-certificate", tmpAbsPath </> Defaults.defaultSpoOpcertCertFp i
                            ]
-          byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
-                         , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
+          byronCliArgs = [ "--byron-delegation-certificate", tmpAbsPath </> Defaults.defaultSpoByronDelegationCertFp i
+                         , "--byron-signing-key", tmpAbsPath </> Defaults.defaultSpoByronDelegateKeyFp i
                          ]
           keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
       pure (Just keys, kesSourceCliArg <> shelleyCliArgs <> byronCliArgs)

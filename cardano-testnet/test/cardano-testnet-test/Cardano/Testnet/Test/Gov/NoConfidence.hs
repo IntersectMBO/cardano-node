@@ -74,7 +74,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
   -- Step 1. Define generate and define a committee in the genesis file
 
   -- Create committee cold key
-  H.createDirectoryIfMissing_ $ tempAbsPath' </> work </> "committee-keys"
+  H.createDirectoryIfMissing_ $ tempAbsPath' </> work </> defaultCommitteeKeysDir
   H.forConcurrently_ [1] $ \n -> do
     H.execCli' execConfigOffline
       [ eraToString sbe, "governance", "committee"
