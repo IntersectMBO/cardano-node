@@ -111,7 +111,7 @@ import           Text.Megaparsec (SourcePos, sourcePosPretty)
 --            | t{> comp} > t{> comp} | t{> comp} >= t{> comp}
 -- t{and} ::= t{> and} &̅&̅ ̅t̅{̅>̅ ̅a̅n̅d̅}̅
 -- t{or}  ::= t{> or} |̅|̅ ̅t̅{̅>̅ ̅o̅r̅}̅
--- t{universe} ::= let x = t{> universe} in t{≥ universe} | \x -> t{≥ universe}
+-- t{universe} ::= let x = t{≥ universe} in t{≥ universe} | \x -> t{≥ universe}
 
 -- | Source location.
 type Loc = SourcePos
@@ -125,6 +125,7 @@ data Expr =
   | Fst Loc Expr
   | Snd Loc Expr
   | MkPair Loc Expr Expr
+  | MkUnit Loc
   | Eq Loc Expr Expr
   | NotEq Loc Expr Expr
   | Lt Loc Expr Expr
@@ -177,6 +178,7 @@ getLoc (Let l _ _ _) = l
 getLoc (Lambda l _ _) = l
 getLoc (Fst l _) = l
 getLoc (Snd l _) = l
+getLoc (MkUnit l) = l
 getLoc (MkPair l _ _) = l
 getLoc (Eq l _ _) = l
 getLoc (NotEq l _ _) = l

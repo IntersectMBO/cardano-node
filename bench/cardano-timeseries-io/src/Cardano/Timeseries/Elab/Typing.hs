@@ -31,8 +31,10 @@ data Ty = InstantVector Ty
         | RangeVector Ty
         | Scalar
         | Text
+        | List Ty
         | Bool
         | Pair Ty Ty
+        | Unit
         | Timestamp
         | Duration
         | Fun Ty Ty
@@ -51,6 +53,7 @@ prettyTy prec (RangeVector typ) = conditionalParens (prec == Tight) $
   "RangeVector " <> prettyTy Tight typ
 prettyTy _prec (Pair typ typ') =
   "(" <> prettyTy Loose typ <> ", " <> prettyTy Loose typ' <> ")"
+prettyTy _prec Unit = "()"
 prettyTy prec (Fun typ typ') = conditionalParens (prec > FunCodomain) $
   prettyTy FunDomain typ <> " -> " <> prettyTy FunCodomain typ'
 prettyTy _ Scalar = "Scalar"
@@ -58,6 +61,8 @@ prettyTy _ Bool = "Bool"
 prettyTy _ Timestamp = "Timestamp"
 prettyTy _ Duration = "Duration"
 prettyTy _ Text = "Text"
+prettyTy prec (List typ) = conditionalParens (prec == Tight) $
+  "List " <> prettyTy Tight typ
 prettyTy _ (Hole idx) = "?" <> showT idx
 
 -- | A context entry of a typing context.

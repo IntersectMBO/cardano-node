@@ -12,6 +12,7 @@ import           Control.DeepSeq (NFData)
 import           Data.Text (unpack, Text)
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
+import           Numeric (showFFloat)
 
 type FunctionValue = Value -> InterpM Value
 
@@ -25,6 +26,8 @@ data Value where
   InstantVector :: InstantVector Value -> Value
   -- | A pair.
   Pair :: Value -> Value -> Value
+  -- | Unit.
+  Unit :: Value
   -- | Truth.
   Truth :: Value
   -- | Falsity.
@@ -35,21 +38,28 @@ data Value where
   Timestamp :: Word64 -> Value
   -- | Function
   Function :: FunctionValue -> Value
+  -- Empty list.
+  Nil :: Value
+  -- Non-empty list.
+  Cons :: Value -> Value -> Value
   -- | Text
   Text :: Text -> Value deriving Generic
 
 instance NFData Value
 
 instance Show Value where
-  show (Scalar x)        = show x
+  show (Scalar x)        = showFFloat Nothing x ""
   show (RangeVector x)   = unpack (asText x)
   show (InstantVector x) = unpack (asText x)
   show (Pair x y)        = "(" <> show x <> ", " <> show y <> ")"
+  show Unit              = "()"
   show Truth             = "true"
   show Falsity           = "false"
   show (Duration d)      = show d <> "ms"
   show (Timestamp t)     = show t
   show (Function _)      = "<function>"
+  show Nil               = "[]"
+  show (Cons h t)        = "[" <> show h <> "|" <> show t <> "]"
   show (Text t)          = show t
 
 fromBool :: Bool -> Value

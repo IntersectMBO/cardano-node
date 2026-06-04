@@ -18,7 +18,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -120,7 +120,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -330,7 +330,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -353,7 +353,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -384,6 +384,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -407,7 +408,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -509,7 +510,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -719,7 +720,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -742,7 +743,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -773,6 +774,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -798,7 +800,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -903,7 +905,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -1113,7 +1115,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -1136,7 +1138,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -1167,6 +1169,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -1193,7 +1196,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -1295,7 +1298,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -1940,7 +1943,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -1963,7 +1966,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -1994,6 +1997,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -2020,7 +2024,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -2122,7 +2126,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -2767,7 +2771,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -2790,7 +2794,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -2821,6 +2825,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -2847,7 +2852,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -2949,7 +2954,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -3594,7 +3599,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -3617,7 +3622,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -3651,6 +3656,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -3677,7 +3683,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -3779,7 +3785,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -4424,7 +4430,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -4447,7 +4453,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -4478,6 +4484,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -4504,7 +4511,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -4606,7 +4613,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -5251,7 +5258,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -5274,7 +5281,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -5308,6 +5315,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -5334,7 +5342,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -5436,7 +5444,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -6081,7 +6089,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -6104,7 +6112,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -6138,6 +6146,835 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
+      "withresources": false
+    },
+    "workloads": []
+  },
+  "6-dense-timeseries-1h": {
+    "analysis": {
+      "cluster_base_startup_overhead_s": 40,
+      "cluster_startup_overhead_s": 240,
+      "filter_exprs": [
+        {
+          "contents": {
+            "contents": 5,
+            "tag": "BMinimumAdoptions"
+          },
+          "tag": "CBlock"
+        }
+      ],
+      "filters": [
+        "unitary",
+        "size-full"
+      ],
+      "finish_patience": 21,
+      "last_log_spread_s": 120,
+      "minimum_chain_density": 0.025,
+      "silence_since_last_block_s": 120,
+      "start_log_spread_s": 120,
+      "tx_loss_ratio": 0.02,
+      "type": "standard"
+    },
+    "cli_args": {
+      "createStakedArgs": [
+        "--testnet-magic",
+        42,
+        "--supply",
+        "10000000000000",
+        "--gen-utxo-keys",
+        1,
+        "--gen-genesis-keys",
+        0,
+        "--supply-delegated",
+        "6000000000000000",
+        "--gen-pools",
+        6,
+        "--gen-stake-delegs",
+        100000,
+        "--num-stuffed-utxo",
+        "500000"
+      ],
+      "createTestnetDataArgs": [
+        "--testnet-magic",
+        42,
+        "--total-supply",
+        "6010000000000000",
+        "--utxo-keys",
+        1,
+        "--genesis-keys",
+        0,
+        "--delegated-supply",
+        "6000000000000000",
+        "--pools",
+        6,
+        "--stake-delegators",
+        100000,
+        "--drep-keys",
+        0,
+        "--stuffed-utxo",
+        "500000"
+      ],
+      "pools": [
+        "--argjson",
+        "initialPoolCoin",
+        "1000000000000000"
+      ]
+    },
+    "composition": {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 6,
+      "n_pool_hosts": 6,
+      "n_pools": 6,
+      "n_singular_hosts": 6,
+      "n_singular_pools": 6,
+      "topology": "torus-dense",
+      "with_explorer": false,
+      "with_proxy": false
+    },
+    "derived": {
+      "dataset_induced_startup_delay_conservative": 240,
+      "dataset_induced_startup_delay_optimistic": 12,
+      "dataset_measure": 600000,
+      "default_value_tx_per_block_estimate": 172,
+      "default_value_tx_size_estimate": 381,
+      "delegators_effective": 100000,
+      "effective_epochs": 6,
+      "epoch_duration": 600,
+      "generator_blocks_lower_bound": 289,
+      "generator_duration": 3600,
+      "generator_tx_count": 43200,
+      "genesis_future_offset": 12,
+      "shutdown_time": 3600,
+      "supply_delegated": 6000000000000000,
+      "supply_total": 6010000000000000,
+      "utxo_delegated": 100000,
+      "utxo_generated": 86400,
+      "utxo_stuffed": 500000
+    },
+    "desc": "Miniature dataset, dense topology on local cluster, 64k blocks",
+    "era": "conway",
+    "generator": {
+      "add_tx_size": 100,
+      "epochs": 6,
+      "init_cooldown": 5,
+      "inputs_per_tx": 2,
+      "outputs_per_tx": 2,
+      "plutus": {
+        "script": null,
+        "type": null
+      },
+      "tps": 12,
+      "tx_count": 43200,
+      "tx_fee": 1000000
+    },
+    "genesis": {
+      "active_slots_coeff": 0.05,
+      "alonzo": {
+        "collateralPercentage": 150,
+        "costModels": {
+          "PlutusV1": {
+            "addInteger-cpu-arguments-intercept": 205665,
+            "addInteger-cpu-arguments-slope": 812,
+            "addInteger-memory-arguments-intercept": 1,
+            "addInteger-memory-arguments-slope": 1,
+            "appendByteString-cpu-arguments-intercept": 1000,
+            "appendByteString-cpu-arguments-slope": 571,
+            "appendByteString-memory-arguments-intercept": 0,
+            "appendByteString-memory-arguments-slope": 1,
+            "appendString-cpu-arguments-intercept": 1000,
+            "appendString-cpu-arguments-slope": 24177,
+            "appendString-memory-arguments-intercept": 4,
+            "appendString-memory-arguments-slope": 1,
+            "bData-cpu-arguments": 1000,
+            "bData-memory-arguments": 32,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
+            "blake2b-memory-arguments": 4,
+            "cekApplyCost-exBudgetCPU": 23000,
+            "cekApplyCost-exBudgetMemory": 100,
+            "cekBuiltinCost-exBudgetCPU": 23000,
+            "cekBuiltinCost-exBudgetMemory": 100,
+            "cekConstCost-exBudgetCPU": 23000,
+            "cekConstCost-exBudgetMemory": 100,
+            "cekDelayCost-exBudgetCPU": 23000,
+            "cekDelayCost-exBudgetMemory": 100,
+            "cekForceCost-exBudgetCPU": 23000,
+            "cekForceCost-exBudgetMemory": 100,
+            "cekLamCost-exBudgetCPU": 23000,
+            "cekLamCost-exBudgetMemory": 100,
+            "cekStartupCost-exBudgetCPU": 100,
+            "cekStartupCost-exBudgetMemory": 100,
+            "cekVarCost-exBudgetCPU": 23000,
+            "cekVarCost-exBudgetMemory": 100,
+            "chooseData-cpu-arguments": 19537,
+            "chooseData-memory-arguments": 32,
+            "chooseList-cpu-arguments": 175354,
+            "chooseList-memory-arguments": 32,
+            "chooseUnit-cpu-arguments": 46417,
+            "chooseUnit-memory-arguments": 4,
+            "consByteString-cpu-arguments-intercept": 221973,
+            "consByteString-cpu-arguments-slope": 511,
+            "consByteString-memory-arguments-intercept": 0,
+            "consByteString-memory-arguments-slope": 1,
+            "constrData-cpu-arguments": 89141,
+            "constrData-memory-arguments": 32,
+            "decodeUtf8-cpu-arguments-intercept": 497525,
+            "decodeUtf8-cpu-arguments-slope": 14068,
+            "decodeUtf8-memory-arguments-intercept": 4,
+            "decodeUtf8-memory-arguments-slope": 2,
+            "divideInteger-cpu-arguments-constant": 196500,
+            "divideInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "divideInteger-cpu-arguments-model-arguments-slope": 220,
+            "divideInteger-memory-arguments-intercept": 0,
+            "divideInteger-memory-arguments-minimum": 1,
+            "divideInteger-memory-arguments-slope": 1,
+            "encodeUtf8-cpu-arguments-intercept": 1000,
+            "encodeUtf8-cpu-arguments-slope": 28662,
+            "encodeUtf8-memory-arguments-intercept": 4,
+            "encodeUtf8-memory-arguments-slope": 2,
+            "equalsByteString-cpu-arguments-constant": 245000,
+            "equalsByteString-cpu-arguments-intercept": 216773,
+            "equalsByteString-cpu-arguments-slope": 62,
+            "equalsByteString-memory-arguments": 1,
+            "equalsData-cpu-arguments-intercept": 1060367,
+            "equalsData-cpu-arguments-slope": 12586,
+            "equalsData-memory-arguments": 1,
+            "equalsInteger-cpu-arguments-intercept": 208512,
+            "equalsInteger-cpu-arguments-slope": 421,
+            "equalsInteger-memory-arguments": 1,
+            "equalsString-cpu-arguments-constant": 187000,
+            "equalsString-cpu-arguments-intercept": 1000,
+            "equalsString-cpu-arguments-slope": 52998,
+            "equalsString-memory-arguments": 1,
+            "fstPair-cpu-arguments": 80436,
+            "fstPair-memory-arguments": 32,
+            "headList-cpu-arguments": 43249,
+            "headList-memory-arguments": 32,
+            "iData-cpu-arguments": 1000,
+            "iData-memory-arguments": 32,
+            "ifThenElse-cpu-arguments": 80556,
+            "ifThenElse-memory-arguments": 1,
+            "indexByteString-cpu-arguments": 57667,
+            "indexByteString-memory-arguments": 4,
+            "lengthOfByteString-cpu-arguments": 1000,
+            "lengthOfByteString-memory-arguments": 10,
+            "lessThanByteString-cpu-arguments-intercept": 197145,
+            "lessThanByteString-cpu-arguments-slope": 156,
+            "lessThanByteString-memory-arguments": 1,
+            "lessThanEqualsByteString-cpu-arguments-intercept": 197145,
+            "lessThanEqualsByteString-cpu-arguments-slope": 156,
+            "lessThanEqualsByteString-memory-arguments": 1,
+            "lessThanEqualsInteger-cpu-arguments-intercept": 204924,
+            "lessThanEqualsInteger-cpu-arguments-slope": 473,
+            "lessThanEqualsInteger-memory-arguments": 1,
+            "lessThanInteger-cpu-arguments-intercept": 208896,
+            "lessThanInteger-cpu-arguments-slope": 511,
+            "lessThanInteger-memory-arguments": 1,
+            "listData-cpu-arguments": 52467,
+            "listData-memory-arguments": 32,
+            "mapData-cpu-arguments": 64832,
+            "mapData-memory-arguments": 32,
+            "mkCons-cpu-arguments": 65493,
+            "mkCons-memory-arguments": 32,
+            "mkNilData-cpu-arguments": 22558,
+            "mkNilData-memory-arguments": 32,
+            "mkNilPairData-cpu-arguments": 16563,
+            "mkNilPairData-memory-arguments": 32,
+            "mkPairData-cpu-arguments": 76511,
+            "mkPairData-memory-arguments": 32,
+            "modInteger-cpu-arguments-constant": 196500,
+            "modInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "modInteger-cpu-arguments-model-arguments-slope": 220,
+            "modInteger-memory-arguments-intercept": 0,
+            "modInteger-memory-arguments-minimum": 1,
+            "modInteger-memory-arguments-slope": 1,
+            "multiplyInteger-cpu-arguments-intercept": 69522,
+            "multiplyInteger-cpu-arguments-slope": 11687,
+            "multiplyInteger-memory-arguments-intercept": 0,
+            "multiplyInteger-memory-arguments-slope": 1,
+            "nullList-cpu-arguments": 60091,
+            "nullList-memory-arguments": 32,
+            "quotientInteger-cpu-arguments-constant": 196500,
+            "quotientInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "quotientInteger-cpu-arguments-model-arguments-slope": 220,
+            "quotientInteger-memory-arguments-intercept": 0,
+            "quotientInteger-memory-arguments-minimum": 1,
+            "quotientInteger-memory-arguments-slope": 1,
+            "remainderInteger-cpu-arguments-constant": 196500,
+            "remainderInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "remainderInteger-cpu-arguments-model-arguments-slope": 220,
+            "remainderInteger-memory-arguments-intercept": 0,
+            "remainderInteger-memory-arguments-minimum": 1,
+            "remainderInteger-memory-arguments-slope": 1,
+            "sha2_256-cpu-arguments-intercept": 806990,
+            "sha2_256-cpu-arguments-slope": 30482,
+            "sha2_256-memory-arguments": 4,
+            "sha3_256-cpu-arguments-intercept": 1927926,
+            "sha3_256-cpu-arguments-slope": 82523,
+            "sha3_256-memory-arguments": 4,
+            "sliceByteString-cpu-arguments-intercept": 265318,
+            "sliceByteString-cpu-arguments-slope": 0,
+            "sliceByteString-memory-arguments-intercept": 4,
+            "sliceByteString-memory-arguments-slope": 0,
+            "sndPair-cpu-arguments": 85931,
+            "sndPair-memory-arguments": 32,
+            "subtractInteger-cpu-arguments-intercept": 205665,
+            "subtractInteger-cpu-arguments-slope": 812,
+            "subtractInteger-memory-arguments-intercept": 1,
+            "subtractInteger-memory-arguments-slope": 1,
+            "tailList-cpu-arguments": 41182,
+            "tailList-memory-arguments": 32,
+            "trace-cpu-arguments": 212342,
+            "trace-memory-arguments": 32,
+            "unBData-cpu-arguments": 31220,
+            "unBData-memory-arguments": 32,
+            "unConstrData-cpu-arguments": 32696,
+            "unConstrData-memory-arguments": 32,
+            "unIData-cpu-arguments": 43357,
+            "unIData-memory-arguments": 32,
+            "unListData-cpu-arguments": 32247,
+            "unListData-memory-arguments": 32,
+            "unMapData-cpu-arguments": 38314,
+            "unMapData-memory-arguments": 32,
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
+          },
+          "PlutusV2": {
+            "addInteger-cpu-arguments-intercept": 205665,
+            "addInteger-cpu-arguments-slope": 812,
+            "addInteger-memory-arguments-intercept": 1,
+            "addInteger-memory-arguments-slope": 1,
+            "appendByteString-cpu-arguments-intercept": 1000,
+            "appendByteString-cpu-arguments-slope": 571,
+            "appendByteString-memory-arguments-intercept": 0,
+            "appendByteString-memory-arguments-slope": 1,
+            "appendString-cpu-arguments-intercept": 1000,
+            "appendString-cpu-arguments-slope": 24177,
+            "appendString-memory-arguments-intercept": 4,
+            "appendString-memory-arguments-slope": 1,
+            "bData-cpu-arguments": 1000,
+            "bData-memory-arguments": 32,
+            "blake2b_256-cpu-arguments-intercept": 117366,
+            "blake2b_256-cpu-arguments-slope": 10475,
+            "blake2b_256-memory-arguments": 4,
+            "cekApplyCost-exBudgetCPU": 23000,
+            "cekApplyCost-exBudgetMemory": 100,
+            "cekBuiltinCost-exBudgetCPU": 23000,
+            "cekBuiltinCost-exBudgetMemory": 100,
+            "cekConstCost-exBudgetCPU": 23000,
+            "cekConstCost-exBudgetMemory": 100,
+            "cekDelayCost-exBudgetCPU": 23000,
+            "cekDelayCost-exBudgetMemory": 100,
+            "cekForceCost-exBudgetCPU": 23000,
+            "cekForceCost-exBudgetMemory": 100,
+            "cekLamCost-exBudgetCPU": 23000,
+            "cekLamCost-exBudgetMemory": 100,
+            "cekStartupCost-exBudgetCPU": 100,
+            "cekStartupCost-exBudgetMemory": 100,
+            "cekVarCost-exBudgetCPU": 23000,
+            "cekVarCost-exBudgetMemory": 100,
+            "chooseData-cpu-arguments": 19537,
+            "chooseData-memory-arguments": 32,
+            "chooseList-cpu-arguments": 175354,
+            "chooseList-memory-arguments": 32,
+            "chooseUnit-cpu-arguments": 46417,
+            "chooseUnit-memory-arguments": 4,
+            "consByteString-cpu-arguments-intercept": 221973,
+            "consByteString-cpu-arguments-slope": 511,
+            "consByteString-memory-arguments-intercept": 0,
+            "consByteString-memory-arguments-slope": 1,
+            "constrData-cpu-arguments": 89141,
+            "constrData-memory-arguments": 32,
+            "decodeUtf8-cpu-arguments-intercept": 497525,
+            "decodeUtf8-cpu-arguments-slope": 14068,
+            "decodeUtf8-memory-arguments-intercept": 4,
+            "decodeUtf8-memory-arguments-slope": 2,
+            "divideInteger-cpu-arguments-constant": 196500,
+            "divideInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "divideInteger-cpu-arguments-model-arguments-slope": 220,
+            "divideInteger-memory-arguments-intercept": 0,
+            "divideInteger-memory-arguments-minimum": 1,
+            "divideInteger-memory-arguments-slope": 1,
+            "encodeUtf8-cpu-arguments-intercept": 1000,
+            "encodeUtf8-cpu-arguments-slope": 28662,
+            "encodeUtf8-memory-arguments-intercept": 4,
+            "encodeUtf8-memory-arguments-slope": 2,
+            "equalsByteString-cpu-arguments-constant": 245000,
+            "equalsByteString-cpu-arguments-intercept": 216773,
+            "equalsByteString-cpu-arguments-slope": 62,
+            "equalsByteString-memory-arguments": 1,
+            "equalsData-cpu-arguments-intercept": 1060367,
+            "equalsData-cpu-arguments-slope": 12586,
+            "equalsData-memory-arguments": 1,
+            "equalsInteger-cpu-arguments-intercept": 208512,
+            "equalsInteger-cpu-arguments-slope": 421,
+            "equalsInteger-memory-arguments": 1,
+            "equalsString-cpu-arguments-constant": 187000,
+            "equalsString-cpu-arguments-intercept": 1000,
+            "equalsString-cpu-arguments-slope": 52998,
+            "equalsString-memory-arguments": 1,
+            "fstPair-cpu-arguments": 80436,
+            "fstPair-memory-arguments": 32,
+            "headList-cpu-arguments": 43249,
+            "headList-memory-arguments": 32,
+            "iData-cpu-arguments": 1000,
+            "iData-memory-arguments": 32,
+            "ifThenElse-cpu-arguments": 80556,
+            "ifThenElse-memory-arguments": 1,
+            "indexByteString-cpu-arguments": 57667,
+            "indexByteString-memory-arguments": 4,
+            "lengthOfByteString-cpu-arguments": 1000,
+            "lengthOfByteString-memory-arguments": 10,
+            "lessThanByteString-cpu-arguments-intercept": 197145,
+            "lessThanByteString-cpu-arguments-slope": 156,
+            "lessThanByteString-memory-arguments": 1,
+            "lessThanEqualsByteString-cpu-arguments-intercept": 197145,
+            "lessThanEqualsByteString-cpu-arguments-slope": 156,
+            "lessThanEqualsByteString-memory-arguments": 1,
+            "lessThanEqualsInteger-cpu-arguments-intercept": 204924,
+            "lessThanEqualsInteger-cpu-arguments-slope": 473,
+            "lessThanEqualsInteger-memory-arguments": 1,
+            "lessThanInteger-cpu-arguments-intercept": 208896,
+            "lessThanInteger-cpu-arguments-slope": 511,
+            "lessThanInteger-memory-arguments": 1,
+            "listData-cpu-arguments": 52467,
+            "listData-memory-arguments": 32,
+            "mapData-cpu-arguments": 64832,
+            "mapData-memory-arguments": 32,
+            "mkCons-cpu-arguments": 65493,
+            "mkCons-memory-arguments": 32,
+            "mkNilData-cpu-arguments": 22558,
+            "mkNilData-memory-arguments": 32,
+            "mkNilPairData-cpu-arguments": 16563,
+            "mkNilPairData-memory-arguments": 32,
+            "mkPairData-cpu-arguments": 76511,
+            "mkPairData-memory-arguments": 32,
+            "modInteger-cpu-arguments-constant": 196500,
+            "modInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "modInteger-cpu-arguments-model-arguments-slope": 220,
+            "modInteger-memory-arguments-intercept": 0,
+            "modInteger-memory-arguments-minimum": 1,
+            "modInteger-memory-arguments-slope": 1,
+            "multiplyInteger-cpu-arguments-intercept": 69522,
+            "multiplyInteger-cpu-arguments-slope": 11687,
+            "multiplyInteger-memory-arguments-intercept": 0,
+            "multiplyInteger-memory-arguments-slope": 1,
+            "nullList-cpu-arguments": 60091,
+            "nullList-memory-arguments": 32,
+            "quotientInteger-cpu-arguments-constant": 196500,
+            "quotientInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "quotientInteger-cpu-arguments-model-arguments-slope": 220,
+            "quotientInteger-memory-arguments-intercept": 0,
+            "quotientInteger-memory-arguments-minimum": 1,
+            "quotientInteger-memory-arguments-slope": 1,
+            "remainderInteger-cpu-arguments-constant": 196500,
+            "remainderInteger-cpu-arguments-model-arguments-intercept": 453240,
+            "remainderInteger-cpu-arguments-model-arguments-slope": 220,
+            "remainderInteger-memory-arguments-intercept": 0,
+            "remainderInteger-memory-arguments-minimum": 1,
+            "remainderInteger-memory-arguments-slope": 1,
+            "serialiseData-cpu-arguments-intercept": 1159724,
+            "serialiseData-cpu-arguments-slope": 392670,
+            "serialiseData-memory-arguments-intercept": 0,
+            "serialiseData-memory-arguments-slope": 2,
+            "sha2_256-cpu-arguments-intercept": 806990,
+            "sha2_256-cpu-arguments-slope": 30482,
+            "sha2_256-memory-arguments": 4,
+            "sha3_256-cpu-arguments-intercept": 1927926,
+            "sha3_256-cpu-arguments-slope": 82523,
+            "sha3_256-memory-arguments": 4,
+            "sliceByteString-cpu-arguments-intercept": 265318,
+            "sliceByteString-cpu-arguments-slope": 0,
+            "sliceByteString-memory-arguments-intercept": 4,
+            "sliceByteString-memory-arguments-slope": 0,
+            "sndPair-cpu-arguments": 85931,
+            "sndPair-memory-arguments": 32,
+            "subtractInteger-cpu-arguments-intercept": 205665,
+            "subtractInteger-cpu-arguments-slope": 812,
+            "subtractInteger-memory-arguments-intercept": 1,
+            "subtractInteger-memory-arguments-slope": 1,
+            "tailList-cpu-arguments": 41182,
+            "tailList-memory-arguments": 32,
+            "trace-cpu-arguments": 212342,
+            "trace-memory-arguments": 32,
+            "unBData-cpu-arguments": 31220,
+            "unBData-memory-arguments": 32,
+            "unConstrData-cpu-arguments": 32696,
+            "unConstrData-memory-arguments": 32,
+            "unIData-cpu-arguments": 43357,
+            "unIData-memory-arguments": 32,
+            "unListData-cpu-arguments": 32247,
+            "unListData-memory-arguments": 32,
+            "unMapData-cpu-arguments": 38314,
+            "unMapData-memory-arguments": 32,
+            "verifyEcdsaSecp256k1Signature-cpu-arguments": 35892428,
+            "verifyEcdsaSecp256k1Signature-memory-arguments": 10,
+            "verifyEd25519Signature-cpu-arguments-intercept": 57996947,
+            "verifyEd25519Signature-cpu-arguments-slope": 18975,
+            "verifyEd25519Signature-memory-arguments": 10,
+            "verifySchnorrSecp256k1Signature-cpu-arguments-intercept": 38887044,
+            "verifySchnorrSecp256k1Signature-cpu-arguments-slope": 32947,
+            "verifySchnorrSecp256k1Signature-memory-arguments": 10
+          }
+        },
+        "executionPrices": {
+          "prMem": {
+            "denominator": 10000,
+            "numerator": 577
+          },
+          "prSteps": {
+            "denominator": 10000000,
+            "numerator": 721
+          }
+        },
+        "lovelacePerUTxOWord": 4310,
+        "maxBlockExUnits": {
+          "exUnitsMem": 62000000,
+          "exUnitsSteps": 20000000000
+        },
+        "maxCollateralInputs": 3,
+        "maxTxExUnits": {
+          "exUnitsMem": 14000000,
+          "exUnitsSteps": 10000000000
+        },
+        "maxValueSize": 5000
+      },
+      "conway": {
+        "plutusV3CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          549,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          24548,
+          29498,
+          38,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          549,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          549,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          549,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ]
+      },
+      "delegator_coin": 1000000000000000,
+      "delegators": 100000,
+      "dreps": 0,
+      "epoch_length": 600,
+      "extra_future_offset": 0,
+      "funds_balance": 10000000000000,
+      "max_block_size": null,
+      "network_magic": 42,
+      "parameter_k": 3,
+      "per_pool_balance": 1000000000000000,
+      "pool_coin": 1000000000000000,
+      "pparamsEpoch": 492,
+      "pparamsOverlays": [
+        "v8-preview",
+        "v9-preview",
+        "blocksize64k"
+      ],
+      "shelley": {
+        "activeSlotsCoeff": 0.05,
+        "epochLength": 600,
+        "protocolParams": {
+          "a0": 0.3,
+          "decentralisationParam": 0,
+          "eMax": 18,
+          "extraEntropy": {
+            "tag": "NeutralNonce"
+          },
+          "keyDeposit": 2000000,
+          "maxBlockBodySize": 65536,
+          "maxBlockHeaderSize": 1100,
+          "maxTxSize": 16384,
+          "minFeeA": 44,
+          "minFeeB": 155381,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
+          "nOpt": 500,
+          "poolDeposit": 500000000,
+          "protocolVersion": {
+            "major": 9,
+            "minor": 0
+          },
+          "rho": 0.003,
+          "tau": 0.2
+        },
+        "securityParam": 3,
+        "slotLength": 1
+      },
+      "single_shot": true,
+      "slot_duration": 1,
+      "utxo": 500000,
+      "utxo_keys": 1
+    },
+    "name": "6-dense-timeseries-1h",
+    "node": {
+      "heap_limit": null,
+      "rts_flags_override": [],
+      "shutdown_on_block_synced": null,
+      "shutdown_on_slot_synced": 3600,
+      "ssd_directory": null,
+      "tracer": true,
+      "tracing_backend": "trace-dispatcher",
+      "utxo_lmdb": false,
+      "utxo_lsmt": false,
+      "verbatim": {
+        "EnableP2P": true
+      }
+    },
+    "overlay": {},
+    "scenario": "fixed-loaded",
+    "tracer": {
+      "ekg": false,
+      "rtview": true,
+      "timeseries": true,
       "withresources": false
     },
     "workloads": []
@@ -6153,7 +6990,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -6266,7 +7103,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -6476,7 +7313,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -6499,7 +7336,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -6531,6 +7368,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -6546,7 +7384,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -6659,7 +7497,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -6869,7 +7707,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -6892,7 +7730,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -6924,6 +7762,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -6939,7 +7778,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -7052,7 +7891,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -7262,7 +8101,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -7285,7 +8124,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -7317,6 +8156,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -7332,7 +8172,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -7445,7 +8285,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -7655,7 +8495,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -7678,7 +8518,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -7710,6 +8550,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -7725,7 +8566,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -7838,7 +8679,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -8048,7 +8889,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -8071,7 +8912,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -8103,6 +8944,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -8118,7 +8960,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "performance"
     },
     "chaindb": {
@@ -8231,7 +9073,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -8441,7 +9283,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 432000,
         "protocolParams": {
           "a0": 0.3,
@@ -8464,7 +9306,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -8496,6 +9338,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -8519,7 +9362,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -8621,7 +9464,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -8831,7 +9674,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -8854,7 +9697,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -8885,6 +9728,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -8908,7 +9752,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -9010,7 +9854,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -9220,7 +10064,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -9243,7 +10087,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -9274,6 +10118,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -9297,7 +10142,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -9399,7 +10244,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -9609,7 +10454,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -9632,7 +10477,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -9663,6 +10508,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -9686,7 +10532,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -9788,7 +10634,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -9998,7 +10844,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -10021,7 +10867,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -10052,6 +10898,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -10075,7 +10922,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -10211,7 +11058,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -10421,7 +11268,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -10444,7 +11291,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -10475,6 +11322,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -10498,7 +11346,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -10600,7 +11448,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -10810,7 +11658,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -10833,7 +11681,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -10864,6 +11712,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -10887,7 +11736,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -11023,7 +11872,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -11233,7 +12082,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -11256,7 +12105,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -11287,6 +12136,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -11312,7 +12162,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -11417,7 +12267,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -11806,7 +12656,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -11829,7 +12679,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -11860,6 +12710,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -11885,7 +12736,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -12004,7 +12855,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -12393,7 +13244,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -12416,7 +13267,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -12447,6 +13298,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -12472,7 +13324,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -12591,7 +13443,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -12980,7 +13832,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -13003,7 +13855,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -13034,6 +13886,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -13059,7 +13912,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -13164,7 +14017,7 @@
       "tx_fee": 1412000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -13553,7 +14406,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -13576,7 +14429,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -13607,6 +14460,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -13632,7 +14486,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -13758,7 +14612,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -14399,7 +15253,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -14422,7 +15276,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -14453,6 +15307,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -14478,7 +15333,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -14591,7 +15446,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -15232,7 +16087,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -15255,7 +16110,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -15286,6 +16141,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -15311,7 +16167,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -15424,7 +16280,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -16067,7 +16923,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -16090,7 +16946,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -16121,6 +16977,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -16144,7 +17001,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -16246,7 +17103,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -16456,7 +17313,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -16479,7 +17336,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -16510,6 +17367,7 @@
     "tracer": {
       "ekg": false,
       "rtview": true,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -16533,7 +17391,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -16635,7 +17493,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -16845,7 +17703,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -16868,7 +17726,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -16899,6 +17757,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -16922,7 +17781,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -17028,7 +17887,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -17238,7 +18097,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -17261,7 +18120,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -17292,6 +18151,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -17317,7 +18177,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -17422,7 +18282,7 @@
       "tx_fee": 1380000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -17812,7 +18672,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -17835,7 +18695,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -17866,6 +18726,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -17889,7 +18750,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -18025,7 +18886,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -18235,7 +19096,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -18258,7 +19119,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -18289,6 +19150,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -18312,7 +19174,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -18414,7 +19276,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -18624,7 +19486,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -18647,7 +19509,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -18678,6 +19540,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -18701,7 +19564,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -18837,7 +19700,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -19047,7 +19910,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -19070,7 +19933,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -19101,6 +19964,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -19126,7 +19990,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -19231,7 +20095,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -19441,7 +20305,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -19464,7 +20328,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -19495,6 +20359,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -19518,7 +20383,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -19620,7 +20485,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -19830,7 +20695,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -19853,7 +20718,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -19884,6 +20749,7 @@
     "tracer": {
       "ekg": false,
       "rtview": true,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -19909,7 +20775,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -20010,7 +20876,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -20220,7 +21086,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -20243,7 +21109,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -20274,6 +21140,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -20299,7 +21166,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -20434,7 +21301,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -20644,7 +21511,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -20667,7 +21534,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -20698,6 +21565,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -20720,10 +21588,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 0.050,
+      "minimum_chain_density": 0.05,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": null
     },
     "cli_args": {
@@ -21057,7 +21925,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 10,
@@ -21089,6 +21957,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -21114,7 +21983,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -21215,7 +22084,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -21425,7 +22294,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -21448,7 +22317,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -21479,6 +22348,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -21504,7 +22374,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -21605,7 +22475,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -21815,7 +22685,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -21838,7 +22708,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -21869,6 +22739,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -21894,7 +22765,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -21998,7 +22869,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -22208,7 +23079,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -22231,7 +23102,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -22262,6 +23133,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -22287,7 +23159,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -22391,7 +23263,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -22601,7 +23473,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -22624,7 +23496,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -22655,6 +23527,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -22678,7 +23551,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -22780,7 +23653,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -22990,7 +23863,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -23013,7 +23886,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -23044,6 +23917,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -23067,7 +23941,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -23169,7 +24043,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -23379,7 +24253,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -23402,7 +24276,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -23433,6 +24307,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -23456,7 +24331,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -23592,7 +24467,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -23981,7 +24856,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -24004,7 +24879,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -24035,6 +24910,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -24058,7 +24934,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -24216,7 +25092,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -24605,7 +25481,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -24628,7 +25504,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -24659,6 +25535,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -24682,7 +25559,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -24784,7 +25661,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -24994,7 +25871,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -25017,7 +25894,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -25048,6 +25925,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -25071,7 +25949,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -25173,7 +26051,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -25383,7 +26261,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -25406,7 +26284,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -25437,6 +26315,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -25462,7 +26341,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -25567,7 +26446,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -25777,7 +26656,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -25800,7 +26679,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -25831,6 +26710,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -25854,7 +26734,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -25956,7 +26836,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -26166,7 +27046,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -26189,7 +27069,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -26220,6 +27100,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -26243,7 +27124,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -26345,7 +27226,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -26555,7 +27436,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -26578,7 +27459,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -26609,6 +27490,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -26634,7 +27516,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -26735,7 +27617,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -26945,7 +27827,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -26968,7 +27850,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -26999,6 +27881,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -27024,7 +27907,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -27125,7 +28008,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -27768,7 +28651,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -27791,7 +28674,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -27822,6 +28705,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -27847,7 +28731,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -27948,7 +28832,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -28158,7 +29042,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -28181,7 +29065,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -28212,6 +29096,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -28237,7 +29122,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -28341,7 +29226,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -28551,7 +29436,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -28574,7 +29459,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -28605,6 +29490,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -28630,7 +29516,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -28734,7 +29620,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -29123,7 +30009,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -29146,7 +30032,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -29177,6 +30063,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -29202,7 +30089,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -29303,7 +30190,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -29513,7 +30400,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -29536,7 +30423,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -29567,6 +30454,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -29592,7 +30480,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -29693,7 +30581,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -30336,7 +31224,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -30359,7 +31247,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -30390,6 +31278,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -30415,7 +31304,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -30516,7 +31405,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -31159,7 +32048,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -31182,7 +32071,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -31215,6 +32104,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -31240,7 +32130,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -31341,7 +32231,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -31984,7 +32874,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -32007,7 +32897,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -32040,6 +32930,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -32065,7 +32956,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -32166,7 +33057,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -32809,7 +33700,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -32832,7 +33723,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -32866,6 +33757,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -32891,7 +33783,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -32992,7 +33884,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -33635,7 +34527,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -33658,7 +34550,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -33693,6 +34585,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -33718,7 +34611,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -33819,7 +34712,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -34029,7 +34922,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -34052,7 +34945,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -34083,6 +34976,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -34108,7 +35002,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -34212,7 +35106,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -34422,7 +35316,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -34445,7 +35339,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -34476,6 +35370,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -34501,7 +35396,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -34602,7 +35497,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -34812,7 +35707,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -34835,7 +35730,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -34868,6 +35763,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -34893,7 +35789,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -34994,7 +35890,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -35204,7 +36100,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -35227,7 +36123,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -35261,6 +36157,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -35286,7 +36183,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -35387,7 +36284,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -35597,7 +36494,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -35620,7 +36517,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -35653,6 +36550,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -35678,7 +36576,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -35779,7 +36677,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -35989,7 +36887,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -36012,7 +36910,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -36046,6 +36944,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -36071,7 +36970,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -36172,7 +37071,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -36382,7 +37281,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -36405,7 +37304,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -36438,6 +37337,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -36463,7 +37363,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -36564,7 +37464,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -36774,7 +37674,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -36797,7 +37697,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -36830,6 +37730,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -36855,7 +37756,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -36956,7 +37857,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -37345,7 +38246,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -37368,7 +38269,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -37399,6 +38300,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -37424,7 +38326,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -37525,7 +38427,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -37914,7 +38816,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -37937,7 +38839,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -37968,6 +38870,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -37993,7 +38896,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -38094,7 +38997,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -38483,7 +39386,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -38506,7 +39409,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -38537,6 +39440,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -38562,7 +39466,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -38663,7 +39567,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -39052,7 +39956,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -39075,7 +39979,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -39106,6 +40010,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -39131,7 +40036,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -39232,7 +40137,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -39621,7 +40526,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -39644,7 +40549,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -39675,6 +40580,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -39700,7 +40606,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -39802,7 +40708,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -40012,7 +40918,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -40035,7 +40941,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -40066,6 +40972,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -40091,7 +40998,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -40192,7 +41099,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -40402,7 +41309,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -40425,7 +41332,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -40456,6 +41363,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -40481,7 +41389,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -40582,7 +41490,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -40792,7 +41700,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -40815,7 +41723,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -40846,6 +41754,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -40871,7 +41780,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -40972,7 +41881,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -41182,7 +42091,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -41205,7 +42114,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -41236,6 +42145,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -41259,7 +42169,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -41395,7 +42305,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -41784,7 +42694,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -41807,7 +42717,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -41838,6 +42748,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -41872,7 +42783,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -42030,7 +42941,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -42419,7 +43330,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -42442,7 +43353,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -42473,6 +43384,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -42510,7 +43422,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -42629,7 +43541,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -43270,7 +44182,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -43293,7 +44205,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -43324,6 +44236,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -43350,7 +44263,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -43469,7 +44382,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -44112,7 +45025,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -44135,7 +45048,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -44166,6 +45079,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -44192,7 +45106,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -44294,7 +45208,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -44935,7 +45849,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -44958,7 +45872,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -44989,6 +45903,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -45015,7 +45930,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -45117,7 +46032,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -45758,7 +46673,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -45781,7 +46696,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -45812,6 +46727,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -45837,7 +46753,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -45938,7 +46854,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -46148,7 +47064,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -46171,7 +47087,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -46202,6 +47118,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -46227,7 +47144,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -46362,7 +47279,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -46572,7 +47489,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -46595,7 +47512,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -46626,6 +47543,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -46651,7 +47569,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -46755,7 +47673,7 @@
       "tx_fee": 1380000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -47144,7 +48062,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -47167,7 +48085,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -47198,6 +48116,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -47224,7 +48143,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -47363,7 +48282,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -47752,7 +48671,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -47775,7 +48694,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -47806,6 +48725,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -47832,7 +48752,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -47971,7 +48891,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -48360,7 +49280,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -48383,7 +49303,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -48414,6 +49334,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -48440,7 +49361,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -48579,7 +49500,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -48968,7 +49889,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -48991,7 +49912,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -49022,6 +49943,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -49048,7 +49970,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -49187,7 +50109,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -49576,7 +50498,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -49599,7 +50521,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -49630,6 +50552,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -49655,7 +50578,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -49773,7 +50696,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -50162,7 +51085,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -50185,7 +51108,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -50216,6 +51139,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -50242,7 +51166,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -50395,7 +51319,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -50784,7 +51708,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -50807,7 +51731,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -50838,6 +51762,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -50863,7 +51788,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -50981,7 +51906,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -51370,7 +52295,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -51393,7 +52318,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -51424,6 +52349,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -51450,7 +52376,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -51603,7 +52529,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -51992,7 +52918,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -52015,7 +52941,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -52046,6 +52972,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -52072,7 +52999,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -52220,7 +53147,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -52861,7 +53788,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -52884,7 +53811,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -52915,6 +53842,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -52941,7 +53869,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -53089,7 +54017,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -53730,7 +54658,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -53753,7 +54681,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -53784,6 +54712,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -53810,7 +54739,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -53949,7 +54878,7 @@
       "tx_fee": 1892175
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -54592,7 +55521,7 @@
         "budget/block/memory/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -54615,7 +55544,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -54660,6 +55589,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -54686,7 +55616,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -54825,7 +55755,7 @@
       "tx_fee": 2463246
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -55468,7 +56398,7 @@
         "budget/block/memory/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -55491,7 +56421,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -55536,6 +56466,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -55562,7 +56493,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -55701,7 +56632,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -56342,7 +57273,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -56365,7 +57296,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -56396,6 +57327,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -56422,7 +57354,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -56561,7 +57493,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -57202,7 +58134,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -57225,7 +58157,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -57259,6 +58191,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -57285,7 +58218,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -57424,7 +58357,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -58090,7 +59023,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -58113,7 +59046,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -58144,6 +59077,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -58185,7 +59119,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -58324,7 +59258,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -58990,7 +59924,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -59013,7 +59947,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -59044,6 +59978,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -59084,7 +60019,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -59223,7 +60158,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -59889,7 +60824,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -59912,7 +60847,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -59943,6 +60878,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -59984,7 +60920,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -60123,7 +61059,7 @@
       "tx_fee": 1412000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -60512,7 +61448,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -60535,7 +61471,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -60566,6 +61502,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -60592,7 +61529,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -60697,7 +61634,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -61338,7 +62275,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -61361,7 +62298,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -61392,6 +62329,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -61418,7 +62356,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -61523,7 +62461,7 @@
       "tx_fee": 2463246
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -62166,7 +63104,7 @@
         "budget/block/memory/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -62189,7 +63127,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -62234,6 +63172,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -62260,7 +63199,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -62379,7 +63318,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -63020,7 +63959,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -63043,7 +63982,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -63074,6 +64013,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -63100,7 +64040,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -63219,7 +64159,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -63862,7 +64802,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -63885,7 +64825,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -63916,6 +64856,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -63942,7 +64883,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -64061,7 +65002,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -64702,7 +65643,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -64725,7 +65666,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -64756,6 +65697,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -64782,7 +65724,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -64901,7 +65843,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -65544,7 +66486,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -65567,7 +66509,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -65598,6 +66540,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -65623,7 +66566,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -65749,7 +66692,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -66390,7 +67333,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -66413,7 +67356,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -66444,6 +67387,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -66469,7 +67413,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -66574,7 +67518,7 @@
       "tx_fee": 1360000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -67215,7 +68159,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -67238,7 +68182,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -67269,6 +68213,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -67294,7 +68239,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -67407,7 +68352,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -68048,7 +68993,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -68071,7 +69016,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -68102,6 +69047,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -68128,7 +69074,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -68288,7 +69234,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -68929,7 +69875,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -68952,7 +69898,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -68983,6 +69929,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -69009,7 +69956,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -69169,7 +70116,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -69812,7 +70759,7 @@
         "budget/block/steps/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -69835,7 +70782,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -69866,6 +70813,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -69892,7 +70840,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -70052,7 +71000,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -70695,7 +71643,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -70718,7 +71666,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -70749,6 +71697,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -70775,7 +71724,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -70922,7 +71871,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -71563,7 +72512,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -71586,7 +72535,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -71617,6 +72566,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -71643,7 +72593,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -71790,7 +72740,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -72433,7 +73383,7 @@
         "budget/block/steps/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -72456,7 +73406,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -72487,6 +73437,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -72513,7 +73464,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -72660,7 +73611,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -73303,7 +74254,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -73326,7 +74277,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -73357,6 +74308,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -73383,7 +74335,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -73522,7 +74474,7 @@
       "tx_fee": 1412000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -74163,7 +75115,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -74186,7 +75138,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -74217,6 +75169,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -74240,7 +75193,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -74342,7 +75295,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -74552,7 +75505,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -74575,7 +75528,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -74606,6 +75559,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -74629,7 +75583,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -74731,7 +75685,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -74941,7 +75895,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -74964,7 +75918,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -74995,6 +75949,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -75018,7 +75973,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -75120,7 +76075,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -75330,7 +76285,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -75353,7 +76308,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -75384,6 +76339,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -75407,7 +76363,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -75509,7 +76465,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -75719,7 +76675,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -75742,7 +76698,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -75773,6 +76729,7 @@
     "tracer": {
       "ekg": false,
       "rtview": true,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -75796,7 +76753,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -75898,7 +76855,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -76108,7 +77065,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -76131,7 +77088,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -76162,6 +77119,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -76185,7 +77143,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -76287,7 +77245,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -76497,7 +77455,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -76520,7 +77478,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -76551,6 +77509,7 @@
     "tracer": {
       "ekg": false,
       "rtview": true,
+      "timeseries": false,
       "withresources": true
     },
     "workloads": []
@@ -76576,7 +77535,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -76678,7 +77637,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -76888,7 +77847,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 600,
         "protocolParams": {
           "a0": 0.3,
@@ -76911,7 +77870,7 @@
             "major": 6,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -76942,6 +77901,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -76968,7 +77928,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -77123,7 +78083,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -77512,7 +78472,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 1200,
         "protocolParams": {
           "a0": 0.3,
@@ -77535,7 +78495,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -77568,6 +78528,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -77594,7 +78555,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -77749,7 +78710,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -78138,7 +79099,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 1200,
         "protocolParams": {
           "a0": 0.3,
@@ -78161,7 +79122,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -78192,6 +79153,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -78218,7 +79180,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -78373,7 +79335,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -78762,7 +79724,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 1200,
         "protocolParams": {
           "a0": 0.3,
@@ -78785,7 +79747,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -78816,6 +79778,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -78842,7 +79805,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -78978,7 +79941,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -79367,7 +80330,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -79390,7 +80353,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -79421,6 +80384,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -79447,7 +80411,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -79583,7 +80547,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -79972,7 +80936,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -79995,7 +80959,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -80026,6 +80990,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -80052,7 +81017,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -80188,7 +81153,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -80577,7 +81542,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -80600,7 +81565,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -80631,6 +81596,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -80657,7 +81623,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -80793,7 +81759,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -81182,7 +82148,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -81205,7 +82171,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -81236,6 +82202,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -81262,7 +82229,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -81419,7 +82386,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -81808,7 +82775,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -81831,7 +82798,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -81862,6 +82829,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -81888,7 +82856,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -82024,7 +82992,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -82413,7 +83381,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -82436,7 +83404,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -82467,6 +83435,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -82493,7 +83462,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -82638,7 +83607,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -83279,7 +84248,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -83302,7 +84271,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -83333,6 +84302,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -83370,7 +84340,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -83520,7 +84490,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -84161,7 +85131,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -84184,7 +85154,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -84215,6 +85185,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -84252,7 +85223,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -84397,7 +85368,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -85038,7 +86009,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -85061,7 +86032,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -85092,6 +86063,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -85118,7 +86090,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -85263,7 +86235,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -85904,7 +86876,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -85927,7 +86899,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -85958,6 +86930,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -85984,7 +86957,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -86120,7 +87093,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -86761,7 +87734,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -86784,7 +87757,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -86815,6 +87788,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -86841,7 +87815,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -86977,7 +87951,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -87618,7 +88592,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -87641,7 +88615,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -87675,6 +88649,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": []
@@ -87701,7 +88676,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -87837,7 +88812,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -88503,7 +89478,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -88526,7 +89501,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -88557,6 +89532,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -88598,7 +89574,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -88734,7 +89710,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -89400,7 +90376,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -89423,7 +90399,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -89454,6 +90430,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [
@@ -89494,7 +90471,7 @@
       "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 0.020,
+      "tx_loss_ratio": 0.02,
       "type": "standard"
     },
     "cli_args": {
@@ -89630,7 +90607,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 0.050,
+      "active_slots_coeff": 0.05,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -90296,7 +91273,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 0.050,
+        "activeSlotsCoeff": 0.05,
         "epochLength": 8000,
         "protocolParams": {
           "a0": 0.3,
@@ -90319,7 +91296,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 0.0030,
+          "rho": 0.003,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -90350,6 +91327,7 @@
     "tracer": {
       "ekg": false,
       "rtview": false,
+      "timeseries": false,
       "withresources": false
     },
     "workloads": [

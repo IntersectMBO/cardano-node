@@ -1,0 +1,18 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - GF_DEFAULT_APP_MODE=development
+      # Allow loading unsigned plugins (needed during local development before signing)
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=iog-cardanotimeseries-datasource
+    volumes:
+      # Mount the built plugin into Grafana's plugin directory
+      - ./dist:/var/lib/grafana/plugins/iog-cardanotimeseries-datasource
+      # Provision the datasource automatically (edit provisioning/datasource.yaml to set URL)
+      - ./provisioning:/etc/grafana/provisioning
+      # Provisioned dashboards
+      - ./dashboards:/var/lib/grafana/dashboards

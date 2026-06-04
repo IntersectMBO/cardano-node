@@ -93,7 +93,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , workloadAppend
 
   -- Tracer's params.
-  , tracerRtview, tracerWithresources
+  , tracerRtview, tracerWithresources, tracerTimeseries
 
   -- Cluster params.
   , clusterMinimunStorage, ssdDirectory, clusterKeepRunningOn
@@ -203,6 +203,7 @@ empty = Types.Profile {
       Types.rtview = False
     , Types.ekg = False
     , Types.withresources = False
+    , Types.timeseries = False
   }
   , Types.cluster = Nothing
   , Types.analysis = Types.Analysis {
@@ -803,6 +804,9 @@ tracerRtview = tracer (\t -> t {Types.rtview = True})
 
 tracerWithresources :: Types.Profile -> Types.Profile
 tracerWithresources = tracer (\t -> t {Types.withresources = True})
+
+tracerTimeseries :: Types.Profile -> Types.Profile
+tracerTimeseries = tracer (\t -> t {Types.timeseries = True})
 
 -- Cluster.
 --------------------------------------------------------------------------------

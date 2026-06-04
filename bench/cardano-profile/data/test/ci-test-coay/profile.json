@@ -315,7 +315,8 @@
   "tracer": {
     "rtview": false,
     "ekg": false,
-    "withresources": false
+    "withresources": false,
+    "timeseries": false
   },
   "cluster": null,
   "desc": "Miniature dataset, CI-friendly duration, test scale",

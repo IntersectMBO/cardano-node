@@ -9,7 +9,7 @@ import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils
 import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils (nl, readRegistry)
+import           Cardano.Tracer.Utils (nl, sanitizeNodeName, readRegistry)
 
 import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (unless)
@@ -19,8 +19,9 @@ import           Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           System.Directory (makeAbsolute)
-import           System.FilePath ((</>))
+import           System.FilePath (takeFileName, (</>))
 import           System.IO (hFlush)
+import           Text.Slugify (slugifyUnicode)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -55,7 +56,12 @@ writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat}
           rootDirAbs <- makeAbsolute logRoot
 
           let subDirForLogs :: FilePath
-              subDirForLogs = rootDirAbs </> T.unpack nodeName
+              subDirForLogs = rootDirAbs </> sanitizedName
+              name          = takeFileName $ T.unpack $ sanitizeNodeName nodeName
+              sanitizedName
+                | null name || name == "." || name == ".."
+                            = T.unpack $ slugifyUnicode nodeName
+                | otherwise = name
 
           createEmptyLogRotation currentLogLock key registry subDirForLogs
           handles <- readRegistry registry

@@ -56,7 +56,7 @@ main = do
   case parse (Surface.Parser.expr <* space <* eof) "input" query of
     Left err -> putStrLn (errorBundlePretty err)
     Right surfaceQuery -> do
-      case evalState (runExceptT (elab surfaceQuery)) initialSt of
+      case evalState (runExceptT (elab surfaceQuery)) (initialSt (metrics flatStore)) of
         Left err   -> Text.putStrLn err
         Right !q -> do
           Text.putStrLn (showT q)

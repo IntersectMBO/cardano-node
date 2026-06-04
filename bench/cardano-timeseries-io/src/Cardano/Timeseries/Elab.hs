@@ -5,7 +5,8 @@
 
 module Cardano.Timeseries.Elab(initialSt, St(..), ElabM, elab) where
 import           Cardano.Timeseries.AsText
-import           Cardano.Timeseries.Domain.Identifier (Identifier)
+import           Cardano.Timeseries.Domain.Identifier (Identifier (..))
+import           Cardano.Timeseries.Domain.Types      (MetricIdentifier)
 import           Cardano.Timeseries.Elab.Expr (Loc, getLoc)
 import qualified Cardano.Timeseries.Elab.Expr as Surface
 import           Cardano.Timeseries.Elab.Resolve
@@ -23,14 +24,17 @@ import qualified Cardano.Timeseries.Interp.BinaryRelation as BinaryRelation
 import           Cardano.Timeseries.Interp.Expr (HoleIdentifier)
 import qualified Cardano.Timeseries.Interp.Expr as Semantic
 
-import           Control.Monad (forM_)
+import           Control.Monad ()
 import           Control.Monad.Except (ExceptT, liftEither, runExceptT, throwError)
 import           Control.Monad.State.Strict (State, get, modify, put, runState)
 import           Data.Foldable as Foldable (toList)
-import           Data.List (find)
+import           Data.List (find, nub, sortOn)
+import qualified Text.EditDistance as EditDistance
 import qualified Data.Map.Strict as Map
-import           Data.Sequence as Seq (Seq (..), fromList, singleton, (><), (|>))
-import           Data.Text (Text, pack)
+import           Data.Sequence as Seq (Seq (..), fromList, reverse, singleton, (><), (|>))
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 
@@ -121,8 +125,8 @@ prettyBinaryArithmeticOpElabProblem (BinaryArithmeticOpElabProblem gam loc _ lhs
     <> "\n  @ "
     <> asText loc
 
-evalBinaryArithmethicOpElabProblem :: Defs -> BinaryArithmeticOpElabProblem -> BinaryArithmeticOpElabProblem
-evalBinaryArithmethicOpElabProblem defs (BinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy) =
+evalBinaryArithmeticOpElabProblem :: Defs -> BinaryArithmeticOpElabProblem -> BinaryArithmeticOpElabProblem
+evalBinaryArithmeticOpElabProblem defs (BinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy) =
   BinaryArithmeticOpElabProblem
     (resolveContext defs gam)
     loc
@@ -174,20 +178,21 @@ instance AsText ElabProblem where
 evalElabProblem :: Defs -> ElabProblem -> ElabProblem
 evalElabProblem defs (General p) = General (evalGeneralElabProblem defs p)
 evalElabProblem defs (BinaryRelation p) = BinaryRelation (evalBinaryRelationElabProblem defs p)
-evalElabProblem defs (BinaryArithmeticOp p) = BinaryArithmeticOp (evalBinaryArithmethicOpElabProblem defs p)
+evalElabProblem defs (BinaryArithmeticOp p) = BinaryArithmeticOp (evalBinaryArithmeticOpElabProblem defs p)
 evalElabProblem defs (ToScalar p) = ToScalar (evalToScalarElabProblem defs p)
 
 
 data St = St {
   defs               :: Defs,
-  nextHoleIdentifier :: HoleIdentifier
+  nextHoleIdentifier :: HoleIdentifier,
+  availableMetrics   :: Set MetricIdentifier
 }
 
-initialSt :: St
+initialSt :: Set MetricIdentifier -> St
 initialSt = St mempty 0
 
 updateDefs :: (Defs -> Defs) -> St -> St
-updateDefs f (St ds x) = St (f ds) x
+updateDefs f (St ds x ms) = St (f ds) x ms
 
 getDefs :: St -> Defs
 getDefs = defs
@@ -196,7 +201,30 @@ setDefs :: Defs -> St -> St
 setDefs v = updateDefs (const v)
 
 updateNextHoleIdentifier :: (HoleIdentifier -> HoleIdentifier) -> St -> St
-updateNextHoleIdentifier f (St ds x) = St ds (f x)
+updateNextHoleIdentifier f (St ds x ms) = St ds (f x) ms
+
+getAvailableMetrics :: ElabM (Set MetricIdentifier)
+getAvailableMetrics = (.availableMetrics) <$> get
+
+didYouMean :: Identifier -> Context -> Set MetricIdentifier -> Text
+didYouMean v gam ms =
+  let nameStr    = Text.unpack (asText v)
+      nameLen    = length nameStr
+      threshold  = max 1 (nameLen `div` 3)
+      candidates = nub $
+                     [ Text.unpack (asText (Types.identifier b)) | b <- Foldable.toList gam ] ++
+                     map Text.unpack (Set.toList ms)
+      close      = take 5
+                 $ map snd
+                 $ sortOn fst
+                   [ (d, Text.pack c)
+                   | c <- candidates
+                   , let d = EditDistance.levenshteinDistance EditDistance.defaultEditCosts nameStr c
+                   , d <= threshold
+                   ]
+  in if null close
+       then ""
+       else "\n  Did you mean: " <> Text.intercalate ", " close
 
 runUnifyM :: UnifyM a -> ElabM a
 runUnifyM f = do
@@ -244,11 +272,6 @@ mbBinaryArithmeticOp (Surface.Sub l a b) = Just (l, a, BinaryArithmeticOp.Sub, b
 mbBinaryArithmeticOp (Surface.Mul l a b) = Just (l, a, BinaryArithmeticOp.Mul, b)
 mbBinaryArithmeticOp (Surface.Div l a b) = Just (l, a, BinaryArithmeticOp.Div, b)
 mbBinaryArithmeticOp _                   = Nothing
-
-checkFresh :: Context -> Identifier -> ElabM ()
-checkFresh ctx v =
-  forM_ (find (\b -> Types.identifier b == v) ctx) $ \found ->
-    throwError $ pack $ "Reused variable name: " <> show (Types.identifier found)
 
 -- | Γ ⊦ to_scalar (t : T) ~> ?
 -- Assumes that `Ty` is normal w.r.t. hole substitution.
@@ -398,6 +421,13 @@ solveCanonicalBinaryArithmeticOpElabProblem _ _ lhs (InstantVector Scalar)
     instantiateExpr hole
       (BinaryArithmeticOp.embedInstantVectorScalar op lhs rhs)
   pure $ Just ([], [])
+-- | Σ Γ ⊦ RangeVector Scalar `op` Scalar ~> ? : RangeVector Scalar
+solveCanonicalBinaryArithmeticOpElabProblem _ _ lhs (RangeVector Scalar)
+  op rhs Scalar hole (RangeVector Scalar) = do
+  modify $ updateDefs $
+    instantiateExpr hole
+      (BinaryArithmeticOp.embedRangeVectorScalar op lhs rhs)
+  pure $ Just ([], [])
 solveCanonicalBinaryArithmeticOpElabProblem _ _ _ _ _ _ _ _ _ = pure Nothing
 
 solveNoncanonicalBinaryArithmeticOpElabProblem ::
@@ -426,15 +456,64 @@ solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArith
   pure $ Just ([UnificationProblem loc rhsTy Duration, UnificationProblem loc typ Timestamp],
     [BinaryArithmeticOp $
       BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp])
+-- | ? - Duration : ? ~> Timestamp - Duration : Timestamp
+-- Only Timestamp - Duration exists, so lhs must be Timestamp.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Sub rhs Duration hole typ = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Timestamp, UnificationProblem loc typ Timestamp]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp]
+    )
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole typ = do
+  pure $ Just ([UnificationProblem loc typ Duration],
+    [BinaryArithmeticOp $
+      BinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole Duration])
+-- | ? + ? : Duration ~> Duration + Duration : Duration
+-- Only Duration + Duration produces Duration.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Add rhs rhsTy hole Duration = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Duration, UnificationProblem loc rhsTy Duration]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Duration BinaryArithmeticOp.Add rhs Duration hole Duration]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (InstantVector Scalar) hole typ = do
   pure (Just ([UnificationProblem loc typ (InstantVector Scalar)], [BinaryArithmeticOp $
     BinaryArithmeticOpElabProblem gam loc rhs (InstantVector Scalar) op lhs Scalar hole (InstantVector Scalar)]))
-solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs _ hole Scalar = do
-  pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc lhsTy Scalar],
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs (RangeVector Scalar) hole typ = do
+  pure (Just ([UnificationProblem loc typ (RangeVector Scalar)], [BinaryArithmeticOp $
+    BinaryArithmeticOpElabProblem gam loc rhs (RangeVector Scalar) op lhs Scalar hole (RangeVector Scalar)]))
+-- | ? - ? : Timestamp ~> Timestamp - Duration : Timestamp
+-- Only Timestamp - Duration produces Timestamp via Sub.
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy BinaryArithmeticOp.Sub rhs rhsTy hole Timestamp = do
+  pure $ Just
+    ( [UnificationProblem loc lhsTy Timestamp, UnificationProblem loc rhsTy Duration]
+    , [BinaryArithmeticOp $
+        BinaryArithmeticOpElabProblem gam loc lhs Timestamp BinaryArithmeticOp.Sub rhs Duration hole Timestamp]
+    )
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole Scalar = do
+  pure $ Just ([UnificationProblem loc lhsTy Scalar, UnificationProblem loc rhsTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole holeTy = do
   pure $ Just ([UnificationProblem loc holeTy Scalar],
         [BinaryArithmeticOp $ BinaryArithmeticOpElabProblem gam loc lhs Scalar op rhs Scalar hole Scalar])
+solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy
+  | lhsTy == RangeVector Scalar || rhsTy == RangeVector Scalar =
+  pure $ Just
+    (
+     [UnificationProblem loc holeTy (RangeVector Scalar)],
+     [BinaryArithmeticOp $
+       BinaryArithmeticOpElabProblem
+         gam
+         loc
+         lhs
+         lhsTy
+         op
+         rhs
+         rhsTy
+         hole
+         (RangeVector Scalar)
+     ]
+    )
 solveNoncanonicalBinaryArithmeticOpElabProblem gam loc lhs lhsTy op rhs rhsTy hole holeTy
   | lhsTy == InstantVector Scalar || rhsTy == InstantVector Scalar =
   pure $ Just
@@ -497,12 +576,16 @@ solveGeneralElabProblem gam (mbBinaryRelation -> Just (l, a, r, b)) x typ = do
           typ
   pure ([], [e1, e2, e3])
 solveGeneralElabProblem _ (Surface.Metrics l) x typ = do
-  let u = UnificationProblem l typ Types.Text
+  let u = UnificationProblem l typ (Types.List Types.Text)
   modify (updateDefs $ instantiateExpr x Semantic.Metrics)
   pure ([u], [])
 solveGeneralElabProblem _ (Surface.Number l f) x typ = do
   let u = UnificationProblem l typ Scalar
   modify (updateDefs $ instantiateExpr x (Semantic.Number f))
+  pure ([u], [])
+solveGeneralElabProblem _ (Surface.MkUnit l) x typ = do
+  let u = UnificationProblem l typ Ty.Unit
+  modify (updateDefs $ instantiateExpr x Semantic.Unit)
   pure ([u], [])
 solveGeneralElabProblem _ (Surface.Truth l) x typ = do
   let u = UnificationProblem l typ Bool
@@ -626,7 +709,7 @@ solveGeneralElabProblem gam (Surface.SumOverTime l r) x typ = do
   rh <- freshExprHole (RangeVector Scalar)
   let e1 = General $ GeneralElabProblem gam r rh (RangeVector Scalar)
   modify $ updateDefs $
-    instantiateExpr x $ Semantic.AvgOverTime (Semantic.Hole rh)
+    instantiateExpr x $ Semantic.SumOverTime (Semantic.Hole rh)
   pure ([u], [e1])
 solveGeneralElabProblem gam (Surface.QuantileOverTime l k r) x typ = do
   let u = UnificationProblem l typ (InstantVector Scalar)
@@ -718,7 +801,6 @@ solveGeneralElabProblem gam (Surface.MkPair l a b) x typ = do
 solveGeneralElabProblem gam (Surface.Lambda l v scope) x typ = do
   tyah <- freshTyHole
   tybh <- freshTyHole
-  checkFresh gam v
   let u = UnificationProblem l typ (Fun (Hole tyah) (Hole tybh))
   scopeh <- freshExprHole (Hole tybh)
   let e = General $ GeneralElabProblem (gam |> LambdaBinding v (Hole tyah)) scope scopeh (Hole tybh)
@@ -731,7 +813,6 @@ solveGeneralElabProblem gam (Surface.Lambda l v scope) x typ = do
 solveGeneralElabProblem gam (Surface.Let l v rhs scope) x typ = do
   tyah <- freshTyHole
   tybh <- freshTyHole
-  checkFresh gam v
   let u = UnificationProblem l typ (Hole tybh)
   rhsh <- freshExprHole (Hole tyah)
   scopeh <- freshExprHole (Hole tybh)
@@ -754,13 +835,16 @@ solveGeneralElabProblem gam (mbBinaryArithmeticOp -> Just (loc, left, op, right)
   let e3 = BinaryArithmeticOp $
        BinaryArithmeticOpElabProblem gam loc (Semantic.Hole lefth) (Hole tyah) op (Semantic.Hole righth) (Hole tybh) x typ
   pure ([], [e1, e2, e3])
-solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) gam = do
+solveGeneralElabProblem gam (Surface.Variable l v) x typ | Just b <- find (\b -> Types.identifier b == v) (Seq.reverse gam) = do
   modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
   pure ([UnificationProblem l typ (Types.ty b)], [])
--- Assumes that all variables into the store (= metrics) have type (Timestamp -> Scalar)
-solveGeneralElabProblem _ (Surface.Variable l v) x typ = do
-  modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
-  pure ([UnificationProblem l typ (Fun Timestamp (InstantVector Scalar))], [])
+solveGeneralElabProblem gam (Surface.Variable l v) x typ = do
+  ms <- getAvailableMetrics
+  case v of
+    User u | Set.member u ms -> do
+      modify $ updateDefs $ instantiateExpr x $ Semantic.Variable v
+      pure ([UnificationProblem l typ (Fun Timestamp (InstantVector Scalar))], [])
+    _ -> throwError $ "Undefined name: " <> asText v <> didYouMean v gam ms <> "\n  @ " <> asText l
 solveGeneralElabProblem gam (Surface.Filter l f v) h hty = do
   argTy <- freshTyHole
   fh <- freshExprHole (Fun (Hole argTy) Bool)
@@ -837,6 +921,10 @@ solveGeneralElabProblem gam (Surface.ToScalar l t) h hty = do
         ,
          ToScalar $ ToScalarElabProblem gam l (Semantic.Hole th) (Hole tTy) h
         ])
+solveGeneralElabProblem _ (Surface.Str l s) x typ = do
+  let u = UnificationProblem l typ Types.Text
+  modify (updateDefs $ instantiateExpr x (Semantic.Str (Text.unpack s)))
+  pure ([u], [])
 solveGeneralElabProblem _ s _ _ = throwError $
   "Do not know how to elaborate: " <> showT s
 

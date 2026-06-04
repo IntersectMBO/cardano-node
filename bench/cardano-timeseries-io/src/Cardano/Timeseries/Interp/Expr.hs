@@ -26,6 +26,10 @@ data Expr = Number Double
           | SubInstantVectorScalar Expr Expr
           | MulInstantVectorScalar Expr Expr
           | DivInstantVectorScalar Expr Expr
+          | AddRangeVectorScalar Expr Expr
+          | SubRangeVectorScalar Expr Expr
+          | MulRangeVectorScalar Expr Expr
+          | DivRangeVectorScalar Expr Expr
           | EqInstantVectorScalar Expr Expr
           | LtInstantVectorScalar Expr Expr
           | LteInstantVectorScalar Expr Expr
@@ -35,6 +39,7 @@ data Expr = Number Double
 
           | True
           | False
+          | Unit
           | And Expr Expr
           | Or Expr Expr
           | Not Expr
@@ -75,6 +80,9 @@ data Expr = Number Double
           | MkPair Expr Expr
           | Fst Expr
           | Snd Expr
+
+          | Nil
+          | Cons Expr Expr
 
           | AvgOverTime Expr
           | SumOverTime Expr

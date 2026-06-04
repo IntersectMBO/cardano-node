@@ -44,12 +44,12 @@ import           Data.Maybe (fromMaybe)
 import           Data.Set (Set, isSubsetOf, member)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word (Word64)
 
 import           Statistics.Function (minMax)
 import           Statistics.Quantile (cadpw, quantile)
 import           Statistics.Sample (mean)
-import qualified Data.Text as Text
 
 
 interpJoin :: (a -> b -> c) -> InstantVector a -> InstantVector b -> Either InterpError (InstantVector c)
@@ -99,14 +99,17 @@ interpMap f = traverse (traverse f)
 
 interpRate :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpRate v = do
-  min <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachOldest v)
-  max <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachNewest v)
-  pure $ zipWith compute min max where
+  mins <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachOldest v)
+  maxs <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachNewest v)
+  traverse (uncurry compute) (zip mins maxs) where
 
-  compute :: Instant Double -> Instant Double -> Instant Double
-  compute min max =
-    let x = (max.value - min.value) / fromIntegral (max.timestamp - min.timestamp) in
-    Instant min.labels max.timestamp x
+  compute :: Instant Double -> Instant Double -> InterpM (Instant Double)
+  compute minI maxI
+    | minI.timestamp == maxI.timestamp =
+        throwInterpError "rate: single-point timeseries has undefined rate (zero time span)"
+    | otherwise =
+        let x = (maxI.value - minI.value) / fromIntegral (maxI.timestamp - minI.timestamp)
+        in pure $ Instant minI.labels maxI.timestamp x
 
 interpIncrease :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpIncrease v = liftEither $ do
@@ -118,6 +121,27 @@ interpIncrease v = liftEither $ do
   compute min max =
     let x = max.value - min.value in
     Instant min.labels max.timestamp x
+
+-- | (v `op` s) applies the scalar operation pointwise to each data point value
+-- | where v : RangeVector Scalar
+-- |       s : Scalar
+interpBinaryArithmeticOpRangeVectorScalar :: Store s Double
+                                          => Config
+                                          -> s
+                                          -> Map Identifier Value
+                                          -> Expr
+                                          -> BinaryArithmeticOp
+                                          -> Expr
+                                          -> Timestamp
+                                          -> InterpM Value
+interpBinaryArithmeticOpRangeVectorScalar cfg store env v op k now = do
+  vv <- interp cfg store env v now >>= expectRangeVector
+  vk <- interp cfg store env k now >>= expectScalar
+  let applyOp (Value.Scalar x) = pure $ Value.Scalar (BinaryArithmeticOp.materializeScalar op x vk)
+      applyOp other             = throwInterpError $
+        "Expected Scalar values in RangeVector for arithmetic, got: " <> showT other
+  tss <- mapM (traverse applyOp) vv
+  pure $ Value.RangeVector tss
 
 -- | (v `op` s) ≡ map (\x -> x `op` s) v
 -- | where v : InstantVector Scalar
@@ -172,10 +196,11 @@ interpFilterBinaryRelation cfg store env v rel k now = do
     now
 
 -- | Given a metric store, an assignment of values to local variables, a query expression and a timestamp "now",
---    interpret the `Expr` into a `Value`.
+--   interpret the `Expr` into a `Value`.
+--   Precondition: the expression must be well-typed in the given variable context.
 interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> InterpM Value
 interp _ store _ Expr.Metrics _ = do
-  pure $ Value.Text $ Text.intercalate ", " (Set.toList $ metrics store)
+  pure $ foldr (Value.Cons . Value.Text) Value.Nil (Set.toList $ metrics store)
 interp _ _ _ (Expr.Number x) _ = do
   pure (Value.Scalar x)
 interp _ store env (Expr.Variable x) _ =
@@ -250,6 +275,8 @@ interp _ _ _ (Milliseconds t) _ = pure $ Duration t
 interp _ _ _ (Seconds t) _ = pure $ Duration (1000 * t)
 interp _ _ _ (Minutes t) _ = pure $ Duration (60 * 1000 * t)
 interp _ _ _ (Hours t) _ = pure $ Duration (60 * 60 * 1000 * t)
+interp cfg store env (BinaryArithmeticOp.mbBinaryArithmeticOpRangeVectorScalar -> Just (v, op, k)) now =
+  interpBinaryArithmeticOpRangeVectorScalar cfg store env v op k now
 interp cfg store env (BinaryArithmeticOp.mbBinaryArithmeticOpInstantVectorScalar -> Just (v, op, k)) now = do
   interpBinaryArithmeticOp cfg store env v op k now
 interp cfg store env (Quantile k_ expr) now = do
@@ -276,13 +303,19 @@ interp cfg store env (Increase r_) now = do
   pure (Value.InstantVector (fmap (fmap Value.Scalar) r'))
 interp cfg store env (Avg expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ mean (Instant.toVector v)
+  if null v
+    then throwInterpError "avg: empty instant vector"
+    else pure $ Value.Scalar $ mean (Instant.toVector v)
 interp cfg store env (Max expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ snd $ minMax (Instant.toVector v)
+  if null v
+    then throwInterpError "max: empty instant vector"
+    else pure $ Value.Scalar $ snd $ minMax (Instant.toVector v)
 interp cfg store env (Min expr) now = do
   v <- interp cfg store env expr now >>= expectInstantVectorScalar
-  pure $ Value.Scalar $ fst $ minMax (Instant.toVector v)
+  if null v
+    then throwInterpError "min: empty instant vector"
+    else pure $ Value.Scalar $ fst $ minMax (Instant.toVector v)
 interp cfg store env (AvgOverTime expr) now = do
   v <- interp cfg store env expr now >>= expectRangeVectorScalar
   pure $ Value.InstantVector (fmap Value.Scalar <$> avgOverTime now v)
@@ -293,6 +326,14 @@ interp cfg store env (MkPair a b) now = do
   va <- interp cfg store env a now
   vb <- interp cfg store env b now
   pure $ Value.Pair va vb
+interp _ _ _ Expr.Nil _ = do
+  pure Value.Nil
+interp cfg store env (Expr.Cons a b) now = do
+  va <- interp cfg store env a now
+  vb <- interp cfg store env b now
+  pure $ Value.Cons va vb
+interp _ _ _ Expr.Unit _ = do
+  pure Value.Unit
 interp cfg store env (Fst t) now = do
   (a, _) <- interp cfg store env t now >>= expectPair
   pure a
@@ -362,4 +403,5 @@ interp cfg store env (Expr.AddDuration a_ b_) now = do
   pure (Value.Duration (a + b))
 interp cfg store env (mbBinaryRelationInstantVector -> Just (v, rel, k)) now =
   interpFilterBinaryRelation cfg store env v rel k now
+interp _ _ _ (Expr.Str s) _ = pure (Value.Text (Text.pack s))
 interp _ _ _ expr _ = throwInterpError $ "Can't interpret expression: " <> showT expr

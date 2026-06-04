@@ -308,7 +308,8 @@
   "tracer": {
     "rtview": false,
     "ekg": false,
-    "withresources": false
+    "withresources": false,
+    "timeseries": false
   },
   "extra_desc": "without cardano-tracer",
   "suffix": "notrc",

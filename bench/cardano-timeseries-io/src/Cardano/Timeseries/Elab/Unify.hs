@@ -50,6 +50,7 @@ unifyNu _ Text Text = pure []
 unifyNu _ Timestamp Timestamp = pure []
 unifyNu _ Duration Duration = pure []
 unifyNu loc (Pair a b) (Pair a' b') = pure [UnificationProblem loc a a', UnificationProblem loc b b']
+unifyNu _ Unit Unit = pure []
 unifyNu _ (Hole x) (Hole y) | x == y = pure []
 unifyNu _ (Hole x) ty = [] <$ unifyHole x ty
 unifyNu _ ty (Hole y) = [] <$ unifyHole y ty
@@ -73,11 +74,13 @@ occursNu x (InstantVector ty) = occursNu x ty
 occursNu x (RangeVector ty)   = occursNu x ty
 occursNu x (Fun ty ty')       = (||) <$> occursNu x ty <*> occursNu x ty'
 occursNu x (Pair ty ty')      = (||) <$> occursNu x ty <*> occursNu x ty'
+occursNu _ Unit               = pure False
 occursNu _ Scalar             = pure False
 occursNu _ Bool               = pure False
 occursNu _ Timestamp          = pure False
 occursNu _ Duration           = pure False
 occursNu _ Text               = pure False
+occursNu x (List ty)          = occursNu x ty
 occursNu x (Hole x')          = pure (x == x')
 
 unify :: Loc -> Ty -> Ty -> UnifyM [UnificationProblem]

@@ -29,7 +29,7 @@ import           Cardano.Tracer.Utils
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import qualified Data.Bimap as BM
 import           Data.Foldable
 import qualified Data.Map.Strict as M
@@ -43,8 +43,11 @@ import           System.Metrics.ReqResp
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore,
                    storeMetrics)
 
-import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
-import qualified Data.Text.Read as Text
+import           Control.Arrow                  (first)
+import           Data.Char                      (isAsciiLower, isAsciiUpper, isDigit)
+import qualified Data.Text                      as T
+import qualified Data.Text.Read                 as Text
+import           Trace.Forward.Utils.DataPoint  (DataPointRequestor, initDataPointRequestor)
 
 prepareDataPointRequestor
   :: Show addr
@@ -123,7 +126,13 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
   storeMetrics resp ekgStore localStore
   for_ (teTimeseriesHandle tracerEnv) $ \h -> do
     ts <- getTimeMs
-    Timeseries.insert h "node_id" nodeId (fromIntegral ts) (mapMaybe parseMetric ms)
+    nodeNames <- readTVarIO (teConnectedNodesNames tracerEnv)
+    -- COMMENT: (@russoul) shall we log the case when no node name has been found?
+    for_ (BM.lookup (NodeId nodeId) nodeNames :: Maybe NodeName) $ \nodeName ->
+      Timeseries.insert h
+        (S.fromList [("node_name", nodeName)])
+        (fromIntegral ts)
+        (map (first sanitiseMetricName) $ mapMaybe parseMetric ms)
 
   where
     numeralOnly :: MetricValue -> Maybe Double
@@ -137,3 +146,9 @@ store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms)
     parseMetric (k, numeralOnly -> Just v) = Just (k, v)
     parseMetric _ = Nothing
 
+    sanitiseMetricName :: MetricName -> MetricName
+    sanitiseMetricName =
+        T.filter (\c -> isAsciiLower c || isAsciiUpper c || isDigit c || c == '_')
+      . T.replace " " "_"
+      . T.replace "-" "_"
+      . T.replace "." "_"

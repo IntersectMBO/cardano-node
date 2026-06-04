@@ -375,6 +375,7 @@ ciTestBage = Types.Profile {
       Types.rtview = False
     , Types.ekg = False
     , Types.withresources = False
+    , Types.timeseries = False
   }
   , Types.cluster = Nothing
   , Types.analysis = Types.Analysis {
