@@ -15,7 +15,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
     - name: Tag
       run: |
@@ -24,7 +24,7 @@ jobs:
         git push origin nightly --force
 
     - name: Invoke workflow
-      uses: input-output-hk/workflow-dispatch@v1
+      uses: input-output-hk/workflow-dispatch@be1256a3797d8bbe96bdbdf65dbf9cc8dc48e9eb # v1
       with:
         workflow: .github/workflows/haskell.yml
         ref: nightly
