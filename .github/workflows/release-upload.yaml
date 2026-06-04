@@ -59,48 +59,54 @@ jobs:
       node_version: ${{ steps.cardano-node-version.outputs.VERSION }}
     steps:
       - name: Install Nix with good defaults
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
         with:
           extra_nix_config: |
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
-            substituters = https://cache.iog.io/ https://cache.nixos.org/
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            extra-substituters = https://cache.iog.io/
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Display flake metadata
         id: flake-metadata
         run: |
-          nix flake metadata ${{ env.FLAKE_REF }}
-          nix flake metadata ${{ env.FLAKE_REF }} --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
+          nix flake metadata "$FLAKE_REF"
+          nix flake metadata "$FLAKE_REF" --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
       - name: Display cardano-node version
         id: cardano-node-version
+        env:
+          LOCKED_URL: ${{ steps.flake-metadata.outputs.LOCKED_URL }}
         run: |
-          VERSION=$(nix eval --raw ${{ steps.flake-metadata.outputs.LOCKED_URL }}#legacyPackages.x86_64-linux.cardanoNodePackages.cardano-node.identifier.version)
+          VERSION=$(nix eval --raw "${LOCKED_URL}#legacyPackages.x86_64-linux.cardanoNodePackages.cardano-node.identifier.version")
           echo "$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Build
+        env:
+          LOCKED_URL: ${{ steps.flake-metadata.outputs.LOCKED_URL }}
+          NODE_VERSION: ${{ steps.cardano-node-version.outputs.VERSION }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          case ${{ matrix.arch }} in
+          case "$ARCH" in
             linux-amd64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.musl.cardano-node-linux
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-linux-amd64.tar.gz
+              nix build --builders "" --max-jobs 0 "${LOCKED_URL}#hydraJobs.x86_64-linux.musl.cardano-node-linux"
+              cp result/cardano-node-*-*.tar.gz "cardano-node-${NODE_VERSION}-linux-amd64.tar.gz"
               ;;
             linux-arm64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-linux.musl.cardano-node-linux
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-linux-arm64.tar.gz
+              nix build --builders "" --max-jobs 0 "${LOCKED_URL}#hydraJobs.aarch64-linux.musl.cardano-node-linux"
+              cp result/cardano-node-*-*.tar.gz "cardano-node-${NODE_VERSION}-linux-arm64.tar.gz"
               ;;
             macos-amd64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-darwin.native.cardano-node-macos
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-amd64.tar.gz
+              nix build --builders "" --max-jobs 0 "${LOCKED_URL}#hydraJobs.x86_64-darwin.native.cardano-node-macos"
+              cp result/cardano-node-*-*.tar.gz "cardano-node-${NODE_VERSION}-macos-amd64.tar.gz"
               ;;
             macos-arm64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.aarch64-darwin.native.cardano-node-macos
-              cp result/cardano-node-*-*.tar.gz cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-macos-arm64.tar.gz
+              nix build --builders "" --max-jobs 0 "${LOCKED_URL}#hydraJobs.aarch64-darwin.native.cardano-node-macos"
+              cp result/cardano-node-*-*.tar.gz "cardano-node-${NODE_VERSION}-macos-arm64.tar.gz"
               ;;
             win-amd64)
-              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win
-              cp result/cardano-node-*-*.zip cardano-node-${{ steps.cardano-node-version.outputs.VERSION }}-win-amd64.zip
+              nix build --builders "" --max-jobs 0 "${LOCKED_URL}#hydraJobs.x86_64-linux.windows.cardano-node-win"
+              cp result/cardano-node-*-*.zip "cardano-node-${NODE_VERSION}-win-amd64.zip"
               ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ github.sha }}-${{ matrix.arch }}
           path: cardano-node-*-*-*.*
@@ -111,15 +117,17 @@ jobs:
     name: "Upload Assets"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           merge-multiple: true
       - name: Checksums
+        env:
+          NODE_VERSION: ${{ needs.pull.outputs.node_version }}
         run: |
-          sha256sums_filename="cardano-node-${{ needs.pull.outputs.node_version }}-sha256sums.txt"
+          sha256sums_filename="cardano-node-${NODE_VERSION}-sha256sums.txt"
           sha256sum cardano-node-*-*-* > "$sha256sums_filename"
       - name: Release
-        uses: input-output-hk/action-gh-release@v1
+        uses: input-output-hk/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
           draft: true
           files: |

@@ -14,10 +14,12 @@ jobs:
     name: Check for scriv fragment
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Check for changes in cardano-testnet
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050 # v3
         id: filter
         with:
           filters: |
@@ -26,7 +28,7 @@ jobs:
 
       - name: Check for changelog changes
         if: steps.filter.outputs.cardano == 'true'
-        uses: brettcannon/check-for-changed-files@v1
+        uses: brettcannon/check-for-changed-files@871d7b8b5917a4f6f06662e2262e8ffc51dff6d1 # v1
         with:
           file-pattern: "cardano-testnet/changelog.d/*.md"
           skip-label: "no-changelog-needed"
@@ -34,14 +36,15 @@ jobs:
 
       - name: Install Nix
         if: steps.filter.outputs.cardano == 'true'
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
         with:
           extra_nix_config: |
-            accept-flake-config = true
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            extra-substituters = https://cache.iog.io/
 
       - name: Check scriv fragments are correct
         if: steps.filter.outputs.cardano == 'true'
-        uses: rrbutani/use-nix-shell-action@v1
+        uses: rrbutani/use-nix-shell-action@f97339023a09121113e5a58ad88fe0e9fde3406b # v1
         with:
           script: cd cardano-testnet && scriv collect --version "CI-CHECK" --keep
 

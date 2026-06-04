@@ -52,7 +52,9 @@ jobs:
 
         echo "PATH=/tmp/stylish-haskell-v$version-linux-x86_64:$PATH" >> "$GITHUB_ENV"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Run stylish-haskell over all Haskell files (always succeeds)
       run: |
@@ -72,11 +74,13 @@ jobs:
         git --no-pager diff
 
     - name: Run stylish-haskell over all modified files
+      env:
+        BASE_REF: ${{ github.base_ref }}
       run: |
         git add .
         git stash
-        git fetch origin ${{ github.base_ref }} --unshallow
-        for x in $(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
+        git fetch origin "$BASE_REF" --unshallow
+        for x in $(git diff --name-only --diff-filter=ACMR origin/"$BASE_REF"..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
             if grep -qE '^#' "$x"; then
               echo "$x contains CPP.  Skipping."
