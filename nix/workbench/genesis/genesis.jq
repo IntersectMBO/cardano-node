@@ -77,23 +77,26 @@ def profile_genesis_cache_key($p; $profile_file):
   | $genesis_crypto_affecting_data
 ;
 
+## Profiles with a preset short-circuit at the genesis.sh top-level dispatcher.
 def profile_genesis_cache_entry_name($p; $params_hash):
 
-if $p.preset == null
-then [ "k\(.composition.n_pools)" ]
-     +
-     if .composition.dense_pool_density == 1 then []
-     else
-     [ "d\(.composition.dense_pool_density)" ] end
-     +
-     [ "\(.genesis.delegators / 1000)kD" ]
-     +
-     if .genesis.dreps != 0 then ["\(.genesis.dreps)Dr"] else [] end
-     +
-     [ "\(.derived.utxo_stuffed / 1000)kU"
-     , "\($params_hash)" ]
-else [ "preset"
-     , $profile[0].preset ]
-end
-| join("-")
+  [ "k\(.composition.n_pools)" ]
+  +
+  if .composition.dense_pool_density == 1
+  then []
+  else [ "d\(.composition.dense_pool_density)" ]
+  end
+  +
+  [ "\(.genesis.delegators / 1000)kD" ]
+  +
+  if .genesis.dreps != 0
+  then ["\(.genesis.dreps)Dr"]
+  else []
+  end
+  +
+  [ "\(.derived.utxo_stuffed / 1000)kU"
+  , "\($params_hash)"
+  ]
+  | join("-")
 ;
+

@@ -178,15 +178,27 @@ case "$op" in
     # Called by: genesis.sh prepare-cache-entry.
     # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
     # Returns: JSON or string written to cache.key.input for debugging.
+    # Profiles with a preset short-circuit here to the preset name.
     profile-cache-key-input )
-        "profile-cache-key-input-$genesis_backend" "$@"
+        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+        if profile has-preset "$profile_json"; then
+          jq -r .preset "$profile_json"
+        else
+          "profile-cache-key-input-$genesis_backend" "$@"
+        fi
         ;;
 
     # Called by: genesis.sh prepare-cache-entry.
     # $1: profile JSON file path (e.g. /nix/store/.../profile.json).
     # Returns: short cache directory name (e.g. "ci-test-coay-1c5c3ba-8444286").
+    # Profiles with a preset short-circuit here to "preset-<name>".
     profile-cache-key )
-        "profile-cache-key-$genesis_backend" "$@"
+        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+        if profile has-preset "$profile_json"; then
+          echo "preset-$(jq -r .preset "$profile_json")"
+        else
+          "profile-cache-key-$genesis_backend" "$@"
+        fi
         ;;
 
     # Called by: genesis-jq.sh (genesis-create-staked, genesis-create-testnet-data).
@@ -208,6 +220,7 @@ case "$op" in
     # $1: profile JSON file path.
     # $2: output directory.
     # Creates the genesis files in the directory.
+    # Profiles with a preset never reach here, prepare-cache-entry handles it.
     create )
         "genesis-create-$genesis_backend" "$@"
         ;;
@@ -217,7 +230,21 @@ case "$op" in
     # $2: timing JSON string (from `profile allocate-time`).
     # $3: genesis cache entry path (e.g. ~/.cache/cardano-workbench/genesis/ci-test-coay-...).
     # $4: output directory (run dir's genesis/, e.g. run/current/genesis).
+    # Profiles with a preset short-circuit here.
     derive-from-cache )
+        local usage="USAGE: wb genesis derive-from-cache PROFILE-JSON TIMING CACHE-ENTRY OUTDIR"
+        local profile_json=${1:?$usage}
+        local cache_entry=${3:?$usage}
+        local outdir=${4:?$usage}
+        # Skip the backend and copy genesis*.json from the cache entry into $outdir.
+        if profile has-preset "$profile_json"; then
+          local preset
+          preset=$(jq -r .preset "$profile_json")
+          mkdir -p "$outdir"
+          progress "genesis" "instantiating from preset $(with_color white "$preset"):  $cache_entry"
+          cp -f "$cache_entry"/genesis*.json "$outdir"
+          return
+        fi
         "derive-from-cache-$genesis_backend" "$@"
         ;;
 

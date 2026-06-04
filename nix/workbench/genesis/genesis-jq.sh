@@ -401,16 +401,6 @@ derive-from-cache-jq() {
 
     mkdir -p "$outdir"
 
-    local preset
-    preset=$(profile preset "$profile_json")
-    if [[ -n "$preset" ]]; then
-      progress "genesis" "instantiating from preset $(with_color white "$preset"):  $cache_entry"
-      mkdir -p "$outdir"/byron
-      cp -f "$cache_entry"/genesis*.json "$outdir"
-      cp -f "$cache_entry"/byron/*.json  "$outdir"/byron
-      return
-    fi
-
     progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
 
     ln -s "$profile_json"                     "$outdir"/profile.json
@@ -435,10 +425,6 @@ derive-from-cache-jq() {
     ## genesis
     cp    "$cache_entry"/genesis*.json        "$outdir"
     chmod u+w                                 "$outdir"/genesis*.json
-
-    if profile has-preset "$profile_json"; then
-      return
-    fi
 
     progress "genesis" "finalizing retrieved cache entry in:  $outdir"
 
