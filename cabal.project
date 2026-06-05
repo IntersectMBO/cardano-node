@@ -93,14 +93,14 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to ouroboros-consensus/leios-prototype-remake
+-- Points to ouroboros-consensus/ch1bo/leios-staging-area
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: cb3a21d17f236bfa3de0d2b658f8cec9cd7b919e
-  --sha256: sha256-rx1lCtjDUtbSxZh7iqwj4JKIwp4ssYH2kqg+RsjV0oQ=
+  tag: 6634d25f9fa64d4ed759ec57da28f8955cefa216
+  --sha256: sha256-l3AQ9tJdSLP/gZeadIxt34nUqI0kEGFpvT9apEkTStY=
 
--- Points to cardano-ledger/leios-prototype-remake
+-- Points to cardano-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
@@ -110,12 +110,12 @@ source-repository-package
     libs/cardano-ledger-core
     eras/dijkstra/impl
 
--- Points to ouroboros-network/leios-prototype-remake
+-- Points to ouroboros-network/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: c66e9a27961da4b2550e0c91974e31aebd76fc9d
-  --sha256: 1ybawvmwvxh23i92dikaa7qsvid3zaybv1cwnirw0gqx6k15gcnw
+  tag: ff3e39af5aa51d4d89c23c72d67716fd9bfcc516
+  --sha256: 00havv7igm3pjkw954mmz2s8wh4ki6pk9d2rnn1srx135xb3zp0a
   subdir:
     ouroboros-network
     cardano-diffusion
@@ -125,7 +125,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 762aacf935572575deba4396afee1d9b1bbc77fa
+  tag: 8bfd8686434ab98e172476fa25c81c81ea9227a6
   --sha256: sha256-DDvLjygtEv9l/ktQuLF/CWFKpx2yE9VxcwMNIwXTKAM=
   subdir:
     cardano-api
@@ -135,7 +135,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: b28efce6591ef07b0b866a4f13bee3bd1b6e4f37
+  tag: caf7fbcf0d23675500aa1b8578dfc34710f6dd3b
   --sha256: sha256-X18lCxUqovnUM6QHiVapJPLT5ylNMSqCt9KcmDv9Kyc=
   subdir:
     cardano-cli
