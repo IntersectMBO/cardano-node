@@ -1,0 +1,4 @@
+Transaction is valid.
+Phase 1: passed
+Phase 2: passed (1 script evaluated)
+  Spend:0 passed (mem: 500, steps: 64100)

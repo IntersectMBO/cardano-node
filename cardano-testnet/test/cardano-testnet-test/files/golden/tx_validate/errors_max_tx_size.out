@@ -1,0 +1,4 @@
+Transaction validation failed.
+Phase 1: FAILED
+  MaxTxSizeUTxO: supplied 20657 bytes, expected ≤ 16384 bytes
+Phase 2: passed (0 scripts evaluated)

@@ -19,6 +19,8 @@ import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+import qualified Cardano.Testnet.Test.Cli.Transaction.Validate
+import qualified Cardano.Testnet.Test.Cli.Transaction.ValidateErrors
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
 import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.FoldEpochState
@@ -119,6 +121,8 @@ tests = do
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
+          , ignoreOnWindows "transaction validate" Cardano.Testnet.Test.Cli.Transaction.Validate.hprop_transaction_validate
+          , ignoreOnWindows "transaction validate all errors" Cardano.Testnet.Test.Cli.Transaction.ValidateErrors.hprop_transaction_validate_all_errors
           , ignoreOnWindows "transaction build with withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward
           , ignoreOnWindows "transaction build with plutus withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward_plutus_v3
           -- FIXME

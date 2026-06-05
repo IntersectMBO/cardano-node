@@ -1,0 +1,5 @@
+Transaction validation failed.
+Phase 1: FAILED
+  FeeTooSmallUTxO: minimum fee is 197 lovelace, transaction specifies 100 lovelace
+  ValueNotConservedUTxO: supplied 10000000 lovelace, expected = 999999000100 lovelace
+Phase 2: passed (0 scripts evaluated)
