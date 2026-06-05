@@ -6,7 +6,6 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,
-#   spec-jq,
 #   genesis-create-jq, derive-from-cache-jq
 
 profile-cache-key-input-jq() {
@@ -40,41 +39,6 @@ profile-cache-key-jq() {
     jq 'include "genesis"; profile_genesis_cache_entry_name($profile[0]; $params_hash)' "${args[@]}" "$profile_json"
 }
 
-spec-jq() {
-    set -euo pipefail
-    local era=${1:?missing era}
-    local profile_json=${2:?missing profile_json}
-    # not needed in the jq version
-    # local node_specs=${3:?missing node_specs}
-
-    case "$1" in
-    shelley)
-        # We pass the network magic as an argument to cardano-cli, but, despite being required,
-        # it is only used to amend a default template while we are bringing our own. So we put it into
-        # the template too.
-        jq '$prof[0] as $p
-            | . * ($p.genesis.shelley // {})
-            | .networkMagic |= $p.genesis.network_magic
-            ' --slurpfile prof "$profile_json" \
-            "$global_basedir"/profile/presets/mainnet/genesis/genesis-shelley.json
-        ;;
-    alonzo)
-        jq '$prof[0] as $p | . * ($p.genesis.alonzo // {})' \
-            --slurpfile prof "$profile_json" \
-            "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json
-        ;;
-    conway)
-        jq '$prof[0] as $p | . * ($p.genesis.conway // {})' \
-            --slurpfile prof "$profile_json" \
-            "$global_basedir"/profile/presets/mainnet/genesis/genesis.conway.json
-        ;;
-    *)
-        echo unknown era
-        exit 1
-        ;;
-    esac
-}
-
 # Entry point for genesis creation.
 # Keeps in the provided directory all the output of `create-testnet-data`.
 genesis-create-jq() {
@@ -83,9 +47,18 @@ genesis-create-jq() {
 
     mkdir -p "$dir"
 
-    genesis spec shelley "$profile_json" >"$dir/shelley-genesis.spec.json"
-    genesis spec alonzo  "$profile_json" >"$dir/alonzo-genesis.spec.json"
-    genesis spec conway  "$profile_json" >"$dir/conway-genesis.spec.json"
+    jq   '.genesis.shelley // {}' "$profile_json" > "$dir/shelley-genesis.spec.json"
+    jq   '.genesis.alonzo  // {}' "$profile_json" > "$dir/alonzo-genesis.spec.json"
+    # Conway spec: use the profile's block when present, else a zero stub.
+    # cardano-cli requires `--spec-conway` unconditionally, and the spec must
+    # parse as a full conway genesis (not just {}).
+    if [[ "$(jq -r '.genesis.conway // "null"' "$profile_json")" != "null" ]]; then
+      jq '.genesis.conway'        "$profile_json" > "$dir/conway-genesis.spec.json"
+    else
+      # Stub that is parseable but it should never be activated to stay inert.
+      # Activation check in service/nodes.nix (TestConwayHardForkAtEpoch).
+      genesis conway-stub-spec                    > "$dir/conway-genesis.spec.json"
+    fi
 
     local era
     era=$(jq --raw-output '.era' "$profile_json")

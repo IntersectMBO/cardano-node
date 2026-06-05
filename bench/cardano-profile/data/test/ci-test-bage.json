@@ -296,6 +296,7 @@
       },
       "maxValueSize": 5000
     },
+    "byron": {},
     "conway": null,
     "delegator_coin": 0,
     "delegators": 0,

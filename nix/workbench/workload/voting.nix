@@ -21,7 +21,7 @@ let
 
   testnet_magic = profile.genesis.network_magic;
   gov_action_deposit =
-    if __hasAttr "conway" profile.genesis
+    if (profile.genesis.conway or null) != null
     then profile.genesis.conway.govActionDeposit
     else throw "Conway genesis needed!"
   ;

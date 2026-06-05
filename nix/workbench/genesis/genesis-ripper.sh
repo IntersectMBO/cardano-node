@@ -6,7 +6,6 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-ripper, profile-cache-key-ripper,
-#   spec-ripper,
 #   genesis-create-ripper,
 #   derive-from-cache-ripper
 #
@@ -95,10 +94,6 @@ profile-cache-key-ripper() {
   local name
   name=$(jq -r '.name' "$profile_json")
   echo "${name}-$(profile-cache-key-input-ripper "$profile_json")"
-}
-
-spec-ripper() {
-  spec-jq "$@";
 }
 
 # Ensure sub-caches exist.
@@ -197,6 +192,9 @@ derive-from-cache-ripper() {
 
   # Conway (can be 200MB+).
   # Only tied to a dataset + protocol. No timing.
+  # When the profile leaves .genesis.conway null, protocol/conway.protocol.json
+  # is the zero stub but we still need to merge the dataset side (initialDReps
+  # and delegs) to produce a parseable file for the node config.
   {
     sed 's/}$//' "$cache_entry/protocol/conway.protocol.json"
     printf ','
@@ -329,16 +327,22 @@ dataset-cache-ensure() {
     # Extract dataset fields as compact JSON and in only one jq pass per file.
     # MUST be compact JSON (-c) because the merge step uses `tail -c +2` which
     # only works on single-line JSON.
+    # - Byron:
       jq -c                                                     \
         '{bootStakeholders, heavyDelegation, nonAvvmBalances}'  \
         "$tmpdir/byron-genesis.json"                            \
     > "$tmpdir/byron.dataset.json"
+    # - Shelley:
       jq -c                                                     \
         '{genDelegs, initialFunds, staking, maxLovelaceSupply}' \
         "$tmpdir/shelley-genesis.json"                          \
     > "$tmpdir/shelley.dataset.json"
+    # - Conway: Default to "{}" if cardano-cli omits initialDReps or delegs:
+    #   cardano-node's parser accepts {} but rejects null.
       jq -c                                                     \
-        '{initialDReps, delegs}'                                \
+        '{ initialDReps: (.initialDReps // {})
+         , delegs:       (.delegs       // {})
+         }'                                                     \
         "$tmpdir/conway-genesis.json"                           \
     > "$tmpdir/conway.dataset.json"
     # Remove the not needed files produced by create-testnet-data.
@@ -441,40 +445,76 @@ protocol-cache-ensure() {
     # JSON (-c) because the merge step uses sed 's/}$//' which only works on
     # single-line JSON.
     # - Byron: remove dataset fields and timing.
-      genesis spec byron    "${profile_json}" \
-    | jq -c                                   \
-        'del( .bootStakeholders
-            , .heavyDelegation
-            , .nonAvvmBalances
-            , .startTime
-            )'                                \
-    > "${outdir}/byron.protocol.json"
+    if test "$(jq -r '.genesis.byron // "null"' "${profile_json}")" != "null"
+    then
+        jq -c                                   \
+          ' .genesis.byron
+          | del( .bootStakeholders
+               , .heavyDelegation
+               , .nonAvvmBalances
+               , .startTime
+               )'                               \
+         "${profile_json}"                      \
+      > "${outdir}/byron.protocol.json"
+    else
+      fatal "empty .genesis.byron in profile"
+    fi
     # - Shelley: remove dataset fields and timing.
-      genesis spec shelley  "${profile_json}" \
-    | jq -c                                   \
-        'del( .genDelegs
-            , .initialFunds
-            , .staking
-            , .maxLovelaceSupply
-            , .systemStart)'                  \
-    > "${outdir}/shelley.protocol.json"
+    if test "$(jq -r '.genesis.shelley // "null"' "${profile_json}")" != "null"
+    then
+        jq -c                                   \
+          ' .genesis.shelley
+          | del( .genDelegs
+               , .initialFunds
+               , .staking
+               , .maxLovelaceSupply
+               , .systemStart)'                 \
+          "${profile_json}"                     \
+      > "${outdir}/shelley.protocol.json"
+    else
+      fatal "empty .genesis.shelley in profile"
+    fi
     # - Alonzo: nothing to do, only compact it.
-      genesis spec alonzo   "${profile_json}" \
-    | jq -c                                   \
-        '.'                                   \
-    > "${outdir}/alonzo.protocol.json"
-    # - Conway: remove dataset fields.
-      genesis spec conway   "${profile_json}" \
-    | jq -c                                   \
-        'del( .initialDReps
-            , .delegs)'                       \
-    > "${outdir}/conway.protocol.json"
-    # - Dijkstra: nothing to do, only compact it.
-      genesis spec dijkstra "${profile_json}" \
-    | jq -c                                   \
-        '.'                                   \
-    > "${outdir}/dijkstra.protocol.json"
-    info genesis "protocol parameters cached: ${outdir}"
+    if test "$(jq -r '.genesis.alonzo // "null"' "${profile_json}")" != "null"
+    then
+        jq -c                                   \
+          '.genesis.alonzo'                     \
+          "${profile_json}"                     \
+      > "${outdir}/alonzo.protocol.json"
+    else
+      fatal "empty .genesis.alonzo in profile"
+    fi
+    # - Conway: always emit a file because cardano-node's config parser requires
+    #   ConwayGenesisFile unconditionally. When the profile has a null or empty
+    #   ".genesis.conway" (e.g. pre-Chang profiles with "pparamsEpoch" < 507) we
+    #   emit a "zero" stub that passes the validation.
+    if test "$(jq -r '.genesis.conway // "null"' "${profile_json}")" != "null"
+    then
+        jq -c                                   \
+          '.genesis.conway
+          | del( .initialDReps
+               , .delegs)'                      \
+          "${profile_json}"                     \
+      > "${outdir}/conway.protocol.json"
+    else
+        # Stub that is parseable but it should never be activated.
+        # Activation check in service/nodes.nix (TestConwayHardForkAtEpoch).
+        genesis conway-stub-spec > "${outdir}/conway.protocol.json"
+    fi
+    # - Dijkstra: always emit a file because cardano-node's config parser requires
+    #   DijkstraGenesisFile unconditionally. When the profile has a null or empty
+    #   ".genesis.dijkstra" we emit a "zero" stub that passes the validation.
+    if test "$(jq -r '.genesis.dijkstra // "null"' "${profile_json}")" != "null"
+    then
+        jq -c                                    \
+	  '.genesis.dijkstra'                    \
+          "${profile_json}"                      \
+      > "${outdir}/dijkstra.protocol.json"
+    else
+        # Stub that is parseable but it should never be activated.
+        # Activation check in service/nodes.nix (TestDijkstraHardForkAtEpoch).
+        genesis dijkstra-stub-spec > "${outdir}/dijkstra.protocol.json"
+    fi
   fi
 
   echo "${outdir}"

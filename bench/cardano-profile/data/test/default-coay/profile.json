@@ -257,6 +257,7 @@
         }
       }
     },
+    "byron": {},
     "conway": null,
     "delegators": 6,
     "pool_coin": 1000000000000000,

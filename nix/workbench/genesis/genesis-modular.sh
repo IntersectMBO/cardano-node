@@ -5,7 +5,6 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-modular, profile-cache-key-modular,
-#   spec-modular,
 #   genesis-create-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
@@ -32,23 +31,8 @@ profile-cache-key-modular() {
     evaluate --profile "${profile_json}" genesis.cache-key | jq -r
 }
 
-spec-modular() {
-    set -euo pipefail
-    local era=${1:?missing era}
-    local profile_json=${2:?missing profile_json}
-    local node_specs=${3:?missing node_specs}
-
-    # nix wants absolute paths
-    profile_json=$(realpath "$profile_json")
-    node_specs=$(realpath "$node_specs")
-
-    # TODO: check for errors
-    # NOTE: jq is only used for to keep the same formatting as the jq version
-    evaluate --profile "$profile_json" --node-specs "$node_specs" "genesis.$era" | jq
-}
-
 # Entry point for genesis creation (delegates to legacy; modular only
-# replaces spec/cache-key/byron generation, not the create-testnet-data call).
+# replaces cache-key/byron generation, not the create-testnet-data call).
 genesis-create-modular() {
     genesis-create-jq "$@";
 }

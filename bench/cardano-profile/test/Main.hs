@@ -100,6 +100,7 @@ ciTestBage = Types.Profile {
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 300
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = KeyMap.fromList [
         ("activeSlotsCoeff", Aeson.Number 5.0e-2)
       , ("epochLength", Aeson.Number 600.0)

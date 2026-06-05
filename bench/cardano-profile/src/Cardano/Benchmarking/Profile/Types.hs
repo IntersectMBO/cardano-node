@@ -308,9 +308,10 @@ data Genesis = Genesis
   -- Genesis result.
     -- TODO: These three could be custom overlays and final objects be part of
     --       the derived properties.
-  , shelley :: KM.KeyMap Aeson.Value
-  , alonzo :: KM.KeyMap Aeson.Value
-  , conway :: Maybe (KM.KeyMap Aeson.Value) -- TODO: Remove the null.
+  , byron    ::        KM.KeyMap Aeson.Value
+  , shelley  ::        KM.KeyMap Aeson.Value
+  , alonzo   ::        KM.KeyMap Aeson.Value
+  , conway   :: Maybe (KM.KeyMap Aeson.Value) -- TODO: Remove the null.
 
   -- Absolute durations:
   , slot_duration :: Time.NominalDiffTime

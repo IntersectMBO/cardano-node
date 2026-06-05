@@ -4,8 +4,8 @@
 global_genesis_format_version=June-22-2026
 
 # Resolve genesis backend once (at source time, no output).
-# Each backend file defines: spec-*, profile-cache-key-*,
-# profile-cache-key-input-*, genesis-create-*, derive-from-cache-*
+# Each backend file defines: profile-cache-key-*, profile-cache-key-input-*,
+# genesis-create-*, derive-from-cache-*
 if   [[ ${WB_GENESIS_RIPPER:-0}  -eq 1 ]]; then genesis_backend=ripper
 elif [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
 else                                            genesis_backend=jq
@@ -198,15 +198,6 @@ case "$op" in
         fi
         ;;
 
-    # Called by: genesis-jq.sh (genesis-create-jq),
-    #            genesis-ripper.sh (protocol-cache-ensure).
-    # $1: era name (byron, shelley, alonzo, conway, dijkstra).
-    # $2: profile JSON file path.
-    # Returns: JSON spec on stdout (mainnet preset merged with profile overrides).
-    spec )
-        "spec-$genesis_backend" "$@"
-        ;;
-
     # Called by: genesis.sh (actually-genesis).
     # $1: profile JSON file path.
     # $2: output directory.
@@ -238,6 +229,34 @@ case "$op" in
         fi
         "derive-from-cache-$genesis_backend" "$@"
         ;;
+
+    # ==========================================================================
+    # Shared protocol stubs for eras the profile leaves null.
+    # ==========================================================================
+    #
+    # cardano-node's config parser requires ConwayGenesisFile and
+    # DijkstraGenesisFile unconditionally. Profiles that, for example, target a
+    # pre-Chang (or pre-Dijkstra) protocol version leave ".genesis.conway" or
+    # ".genesis.dijkstra" null on purpose.
+    # The stubs below satisfy the parser independent of the activation of those
+    # eras: the workbench must omit the matching TestConwayHardForkAtEpoch and
+    # TestDijkstraHardForkAtEpoch from the node config in that case (see
+    # nix/workbench/service/nodes.nix), so the stub content is loaded but never
+    # as live parameters.
+    #
+    # Stubs are sourced from the zero preset (single canonical source of truth
+    # for "schema-valid but inert" genesis content). Output is compact (single
+    # line) because the ripper backend's assembly step uses sed 's/}$//' to
+    # strip the trailing brace before splicing in the dataset side
+    # (initialDReps for conway).
+
+    conway-stub-spec )
+      jq -c . "$global_basedir/genesis/zero/genesis/conway.json"
+      ;;
+
+    dijkstra-stub-spec )
+      jq -c . "$global_basedir/genesis/zero/genesis/dijkstra.json"
+      ;;
 
     * )
       usage_genesis

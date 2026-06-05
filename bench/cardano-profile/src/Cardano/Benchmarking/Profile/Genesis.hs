@@ -48,7 +48,8 @@ data Epoch = Epoch
   deriving (Eq, Show, Generic)
 
 data EpochParams = EpochParams
-  { shelley :: Maybe (KeyMap.KeyMap Aeson.Value)
+  { byron   :: Maybe (KeyMap.KeyMap Aeson.Value)
+  , shelley :: Maybe (KeyMap.KeyMap Aeson.Value)
   , alonzo  :: Maybe (KeyMap.KeyMap Aeson.Value)
   , conway  :: Maybe (KeyMap.KeyMap Aeson.Value)
   }
@@ -63,13 +64,14 @@ data CostModel = CostModel
 
 instance Semigroup EpochParams where
   ep1 <> ep2 = EpochParams
-    { shelley = shelley ep1 `union` shelley ep2
-    , alonzo  = alonzo  ep1 `union` alonzo  ep2
-    , conway  = conway  ep1 `union` conway  ep2
+    { byron   = byron    ep1 `union` byron    ep2
+    , shelley = shelley  ep1 `union` shelley  ep2
+    , alonzo  = alonzo   ep1 `union` alonzo   ep2
+    , conway  = conway   ep1 `union` conway   ep2
     }
 
 instance Monoid EpochParams where
-  mempty = EpochParams Nothing Nothing Nothing
+  mempty = EpochParams Nothing Nothing Nothing Nothing
   mappend = (<>)
 
 instance Semigroup CostModel where

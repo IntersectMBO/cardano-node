@@ -453,6 +453,7 @@
         }
       }
     },
+    "byron": {},
     "conway": null,
     "pool_coin": 1000000000000000,
     "delegator_coin": 0

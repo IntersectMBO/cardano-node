@@ -152,6 +152,7 @@ empty = Types.Profile {
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 0
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = mempty
     , Types.alonzo = mempty
     , Types.conway = Nothing

@@ -129,11 +129,12 @@ getOverlay overlayName = do
     (Right epoch) -> epoch
     (Left e) -> error $ "\"" ++ fp ++ "\": " ++ e
 
--- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties using
---   the profile's epoch number and overlay names. Creates the merged Epoch once
---   (timeline + overlays + profile-supplied params) and then completes two
---   sub-steps that share that Epoch:
---     2a) `genesisParams`:     protocol parameters (shelley / alonzo / conway).
+-- | Fill the "genesis" object "byron", "shelley", "alonzo" and "conway"
+--   properties using the profile's epoch number and overlay names. Creates the
+--   merged Epoch once (timeline + overlays + profile-supplied params) and then
+--   completes two sub-steps that share that Epoch:
+--     2a) `genesisParams`:     protocol parameters (byron / shelley / alonzo /
+--                              conway).
 --     2b) `genesisCostModels`: Plutus cost-model placements on top.
 shelleyAlonzoConway :: Types.Profile -> Types.Profile
 shelleyAlonzoConway profile =
@@ -153,9 +154,10 @@ shelleyAlonzoConway profile =
       epoch'' =    epoch'
                 <> Genesis.Epoch
                      (Genesis.EpochParams
-                       (Just $ Types.shelley $ Types.genesis profile)
-                       (Just $ Types.alonzo  $ Types.genesis profile)
-                       (       Types.conway  $ Types.genesis profile)
+                       (Just $ Types.byron    $ Types.genesis profile)
+                       (Just $ Types.shelley  $ Types.genesis profile)
+                       (Just $ Types.alonzo   $ Types.genesis profile)
+                       (       Types.conway   $ Types.genesis profile)
                      )
                      -- Cost models don't come from the profile, only from
                      -- epochTimeline + overlays, they contribute nothing here.
@@ -168,12 +170,32 @@ shelleyAlonzoConway profile =
 -- Step 2a.
 --------------------------------------------------------------------------------
 
--- | Fill "shelley", "alonzo" and "conway" on the Genesis with the
+-- | Fill "byron", "shelley", "alonzo" and "conway" on the Genesis with the
 --   protocol-parameter side of the merged Epoch from `shelleyAlonzoConway`.
 --   Cost models are NOT touched here, see `genesisCostModels` (Step 2b).
 genesisParams :: Genesis.EpochParams -> Types.Genesis -> Types.Genesis
 genesisParams epochParams g =
-  g { Types.shelley =
+  g { -- "byron", "shelley" and "alonzo" must exists.
+      Types.byron =
+        case Genesis.byron epochParams of
+          (Just byronKeyMap) ->
+            -- Merge profile-specific "k" / "protocolMagic" into the existing
+            -- "protocolConsts" preserving "vssMaxTTL" and "vssMinTTL".
+            let existingConsts =
+                  case KeyMap.lookup "protocolConsts" byronKeyMap of
+                    Just (Aeson.Object o) -> o
+                    _                     -> KeyMap.empty
+                mergedConsts =
+                    KeyMap.insert "k"
+                      (Aeson.Number $ fromInteger $ Types.parameter_k g)
+                  $ KeyMap.insert "protocolMagic"
+                      (Aeson.Number $ fromInteger $ Types.network_magic g)
+                      existingConsts
+            in KeyMap.insert "protocolConsts"
+                 (Aeson.Object mergedConsts)
+                 byronKeyMap
+          Nothing -> error "No \"byron\" JSON object from epoch-timeline.json"
+    , Types.shelley =
         case Genesis.shelley epochParams of
           (Just sheyKeyMap) -> foldl
             (\acc (k,v) -> KeyMap.insert k v acc)
@@ -186,12 +208,16 @@ genesisParams epochParams g =
             , ("epochLength",      Aeson.Number $ fromInteger $ Types.epoch_length g)
             , ("securityParam",    Aeson.Number $ fromInteger $ Types.parameter_k g)
             , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
+            -- The timeline carries mainnet's networkId / networkMagic.
+            , ("networkId",        Aeson.String "Testnet")
+            , ("networkMagic",     Aeson.Number $ fromInteger $ Types.network_magic g)
             ]
           Nothing -> error "No \"shelley\" JSON object from epoch-timeline.json"
     , Types.alonzo =
         case Genesis.alonzo epochParams of
           (Just a) -> a
           Nothing  -> error "No \"alonzo\" JSON object from epoch-timeline.json"
+    -- Optional "conway".
     , Types.conway = Genesis.conway epochParams
     }
 
