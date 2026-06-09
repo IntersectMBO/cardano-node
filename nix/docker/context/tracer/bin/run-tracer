@@ -34,7 +34,7 @@ printRunEnv () {
 #
 writeRootEnv () {
 
-cat << EOF > /usr/local/bin/env
+cat << EOF > /tmp/cardano-env
 #!/usr/bin/env bash
 
 # Docker run ENV vars
@@ -44,7 +44,7 @@ EOF
 
 if [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]]; then
   echo "CARDANO_MIN_LOG_SEVERITY=\"$CARDANO_MIN_LOG_SEVERITY\"" \
-    >> /usr/local/bin/env
+    >> /tmp/cardano-env
 fi
 }
 

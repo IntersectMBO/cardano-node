@@ -176,6 +176,11 @@ in
       ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
+      # Backwards-compatible alias for the resolved-config env snapshot
+      # written by run-node. The runtime writer targets /tmp/cardano-env so
+      # the image remains compatible with a read-only root filesystem.
+      ln -sv /tmp/cardano-env usr/local/bin/env
+
       # Create iohk-nix network configs, organized by network directory.
       SRC="${genCfgs}"
       DST="opt/cardano"
