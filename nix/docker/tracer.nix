@@ -153,6 +153,11 @@ in
       ln -sv ${cardano-tracer}/bin/cardano-tracer usr/local/bin/cardano-tracer
       ln -sv ${jq}/bin/jq usr/local/bin/jq
 
+      # Backwards-compatible alias for the resolved-config env snapshot
+      # written by run-tracer. The runtime writer targets /tmp/cardano-env so
+      # the image remains compatible with a read-only root filesystem.
+      ln -sv /tmp/cardano-env usr/local/bin/env
+
       # Create iohk-nix network configs, organized by network directory.
       SRC="${genCfgs}"
       DST="opt/cardano"
