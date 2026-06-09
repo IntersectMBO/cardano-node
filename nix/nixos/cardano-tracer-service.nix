@@ -501,12 +501,27 @@ in {
         '';
       };
 
+      profilingOutputDir = mkOption {
+        type = nullOr str;
+        default = null;
+        description = ''
+          Optional directory prefix for GHC RTS profiling output files
+          (cardano-node.stats, cardano-node.prof, cardano-node.hp, etc.).
+          When null, files are written relative to the working directory
+          (the systemd unit's WorkingDirectory for NixOS deployments, which
+          is cfg.stateDir).
+        '';
+      };
+
       profilingArgs = mkOption {
         type = listOf str;
-        default =
-             [ "--machine-readable"
-               "-tcardano-node.stats"
-               "-pocardano-node"
+        default = let
+          prefix = if cfg.profilingOutputDir == null then "" else "${cfg.profilingOutputDir}/";
+        in
+             optionals (cfg.profiling != "none" || cfg.eventlog) [
+               "--machine-readable"
+               "-t${prefix}cardano-node.stats"
+               "-po${prefix}cardano-node"
              ]
           ++ optional (cfg.eventlog) "-l"
           ++ (
