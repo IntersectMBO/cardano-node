@@ -149,6 +149,30 @@ respectively.  This makes bind mounting easier when switching between
 default state directory locations, `/{data,ipc,logs}`, will work for both modes.
 
 
+## Read-Only Root Filesystem
+The image is compatible with `--read-only` (Docker/Podman) and
+`securityContext.readOnlyRootFilesystem: true` (Kubernetes), provided the
+runtime supplies writable storage for the state directories described above
+(`/data`, `/ipc`, `/logs`) and a writable `/tmp` (tmpfs or `emptyDir`).
+
+A resolved-configuration snapshot is written at runtime to `/tmp/cardano-env`
+and can be `source`d for an interactive debug shell inside the container.
+The legacy path `/usr/local/bin/env` is preserved as a symlink to
+`/tmp/cardano-env` for backwards compatibility.
+
+In "scripts" mode, GHC RTS profiling output (`cardano-node.stats`,
+`cardano-node.prof`, `cardano-node.hp`, etc.) is directed to `/logs/` so the
+image keeps working when profiling is enabled under a read-only root.
+In "custom" mode the operator chooses the RTS flags, so any profiling output
+must similarly be directed to a writable mount, for example:
+```
+... run \
+  --config /opt/cardano/config/mainnet/config.json \
+  ... \
+  +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -p -RTS
+```
+
+
 ## Cardano-node Socket Sharing
 To share a cardano-node socket with a different container, a volume can be made
 for establishing cross-container communication:
