@@ -16,6 +16,10 @@ let
             nodeConfig = cfg.environments.${cfg.environment}.nodeConfig;
             stateDir = mkDefault "state-node-${cfg.environment}";
             runtimeDir = mkDefault null;
+            # When profiling is enabled, direct GHC RTS output
+            # (stats, prof, hp, ...) to /logs so the OCI image works
+            # with a read-only root filesystem. No effect when profiling = "none".
+            profilingOutputDir = mkDefault "/logs";
           } // optionalAttrs (envConfig ? topology) {
             topology = mkDefault envConfig.topology;
           };
