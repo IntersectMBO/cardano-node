@@ -1,4 +1,3 @@
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
@@ -9,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -456,7 +456,11 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
 
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite leiosDbPath
+    LeiosDbSQLite leiosDbPath -> do
+      let leiosDbTracer =
+             contramap Leios.TraceLeiosDb $
+               Consensus.leiosKernelTracer (consensusTracers tracers)
+      newLeiosDBSQLite leiosDbTracer leiosDbPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
