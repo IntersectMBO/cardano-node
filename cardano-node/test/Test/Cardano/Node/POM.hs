@@ -19,8 +19,6 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (makeRpcConfig)
-import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
-                   partialTraceSelectionToEither)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
@@ -141,9 +139,6 @@ testPartialYamlConfig =
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
-    , pncLoggingSwitch = Last $ Just True
-    , pncLogMetrics = Last $ Just True
-    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
     , pncTraceForwardSocket = Last Nothing
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
@@ -202,9 +197,6 @@ testPartialCliConfig =
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
-    , pncLoggingSwitch = mempty
-    , pncLogMetrics = mempty
-    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
@@ -243,8 +235,6 @@ testPartialCliConfig =
 -- | Expected final NodeConfiguration
 eExpectedConfig :: Either Text NodeConfiguration
 eExpectedConfig = do
-  traceOptions <- partialTraceSelectionToEither
-                    (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
   ncRpcConfig <- first fromString $ makeRpcConfig mempty
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
@@ -261,9 +251,6 @@ eExpectedConfig = do
     , ncEgressPollInterval = 0
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
-    , ncLoggingSwitch = True
-    , ncLogMetrics = True
-    , ncTraceConfig = traceOptions
     , ncTraceForwardSocket = Nothing
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5

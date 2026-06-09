@@ -26,7 +26,6 @@ base =
     P.fixedLoaded
   . P.uniCircle . P.loopback
   . V.fundsDefault
-  . P.newTracing
   . P.initCooldown 5
   . P.analysisStandard
 

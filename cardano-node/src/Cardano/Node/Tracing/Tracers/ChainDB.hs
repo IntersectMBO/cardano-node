@@ -19,8 +19,8 @@ import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
+import           Cardano.Node.Tracing.Tracers.HasIssuer
 import           Cardano.Prelude (maximumDef)
-import           Cardano.Tracing.HasIssuer
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract.CanHardFork
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract.SingleEraBlock
@@ -56,7 +56,7 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
-import           Data.Aeson (Object, Value (String), object, toJSON, (.=))
+import           Data.Aeson (Object, ToJSON, Value (Object, String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
 import           Data.SOP (All, K (..), hcmap, hcollapse)
@@ -101,7 +101,6 @@ instance (  LogFormatting (Header blk)
           , InspectLedger blk
           , HasIssuer blk
           , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
-
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
     "ChainDB is not clean. Validating all immutable chunks"
@@ -1182,7 +1181,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 -- -- TraceInitChainSelEvent
 -- --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
     forHuman ChainDB.InitialChainSelected{} =
@@ -1190,7 +1189,8 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     forHuman ChainDB.StartedInitChainSelection {} =
         "Started initial chain selection"
 
-    forMachine dtal (ChainDB.InitChainSelValidation v) = forMachine dtal v
+    forMachine dtal (ChainDB.InitChainSelValidation v) =
+      forMachine dtal v
     forMachine _dtal ChainDB.InitialChainSelected =
       mconcat ["kind" .= String "Follower.InitialChainSelected"]
     forMachine _dtal ChainDB.StartedInitChainSelection =
@@ -1754,7 +1754,7 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "tip" .= show pt
-             , "enclosedTime" .= enclosedTiming
+             , "enclosedTime" .= enclosingValue enclosedTiming
              ]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
     mconcat [ "kind" .= String "DeletedSnapshot"
@@ -2320,11 +2320,17 @@ instance MetaTrace V1.BackingStoreValueHandleTrace where
 -------------------------------------------------------------------------------}
 
 instance LogFormatting EnclosingTimed where
-  forMachine _dtal RisingEdge = mconcat [ "edge" .= String "Starting" ]
-  forMachine _dtal (FallingEdgeWith a) = mconcat [ "edge" .= toJSON a ]
+  forMachine _dtal = enclosingObject
 
   forHuman RisingEdge = "Starting"
   forHuman (FallingEdgeWith a) = "Completed in " <> showT a <> " seconds"
+
+enclosingObject :: ToJSON a => Enclosing' a -> Object
+enclosingObject RisingEdge = mconcat [ "edge" .= String "Starting" ]
+enclosingObject (FallingEdgeWith a) = mconcat [ "edge" .= toJSON a ]
+
+enclosingValue :: ToJSON a => Enclosing' a -> Value
+enclosingValue = Object . enclosingObject
 
 instance LogFormatting V2.LedgerDBV2Trace where
   forMachine dtal (V2.TraceLedgerTablesHandleCreate enc) =
@@ -3134,7 +3140,7 @@ instance ConvertRawHash blk => LogFormatting (ChainDB.TraceAddPerasCertEvent blk
     mconcat ["kind" .= String "AddedPerasCertToQueue",
              "round" .= String (Text.pack $ show roundNo),
              "boostedBlock" .= String (renderPoint boostedBlock),
-             "queueSize" .= toJSON queueSize]
+             "queueSize" .= enclosingValue queueSize]
   forMachine _dtal (ChainDB.PoppedPerasCertFromQueue roundNo boostedBlock) =
     mconcat ["kind" .= String "PoppedPerasCertFromQueue",
              "round" .= String (Text.pack $ show roundNo),

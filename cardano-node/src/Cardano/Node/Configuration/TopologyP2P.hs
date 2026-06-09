@@ -21,11 +21,11 @@ import           Cardano.Api (handleIOExceptionsLiftWith, liftEither, runExceptT
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology,
                    isValidTrustedPeerConfiguration)
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.Diffusion.Topology (NetworkTopology (..))
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
@@ -47,6 +47,7 @@ import           System.FilePath (takeDirectory, (</>))
 instance AdjustFilePaths CardanoNetworkTopology where
   adjustFilePaths f nt@NetworkTopology{peerSnapshotPath} =
     nt{peerSnapshotPath = f <$> peerSnapshotPath}
+
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 readTopologyFile :: ()

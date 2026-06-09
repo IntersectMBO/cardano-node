@@ -30,11 +30,6 @@ import           Cardano.Benchmarking.Types
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Common ()
-import           Cardano.Tracing.OrphanInstances.Consensus ()
-import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block
                    (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))

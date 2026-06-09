@@ -359,9 +359,7 @@ data AfterSlot =
   | After SlotNo
   deriving (Eq, Show)
 
--- `FromJSON`/`ToJSON` from "Cardano.Tracing.OrphanInstances.Network".
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs#L2784
+-- `FromJSON`/`ToJSON`.
 
 instance Aeson.FromJSON UseLedgerPeers where
   parseJSON (Aeson.Number slot) = return $
@@ -371,8 +369,6 @@ instance Aeson.FromJSON UseLedgerPeers where
       LT -> DontUseLedgerPeers
   parseJSON invalid = fail $ "Parsing of slot number failed due to type mismatch. "
                             <> "Encountered: " <> show invalid
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs#L2811
 
 instance Aeson.ToJSON UseLedgerPeers where
   toJSON DontUseLedgerPeers                  = Aeson.Number (-1)
@@ -409,11 +405,9 @@ newtype HotValency = HotValency { getHotValency :: Int }
 newtype WarmValency = WarmValency { getWarmValency :: Int }
   deriving (Show, Eq, Ord)
 
--- `FromJSON`/`ToJSON` from "Cardano.Tracing.OrphanInstances.Network".
+-- `FromJSON`/`ToJSON`.
 
 -- Replaced `HotValency` and `WarmValency` with `Valency`.
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs#L1638
-
 instance Aeson.ToJSON Valency where
   toJSON (Valency v) = Aeson.toJSON v
 
@@ -449,9 +443,7 @@ data PeerTrustable =
   | IsNotTrustable
   deriving (Eq, Show, Ord, Generic)
 
--- `FromJSON`/`ToJSON` from "Cardano.Tracing.OrphanInstances.Network".
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs#L2824
+-- `FromJSON`/`ToJSON`.
 
 instance Aeson.FromJSON PeerTrustable where
   parseJSON = Aeson.withBool "PeerTrustable" $ \b ->
@@ -473,9 +465,7 @@ data UseBootstrapPeers =
   | UseBootstrapPeers [RelayAccessPoint]
   deriving (Eq, Show, Ord, Generic)
 
--- `FromJSON`/`ToJSON` from "Cardano.Tracing.OrphanInstances.Network".
-
--- https://github.com/IntersectMBO/cardano-node/blob/52b708f37cd3dc92a188717deae2a6a60117f696/cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs#L2816
+-- `FromJSON`/`ToJSON`.
 
 instance Aeson.ToJSON UseBootstrapPeers where
   toJSON DontUseBootstrapPeers   = Aeson.Null

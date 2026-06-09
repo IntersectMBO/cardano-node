@@ -38,7 +38,7 @@ profilesNoEraModel =
         . P.uniCircle . V.hosts 4 . P.loopback
         . modelFor7Epochs
         . V.fundsDouble
-        . P.traceForwardingOn . P.newTracing
+        . P.traceForwardingOn
         . P.analysisStandard . P.analysisEpoch3Plus
         . P.desc "Status-quo dataset, 7 epochs"
       secp       = V.plutusDoubleSaturation . V.plutusTypeECDSA . P.analysisSizeModerate

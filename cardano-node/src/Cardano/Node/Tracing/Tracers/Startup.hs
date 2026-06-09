@@ -17,6 +17,7 @@ module Cardano.Node.Tracing.Tracers.Startup
 
 import           Cardano.Api (NetworkMagic (..), SlotNo (..))
 import qualified Cardano.Api as Api
+import           Cardano.Network.OrphanInstances ()
 
 import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Git.Rev (gitRev)
@@ -129,23 +130,21 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
 --
 data ConsensusNetworkVersionTuple a b = ConsensusNetworkVersionTuple a b
 
-instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
     toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
       Aeson.object [ "nodeToClientVersion" .= nodeToClientVersion
-                   , "blockVersion" .= blockVersion
+                   , "blockVersion" .= String (pack $ show blockVersion)
                    ]
 
-instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
-    toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
-      Aeson.object [ "nodeToNodeVersion" .= nodeToClientVersion
-                   , "blockVersion" .= blockVersion
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
+    toJSON (ConsensusNetworkVersionTuple nodeToNodeVersion blockVersion) =
+      Aeson.object [ "nodeToNodeVersion" .= nodeToNodeVersion
+                   , "blockVersion" .= String (pack $ show blockVersion)
                    ]
 
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
-         , ToJSON (BlockNodeToNodeVersion blk)
-         , ToJSON (BlockNodeToClientVersion blk)
          )
         => LogFormatting (StartupTrace blk) where
   forHuman = ppStartupInfoTrace
@@ -172,12 +171,12 @@ instance ( Show (BlockNodeToNodeVersion blk)
           _ ->
             [ "maxNodeToNodeVersion" .=
                 case Map.maxViewWithKey supportedNodeToNodeVersions of
-                  Nothing     -> String "no-supported-version"
-                  Just (v, _) -> String (pack . show $ v)
+                  Nothing          -> String "no-supported-version"
+                  Just ((k, _), _) -> toJSON k
             , "maxNodeToClientVersion" .=
                 case Map.maxViewWithKey supportedNodeToClientVersions of
-                  Nothing     -> String "no-supported-version"
-                  Just (v, _) -> String (pack . show $ v)
+                  Nothing          -> String "no-supported-version"
+                  Just ((k, _), _) -> toJSON k
             ])
   forMachine _dtal (StartupP2PInfo diffusionMode) =
       mconcat [ "kind" .= String "StartupP2PInfo"

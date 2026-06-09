@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Tracing.HasIssuer
+module Cardano.Node.Tracing.Tracers.HasIssuer
   ( BlockIssuerVerificationKeyHash (..)
   , HasIssuer (..)
   ) where

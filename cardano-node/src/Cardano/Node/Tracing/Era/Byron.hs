@@ -22,7 +22,7 @@ import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
 import           Cardano.Logging
-import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Node.Tracing.Render (renderTxId)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
@@ -119,7 +119,7 @@ instance LogFormatting UpdateState where
 instance LogFormatting (GenTx ByronBlock) where
   forMachine dtal tx =
     mconcat $
-        ( "txid" .= txId tx )
+        ( "txid" .= (Text.take 8 . renderTxId $ txId tx) )
      :  [ "tx"   .= condense tx | dtal == DDetailed ]
 
 instance LogFormatting ChainValidationError where

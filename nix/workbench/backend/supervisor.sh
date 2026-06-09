@@ -13,6 +13,8 @@ EOF
 backend_supervisor() {
 op=${1:?$(usage_supervisor)}; shift
 
+export PYTHONWARNINGS="ignore::UserWarning"
+
 case "$op" in
     name )
         echo 'supervisor';;

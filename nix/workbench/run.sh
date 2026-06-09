@@ -293,11 +293,7 @@ EOF
 
         jq ' .meta.profile_content
            | .analysis.filters += ["model"]
-           | .node.tracing_backend =
-               (if .node.withNewTracing
-                then "trace-dispatcher"
-                else "iohk-monitoring"
-                end)
+           | .node.tracing_backend = "trace-dispatcher"
            ' "$dir"/meta.json > "$dir"/profile.json;;
 
     compute-path )

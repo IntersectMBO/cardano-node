@@ -39,8 +39,6 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
                    makeRpcConfig)
-import           Cardano.Tracing.Config
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
@@ -53,6 +51,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (.
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
+import           Ouroboros.Network.OrphanInstances ()
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionInitDelay (..),
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
@@ -61,12 +60,10 @@ import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (Bifunctor (..))
 import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
@@ -121,10 +118,6 @@ data NodeConfiguration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
 
-         -- Logging parameters:
-       , ncLoggingSwitch  :: !Bool
-       , ncLogMetrics     :: !Bool
-       , ncTraceConfig    :: !TraceOptions
        , ncTraceForwardSocket :: !(Maybe (HowToConnect, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
@@ -253,10 +246,6 @@ data PartialNodeConfiguration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
        , pncMaxConcurrencyDeadline :: !(Last MaxConcurrencyDeadline)
 
-         -- Logging parameters:
-       , pncLoggingSwitch  :: !(Last Bool)
-       , pncLogMetrics     :: !(Last Bool)
-       , pncTraceConfig    :: !(Last PartialTraceOptions)
        , pncTraceForwardSocket :: !(Last (HowToConnect, ForwarderMode))
 
          -- Configuration for testing purposes
@@ -352,18 +341,6 @@ instance FromJSON PartialNodeConfiguration where
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
       pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
 
-      -- Logging parameters
-      pncLoggingSwitch'  <-                 v .:? "TurnOnLogging" .!= True
-      pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
-      useTraceDispatcher <-                 v .:? "UseTraceDispatcher" .!= True
-      pncTraceConfig     <-  if pncLoggingSwitch'
-                             then do
-                               partialTraceSelection <- parseJSON $ Object v
-                               if useTraceDispatcher
-                               then return $ Last $ Just $ PartialTraceDispatcher partialTraceSelection
-                               else return $ Last $ Just $ PartialTracingOnLegacy partialTraceSelection
-                             else return $ Last $ Just PartialTracingOff
-
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
@@ -450,9 +427,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics
-           , pncTraceConfig
            , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
@@ -693,7 +667,6 @@ defaultPartialNodeConfiguration =
   PartialNodeConfiguration
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
-    , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
@@ -705,8 +678,6 @@ defaultPartialNodeConfiguration =
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
-    , pncLogMetrics = mempty
-    , pncTraceConfig = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -767,6 +738,9 @@ defaultPartialNodeConfiguration =
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
 
+lastToEither :: String -> Last a -> Either String a
+lastToEither msg = maybe (Left msg) Right . getLast
+
 makeNodeConfiguration :: PartialNodeConfiguration -> Either String NodeConfiguration
 makeNodeConfiguration pnc = do
   configFile <- lastToEither "Missing YAML config file" $ pncConfigFile pnc
@@ -776,9 +750,6 @@ makeNodeConfiguration pnc = do
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
-  loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
-  logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
-  traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -932,10 +903,6 @@ makeNodeConfiguration pnc = do
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
-             , ncLoggingSwitch = loggingSwitch
-             , ncLogMetrics = logMetrics
-             , ncTraceConfig = if loggingSwitch then traceConfig
-                                                else TracingOff
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncLedgerDbConfig

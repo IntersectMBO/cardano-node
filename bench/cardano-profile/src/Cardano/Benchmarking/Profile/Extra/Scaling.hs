@@ -30,7 +30,7 @@ base =
   . P.uniCircle . V.hosts 1
   . P.delegators 1200000 . P.dreps 0
   . P.initCooldown 5
-  . P.traceForwardingOn . P.newTracing
+  . P.traceForwardingOn
   . P.analysisStandard
 
 profilesNoEraScalingLocal :: [Types.Profile]
@@ -60,8 +60,8 @@ profilesNoEraScalingCloud =
     utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire . P.rtsHeapLimit 16384 . P.heapLimit 16384
   , utxoScale   & P.name "utxoscale-solo-12M64G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
-  , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing
-  , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble . P.newTracing
+  , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn
+  , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble
   ]
   -----------
   -- Latency.
@@ -82,7 +82,7 @@ profilesNoEraScalingCloud =
   in [
     latency & P.name "latency-nomadperfssd"
             . P.desc "AWS perf-ssd class cluster, stop when all latency services stop"
-            . P.traceForwardingOn . P.newTracing . nomadSsd
+            . P.traceForwardingOn . nomadSsd
   ]
 
 nomadSsd :: Types.Profile -> Types.Profile

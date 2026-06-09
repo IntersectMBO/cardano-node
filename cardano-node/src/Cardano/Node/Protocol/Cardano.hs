@@ -29,8 +29,6 @@ import qualified Cardano.Node.Protocol.Dijkstra as Dijkstra
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()

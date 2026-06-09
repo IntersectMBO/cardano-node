@@ -88,7 +88,6 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Tracing.Config
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -104,11 +103,8 @@ import           Control.Exception (Exception (..))
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
-import           Data.Bifunctor (bimap)
 import qualified Data.Default.Class as DefaultClass
-import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
 import           Data.Text (Text)
@@ -207,7 +203,6 @@ defaultEra = ShelleyBasedEraConway
 defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
-    <> tracers
     <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
@@ -281,45 +276,6 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
                 ]
                 )
-  -- | Various tracers we can turn on or off
-  tracers :: Aeson.KeyMap Aeson.Value
-  tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
-    [ (proxyName (Proxy @TraceBlockFetchClient), False)
-    , (proxyName (Proxy @TraceBlockFetchDecisions), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocol), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocolSerialised), False)
-    , (proxyName (Proxy @TraceBlockFetchServer), False)
-    , (proxyName (Proxy @TraceBlockchainTime), True)
-    , (proxyName (Proxy @TraceChainDB), True)
-    , (proxyName (Proxy @TraceChainSyncClient), False)
-    , (proxyName (Proxy @TraceChainSyncBlockServer), False)
-    , (proxyName (Proxy @TraceChainSyncHeaderServer), False)
-    , (proxyName (Proxy @TraceChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceDnsResolver), True)
-    , (proxyName (Proxy @TraceDnsSubscription), True)
-    , (proxyName (Proxy @TraceErrorPolicy), True)
-    , (proxyName (Proxy @TraceLocalErrorPolicy), True)
-    , (proxyName (Proxy @TraceForge), True)
-    , (proxyName (Proxy @TraceHandshake), False)
-    , (proxyName (Proxy @TraceIpSubscription), True)
-    , (proxyName (Proxy @TraceLocalRootPeers), True)
-    , (proxyName (Proxy @TracePublicRootPeers), True)
-    , (proxyName (Proxy @TracePeerSelection), True)
-    , (proxyName (Proxy @TracePeerSelectionActions), True)
-    , (proxyName (Proxy @TraceConnectionManager), True)
-    , (proxyName (Proxy @TraceServer), True)
-    , (proxyName (Proxy @TraceLocalConnectionManager), False)
-    , (proxyName (Proxy @TraceLocalServer), False)
-    , (proxyName (Proxy @TraceLocalChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceLocalHandshake), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionProtocol), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionServer), False)
-    , (proxyName (Proxy @TraceMempool), True)
-    , (proxyName (Proxy @TraceMux), False)
-    , (proxyName (Proxy @TraceTxInbound), False)
-    , (proxyName (Proxy @TraceTxOutbound), False)
-    , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
-    ]
 
   traceOptions = Aeson.Object mempty
   -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
@@ -358,20 +314,11 @@ defaultYamlConfig =
     , ("SocketPath", "db/node.socket")
     , ("PBftSignatureThreshold", Aeson.Number (fromFloatDigits (0.6 :: Double)))
 
-    -- Global logging severity filter. Messages must have at least this severity to pass.
-    , ("minSeverity", "Debug")
-
-    , ("EnableLogMetrics", Aeson.Bool False)
-    , ("TurnOnLogMetrics", Aeson.Bool False)
-
     -- The maximum number of used peers during bulk sync.
     , ("MaxConcurrencyBulkSync", Aeson.Number 1)
 
     -- The maximum number of used peers when fetching newly forged blocks.
     , ("MaxConcurrencyDeadline", Aeson.Number 2)
-
-    -- Turn logging on or off
-    , ("EnableLogging", Aeson.Bool True)
 
     -- Genesis filepaths
     , ("ByronGenesisFile", genesisPath ByronEra)
@@ -385,44 +332,12 @@ defaultYamlConfig =
 
     , ("PeerSharing", Aeson.Bool False)
 
-    -- Logging related
-    , ("setupScribes", setupScribes)
-    , ("rotation", rotationObject)
-    , ("defaultScribes", defaultScribes)
-    , ("setupBackends", Aeson.Array ["KatipBK"])
-    , ("defaultBackends", Aeson.Array ["KatipBK"])
-    , ("options", Aeson.object mempty)
+    -- New tracing system: empty map = use all defaults.
+    -- Mandatory: trace-dispatcher's FromJSON parses "TraceOptions" at the root.
+    , ("TraceOptions", Aeson.object mempty)
     ]
   where
     genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
-    defaultScribes :: Aeson.Value
-    defaultScribes =
-      Aeson.Array
-        [ Aeson.Array ["FileSK","logs/mainnet.log"]
-        , Aeson.Array ["StdoutSK","stdout"]
-        ]
-    rotationObject :: Aeson.Value
-    rotationObject =
-      Aeson.Object $
-        mconcat $ map (uncurry Aeson.singleton)
-          [ ("rpLogLimitBytes", Aeson.Number 5_000_000)
-          , ("rpKeepFilesNum", Aeson.Number 3)
-          , ("rpMaxAgeHours", Aeson.Number 24)
-          ]
-    setupScribes :: Aeson.Value
-    setupScribes =
-      Aeson.Array
-        [ Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "FileSK")
-            , ("scName", "logs/node.log")
-            , ("scFormat", "ScJson")
-            ]
-        , Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "StdoutSK")
-            , ("scName", "stdout")
-            , ("scFormat", "ScJson")
-            ]
-        ]
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined

@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- needs different instances on ghc8 and on ghc9
 
 module Cardano.Node.Tracing.Tracers
@@ -19,7 +20,9 @@ module Cardano.Node.Tracing.Tracers
 import           Cardano.Logging
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Network.NodeToClient (LocalAddress)
+import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
+import           Cardano.Network.NodeToNode.Version ()
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
@@ -58,11 +61,13 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (Tracer (..))
-import           Data.Aeson (ToJSON)
+import           Cardano.Network.OrphanInstances ()
+import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
+
 
 -- | Construct tracers for all system components.
 --
@@ -317,8 +322,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     configureTracers configReflection trConfig [consensusStartupErrorTr]
 
     !consensusGddTr <- mkCardanoTracer
-                 trBase trForward mbTrEKG
-                 ["Consensus", "GDD"]
+                trBase trForward mbTrEKG
+                ["Consensus", "GDD"]
     configureTracers configReflection trConfig [consensusGddTr]
 
     !consensusGsmTr <- mkCardanoTracer
