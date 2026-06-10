@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Plutuscall (
-  profilesNoEraPlutuscall
+  profilesPlutuscall
 ) where
 
 --------------------------------------------------------------------------------
@@ -28,8 +28,8 @@ compressedFor15Epochs =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraPlutuscall :: [Types.Profile]
-profilesNoEraPlutuscall =
+profilesPlutuscall :: [Types.Profile]
+profilesPlutuscall =
   ------------------------------------------------------------------------------
   -- plutuscall: 6 nodes, FixedLoaded and "--shutdown-on-slot-synced 9000"
   ------------------------------------------------------------------------------

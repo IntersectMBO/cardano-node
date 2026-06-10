@@ -6,7 +6,7 @@
 module Cardano.Benchmarking.Profile.Playground (
     calibrateLoopBlockMemx15
   , calibrateLoopBlockMemx2
-  , profilesNoEraPlayground
+  , profilesPlayground
 ) where
 
 --------------------------------------------------------------------------------
@@ -71,8 +71,8 @@ compressedFor3Epochs =
   . P.generatorEpochs 3 . P.initCooldown 5
   . P.shutdownOnOff
 
-profilesNoEraPlayground :: [Types.Profile]
-profilesNoEraPlayground =
+profilesPlayground :: [Types.Profile]
+profilesPlayground =
   ------------------------------------------------------------------------------
   -- ci-bench like: 2 nodes, FixedLoaded and "--shutdown-on-block-synced 15"
   ------------------------------------------------------------------------------

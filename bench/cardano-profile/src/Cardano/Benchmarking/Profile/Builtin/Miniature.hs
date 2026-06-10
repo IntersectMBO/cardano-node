@@ -6,7 +6,7 @@
 module Cardano.Benchmarking.Profile.Builtin.Miniature (
   base
 , benchDuration
-, profilesNoEraMiniature
+, profilesMiniature
 ) where
 
 --------------------------------------------------------------------------------
@@ -55,8 +55,8 @@ duration240 =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraMiniature :: [Types.Profile]
-profilesNoEraMiniature =
+profilesMiniature :: [Types.Profile]
+profilesMiniature =
   ------------------------------------------------------------------------------
   -- ci-bench: 2|10 nodes, FixedLoaded and "--shutdown-on-block-synced 15"
   ------------------------------------------------------------------------------

@@ -55,7 +55,7 @@ backend_nomadcloud() {
       # the correct one.
       # (For this the clients.json / NOMAD_CLIENTS_FILE file is needed)
       if \
-            echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"               \
+            echo "${WB_SHELL_PROFILE_NAME}" | grep --quiet "\-nomadperf"          \
          &&                                                                       \
             jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json \
          &&                                                                       \

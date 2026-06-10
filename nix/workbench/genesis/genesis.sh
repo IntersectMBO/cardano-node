@@ -44,8 +44,8 @@ case "$op" in
 
     # Called by: run.sh (line 433)
     # [--force]: optional, forces cache regeneration
-    # $1: profile JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/profile.json)
-    # $2: node-specs JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-coay/node-specs.json)
+    # $1: profile JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-conway/profile.json)
+    # $2: node-specs JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-conway/node-specs.json)
     # $3: cache directory (e.g. ~/.cache/cardano-workbench, defaults to envjqr 'cacheDir')
     # Returns: absolute path to the genesis cache entry on stdout
     prepare-cache-entry )

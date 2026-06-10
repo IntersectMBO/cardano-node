@@ -2,10 +2,11 @@
 ## The binaries/scripts to use when calling the workbench.
 , haskellProject
 , workbench # The derivation.
-## Profile dependent parameters.
+## Nix attrset parameters.
 , profile
 , backend
 ## This run parameters.
+, eraName
 , batchName
 , workbenchStartArgs
 ##
@@ -21,7 +22,7 @@ let
   backendName = backend.name;
   inherit (backend) stateDir basePort useCabalRun profiling;
 
-  profileBundle  = profile.profileBundle { inherit backend; };
+  profileBundle  = profile.profileBundle { inherit eraName backend; };
 
   profileDataDir = profile.materialise-profile { inherit profileBundle; };
   backendDataDir = backend.materialise-profile { inherit profileBundle; };
@@ -41,9 +42,10 @@ let
     ''
     export WB_CHAP_PATH=${chap}
     export WB_NIX_PLAN=${nixPlanJson}
-    export WB_SHELL_PROFILE=${profileName}
+    export WB_SHELL_PROFILE_NAME=${profileName}
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
-    export WB_BACKEND=${backendName}
+    export WB_SHELL_ERA_NAME=${eraName}
+    export WB_BACKEND_NAME=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
@@ -82,6 +84,7 @@ let
 
     wb start \
       --batch-name   ${batchName} \
+      --era-name     ${eraName} \
       --profile-data ${profileDataDir} \
       --backend-data ${backendDataDir} \
       --cache-dir    ${cacheDir} \
@@ -194,6 +197,7 @@ let
           --backend-data        ${backendDataDir}
           --genesis-cache-entry "$genesis_cache_entry"
           --batch-name          smoke-test
+          --era-name            ${eraName}
           --base-port           ${toString basePort}
           --node-source         ${haskellProject.args.src}
           --node-rev            ${cardano-node-rev}

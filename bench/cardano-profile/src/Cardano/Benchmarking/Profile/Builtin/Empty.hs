@@ -13,7 +13,7 @@ module Cardano.Benchmarking.Profile.Builtin.Empty (
 , traceBenchDuration, traceFullDuration
 , defaultDuration
 , epochTransitionDuration
-, profilesNoEraEmpty
+, profilesEmpty
 ) where
 
 --------------------------------------------------------------------------------
@@ -105,8 +105,8 @@ epochTransitionDuration =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraEmpty :: [Types.Profile]
-profilesNoEraEmpty = map baseNoDataset
+profilesEmpty :: [Types.Profile]
+profilesEmpty = map baseNoDataset
   $
   ------------------------------------------------------------------------------
   -- fast: FixedLoaded and "--shutdown-on-block-synced 1" with 1 or 2 nodes.

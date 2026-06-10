@@ -27,8 +27,9 @@ project.shellFor {
 
     ${workbench-runner.workbench-envars}
 
-    progress "profile name"            $WB_SHELL_PROFILE
-    progress "backend name"            $WB_BACKEND
+    progress "profile name"            $WB_SHELL_PROFILE_NAME
+    progress "era name"                $WB_SHELL_ERA_NAME
+    progress "backend name"            $WB_BACKEND_NAME
     progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
     progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME

@@ -7,7 +7,7 @@
 module Cardano.Benchmarking.Profile.Builtin.ForgeStress (
   base
 , durationXS, durationM, durationXL
-, profilesNoEraForgeStress
+, profilesForgeStress
 ) where
 
 --------------------------------------------------------------------------------
@@ -49,8 +49,8 @@ durationXL = V.timescaleCompressed . P.shutdownOnSlot 4800
 
 --------------------------------------------------------------------------------
 
-profilesNoEraForgeStress :: [Types.Profile]
-profilesNoEraForgeStress =
+profilesForgeStress :: [Types.Profile]
+profilesForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
       -- TODO: Bump all to genesisVariantVoltaire; however, except for the solo profile, forge-stress works better with a smaller block size (64k)

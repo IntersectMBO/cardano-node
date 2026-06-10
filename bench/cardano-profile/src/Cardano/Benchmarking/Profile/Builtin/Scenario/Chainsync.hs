@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync (
-  profilesNoEraChainsync
+  profilesChainsync
 ) where
 
 --------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraChainsync :: [Types.Profile]
-profilesNoEraChainsync =
+profilesChainsync :: [Types.Profile]
+profilesChainsync =
   let chainsync =
           P.empty & B.base
         . P.chainsync

@@ -8,6 +8,7 @@ in
 , profilingType ? defaultCustomConfig.profilingType
 , withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
+, eraName ? defaultCustomConfig.localCluster.eraName
 , backendName ? defaultCustomConfig.localCluster.backendName
 , useCabalRun ? true
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
@@ -15,7 +16,7 @@ in
 , customConfig ? {
     inherit profiledBuild profilingType withHoogle;
     localCluster =  {
-      inherit profileName backendName useCabalRun workbenchDevMode workbenchStartArgs;
+      inherit profileName eraName backendName useCabalRun workbenchDevMode workbenchStartArgs;
     };
   }
 , pkgs ? import ./nix customConfig
@@ -24,7 +25,7 @@ with pkgs;
 let
   inherit (pkgs) customConfig;
   inherit (customConfig) withHoogle localCluster;
-  inherit (localCluster) profileName workbenchDevMode workbenchStartArgs;
+  inherit (localCluster) profileName eraName workbenchDevMode workbenchStartArgs;
   inherit (pkgs.haskell-nix) haskellLib;
 
   # An attrset containing the parsed profiling options.
@@ -194,7 +195,7 @@ let
           inherit withHoogle;
           workbench-runner = workbench.runner
             { inherit profiling;
-              inherit profileName backendName;
+              inherit profileName eraName backendName;
               inherit useCabalRun;
               inherit workbenchStartArgs cardano-node-rev;
               inherit (customConfig.localCluster) stateDir basePort batchName;
@@ -202,16 +203,17 @@ let
         };
 
   devops =
-    let profileName = "devops-bage";
+    let profileName = "devops";
+        eraName  = "babbage";
         workbench-runner = workbench.runner
           { inherit profiling;
-            inherit profileName;
+            inherit profileName eraName;
             backendName = "supervisor";
             useCabalRun = false;
             inherit workbenchStartArgs cardano-node-rev;
             inherit (customConfig.localCluster) stateDir basePort batchName;
           };
-        devopsShell = 
+        devopsShell =
           import ./nix/workbench/shell.nix
             { inherit pkgs lib haskellLib project;
               inherit setLocale haveGlibcLocales;

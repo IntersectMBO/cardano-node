@@ -94,8 +94,8 @@ local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
 
-if test -v "WB_BACKEND"
-then backend=$WB_BACKEND
+if test -v "WB_BACKEND_NAME"
+then backend=$WB_BACKEND_NAME
 else backend=
 fi
 

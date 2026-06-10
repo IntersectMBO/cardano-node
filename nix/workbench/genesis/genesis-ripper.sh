@@ -283,8 +283,7 @@ dataset-cache-ensure() {
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
     # Extract dataset parameters from canonical profile fields
-    local era bfts pools delegators dreps stuffed utxo_keys supply_t supply_d magic
-    era=$(jq        --raw-output '.era'                          "$profile_json")
+    local bfts pools delegators dreps stuffed utxo_keys supply_t supply_d magic
     bfts=$(jq       --raw-output '.composition.n_bft_hosts'      "$profile_json")
     pools=$(jq      --raw-output '.composition.n_pools'          "$profile_json")
     delegators=$(jq --raw-output '.derived.delegators_effective' "$profile_json")
@@ -308,7 +307,13 @@ dataset-cache-ensure() {
     # protocol: the same dataset params always produce byte-identical dataset
     # fields regardless of which era / protocol-params the profile uses.
     progress genesis "creating dataset cache: $outdir ($tmpdir)"
-    cardano-cli "$era" genesis create-testnet-data \
+    # Use `cardano-cli latest` rather than workbench's `eraName`:
+    # - The era passed to `cardano-cli genesis create-testnet-data` only selects
+    #   which CLI flavour is invoked and the output is the same.
+    # - The workbench's `eraName` controls which Test<Era>HardForkAtEpoch flags
+    #   the node config sets (see service/nodes.nix), independently from the
+    #   spec generation step here.
+    cardano-cli latest genesis create-testnet-data \
       --out-dir "$tmpdir"                          \
       --spec-shelley "$zero_dir/shelley.json"      \
       --spec-alonzo  "$zero_dir/alonzo.json"       \

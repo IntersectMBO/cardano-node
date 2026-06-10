@@ -60,9 +60,6 @@ genesis-create-jq() {
       genesis conway-stub-spec                    > "$dir/conway-genesis.spec.json"
     fi
 
-    local era
-    era=$(jq --raw-output '.era' "$profile_json")
-
     # TODO if profile_json.composition.dense_pool_density != 1 -> create-testnet-data does not support dense pools
     read -r -a args <<<"$(jq --raw-output '.cli_args.createTestnetDataArgs | join(" ")' "$profile_json")"
     create_testnet_data_args=(
@@ -72,8 +69,14 @@ genesis-create-jq() {
         --out-dir      "$dir"
         "${args[@]}"
     )
-    progress genesis "$(colorise cardano-cli "$era" create-testnet-data "${create_testnet_data_args[@]}")"
-    cardano-cli "$era" genesis create-testnet-data "${create_testnet_data_args[@]}"
+    # Use `cardano-cli latest` rather than workbench's `eraName`:
+    # - The era passed to `cardano-cli genesis create-testnet-data` only selects
+    #   which CLI flavour is invoked and the output is the same.
+    # - The workbench's `eraName` controls which Test<Era>HardForkAtEpoch flags
+    #   the node config sets (see service/nodes.nix), independently from the
+    #   spec generation step here.
+    progress genesis "$(colorise cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}")"
+    cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}"
     info genesis "create-testnet-data genesis available in $dir"
 }
 

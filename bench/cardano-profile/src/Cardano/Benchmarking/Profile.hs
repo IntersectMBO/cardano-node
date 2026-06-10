@@ -3,10 +3,7 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile
-  ( addEras
-  , realize
-  ) where
+module Cardano.Benchmarking.Profile ( realize ) where
 
 --------------------------------------------------------------------------------
 
@@ -19,8 +16,6 @@ import           GHC.Stack (HasCallStack)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
--- Package: containers.
-import qualified Data.Map.Strict as Map
 -- Package: text.
 import qualified Data.Text            as Text
 -- Package: scientific.
@@ -432,7 +427,7 @@ overlay profile =
 -- Fills the "derive" property.
 -- "derive" needs above "shelley", "alonzo" and "conway" properties.
 derive :: Types.Profile -> Types.Profile
-derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
+derive p@(Types.Profile _ _ _ comp gsis _ n gtor _ _ _ ana _ _ _ _) =
   let 
       -- Absolute/epoch durations:
       ----------------------------
@@ -615,7 +610,7 @@ finalize profile =
   in profile''
 
 cliArgs :: Types.Profile -> Types.Profile
-cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
+cliArgs p@(Types.Profile _ _ _ comp gsis _ _ _ _ _ _ _ dved _ _ _) =
   let --toJson = map (\(k,n) -> )
       fmtDecimal i =
            Scientific.formatScientific Scientific.Fixed (Just 0) (fromInteger i / 100000)
@@ -680,32 +675,4 @@ unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
   Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
 -- If not an object prefer the right value.
 unionWithKey _ _ b = b
-
--- Post-processing
---------------------------------------------------------------------------------
-
--- | Specialize profile to all valid eras and add era suffix(es) to profile name.
---   An era is considered valid based on the protocol version a profile might define.
-addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
-addEras = foldMap
-  (\profile -> Map.fromList $
-      catMaybes
-        [ addEra profile Types.Shelley "shey"
-        , addEra profile Types.Allegra "alra"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-
-addEra :: Types.Profile -> Types.Era -> String -> Maybe (String, Types.Profile)
-addEra p era suffix
-  | Just (major, _) <- Types.profileProtocolVersion p
-  , era < Types.firstEraForMajorVersion major
-    = Nothing
-  | otherwise
-    = let name = Types.name p
-          newName = name ++ "-" ++ suffix
-      in Just (newName, p {Types.name = newName, Types.era = era})
 
