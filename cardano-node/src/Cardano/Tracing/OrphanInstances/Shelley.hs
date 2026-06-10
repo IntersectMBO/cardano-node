@@ -115,6 +115,11 @@ instance
   ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
   , ToJSON (ApplyTxError ledgerera) -- provided by cardano-api
   ) => ToObject (ApplyTxError ledgerera) where
+  toObject _verb err =
+    mconcat
+      [ "kind"   .= String "ApplyTxError"
+      , "reason" .= toJSON err
+      ]
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =

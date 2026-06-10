@@ -1571,13 +1571,11 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk)
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
   toObject verb (TraceMempoolRejectedTx tx txApplyErr details mpSz) =
-    mconcat $
+    mconcat
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
-      ] <>
-      if verb /= MaximalVerbosity then [] else
-      [ "err" .= toObject verb txApplyErr
+      , "err" .= toObject verb txApplyErr
       , "errdetails" .= jsonMempoolRejectionDetails details
       ]
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
