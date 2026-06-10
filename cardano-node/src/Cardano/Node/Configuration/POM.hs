@@ -48,7 +48,7 @@ import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigF
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
-                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs)
+                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
 import           Ouroboros.Consensus.Util.Args (OverrideOrDefault (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
@@ -67,6 +67,7 @@ import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
@@ -547,8 +548,16 @@ instance FromJSON PartialNodeConfiguration where
 
              mSnapshotsVal <- o .:? "Snapshots"
              spArgs <- case mSnapshotsVal of
+               -- A named snapshot policy selects a predefined set of snapshot
+               -- policy arguments as a whole.
+               Just (String name) -> case name of
+                 "Mithril" -> pure mithrilSnapshotPolicyArgs
+                 _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
+                          <> ". Expected \"Mithril\" or an object with snapshot options."
+               -- the modern case of the snapshot policy specified under the "Snapshots" key
+               Just sv -> withObject "Snapshots" parseSnapshotOpts sv
+               -- the legacy case of the snapshot policy specified at the top-level
                Nothing -> parseSnapshotOpts o
-               Just sv -> flip (withObject "Snapshots") sv parseSnapshotOpts
 
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
