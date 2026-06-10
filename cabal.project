@@ -46,7 +46,6 @@ packages:
   bench/locli
   bench/plutus-scripts-bench
   bench/tx-generator
-  bench/cardano-recon-framework
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-resources

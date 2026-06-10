@@ -168,7 +168,6 @@ let
             # Tests broken under Wine: System.IO.Temp file operations fail
             packages.cardano-profile.components.tests.cardano-profile-test.buildable = lib.mkForce false;
             packages.cardano-topology.components.tests.cardano-topology-test.buildable = lib.mkForce false;
-            packages.cardano-recon-framework.components.tests.cardano-recon-integration-test.buildable = lib.mkForce false;
             packages.trace-schema-gen.components.tests.trace-schema-gen-test.buildable = lib.mkForce false;
           })
           ({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.4" >= 0) {
