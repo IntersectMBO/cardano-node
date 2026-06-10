@@ -471,13 +471,13 @@ profilesRaw =
   ++ profilesScalingLocal
   ++ profilesScalingCloud
 
--- Check all builtin profiles (no overlay) with "data/all-profiles-coay.json".
+-- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
 testGroupMap :: Tasty.TestTree
 testGroupMap = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (Without overlay)"
   [ testCase "Profiles (Builtin)" $ do
-      fp <- Paths.getDataFileName "data/all-profiles-coay.json"
+      fp <- Paths.getDataFileName "data/all-profiles.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
