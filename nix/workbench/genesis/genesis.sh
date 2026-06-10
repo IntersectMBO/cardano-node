@@ -34,12 +34,6 @@ set -euo pipefail
 
 local op=${1:-$(usage_genesis)}; shift
 
-if   [[ $WB_GENESIS_RIPPER -eq 1 ]]; then
-    info genesis "$(red using ripper backend)"
-elif [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
-    info genesis "$(red using modular configuration)"
-fi
-
 case "$op" in
 
     # Called by: run.sh (line 433)
