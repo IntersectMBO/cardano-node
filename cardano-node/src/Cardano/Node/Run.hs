@@ -456,7 +456,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
 
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite leiosDbPath
+    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite nullTracer leiosDbPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
