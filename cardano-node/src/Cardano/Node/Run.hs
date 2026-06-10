@@ -183,6 +183,7 @@ import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
 import           LeiosDemoDb (newLeiosDBInMemory, newLeiosDBSQLite)
+import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -456,7 +457,10 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
 
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosDbPath -> newLeiosDBSQLite nullTracer leiosDbPath
+    LeiosDbSQLite leiosDbPath ->
+      newLeiosDBSQLite
+        (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
+        leiosDbPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)

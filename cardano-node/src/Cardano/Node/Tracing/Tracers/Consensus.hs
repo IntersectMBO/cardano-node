@@ -2386,6 +2386,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor _ = Namespace [] ["TraceLeiosKernel"]
 
   severityFor _ (Just TraceLeiosDbException{}) = Just Error
+  severityFor _ (Just TraceLeiosDb{}) = Just Warning
   severityFor _ _ = Just Debug
 
   documentFor _ = Nothing
