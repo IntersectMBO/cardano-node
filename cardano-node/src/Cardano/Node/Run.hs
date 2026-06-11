@@ -86,7 +86,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Args as LDBArgs
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Forker
 import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -400,7 +399,6 @@ handlePeersListSimple tr nodeKern = forever $ do
 handleSimpleNode
   :: forall blk .
     ( Api.Protocol IO blk
-    , Ouroboros.Consensus.Storage.LedgerDB.Forker.ResolveLeiosBlock blk
     )
   => Api.BlockType blk
   -> Api.ProtocolInfoArgs blk
