@@ -91,7 +91,7 @@ LedgerDB:
   # Instead of an object with individual options, a predefined snapshot
   # policy can be selected by name, e.g. `Snapshots: Mithril`.
   Snapshots:
-    # The time interval between snapshots, in seconds.
+    # The time interval between snapshots, in slots.
     SnapshotInterval: 4320
 
     # The number of disk snapshots to keep.

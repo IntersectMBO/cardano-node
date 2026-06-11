@@ -488,16 +488,13 @@ instance FromJSON PartialNodeConfiguration where
               Nothing -> return Nothing
 
       parseLedgerDbConfig v = do
-        -- TODO maybe don't silently convert old format (which was in seconds)
-        -- to new format (which is in slots), despite these being the same on
-        -- mainnet?
-        let snapInterval x = do
+        let snapIntervalSlots x = do
               si <- x .:? "SnapshotInterval"
               when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
               pure $ Override . SlotNo <$> si
             snapNum x      = fmap (Override . NumOfDiskSnapshots) <$> x .:? "NumOfDiskSnapshots"
 
-        mTopLevelSnapInterval <- snapInterval v
+        mTopLevelSnapInterval <- snapIntervalSlots v
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
@@ -523,7 +520,7 @@ instance FromJSON PartialNodeConfiguration where
              -- Parse snapshot options from the "Snapshots" sub-object if present,
              -- otherwise fall back to the LedgerDB object for backward compatibility.
              let parseSnapshotOpts s = do
-                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= UseDefault
+                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapIntervalSlots s) .!= UseDefault
                    sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= UseDefault
                    sOffset    <- (fmap Override <$> s .:? "SlotOffset") .!= UseDefault
                    sRateLimit <- (fmap (Override . secondsToDiffTime) <$> s .:? "RateLimit") .!= UseDefault

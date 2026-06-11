@@ -1796,13 +1796,13 @@ instance ( StandardHash blk
             , "snapshot" .= forMachine dtals snap
             , "failure" .= show failure ]
   forMachine _dtals (LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots) =
-    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestDelayed"
+    mconcat [ "kind" .= String "SnapshotRequestDelayed"
              , "requestTime" .= show snapshotRequestTime
-             , "delayBeforeSnapshotting " .= show delayBeforeSnapshotting
-             , "slots" .= show slots
+             , "delayBeforeSnapshotting" .= show delayBeforeSnapshotting
+             , "slots" .= toJSON (NonEmpty.toList slots)
              ]
-  forMachine _dtals (LedgerDB.SnapshotRequestCompleted) =
-    mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.SnapshotRequestCompleted"
+  forMachine _dtals LedgerDB.SnapshotRequestCompleted =
+    mconcat [ "kind" .= String "SnapshotRequestCompleted"
              ]
 
 
@@ -1816,6 +1816,8 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
+    severityFor  (Namespace _ ["SnapshotRequestDelayed"]) _ = Just Debug
+    severityFor  (Namespace _ ["SnapshotRequestCompleted"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
@@ -1840,6 +1842,8 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
+      , Namespace [] ["SnapshotRequestDelayed"]
+      , Namespace [] ["SnapshotRequestCompleted"]
       ]
 
 --------------------------------------------------------------------------------
