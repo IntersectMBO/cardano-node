@@ -97,15 +97,15 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a2583031a084da87400df4e1d21447f1aa776f93
-  --sha256: sha256-F7nwMJlTz2RHkyzJ06FLaGhhrckVect5AJNWAPtia9Y=
+  tag: 2999407aff0a9de40e6faf4ac3ba666fcbd94e4d
+  --sha256: sha256-8i7y/0SzH+Zb/CUcij05C4IpNSR/1EUqAzRRQtnmwz0=
 
 -- Points to cardano-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: c47305fcf47bd77437b837d0dfb9cb4181bfbc77
-  --sha256: 1db2xc2gs44g5035srqzgqkbv3a2yacmvnwchd1jnjrfkibnxnak
+  tag: 4bf2edca4ccbf18d4e2574b1544a2cf7ffc992eb
+  --sha256: sha256-rFFN26bjo0Wji9htl5Bj5Et7m3FsREv72vdP91fo8+o=
   subdir:
     libs/cardano-ledger-core
     eras/dijkstra/impl
@@ -115,7 +115,7 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
   tag: ff3e39af5aa51d4d89c23c72d67716fd9bfcc516
-  --sha256: 00havv7igm3pjkw954mmz2s8wh4ki6pk9d2rnn1srx135xb3zp0a
+  --sha256: sha256-Ctw/Vi8j9KyDtVm0NK+Jk0COtPi1kpL4lHfUF8/eCgI=
   subdir:
     ouroboros-network
     cardano-diffusion
