@@ -120,6 +120,7 @@ This is a **functional submission transport, not a benchmarking one**:
 
 - Transactions are submitted strictly one per round trip, so throughput is bounded by the latency to the endpoint; `tps` pacing and `targetNodes` are not used.
 - No benchmark metrics or submission summary are produced; per-transaction rejections (including the failure detail reported by Ogmios) and a final sent/failed count go to the trace output.
+- Rejected transactions make the run fail: setup phases (genesis import, splitting) abort at the first rejection, and the final phase exits non-zero if any transaction was rejected. Exit codes can be trusted in scripts.
 - Because no real benchmark runs, the config compiler requires `debugMode: true` alongside `ogmiosUrl` and rejects the config otherwise.
 
 Note that the **local node socket and config file are still required**: protocol-parameter and era queries as well as protocol startup keep using the local node; only transaction submission goes through Ogmios.

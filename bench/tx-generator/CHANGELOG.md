@@ -2,8 +2,8 @@
 
 ## 2.17 -- Jun 2026
 
-* New `Ogmios` submit mode, selected by the optional `ogmiosUrl` config key: when set, all transaction submission (genesis fund import, UTxO splitting, and the benchmarking phase) goes through an Ogmios WebSocket endpoint as JSON-RPC 2.0 `submitTransaction` calls instead of the local socket / Node-to-Node protocols. This is a functional submission transport without TPS pacing or benchmark metrics, so the high-level config compiler only accepts `ogmiosUrl` together with `debugMode: true`.
-* Fix: Scripts that never start the node-to-node benchmark machinery (such as `debugMode: true` runs and low-level `json` scripts without a `Benchmark` submit phase) now exit cleanly instead of crashing at shutdown with "AsyncBenchmarkControl absent".
+* New `Ogmios` submit mode, selected by the optional `ogmiosUrl` config key: when set, all transaction submission (genesis fund import, UTxO splitting, and the benchmarking phase) goes through an Ogmios WebSocket endpoint as JSON-RPC 2.0 `submitTransaction` calls instead of the local socket / Node-to-Node protocols. This is a functional submission transport without TPS pacing or benchmark metrics, so the high-level config compiler only accepts `ogmiosUrl` together with `debugMode: true`. Rejected transaction submitted through Ogmios are traced through the regular tracing pipeline, including the failure detail reported by Ogmios, and make the run fail: setup phases abort at the first rejected transaction, and the benchmarking phase exits non-zero if any transaction was rejected.
+* Scripts that never start the node-to-node benchmark machinery (such as `debugMode: true` runs and low-level `json` scripts without a `Benchmark` submit phase) now exit cleanly instead of crashing at shutdown with "AsyncBenchmarkControl absent".
 
 ## 2.16 -- Apr 2026
 

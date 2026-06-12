@@ -25,9 +25,18 @@ else still talks to the local node directly: protocol-parameter and era
 queries as well as protocol startup use the node socket and config
 file, so tx-generator keeps requiring local node access even when
 submitting through a remote endpoint.
+
+Rejected transactions make the run fail. Streams of chained setup
+transactions (genesis import, splitting) abort at the first rejection —
+everything after it would be doomed anyway — while the benchmarking
+phase's stream of independent transactions is submitted to the end and
+the action fails afterwards if anything was rejected. Either way the
+process exits non-zero, so exit codes can be trusted in scripts.
 -}
 module Cardano.Benchmarking.Script.Ogmios
   ( OgmiosResult (..)
+  , OnRejection (..)
+  , onRejectionFor
   , parseOgmiosResponse
   , parseOgmiosUrl
   , submitAllOgmios
@@ -38,6 +47,7 @@ import           Cardano.Api (IsShelleyBasedEra, Tx, serialiseToCBOR)
 import           Cardano.Benchmarking.LogTypes (BenchTracers (..), TraceBenchTxSubmit (..))
 import           Cardano.Benchmarking.Script.Env (ActionM, getBenchTracers, liftTxGenError,
                    traceDebug)
+import           Cardano.Benchmarking.Script.Types (Generator (..))
 import           Cardano.Benchmarking.Wallet (TxStream)
 import           Cardano.Logging (traceWith)
 import           Cardano.TxGenerator.Types (TxGenError (..))
@@ -71,9 +81,29 @@ defaultOgmiosPort = 1337
 responseTimeout :: Int
 responseTimeout = 90_000_000
 
+-- | How to proceed when Ogmios rejects a transaction.
+data OnRejection
+  = AbortOnRejection    -- ^ stop the stream at the first rejection
+  | ContinueOnRejection -- ^ submit the whole stream, then fail if anything was rejected
+  deriving (Eq, Show)
+
+-- | Setup-phase generators (genesis import, splitting) emit chains of
+-- interdependent transactions: once one is rejected, everything after it
+-- is doomed, so abort right away. The benchmarking phase's 'NtoM' stream
+-- consists of mutually independent transactions, so submit it to the end
+-- and let the final tally decide.
+onRejectionFor :: Generator -> OnRejection
+onRejectionFor generator = case generator of
+  NtoM {}        -> ContinueOnRejection
+  Take _ g       -> onRejectionFor g
+  Cycle g        -> onRejectionFor g
+  Sequence gs
+    | any ((ContinueOnRejection ==) . onRejectionFor) gs -> ContinueOnRejection
+  _              -> AbortOnRejection
+
 submitAllOgmios :: forall era. IsShelleyBasedEra era
-  => String -> TxStream IO era -> ActionM ()
-submitAllOgmios url txStream =
+  => OnRejection -> String -> TxStream IO era -> ActionM ()
+submitAllOgmios onRejection url txStream =
   case parseOgmiosUrl url of
     Left err -> liftTxGenError $ TxGenError err
     Right (host, port, path) -> do
@@ -93,7 +123,7 @@ submitAllOgmios url txStream =
               ]
       traceDebug $ "Ogmios: connecting to " ++ url
       result <- liftIO $
-        WS.runClient host port path (\conn -> submitLoop traceSubmitFail conn txStream 0 0 0)
+        WS.runClient host port path (\conn -> submitLoop onRejection traceSubmitFail conn txStream 0 0 0)
           `catches`
             [ Handler $ \(e :: WS.HandshakeException)  -> connectionFailure e
             , Handler $ \(e :: WS.ConnectionException) -> connectionFailure e
@@ -101,16 +131,22 @@ submitAllOgmios url txStream =
             ]
       case result of
         Left err -> liftTxGenError err
-        Right (sent, failed) ->
+        Right (sent, failed) -> do
           traceDebug $ "Ogmios: done, " ++ show sent ++ " sent, " ++ show failed ++ " failed"
+          -- a rejected transaction is a functional failure; report it as
+          -- such so the run's exit code can be trusted
+          when (failed > 0) $ liftTxGenError $ TxGenError $
+            "Ogmios: " ++ show failed ++ " of " ++ show (sent + failed)
+              ++ " transactions were rejected"
  where
   connectionFailure :: Show e => e -> IO (Either TxGenError (Int, Int))
   connectionFailure e = return $ Left $ TxGenError $ "Ogmios connection failure: " ++ show e
 
 submitLoop :: IsShelleyBasedEra era
-  => (Int -> Text -> Value -> IO ())
+  => OnRejection
+  -> (Int -> Text -> Value -> IO ())
   -> WS.Connection -> TxStream IO era -> Int -> Int -> Int -> IO (Either TxGenError (Int, Int))
-submitLoop traceSubmitFail conn stream reqId sent failed = do
+submitLoop onRejection traceSubmitFail conn stream reqId sent failed = do
   step <- Streaming.inspect stream
   case step of
     Left () -> return $ Right (sent, failed)
@@ -133,9 +169,14 @@ submitLoop traceSubmitFail conn stream reqId sent failed = do
                   ++ ", got " ++ show respId ++ " (" ++ describe result ++ ")"
             | OgmiosError code errMsg errData <- result -> do
                 traceSubmitFail code errMsg errData
-                submitLoop traceSubmitFail conn rest (reqId + 1) sent (failed + 1)
+                case onRejection of
+                  AbortOnRejection -> return $ Left $ TxGenError $
+                    "Ogmios: transaction rejected: " ++ Text.unpack errMsg
+                      ++ " (code " ++ show code ++ ")"
+                  ContinueOnRejection ->
+                    submitLoop onRejection traceSubmitFail conn rest (reqId + 1) sent (failed + 1)
             | otherwise ->
-                submitLoop traceSubmitFail conn rest (reqId + 1) (sent + 1) failed
+                submitLoop onRejection traceSubmitFail conn rest (reqId + 1) (sent + 1) failed
  where
   describe (OgmiosSuccess txId)  = "success, tx " ++ Text.unpack txId
   describe (OgmiosError _ msg _) = "error: " ++ Text.unpack msg

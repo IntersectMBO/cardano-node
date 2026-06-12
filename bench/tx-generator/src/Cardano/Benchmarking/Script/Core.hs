@@ -245,7 +245,7 @@ submitInEra submitMode generator txParams era = do
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
-    Ogmios url -> Ogmios.submitAllOgmios url txStream
+    Ogmios url -> Ogmios.submitAllOgmios (Ogmios.onRejectionFor generator) url txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
