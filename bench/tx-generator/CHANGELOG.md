@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 2.17 -- Jun 2026
+
+* New `Ogmios` submit mode, selected by the optional `ogmiosUrl` config key: when set, all transaction submission (genesis fund import, UTxO splitting, and the benchmarking phase) goes through an Ogmios WebSocket endpoint as JSON-RPC 2.0 `submitTransaction` calls instead of the local socket / Node-to-Node protocols. This is a functional submission transport without TPS pacing or benchmark metrics, so the high-level config compiler only accepts `ogmiosUrl` together with `debugMode: true`.
+* Fix: Scripts that never start the node-to-node benchmark machinery (such as `debugMode: true` runs and low-level `json` scripts without a `Benchmark` submit phase) now exit cleanly instead of crashing at shutdown with "AsyncBenchmarkControl absent".
+
 ## 2.16 -- Apr 2026
 
 * Added a `--testnet-config-dir` flag to `tx-generator json_highlevel` that auto-discovers connection settings config (socket path, signing key, node config, target nodes) from a `cardano-testnet` output directory.

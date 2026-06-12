@@ -58,6 +58,7 @@ cabal run tx-generator -- json_highlevel config.json \
 | `targetNodes`         | List of nodes to submit transactions to (Node-to-Node protocol) | Yes      |
 | `nodeConfigFile`      | Path to node configuration file                                 | Yes      |
 | `sigKey`              | Path to signing key with sufficient funds (genesis key)         | Yes      |
+| `ogmiosUrl`           | Optional ogmios endpoint (`ws://host:port`) for tx submission   | No       |
 
 ### Transaction Settings
 
@@ -110,6 +111,18 @@ The high-level JSON configuration is automatically compiled into a multi-phase s
 - Reports final submission statistics
 
 **Important**: All phases use the **local node socket** for setup (phases 1-3), and only phase 4 connects to **target nodes** via Node-to-Node protocol for actual benchmarking.
+
+### Submitting through Ogmios
+
+Setting `ogmiosUrl` (e.g. `"ogmiosUrl": "ws://127.0.0.1:1337"`) reroutes the submission of **every** phase — genesis fund import, UTxO splitting, and the final phase — through that [Ogmios](https://ogmios.dev) endpoint, as JSON-RPC 2.0 `submitTransaction` calls over a WebSocket (only plain `ws://` is supported).
+
+This is a **functional submission transport, not a benchmarking one**:
+
+- Transactions are submitted strictly one per round trip, so throughput is bounded by the latency to the endpoint; `tps` pacing and `targetNodes` are not used.
+- No benchmark metrics or submission summary are produced; per-transaction rejections (including the failure detail reported by Ogmios) and a final sent/failed count go to the trace output.
+- Because no real benchmark runs, the config compiler requires `debugMode: true` alongside `ogmiosUrl` and rejects the config otherwise.
+
+Note that the **local node socket and config file are still required**: protocol-parameter and era queries as well as protocol startup keep using the local node; only transaction submission goes through Ogmios.
 
 ## Low-Level JSON Script (Advanced)
 

@@ -11,6 +11,20 @@ submits strictly one transaction per round trip over a single WebSocket
 connection, ignores any TPS pacing, and reports no submission metrics
 beyond a sent/failed count traced at debug level. The high-level config
 compiler therefore only selects it together with @debugMode: true@.
+
+Throughput is bounded by the round-trip time to the endpoint, since at
+most one request is in flight at a time. Ogmios itself supports
+pipelining many requests per connection, correlated by the JSON-RPC
+@id@ — a paced sender/receiver pair with an in-flight window is the
+natural next step should this transport ever need to carry
+benchmark-grade load. Until then, do not draw throughput conclusions
+from runs submitted this way.
+
+Note that only transaction submission goes through Ogmios. Everything
+else still talks to the local node directly: protocol-parameter and era
+queries as well as protocol startup use the node socket and config
+file, so tx-generator keeps requiring local node access even when
+submitting through a remote endpoint.
 -}
 module Cardano.Benchmarking.Script.Ogmios
   ( OgmiosResult (..)
@@ -21,8 +35,11 @@ module Cardano.Benchmarking.Script.Ogmios
 
 import           Cardano.Api (IsShelleyBasedEra, Tx, serialiseToCBOR)
 
-import           Cardano.Benchmarking.Script.Env (ActionM, liftTxGenError, traceDebug)
+import           Cardano.Benchmarking.LogTypes (BenchTracers (..), TraceBenchTxSubmit (..))
+import           Cardano.Benchmarking.Script.Env (ActionM, getBenchTracers, liftTxGenError,
+                   traceDebug)
 import           Cardano.Benchmarking.Wallet (TxStream)
+import           Cardano.Logging (traceWith)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Prelude
@@ -60,9 +77,23 @@ submitAllOgmios url txStream =
   case parseOgmiosUrl url of
     Left err -> liftTxGenError $ TxGenError err
     Right (host, port, path) -> do
+      tracers <- getBenchTracers
+      -- per-transaction rejections must reach the trace stream like every
+      -- other submission event, not stdout; the loop itself runs in plain
+      -- IO under the WebSocket client, so hand it a prebuilt trace action
+      let traceSubmitFail :: Int -> Text -> Value -> IO ()
+          traceSubmitFail code msg errData =
+            traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubError $ Text.concat
+              [ "Ogmios submit failed: ", msg
+              , " (code ", Text.pack (show code), ")"
+              , case errData of
+                  Null -> ""
+                  dat  -> ", details: "
+                            <> Text.decodeUtf8 (LBS.toStrict (Aeson.encode dat))
+              ]
       traceDebug $ "Ogmios: connecting to " ++ url
       result <- liftIO $
-        WS.runClient host port path (\conn -> submitLoop conn txStream 0 0 0)
+        WS.runClient host port path (\conn -> submitLoop traceSubmitFail conn txStream 0 0 0)
           `catches`
             [ Handler $ \(e :: WS.HandshakeException)  -> connectionFailure e
             , Handler $ \(e :: WS.ConnectionException) -> connectionFailure e
@@ -77,8 +108,9 @@ submitAllOgmios url txStream =
   connectionFailure e = return $ Left $ TxGenError $ "Ogmios connection failure: " ++ show e
 
 submitLoop :: IsShelleyBasedEra era
-  => WS.Connection -> TxStream IO era -> Int -> Int -> Int -> IO (Either TxGenError (Int, Int))
-submitLoop conn stream reqId sent failed = do
+  => (Int -> Text -> Value -> IO ())
+  -> WS.Connection -> TxStream IO era -> Int -> Int -> Int -> IO (Either TxGenError (Int, Int))
+submitLoop traceSubmitFail conn stream reqId sent failed = do
   step <- Streaming.inspect stream
   case step of
     Left () -> return $ Right (sent, failed)
@@ -99,11 +131,11 @@ submitLoop conn stream reqId sent failed = do
             | respId /= Just reqId -> return $ Left $ TxGenError $
                 "Ogmios: response id mismatch: expected " ++ show reqId
                   ++ ", got " ++ show respId ++ " (" ++ describe result ++ ")"
-            | OgmiosError _code errMsg _errData <- result -> do
-                putStrLn $ "Ogmios submit failed: " ++ Text.unpack errMsg
-                submitLoop conn rest (reqId + 1) sent (failed + 1)
+            | OgmiosError code errMsg errData <- result -> do
+                traceSubmitFail code errMsg errData
+                submitLoop traceSubmitFail conn rest (reqId + 1) sent (failed + 1)
             | otherwise ->
-                submitLoop conn rest (reqId + 1) (sent + 1) failed
+                submitLoop traceSubmitFail conn rest (reqId + 1) (sent + 1) failed
  where
   describe (OgmiosSuccess txId)  = "success, tx " ++ Text.unpack txId
   describe (OgmiosError _ msg _) = "error: " ++ Text.unpack msg
