@@ -173,6 +173,25 @@ must similarly be directed to a writable mount, for example:
 ```
 
 
+## Non-Root User
+The image can run as any non-root user (`docker run --user <uid>` /
+Kubernetes `securityContext.runAsUser`). None of the entrypoint or
+`run-node` startup logic touches image-content directories at runtime;
+all generated artifacts live under `/tmp`.
+
+The mount-point directories (`/data`, `/ipc`, `/logs`) are owned by
+GID 0 and group-writable in the image, so non-root containers can write
+to freshly-created Docker or Kubernetes volumes mounted at those paths
+without an init container or pre-chown. To inherit the group-writable
+perm, the non-root user needs to run with primary group 0 (the Kubernetes
+default for `runAsUser`) or with supplementary group 0. In Kubernetes
+you can also set `securityContext.fsGroup: 0` to have the kubelet chown
+the volume on mount. For Docker, `--user <uid>:0` is the equivalent.
+
+The image defaults to running as root; specify a UID explicitly
+to opt into a non-root run.
+
+
 ## Cardano-node Socket Sharing
 To share a cardano-node socket with a different container, a volume can be made
 for establishing cross-container communication:
