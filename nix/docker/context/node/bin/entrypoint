@@ -3,6 +3,15 @@ set -euo pipefail
 
 [[ -n ${DEBUG:-} ]] && set -x
 
+# The image writes a resolved-config env snapshot and any merge-mode
+# artifacts to /tmp. Catch the common operator mistake of running
+# with a read-only filesystem without mounting a writable /tmp.
+if ! [[ -w /tmp ]]; then
+  echo "ERROR: /tmp is not writable." >&2
+  echo "With a read-only filesystem, mount a tmpfs or emptyDir at /tmp." >&2
+  exit 1
+fi
+
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
 if [[ -n ${NETWORK:-} ]]; then
@@ -30,24 +39,44 @@ if [[ -n ${NETWORK:-} ]]; then
     # full replacement and null values persist.
     #
     # jq -S sorts output keys alphabetically for deterministic diffs.
+    #
+    # Merged files are written to /tmp so that the image can run as a
+    # non-root user ($CFG is image content and only writable by root)
+    # and under read-only root filesystems.
+    # Relative file references are rewritten to absolute paths
+    # anchored at $CFG/$NETWORK/ so they resolve from the new location.
     if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
       jq -S \
+        --arg cfgDir "$CFG/$NETWORK" \
         --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
-        '. * $deepMerge' \
+        '. * $deepMerge
+         | with_entries(
+             if ((.key | test("GenesisFile$|^CheckpointsFile$"))
+                 and (.value | type == "string")
+                 and (.value | startswith("/") | not))
+             then .value = "\($cfgDir)/\(.value)"
+             else .
+             end
+           )' \
         < "$CFG/$NETWORK/config.json" \
-        > "$CFG/$NETWORK/config-merged.json"
-      export CARDANO_CONFIG="$CFG/$NETWORK/config-merged.json"
+        > /tmp/cardano-config-merged.json
+      export CARDANO_CONFIG=/tmp/cardano-config-merged.json
     else
       export CARDANO_CONFIG="$CFG/$NETWORK/config.json"
     fi
 
     if [[ -n ${CARDANO_TOPOLOGY_JSON_MERGE:-} ]]; then
       jq -S \
+        --arg cfgDir "$CFG/$NETWORK" \
         --argjson deepMerge "$CARDANO_TOPOLOGY_JSON_MERGE" \
-        '. * $deepMerge' \
+        '. * $deepMerge
+         | if (.peerSnapshotFile? | type) == "string" and (.peerSnapshotFile | startswith("/") | not)
+           then .peerSnapshotFile = "\($cfgDir)/\(.peerSnapshotFile)"
+           else .
+           end' \
         < "$CFG/$NETWORK/topology.json" \
-        > "$CFG/$NETWORK/topology-merged.json"
-      export CARDANO_TOPOLOGY="$CFG/$NETWORK/topology-merged.json"
+        > /tmp/cardano-topology-merged.json
+      export CARDANO_TOPOLOGY=/tmp/cardano-topology-merged.json
     else
       export CARDANO_TOPOLOGY="$CFG/$NETWORK/topology.json"
     fi

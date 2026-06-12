@@ -3,6 +3,15 @@ set -euo pipefail
 
 [[ -n ${DEBUG:-} ]] && set -x
 
+# The image writes a resolved-config env snapshot and any merge-mode
+# artifacts to /tmp. Catch the common operator mistake of running
+# with a read-only filesystem without mounting a writable /tmp.
+if ! [[ -w /tmp ]]; then
+  echo "ERROR: /tmp is not writable." >&2
+  echo "With a read-only filesystem, mount a tmpfs or emptyDir at /tmp." >&2
+  exit 1
+fi
+
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
 if [[ -n ${NETWORK:-} ]]; then
@@ -30,13 +39,19 @@ if [[ -n ${NETWORK:-} ]]; then
     # full replacement and null values persist.
     #
     # jq -S sorts output keys alphabetically for deterministic diffs.
+    #
+    # Merged files are written to /tmp so that the image can run as a
+    # non-root user ($CFG is image content and only writable by root)
+    # and under read-only root filesystems.
+    # The base tracer config has no relative file
+    # references, so no path rewriting is needed.
     if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
       jq -S \
         --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
         '. * $deepMerge' \
         < "$CFG/$NETWORK/tracer-config.json" \
-        > "$CFG/$NETWORK/tracer-config-merged.json"
-      export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config-merged.json"
+        > /tmp/cardano-tracer-config-merged.json
+      export CARDANO_CONFIG=/tmp/cardano-tracer-config-merged.json
     else
       export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config.json"
     fi
