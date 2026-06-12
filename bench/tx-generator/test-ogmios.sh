@@ -12,9 +12,17 @@
 #
 set -euo pipefail
 
-OGMIOS_FLAKE="${1:-github:IntersectMBO/ogmios/jmiller/dijkstra-integration}"
+OGMIOS_FLAKE="${1:-github:IntersectMBO/ogmios/master}"
 TESTNET_MAGIC=42
 OGMIOS_PORT=11337
+
+# --- Check host prerequisites ---
+for cmd in nix jq nc; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "ERROR: required command not found: $cmd"
+        exit 1
+    fi
+done
 
 # --- Resolve binaries from the ogmios flake ---
 echo "=== Resolving nix packages ==="
@@ -34,8 +42,9 @@ CARDANO_CLI=$(nix build "${CN_FLAKE}#cardano-cli" --no-link --print-out-paths)/b
 CARDANO_TESTNET=$(nix build "${CN_FLAKE}#cardano-testnet" --no-link --print-out-paths)/bin/cardano-testnet
 
 # tx-generator: locally-built (resolve to absolute path)
+# -perm -u+x is understood by both GNU and BSD find
 TX_GENERATOR=$(cabal list-bin tx-generator 2>/dev/null \
-  || find "$(pwd)/dist-newstyle" -name tx-generator -type f -perm +111 | head -1)
+  || find "$(pwd)/dist-newstyle" -name tx-generator -type f -perm -u+x | head -1)
 
 for bin in OGMIOS CARDANO_TESTNET CARDANO_NODE CARDANO_CLI TX_GENERATOR; do
     path="${!bin}"
@@ -56,6 +65,7 @@ echo ""
 echo "=== Ogmios tx-generator integration test ==="
 echo "Work directory: $WORKDIR"
 
+# shellcheck disable=SC2329  # invoked via the EXIT trap only
 cleanup() {
     echo ""
     echo "=== Cleaning up ==="
@@ -141,6 +151,9 @@ if [ -z "$SIG_KEY" ]; then
 fi
 
 CONFIG_FILE="$WORKDIR/tx-generator-config.json"
+# debugMode is mandatory alongside ogmiosUrl: the Ogmios submit mode is a
+# functional transport without pacing or metrics, and the config compiler
+# rejects it for benchmark (non-debug) runs.
 cat > "$CONFIG_FILE" << EOF
 {
   "tx_count": 10,
@@ -160,7 +173,23 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
-BENCH_ADDR="addr_test1vz4qz2ayucp7xvnthrx93uhha7e04gvxttpnuq4e6mx2n5gzfw23z"
+# The benchmarking phase pays to the compiler's hardcoded "BenchmarkingDone"
+# key; derive its address instead of hardcoding it. The cborHex must match
+# keyBenchmarkDone in src/Cardano/Benchmarking/Compiler.hs.
+# (addr_test1vz4qz2ayucp7xvnthrx93uhha7e04gvxttpnuq4e6mx2n5gzfw23z @ magic 42)
+cat > "$WORKDIR/benchmark-done.skey" << EOF
+{
+    "type": "PaymentSigningKeyShelley_ed25519",
+    "description": "",
+    "cborHex": "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
+}
+EOF
+"$CARDANO_CLI" key verification-key \
+  --signing-key-file "$WORKDIR/benchmark-done.skey" \
+  --verification-key-file "$WORKDIR/benchmark-done.vkey"
+BENCH_ADDR=$("$CARDANO_CLI" address build \
+  --payment-verification-key-file "$WORKDIR/benchmark-done.vkey" \
+  --testnet-magic "$TESTNET_MAGIC")
 
 query_utxo_count() {
     "$CARDANO_CLI" query utxo \
@@ -179,10 +208,15 @@ echo "  $BEFORE UTxOs at $BENCH_ADDR"
 # --- 7. Run tx-generator via Ogmios ---
 echo ""
 echo "--- Running tx-generator with Ogmios submission ---"
-( cd "$WORKDIR" && "$TX_GENERATOR" json_highlevel "$CONFIG_FILE" \
+# the if/else keeps a failure from tripping `set -e` before the log tails
+# and the exit-code report below get a chance to run
+if ( cd "$WORKDIR" && "$TX_GENERATOR" json_highlevel "$CONFIG_FILE" \
   --testnet-config-dir "$TESTNET_DIR" \
-  > "$LOGS_DIR/tx-generator.stdout" 2> "$LOGS_DIR/tx-generator.stderr" )
-TX_EXIT=$?
+  > "$LOGS_DIR/tx-generator.stdout" 2> "$LOGS_DIR/tx-generator.stderr" ); then
+    TX_EXIT=0
+else
+    TX_EXIT=$?
+fi
 
 echo ""
 echo "--- tx-generator stdout (last 30 lines) ---"
@@ -200,7 +234,8 @@ fi
 # --- 8. Wait for txs to land in blocks, then count UTxOs ---
 echo ""
 echo "--- Waiting for transactions to be included in blocks ---"
-for i in $(seq 1 30); do
+AFTER="$BEFORE"
+for i in $(seq 1 60); do
     AFTER=$(query_utxo_count)
     echo "  [$i] $AFTER UTxOs at benchmark address"
     if [ "$AFTER" -gt "$BEFORE" ]; then
@@ -218,4 +253,14 @@ echo "  UTxOs before: $BEFORE"
 echo "  UTxOs after:  $AFTER"
 echo "  New UTxOs:    $((AFTER - BEFORE))"
 
-exit "$TX_EXIT"
+# submissions were all accepted (or we exited above), so new UTxOs must
+# have appeared by now for the run to count as a pass
+if [ "$AFTER" -le "$BEFORE" ]; then
+    echo ""
+    echo "=== FAILED: no new UTxOs appeared at the benchmark address ==="
+    exit 1
+fi
+
+echo ""
+echo "=== PASSED ==="
+exit 0
