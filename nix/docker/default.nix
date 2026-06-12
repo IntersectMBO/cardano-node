@@ -152,6 +152,15 @@ in
       # Similarly, make a root level dir for logs:
       mkdir -p logs
 
+      # Make the mount-point directories group-writable. Group is already
+      # 0 (the build env writes files as 0:0). When a fresh Docker volume
+      # is first mounted at one of these paths, the perms propagate from
+      # the image, so non-root containers (running as a UID in group 0 —
+      # the K8s default for runAsUser — or with explicit fsGroup) can
+      # write to a freshly-created volume without an init container or
+      # pre-chown.
+      chmod g+w data ipc logs
+
       # The "custom" operation mode of this image, when the NETWORK env is
       # unset and "run" is provided as an entrypoint arg, will use the
       # following default directories.  To reduce confusion caused by default
