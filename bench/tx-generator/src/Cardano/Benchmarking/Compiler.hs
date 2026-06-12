@@ -200,12 +200,20 @@ benchmarkingPhase wallet collateralWallet = do
   txParams <- askNixOption txGenTxParams
   ogmiosUrl <- askNixOption _nix_ogmiosUrl
   doneWallet <- newWallet "done_wallet"
+  -- Ogmios is a functional submission transport, not a benchmarking one: it
+  -- ignores tps and targetNodes and produces no submission metrics, so a
+  -- config that asks for a real benchmark must fail fast here instead of
+  -- running unpaced and unmeasured.
+  submitMode <- case (ogmiosUrl, debugMode) of
+    (Just url, True)  -> pure $ Ogmios url
+    (Just _,   False) -> throwCompileError $ SomeCompilerError
+      "ogmiosUrl is a functional submission transport: it ignores tps and \
+      \targetNodes and produces no benchmark metrics. Set debugMode: true \
+      \to acknowledge this, or remove ogmiosUrl to run a real benchmark."
+    (Nothing,  True)  -> pure LocalSocket
+    (Nothing,  False) -> pure $ Benchmark targetNodes tps txCount
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
-    submitMode
-      | Just url <- ogmiosUrl = Ogmios url
-      | debugMode         = LocalSocket
-      | otherwise         = Benchmark targetNodes tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
   emit $ Submit era submitMode txParams generator
   case submitMode of
