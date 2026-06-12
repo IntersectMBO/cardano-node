@@ -120,6 +120,14 @@ docker run \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
 
+The resulting merged config and topology are written to
+`/tmp/cardano-{{,tracer-}config,topology}-merged.json`
+and used as the runtime configuration.
+Relative file references are rewritten to absolute paths
+anchored at `/opt/cardano/config/$NETWORK/`
+so they resolve from the new location.
+
+
 ## CLI Mode
 To run cardano-cli, leave the `NETWORK` env variable unset and provide
 entrypoint args starting with `cli` followed by cardano-cli command args.
