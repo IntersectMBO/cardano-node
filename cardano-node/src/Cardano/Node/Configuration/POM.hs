@@ -49,7 +49,6 @@ import           Ouroboros.Consensus.Util.Args (OverrideOrDefault (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (
                    SnapshotFrequency (..), SnapshotFrequencyArgs (..), SnapshotPolicyArgs (..),
                    defaultSnapshotPolicyArgs, NumOfDiskSnapshots (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
@@ -525,12 +524,6 @@ instance FromJSON PartialNodeConfiguration where
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
              selector        <- case backend of
-               "V1LMDB"     -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
-                 mapSize :: Maybe Gigabytes <- o .:? "MapSize"
-                 lmdbPath :: Maybe FilePath <- o .:? "LiveTablesPath"
-                 mxReaders :: Maybe Int <- o .:? "MaxReaders"
-                 return $ V1LMDB flush lmdbPath mapSize mxReaders
                "V2InMemory" -> return V2InMemory
                "V2LSM" -> do
                  lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
