@@ -11,7 +11,7 @@ module Cardano.Tracer.Run
   , runCardanoTracer
   ) where
 
-import           Cardano.Logging.Resources
+import           Hermod.Tracing.Resources
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
 import           Cardano.Tracer.Configuration

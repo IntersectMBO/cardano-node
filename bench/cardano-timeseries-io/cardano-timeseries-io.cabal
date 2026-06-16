@@ -144,7 +144,7 @@ executable cardano-timeseries-io
       , statistics
       , text
       , time
-      , trace-resources
+      , hermod-trace-resources
       , vector
 
 test-suite cardano-timeseries-test
@@ -184,6 +184,6 @@ benchmark cardano-timeseries-io-bench
       , statistics
       , text
       , time
-      , trace-resources
+      , hermod-trace-resources
       , vector
       , zlib

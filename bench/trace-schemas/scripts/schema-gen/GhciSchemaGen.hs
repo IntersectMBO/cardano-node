@@ -55,8 +55,8 @@ rootDirs =
   , "../ouroboros-consensus/ouroboros-consensus-diffusion/src/ouroboros-consensus-diffusion"
   , "../ouroboros-consensus/ouroboros-consensus-cardano/src"
   , "../hermod-tracing/trace-dispatcher/src"
+  , "../hermod-tracing/hermod-trace-resources/src"
   , "trace-forward/src"
-  , "trace-resources/src"
   ]
 
 type ConstructorName = String

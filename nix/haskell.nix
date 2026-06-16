@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, hermod-tracing
 , macOS-security
 , windowsCompilerNixName
 }:
@@ -46,7 +47,8 @@ let
           flags: -systemd
       '';
       inputMap = {
-        "https://chap.intersectmbo.org/" = CHaP;
+        "https://chap.intersectmbo.org/"                 = CHaP;
+        "https://github.com/IntersectMBO/hermod-tracing" = hermod-tracing;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";
@@ -402,7 +404,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             [ "cardano-node"
               "cardano-tracer"
               "trace-forward"
-              "trace-resources"
+              "hermod-trace-resources"
             ]
             (name: { configureFlags = [ "--ghc-option=-fprof-auto" ]; });
         }];

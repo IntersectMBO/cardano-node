@@ -39,6 +39,11 @@
       flake = false;
     };
 
+    hermod-tracing = {
+      url = "github:IntersectMBO/hermod-tracing/without_contra_included";
+      flake = false;
+    };
+
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -506,7 +511,7 @@
         cardanoNodeProject =
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
-            inherit CHaP incl windowsCompilerNixName;
+            inherit CHaP hermod-tracing incl windowsCompilerNixName;
             macOS-security = macOS-security (final.pkgs);
           })
           .appendModule [

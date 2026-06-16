@@ -18,7 +18,7 @@ import Cardano.Prelude
 import Data.Accum
 import Data.CDF
 import Cardano.Util
-import Cardano.Logging.Resources.Types
+import Hermod.Tracing.Resources.Types
 
 deriving instance Foldable Resources
 deriving instance Traversable Resources

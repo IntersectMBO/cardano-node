@@ -48,7 +48,6 @@ packages:
   bench/tx-generator
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
-  trace-resources
   trace-forward
 
 -- Needed when cross compiling
@@ -83,3 +82,12 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Temporary: hermod-trace-resources is pending publication to CHaP.
+-- Update the tag to the hermod-tracing commit that includes hermod-trace-resources,
+-- then remove this stanza once the package is available in CHaP.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/hermod-tracing
+  tag: f94edf21d7df01f43e115e370f0a48fd00240003
+  subdir: hermod-trace-resources

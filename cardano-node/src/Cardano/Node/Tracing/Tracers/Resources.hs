@@ -4,7 +4,7 @@ module Cardano.Node.Tracing.Tracers.Resources
   ( startResourceTracer
   ) where
 
-import           Cardano.Logging.Resources
+import           Hermod.Tracing.Resources
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)

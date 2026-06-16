@@ -4,7 +4,7 @@
 
 module Cardano.Timeseries.Common(readStore, repl, printInterpResult, printExecutionResult) where
 
-import           Cardano.Logging.Resources (ResourceStats, Resources (..), readResourceStats)
+import           Hermod.Tracing.Resources (ResourceStats, Resources (..), readResourceStats)
 import           Cardano.Timeseries.API
 import           Cardano.Timeseries.Import.PlainCBOR
 

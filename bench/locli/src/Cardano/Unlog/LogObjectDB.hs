@@ -37,7 +37,7 @@ module Cardano.Unlog.LogObjectDB
        ) where
 
 import           Cardano.Analysis.API.Ground
-import           Cardano.Logging.Resources.Types (ResourceStats, Resources (..))
+import           Hermod.Tracing.Resources.Types (ResourceStats, Resources (..))
 import           Cardano.Unlog.LogObject
 import           Cardano.Util hiding (count)
 

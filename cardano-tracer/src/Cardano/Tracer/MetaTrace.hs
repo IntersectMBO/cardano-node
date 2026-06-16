@@ -21,7 +21,7 @@ module Cardano.Tracer.MetaTrace
   ) where
 
 import           Cardano.Logging
-import           Cardano.Logging.Resources
+import           Hermod.Tracing.Resources
 import           Cardano.Timeseries.Component.Trace (TimeseriesTrace)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Types (NodeId (..), NodeName)

@@ -9,7 +9,7 @@ module Cardano.Node.Tracing
   , ConsensusStartupException (..)
   ) where
 
-import           Cardano.Logging.Resources
+import           Hermod.Tracing.Resources
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))

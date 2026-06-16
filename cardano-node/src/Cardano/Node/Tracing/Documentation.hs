@@ -27,8 +27,8 @@ import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
-import           Cardano.Logging.Resources
-import           Cardano.Logging.Resources.Types ()
+import           Hermod.Tracing.Resources
+import           Hermod.Tracing.Resources.Types ()
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano

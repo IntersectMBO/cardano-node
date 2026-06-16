@@ -136,7 +136,7 @@ library
                       , text
                       , text-short
                       , time
-                      , trace-resources
+                      , hermod-trace-resources
                       , transformers
                       , transformers-except
                       , unix
@@ -197,7 +197,7 @@ executable locli-quick
                       , text
                       , text-short
                       , time
-                      , trace-resources
+                      , hermod-trace-resources
                       , sqlite-easy >= 1.1.0.1
                       , unordered-containers
 

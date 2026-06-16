@@ -14,8 +14,8 @@ module Cardano.Node.Tracing.Consistency
 
 
 import           Cardano.Logging
-import           Cardano.Logging.Resources
-import           Cardano.Logging.Resources.Types ()
+import           Hermod.Tracing.Resources
+import           Hermod.Tracing.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import qualified Cardano.Network.NodeToNode as NtN
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
