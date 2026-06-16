@@ -32,6 +32,15 @@ let
           secure: True
         active-repositories: hackage.haskell.org, cardano-haskell-packages-local
         allow-newer: terminfo:base
+
+        -- hermod-trace-resources is pending publication to CHaP.
+        -- Resolved via the hermod-tracing flake input (see inputMap below).
+        -- Remove once the package is available in CHaP.
+        source-repository-package
+          type: git
+          location: https://github.com/IntersectMBO/hermod-tracing
+          tag: f94edf21d7df01f43e115e370f0a48fd00240003
+          subdir: hermod-trace-resources
       '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
         -- When cross compiling we don't have a `ghc` package
         package plutus-tx-plugin

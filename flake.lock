@@ -324,6 +324,23 @@
         "type": "github"
       }
     },
+    "hermod-tracing": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781620227,
+        "narHash": "sha256-KD9zDu81xIXYe0Bd5rJgVWS63YS3GbJw71CHjs+EH9Q=",
+        "owner": "IntersectMBO",
+        "repo": "hermod-tracing",
+        "rev": "f94edf21d7df01f43e115e370f0a48fd00240003",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "without_contra_included",
+        "repo": "hermod-tracing",
+        "type": "github"
+      }
+    },
     "hls": {
       "flake": false,
       "locked": {
@@ -788,6 +805,7 @@
         "flake-compat": "flake-compat",
         "hackageNix": "hackageNix_2",
         "haskellNix": "haskellNix",
+        "hermod-tracing": "hermod-tracing",
         "incl": "incl",
         "iohkNix": "iohkNix",
         "nixpkgs": [

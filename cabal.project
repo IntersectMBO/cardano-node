@@ -83,11 +83,9 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Temporary: hermod-trace-resources is pending publication to CHaP.
--- Update the tag to the hermod-tracing commit that includes hermod-trace-resources,
--- then remove this stanza once the package is available in CHaP.
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/hermod-tracing
-  tag: f94edf21d7df01f43e115e370f0a48fd00240003
-  subdir: hermod-trace-resources
+-- hermod-trace-resources is pending publication to CHaP.
+-- Nix builds resolve it via the flake inputMap (see nix/haskell.nix + flake.nix).
+-- For local cabal builds, add the following to your cabal.project.local:
+--
+--   packages:
+--     ../hermod-tracing/hermod-trace-resources

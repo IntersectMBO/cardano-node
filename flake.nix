@@ -65,6 +65,7 @@
   outputs = {
     cardano-automation,
     CHaP,
+    hermod-tracing,
     haskellNix,
     incl,
     iohkNix,
