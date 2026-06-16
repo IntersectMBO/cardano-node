@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use uncurry" -}
 
