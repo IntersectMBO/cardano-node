@@ -32,16 +32,6 @@ let
     peerSnapshotFile = cfg.peerSnapshotFile i;
   };
 
-  oldTopology = i: {
-    Producers = concatMap (g: map (a: {
-        addr = a.address;
-        inherit (a) port;
-        valency = a.valency or 1;
-      }) g.accessPoints) (
-      cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
-    );
-  };
-
   assertNewTopology = i:
     let
       checkEval = tryEval (
@@ -58,7 +48,7 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.json" (toJSON (if (cfg.useNewTopology != false) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (assertNewTopology i));
 
   topology = i:
     if cfg.useSystemdReload
@@ -72,27 +62,17 @@ let
               // (mapAttrs' (era: epoch:
                 nameValuePair "Test${era}HardForkAtEpoch" epoch
               ) cfg.forceHardForks)
-              // (optionalAttrs (cfg.useNewTopology != false) (
-                {
-                  MaxConcurrencyBulkSync = 2;
-                } // optionalAttrs (cfg.useNewTopology == true) {
-                  # Starting with node 10.6.0, p2p is the only network
-                  # operating mode and EnableP2P becomes a no-op and is not
-                  # declared by default.
-                  #
-                  # Older node versions which still require an explicit
-                  # declaration can set useNewTopology true.
-                  EnableP2P = true;
-                } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
-                  TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-                } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
-                  TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-                } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
-                  TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-                } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
-                  TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-                })
-              )
+              // {
+                MaxConcurrencyBulkSync = 2;
+              } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
+                TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+              } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
+                TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+              } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
+                TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+              } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
+                TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+              }
             ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
@@ -635,31 +615,6 @@ in {
         '';
       };
 
-      useNewTopology = mkOption {
-        type = nullOr bool;
-        default = cfg.nodeConfig.EnableP2P or null;
-        description = ''
-          Use new, p2p and ledger peers compatible topology.
-
-          The useNewTopology option is deprecated and will be removed in the
-          future. As of cardano-node 10.6.0, this option should remain null.
-          For older node versions, a bool value can be set, but this will only
-          be supported until the Dijkstra hard fork at which point all
-          cardano-node versions will be compelled to upgrade and the
-          useNewTopology option will be removed.
-
-          For node version < 10.6.0, useNewTopology will need to be explicitly
-          declared true or false to behave accordingly.  If left null while
-          also using the auto-generated p2p topology, node will fail to start.
-
-          For node version >= 10.6.0, useNewTopology should be left as null
-          until the option is removed after the Dijkstra hard fork.  If
-          explicitly declared true, node will continue to work, but if declared
-          false while using the auto-generated legacy topology, node will fail to
-          start.
-        '';
-      };
-
       useLegacyTracing = mkOption {
         type = bool;
         default = false;
@@ -877,12 +832,9 @@ in {
           #
           # Mainnet does not yet require it, but declaring it will also
           # facilitate testing.
-          if (cfg.useNewTopology != false)
-          then
-            if cfg.useSystemdReload
-            then "peer-snapshot-${toString i}.json"
-            else toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot))
-          else null;
+          if cfg.useSystemdReload
+          then "peer-snapshot-${toString i}.json"
+          else toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
@@ -926,7 +878,7 @@ in {
             (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
-        (mkIf ((cfg.useNewTopology != false) && cfg.useSystemdReload)
+        (mkIf cfg.useSystemdReload
           (foldl'
             (acc: i: recursiveUpdate acc (
               optionalAttrs (cfg.peerSnapshotFile i != null) {
@@ -950,12 +902,12 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
-        reloadTriggers = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) [ (selectTopology i) ];
+        reloadTriggers = mkIf cfg.useSystemdReload [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
-          ExecReload = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+          ExecReload = mkIf cfg.useSystemdReload "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = mkIf (!cfg.systemdSocketActivation)
             (removePrefix cfg.runDirBase (runtimeDir i));
@@ -1033,7 +985,7 @@ in {
           '';
         }
         {
-          assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));
+          assertion = !cfg.systemdSocketActivation;
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
@@ -1058,13 +1010,6 @@ in {
           message   = "Only one option of services.cardano-node.tracerSocket(PathAccept|PathConnect|NetworkAccept|NetworkConnect) can be declared.";
         }
       ];
-
-      warnings = optional (cfg.useNewTopology != null) ''
-        The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
-        For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
-        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.  See the services.cardano-node.useNewTopology
-        option description for further details.
-      '';
     }
   ]);
 }
