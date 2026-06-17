@@ -27,6 +27,15 @@
       flake = false;
     };
 
+    # Source for the ouroboros-consensus source-repository-package, fetched
+    # WITH submodules (git+https, not github:) so the cardano-blueprint
+    # submodule referenced by its data-files is present. Wired into the
+    # haskell.nix inputMap, keyed by the SRP's location/tag in cabal.project.
+    ouroboros-consensus = {
+      url = "git+https://github.com/IntersectMBO/ouroboros-consensus?ref=nfrisby/leios-prototype-out-of-order-RB-EB&rev=bca2a74a9fd3cc52b4235b22db9e8f0a9a2903e5&submodules=1";
+      flake = false;
+    };
+
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
@@ -64,6 +73,7 @@
     incl,
     iohkNix,
     nixpkgs,
+    ouroboros-consensus,
     self,
     utils,
     ...
@@ -503,7 +513,7 @@
         cardanoNodeProject =
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
-            inherit CHaP incl windowsCompilerNixName;
+            inherit CHaP incl windowsCompilerNixName ouroboros-consensus;
             macOS-security = macOS-security (final.pkgs);
           })
           .appendModule [
