@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, ouroboros-consensus
 , macOS-security
 , windowsCompilerNixName
 }:
@@ -68,6 +69,10 @@ let
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
         "https://github.com/google/proto-lens/20de5227947b0c37dd6852dcc6f2db1cd5889cee" = fixProtoLensSrc;
+        # Source the ouroboros-consensus SRP from the submodule-complete input
+        # (cabal.project pins this same location/tag); plain SRP fetch omits the
+        # cardano-blueprint submodule that its data-files reference.
+        "https://github.com/IntersectMBO/ouroboros-consensus/a2c4dc1c2ffa84f2467a2ec1dab5184d2a93f62f" = ouroboros-consensus;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";
