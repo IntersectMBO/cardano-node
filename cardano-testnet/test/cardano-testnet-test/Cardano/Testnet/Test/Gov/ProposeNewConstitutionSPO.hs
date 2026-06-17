@@ -30,6 +30,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (unsafeEraFromSbe)
+import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -182,7 +183,8 @@ getConstitutionProposal
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe L.GovActionId)
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
-  result <- H.evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  fs <- H.evalIO $ mkNodeConfigFs nodeConfigFile
+  result <- H.evalIO . runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState _) _slotNb _blockNb ->
           obtainCommonConstraints (unsafeEraFromSbe actualEra) $ do
             let proposals = newEpochState

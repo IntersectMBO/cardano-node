@@ -27,7 +27,7 @@ import           Cardano.Api (AnyCardanoEra, mapFile)
 import           Cardano.CLI.Type.Common (FileDirection (..), SigningKeyFile)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
-                   NodeHostIPv4Address (..), NodeIPv4Address)
+                   NodeIPv4Address)
 import           Cardano.Node.Types (AdjustFilePaths (..))
 import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
@@ -74,22 +74,20 @@ data NodeDescription =
 
 instance FromJSON NodeDescription where
   parseJSON = withObject "NodeDescription" \v -> do
-    unNodeHostIPv4Address
+    naHostAddress
             <- v .:  "addr"    <?> Key "addr"
     naPort  <- fmap toEnum $
                  v .:  "port"  <?> Key "port"
-    let naHostAddress = NodeHostIPv4Address {..}
-        ndAddr        = NodeAddress {..}
+    let ndAddr        = NodeAddress {..}
     ndName  <- v .:? "name"    <?> Key "name" .!= show ndAddr
     pure $ NodeDescription {..}
 
 instance ToJSON NodeDescription where
   toJSON NodeDescription {ndAddr, ndName} = object
        [ "name" .= ndName
-       , "addr" .= unNodeHostIPv4Address
+       , "addr" .= naHostAddress
        , "port" .= fromEnum naPort ] where
     _addr@NodeAddress {naHostAddress, naPort} = ndAddr
-    _hostAddr@NodeHostIPv4Address {unNodeHostIPv4Address} = naHostAddress
 
 
 -- Long GC pauses on target nodes can trigger spurious MVar deadlock

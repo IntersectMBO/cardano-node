@@ -433,8 +433,10 @@ cardanoTestnet
                       -> TestnetNode
                       -> m ()
     waitForBlockThrow timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
+      fs <- liftIO $ mkNodeConfigFs nodeConfigFile
       result <- timeout (timeoutSeconds * 1_000_000) $
         runExceptT . foldEpochState
+          fs
           nodeConfigFile
           (nodeSocketPath node)
           QuickValidation

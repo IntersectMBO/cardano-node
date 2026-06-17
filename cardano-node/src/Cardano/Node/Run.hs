@@ -238,15 +238,15 @@ handleNodeWithTracers
   -> SomeConsensusProtocol
   -> IO ()
 handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
-  let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
-      networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
+  (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
+  let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
   let fp = maybe  "No file path found!"
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
-  blockForging <- snd (Api.protocolInfo runP) nullTracer
+  blockForging <- mkBlockForging nullTracer
   tracers <-
     initTraceDispatcher
       nc
@@ -302,7 +302,7 @@ handleSimpleNode
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
-  -> Api.ProtocolInfoArgs blk
+  -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
   -> NetworkMagic
@@ -323,7 +323,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  let pInfo = fst $ Api.protocolInfo @IO runP
+  pInfo <- fst <$> Api.protocolInfo @IO runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -403,7 +403,8 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              blockForging <- snd (Api.protocolInfo runP) (Consensus.kesAgentTracer $ consensusTracers tracers)
+              (_, mkBlockForging) <- Api.protocolInfo runP
+              blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $
                 setBlockForging nodeKernel blockForging
@@ -634,7 +635,8 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          blockForging <- snd (Api.protocolInfo runP') kesAgentTracer
+          (_, mkBlockForging) <- Api.protocolInfo runP'
+          blockForging <- mkBlockForging kesAgentTracer
           traceWith startupTracer
                     (BlockForgingUpdate (if null blockForging
                                           then DisabledBlockForging

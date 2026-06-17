@@ -20,9 +20,6 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
-import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
-import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)

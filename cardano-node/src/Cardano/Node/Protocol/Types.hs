@@ -50,5 +50,5 @@ data SomeConsensusProtocol where
                                           , Api.FromCBOR (HeaderHash blk)
                                           )
                            => Api.BlockType blk
-                           -> Api.ProtocolInfoArgs blk
+                           -> Api.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol

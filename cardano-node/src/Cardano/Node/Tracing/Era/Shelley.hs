@@ -54,7 +54,6 @@ import           Cardano.Protocol.TPraos.Rules.Overlay
 import           Cardano.Protocol.TPraos.Rules.Prtcl
                    (PrtclPredicateFailure (OverlayFailure, UpdnFailure),
                    PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
-import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
@@ -64,10 +63,13 @@ import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
+import qualified Ouroboros.Consensus.Shelley.Protocol.EnvelopeChecks as Praos
+                   (EnvelopeError (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
+
+import           Control.DeepSeq (NFData)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
@@ -252,6 +254,7 @@ instance
   , LogFormatting (PredicateFailure (ShelleyUTXO era))
   , LogFormatting (PredicateFailure (ShelleyUTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "BBODY" era))
+  , NFData (PredicateFailure (Ledger.EraRule "BBODY" era))
   ) => LogFormatting (BlockTransitionError era) where
   forMachine dtal (BlockTransitionError fs) =
     mconcat [ "kind" .= String "BlockTransitionError"
@@ -765,10 +768,6 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
             , "vrfKeyHash" .= String (textShow vrfKeyHash)
             , "error" .= String "Pool with the same VRF Key Hash is already registered"
             ]
-
-
-instance LogFormatting TicknPredicateFailure where
-  forMachine _dtal x = case x of {} -- no constructors
 
 
 instance
@@ -1325,7 +1324,7 @@ instance LogFormatting (Praos.PraosCannotForge crypto) where
             , "opCertStartingKesPeriod" .= kesPeriodValue startingKesPeriod
             ]
 
-instance LogFormatting Praos.PraosEnvelopeError where
+instance LogFormatting Praos.EnvelopeError where
   forMachine _ err' =
     case err' of
       Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->

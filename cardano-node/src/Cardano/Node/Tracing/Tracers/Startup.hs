@@ -67,8 +67,8 @@ getStartupInfo
   -> IO [StartupTrace blk]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
-  let cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
-      basicInfoCommon = BICommon $ BasicInfoCommon {
+  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
+  let basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
               , biCommit   = $(gitRev)

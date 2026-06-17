@@ -272,7 +272,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                           , localNodeSocketPath = socketPath
                           }
               chairmanChainSyncClient = LocalChainSyncClient $
-                chainSyncClient (showTracing tracer) socketPath chainsVar secParam
+                chainSyncClient (show >$< tracer) socketPath chainsVar secParam
               protocolsInMode = LocalNodeClientProtocols
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing

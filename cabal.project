@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-04-17T09:20:55Z
-  , cardano-haskell-packages 2026-05-27T09:43:46Z
+  , hackage.haskell.org 2026-06-10T14:43:25Z
+  , cardano-haskell-packages 2026-06-10T14:16:00Z
 
 active-repositories:
   , :rest
@@ -50,16 +50,6 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-resources
   trace-forward
-  ouroboros-consensus
-  ouroboros-network/ouroboros-network
-  ouroboros-network/cardano-diffusion
-  ouroboros-network/cardano-ping
-  ouroboros-network/monoidal-synchronisation
-  ouroboros-network/network-mux
-  ekg-forward
-  hermod-tracing/trace-dispatcher
-  cardano-api/cardano-api
-  cardano-api/cardano-rpc
 
 -- Needed when cross compiling
 extra-packages: alex, dmq-node >= 0.4.2.0
@@ -96,3 +86,103 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 500e283a93fcb4c82b03febf243cb976431a613f
+  --sha256: sha256-aHpjdMQhjRpe0w5Fb9a5LeVGcO44VAl928CS7HoYB0Q=
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 9678a844fd2b53bc3777906d61b53fe0ff93e8ed
+  --sha256: sha256-0Eo3txVuqkmvZdsyalKbS+bnmFzevG4O99CavSjo7SM=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 3f879bb37df4738ed8211e500c7d180443cfcbe4
+  --sha256: sha256-uLjiIHiU1SzAmoKs+rynQphc3FUYXKeJLlOnp87uNdg=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/f-f/kes-agent.git
+  tag: fdb4f4db05e3744ed413f83477020fdf43cf32a2
+  --sha256: sha256-eyQc8Dk7+upSRQvH5eXZuj6asYhOLsH59ABJZDyvQ6I=
+  subdir:
+    kes-agent
+    kes-agent-crypto
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 0411b4d50dc62cab07bbbf75805cf585a7a1f8e7
+  --sha256: sha256-DNnGHdo+oQDBbHzAl6UZ/VcPoS4TxGrC9eCOiMxgc8A=
+  subdir:
+    .
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 1881340e26ca98b3ee2b89ea536348406b79e051
+  --sha256: sha256-O1Th+YI6LZqCLM6n75tVV+3InA4W8sC0yHEi09u8Fyw=
+  subdir:
+    ./cardano-diffusion
+    ./monoidal-synchronisation
+    ./network-mux
+    ./ouroboros-network
+
+source-repository-package
+  type: git
+  location: https://github.com/f-f/dmq-node.git
+  tag: b7d59834e52d46229bb3ff6e5595509eede730dd
+  --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
+  subdir:
+    dmq-node
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus.git
+  tag: 5b401b3ba95d2b8ecf9454aca7bf704bfd69f13c
+  --sha256: sha256-1kIRfqJGitFLdg77kYrmA8P8gDDmnldRLqI1iBDSVRU=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-tx
+    plutus-tx-plugin
+    plutus-metatheory
+
+source-repository-package
+  type: git
+  location: https://github.com/f-f/ekg-forward
+  tag: b24b3aba2806ce223c62f8ce3e267ec92dcc52e2
+  --sha256: sha256-s5Hxxm04HmFVmdBjAnFEsJEhTqr5Z/uiB4K1s2VaVwE=

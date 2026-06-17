@@ -190,6 +190,7 @@ defaultConwayGenesis = do
       , cgCommittee = DefaultClass.def
       , cgDelegs = mempty
       , cgInitialDReps = mempty
+      , cgExtraConfig = SNothing
       }
 
 -- | The only era supported by cardano-testnet for the moment.

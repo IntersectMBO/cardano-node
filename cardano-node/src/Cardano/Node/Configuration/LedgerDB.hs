@@ -88,4 +88,4 @@ selectorToArgs ::
     , CanUpgradeLedgerTables LedgerState blk
     ) => LedgerDbSelectorFlag -> FilePath -> StdGen -> (LedgerDbBackendArgs IO blk, StdGen)
 selectorToArgs V2InMemory _ = InMemory.mkInMemoryArgs
-selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgsIO (Proxy @blk) (fromMaybe "lsm" fp) fastStoragePath
+selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgsIO (Proxy @blk) (fromMaybe "lsm" fp) Nothing fastStoragePath

@@ -30,7 +30,7 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
 import qualified Ouroboros.Network.Protocol.Handshake as Handshake
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+import           Ouroboros.Network.Protocol.Handshake.Codec (mkVersionedCodecCBORTerm,
                    codecHandshake, noTimeLimitsHandshake)
 import qualified Ouroboros.Network.Server.Simple as Server
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
@@ -232,7 +232,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
   args = ConnectToArgs {
     ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
     ctaHandshakeTimeLimits = timeLimits,
-    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
     ctaConnectTracers = nullNetworkConnectTracers,
     ctaHandshakeCallbacks = HandshakeCallbacks Handshake.acceptableVersion Handshake.queryVersion }
 
@@ -281,7 +281,7 @@ doListenToAcceptor TestSetup{..}
         haHandshakeTracer = nullTracer,
         haBearerTracer = nullTracer,
         haHandshakeCodec = codecHandshake forwardingVersionCodec,
-        haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+        haVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
         haAcceptVersion = Handshake.acceptableVersion,
         haQueryVersion = Handshake.queryVersion,
         haTimeLimits = timeLimits
