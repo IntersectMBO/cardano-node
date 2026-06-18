@@ -79,12 +79,10 @@ with pkgs.lib; let
       topology = "topology.json";
       nodeConfigFile = "config.json";
 
-      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory;
+      # Allow for local clusters to have multiple on-disk (LSM-tree) directories in the same physical ssd_directory;
       # non-block producers (like the explorer node) keep using the in-memory backend
-      withUtxoHdLmdb = profile.node.utxo_lmdb && isProducer;
-      withUtxoHdLsmt = profile.node.utxo_lsmt && isProducer;
-      lmdbDatabasePath = liveTablesPath i;
-      lsmDatabasePath = liveTablesPath i;
+      withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
+      lsmDatabasePath  = liveTablesPath i;
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)
@@ -138,13 +136,6 @@ with pkgs.lib; let
                   LedgerDB = {
                     Backend = "V2LSM";
                     LSMDatabasePath = liveTablesPath i;
-                  };
-                }
-                // optionalAttrs (profile.node.utxo_lmdb && isProducer)
-                {
-                  LedgerDB = {
-                    Backend = "V1LMDB";
-                    LiveTablesPath = liveTablesPath i;
                   };
                 })
               {
