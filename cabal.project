@@ -88,6 +88,21 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: b117101eba8de9ede9f99e0399bbb0b251fa8a19
+  subdir:
+    ouroboros-network
+  --  network-mux
+  --sha256: sha256-B6OVbFRMo4KekTcT75VJKq26b4nje9XAWPXBIi+b7V4=
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-consensus.git
+  tag: bc341c477569a772871370b086bafa96db33b7ce
+  --sha256: sha256-OkC6mMiMZudc3bZARVO8e1PEr8W/0mYZSoDBYU4FZRs=
+
 
 if impl(ghc >= 9.12)
   -- GHC 9.12 support - master branch
