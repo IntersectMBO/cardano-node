@@ -222,8 +222,8 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , ToJSON (ApplyTxError era)
   ) => LogFormatting (ApplyTxError era) where
@@ -251,8 +251,8 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "BBODY" era))
   , NFData (PredicateFailure (Ledger.EraRule "BBODY" era))
   ) => LogFormatting (BlockTransitionError era) where
@@ -323,8 +323,8 @@ instance LogFormatting PrtlSeqFailure where
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGERS" era))
   ) => LogFormatting (ShelleyBbodyPredFailure era) where
@@ -345,8 +345,8 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   ) => LogFormatting (ShelleyLedgersPredFailure era) where
   forMachine dtal (LedgerFailure f) = forMachine dtal f
@@ -363,8 +363,8 @@ instance LogFormatting Withdrawals where
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "DELEGS" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
   ) => LogFormatting (ShelleyLedgerPredFailure era) where
@@ -433,7 +433,7 @@ formatAsHex (Just bs) = show bs
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (UTXO era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
   ) => LogFormatting (ShelleyUtxowPredFailure era) where
   forMachine _dtal (InvalidWitnessesUTXOW wits') =
