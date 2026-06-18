@@ -91,8 +91,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 500e283a93fcb4c82b03febf243cb976431a613f
-  --sha256: sha256-aHpjdMQhjRpe0w5Fb9a5LeVGcO44VAl928CS7HoYB0Q=
+  tag: 9dd555a313edb9c3a1203506d69702036d3c170f
+  --sha256: sha256-qQlEg7VwDMo5xEuCgnzx3UPchZhDbMmizx0c3kMy578=
   subdir:
     cardano-api
     cardano-rpc
@@ -108,8 +108,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 3f879bb37df4738ed8211e500c7d180443cfcbe4
-  --sha256: sha256-uLjiIHiU1SzAmoKs+rynQphc3FUYXKeJLlOnp87uNdg=
+  tag: 8dc1c431e06db2c8b5d44fb4b3cca6419197d763
+  --sha256: sha256-xKtgNFxjbJE6UWGvTioGX81NgvlKH3mHEaYMWDm8/UA=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -136,8 +136,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/f-f/kes-agent.git
-  tag: fdb4f4db05e3744ed413f83477020fdf43cf32a2
-  --sha256: sha256-eyQc8Dk7+upSRQvH5eXZuj6asYhOLsH59ABJZDyvQ6I=
+  tag: 32c1ed675d22a30735d9f22f7afa436a3ef3e64a
+  --sha256: sha256-o7hFX1JnraS6Xq0WoXQwd9Z8GsPPv0Ls2DWvZ08o0ZU=
   subdir:
     kes-agent
     kes-agent-crypto
@@ -145,16 +145,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 0411b4d50dc62cab07bbbf75805cf585a7a1f8e7
-  --sha256: sha256-DNnGHdo+oQDBbHzAl6UZ/VcPoS4TxGrC9eCOiMxgc8A=
+  tag: e6fad063078894cefece2a535a2e2b4d9a092e73
+  --sha256: sha256-SPtbQ1+zN4uYiVx3rej2kMasbpfhSAyjRD5bdrnK3Rs=
   subdir:
     .
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 1881340e26ca98b3ee2b89ea536348406b79e051
-  --sha256: sha256-O1Th+YI6LZqCLM6n75tVV+3InA4W8sC0yHEi09u8Fyw=
+  tag: 8b4dcb898b64615f574a7fbdcf119f77c7fbc598
+  --sha256: sha256-t1tGV5uZwyKnSSCbaJJAteMYKnQYeO39hUUycMRuC2M=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation
@@ -172,8 +172,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/plutus.git
-  tag: 5b401b3ba95d2b8ecf9454aca7bf704bfd69f13c
-  --sha256: sha256-1kIRfqJGitFLdg77kYrmA8P8gDDmnldRLqI1iBDSVRU=
+  tag: b1db04cc425fab303ac3b79d7140dc2a17f29e6d
+  --sha256: sha256-XtYzjNVx4+IGWpgm+p/YTf56DrJtK0I98umZCTE3U80=
   subdir:
     plutus-core
     plutus-ledger-api
