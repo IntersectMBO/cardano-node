@@ -216,13 +216,13 @@ state types as needed, without relying on host level tooling or full
 chain ledger replays.
 
 An example follows to convert preprod ledger state in a named docker volume
-from a memory based ledger snapshot to an LMDB snapshot when node is not
+from a memory based ledger snapshot to an LSM snapshot when node is not
 already running:
 ```
 docker run -v preprod-data:/data --rm -it --entrypoint=bash ghcr.io/intersectmbo/cardano-node:dev -c '
   mv /data/db/ledger /data/db/ledger-old \
-    && mkdir -p /data/db/ledger \
-    && snapshot-converter --mem-in /data/db/ledger-old/20807240 --lmdb-out /data/db/ledger/20807240 --config /opt/cardano/config/preprod/config.json
+    && mkdir -p /data/db/ledger /data/db/lsm \
+    && snapshot-converter --input-mem /data/db/ledger-old/20807240 --output-lsm-snapshot /data/db/ledger/20807240 --output-lsm-database /data/db/lsm --config /opt/cardano/config/preprod/config.json
 '
 ```
 

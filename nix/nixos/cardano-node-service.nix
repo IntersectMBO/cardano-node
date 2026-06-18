@@ -82,12 +82,6 @@ let
                 Backend = "V2LSM";
                 LSMDatabasePath = cfg.lsmDatabasePath i;
               };
-            }
-            // optionalAttrs (cfg.withUtxoHdLmdb i){
-              LedgerDB = {
-                Backend = "V1LMDB";
-                LiveTablesPath = cfg.lmdbDatabasePath i;
-              };
             };
     in i: let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
@@ -391,16 +385,6 @@ in {
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''The node database path, for each instance.'';
-      };
-
-      lmdbDatabasePath = mkOption {
-        type = funcToOr nullOrStr;
-        default = null;
-        apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
-        description = ''
-          A node UTxO-HD on-disk LMDB path for performant disk I/O, for each instance.
-          This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
-        '';
       };
 
       lsmDatabasePath = mkOption {
@@ -757,16 +741,6 @@ in {
         '';
       };
 
-      withUtxoHdLmdb = mkOption {
-        type = funcToOr bool;
-        default = false;
-        apply = x: if lib.isFunction x then x else _: x;
-        description = ''
-          On a UTxO-HD enabled node, the in-memory backend is the default.
-          This activates the on-disk backend (LMDB) instead.
-        '';
-      };
-
       withUtxoHdLsmt = mkOption {
         type = funcToOr bool;
         default = false;
@@ -858,7 +832,6 @@ in {
   };
 
   config = mkIf cfg.enable ( let
-    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (genList trivial.id cfg.instances));
     lsmPaths = filter (x: x != null) (map (e: cfg.lsmDatabasePath e) (genList trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
@@ -989,16 +962,8 @@ in {
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
-          assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
-          message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
-        }
-        {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
           message   = "When configuring multiple LSM enabled nodes on one instance, lsmDatabasePath must be unique.";
-        }
-        {
-          assertion = all (i: !(cfg.withUtxoHdLmdb i && cfg.withUtxoHdLsmt i)) (genList trivial.id cfg.instances);
-          message = "Each instance can only declare either withUtxoHdLmdb or withUtxoHdLsmt";
         }
         {
           assertion = count (o: o != null) (with cfg; [
