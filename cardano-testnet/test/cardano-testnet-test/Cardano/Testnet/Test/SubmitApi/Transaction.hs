@@ -148,6 +148,8 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
 
       getResponseStatusCode response === 202
 
+    void $ pure ()
+
     H.byDurationM 5 45 "Expected UTxO found" $ do
       void $ execCli' execConfig
         [ eraString, "query", "utxo"
