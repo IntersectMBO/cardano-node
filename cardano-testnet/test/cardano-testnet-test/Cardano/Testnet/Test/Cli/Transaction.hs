@@ -13,7 +13,6 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.CLI.Type.Common
 import           Cardano.Crypto.Hash.Class (hashToStringAsHex)
-import qualified Cardano.Ledger.Core as L
 import           Cardano.Testnet
 
 import           Prelude

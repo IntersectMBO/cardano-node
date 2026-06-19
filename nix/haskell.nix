@@ -137,6 +137,8 @@ let
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
+            # GHC 9.6.7 haddock panics on TopTx type family (tyConStupidTheta)
+            packages.cardano-api.components.library.doHaddock = false;
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;

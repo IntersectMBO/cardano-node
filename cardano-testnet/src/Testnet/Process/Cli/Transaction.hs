@@ -17,7 +17,7 @@ module Testnet.Process.Cli.Transaction
   )
 where
 
-import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api hiding (TxBody)
 import           Cardano.Api.Experimental (Some (..))
 
 import           Prelude
