@@ -2,6 +2,12 @@
 
 ## NEXT
 
+## 0.6.0 (June 2026)
+* Remove RTView: the experimental opt-in browser dashboard (`flag rtview`) has been
+  removed entirely. The `hasRTView` field is removed from `TracerConfig`. The
+  `threepenny-gui`, `cassava`, `string-qq`, `cardano-git-rev`, and `utf8-string`
+  dependencies that were RTView-only are no longer required.
+
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an
   `application/x-www-form-urlencoded` body (Prometheus wire format).
@@ -14,7 +20,7 @@
   - `GET /timeseries/node/{id}/info` — node info (name, protocol, version,
     commit, start time, system start time) plus `uptimeSeconds`.
   - `GET /timeseries/node/{id}/startup` — node startup info.
-  - `GET /timeseries/node/{id}/state` — sync progress (RTView build only).
+  - `GET /timeseries/node/{id}/state` — sync progress.
 * Metric names stored in the timeseries are sanitised: `.`, `-`, and spaces
   are replaced with `_`; all other non-alphanumeric, non-underscore characters
   are stripped. This aligns stored names with Prometheus label conventions.
