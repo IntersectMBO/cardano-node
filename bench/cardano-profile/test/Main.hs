@@ -372,8 +372,7 @@ ciTestBage = Types.Profile {
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
-      Types.rtview = False
-    , Types.ekg = False
+      Types.ekg = False
     , Types.withresources = False
     , Types.timeseries = False
   }
