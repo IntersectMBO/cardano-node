@@ -1,11 +1,12 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 
-global_genesis_format_version=June-22-2026
-
 # Resolve genesis backend once (at source time, no output).
 # Each backend file defines: profile-cache-key-*, profile-cache-key-input-*,
-# genesis-create-*, derive-from-cache-*
+# genesis-cache-hit-*, genesis-create-cache-*, derive-from-cache-*
+# Cache layout/versioning is each backend's concern (jq: layout.version;
+# ripper: a version folded into its cache keys). Atomic commit (build in a temp
+# dir, mv into place) is shared, in prepare-cache-entry.
 if   [[ ${WB_GENESIS_RIPPER:-0}  -eq 1 ]]; then genesis_backend=ripper
 elif [[ ${WB_MODULAR_GENESIS:-0} -eq 1 ]]; then genesis_backend=modular
 else                                            genesis_backend=jq
@@ -13,19 +14,19 @@ fi
 
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
-    $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
+    $(helpcmd prepare-cache-entry '[--force]' PROFILE-JSON '[CACHEDIR]')
                      Prepare a genesis cache entry for the specified profile.
-                       Cache entry regeneration can be $(yellow --force)'d
+                       Prints the cache entry path. Regeneration can be $(yellow --force)'d.
 
-    $(helpcmd derive-from-cache PROFILE-DIR TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR)
+    $(helpcmd derive-from-cache PROFILE-JSON CACHE-ENTRY-DIR OUTDIR TIMING-JSON-EXPR)
                      Instantiate genesis from a cache entry
 
     $(helpcmd genesis-from-preset PRESET-NAME OUTDIR)
                      ($(red DEV)) Prepare genesis for an environment preset,
                        like $(yellow mainnet)
 
-    $(helpcmd actually-genesis PROFILE-JSON NODE-SPECS OUTDIR CACHE-KEY-INPUT CACHE-KEY)
-                     ($(red DEV)) Internal procedure to actually generate genesis
+    $(helpcmd create-cache PROFILE-JSON DIR '[GENESIS-CACHE-DIR]')
+                     ($(red DEV)) Materialize a complete genesis entry into DIR
 EOF
 }
 
@@ -36,98 +37,77 @@ local op=${1:-$(usage_genesis)}; shift
 
 case "$op" in
 
-    # Called by: run.sh (line 433)
+    # Called by: run.sh.
     # [--force]: optional, forces cache regeneration
-    # $1: profile JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-conway/profile.json)
-    # $2: node-specs JSON file path (e.g. /nix/store/.../workbench-profile-data-ci-test-conway/node-specs.json)
-    # $3: cache directory (e.g. ~/.cache/cardano-workbench, defaults to envjqr 'cacheDir')
+    # $1: profile JSON file path (e.g. /nix/store/.../profile.json)
+    # $2: cache directory (e.g. ~/.cache/cardano-workbench, defaults to envjqr 'cacheDir')
     # Returns: absolute path to the genesis cache entry on stdout
     prepare-cache-entry )
-        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
+        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON [CACHEDIR]"
 
-        local regenesis_causes=()
+        local force=
         while test $# -gt 0; do
           case "$1" in
-            --force )
-              regenesis_causes+=('has--force')
-              ;;
-            * )
-              break
-              ;;
+            --force ) force=t ;;
+            * )       break   ;;
           esac
           shift
         done
-
+        # __REWRITE_GENESIS_CACHE forces regeneration, same as --force.
+        if [[ -v __REWRITE_GENESIS_CACHE ]]; then force=t; fi
         local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
-        local cacheDir=${3:-$(envjqr 'cacheDir')}
-
-        local cache_key_input cache_key cache_path
+        local cacheDir=${2:-$(envjqr 'cacheDir')}
 
         mkdir -p "$cacheDir"
         if [[ ! -w "$cacheDir" ]]; then
           fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
         fi
+        # The genesis cache root: backends own everything under it (their own
+        # entry plus, for the ripper, the dataset/ and protocol/ sub-caches).
+        local genesis_cache_dir="$cacheDir"/genesis
+        mkdir -p "$genesis_cache_dir"
 
-        cache_key_input=$(genesis profile-cache-key-input "$profile_json")
-        if [[ -z "$cache_key_input" ]]; then
+        local cache_key cache_path
+        cache_key=$(genesis profile-cache-key "$profile_json")
+        if [[ -z "$cache_key" ]]; then
           fatal "no valid profile JSON in $profile_json"
         fi
-        cache_key=$(genesis profile-cache-key "$profile_json")
-        cache_path=$cacheDir/genesis/$cache_key
-        if [[ "$(realpath "$cacheDir"/genesis)" == "$(realpath "$cache_path")" ]]; then
+        cache_path="$genesis_cache_dir/$cache_key"
+        if [[ "$(realpath "$genesis_cache_dir")" == "$(realpath "$cache_path")" ]]; then
           fatal "no valid genesis cache key associated with profile in $profile_json"
         fi
 
-        if genesis cache-test "$cache_path"; then
-          cache_hit=t
-          cache_hit_desc='hit'
+        jqtest .genesis.single_shot "$profile_json" ||
+            fatal "Incremental (non single-shot) genesis is not supported."
+
+        if profile has-preset "$profile_json"; then
+          # Presets are materialized directly: no backend, always refreshed.
+          local preset
+          preset=$(jq .preset "$profile_json" -r)
+          progress "genesis | cache" "preparing preset entry $cache_key  ($cache_path)"
+          genesis genesis-from-preset "$preset" "$cache_path"
+        elif test -z "$force" && genesis cache-hit "$profile_json" "$genesis_cache_dir"; then
+          progress "genesis | cache" "entry $cache_key:  $(red hit) ($cache_path)"
         else
-          cache_hit=
-          cache_hit_desc='miss'
-        fi
-
-        progress "genesis | cache"  "preparing entry $cache_key:  $(red $cache_hit_desc) ($cache_path)"
-
-        if [[ -z "$cache_hit" ]]; then
-          regenesis_causes+=('cache-miss')
-        elif [[ -v __REWRITE_GENESIS_CACHE ]]; then
-          regenesis_causes+=('__REWRITE_GENESIS_CACHE-env-var-defined')
-        fi
-
-        local preset
-
-        if [[ -n "${regenesis_causes[*]}" ]]; then
-          info genesis "generating due to ${regenesis_causes[*]}:  $cache_key @$cache_path"
-
-          jqtest .genesis.single_shot "$profile_json" ||
-              fatal "Incremental (non single-shot) genesis is not supported."
-
-          if profile has-preset "$profile_json"; then
-            preset=$(jq .preset "$profile_json" -r)
-            genesis genesis-from-preset "$preset" "$cache_path"
-          else
-            genesis actually-genesis "$profile_json" "$node_specs" "$cache_path" "$cache_key_input" "$cache_key"
-          fi
+          # Miss or --force: the backend fills a temp dir, then we commit it
+          # with an atomic mv (shared by every backend). The ripper's
+          # dataset/protocol sub-caches commit themselves independently under
+          # genesis_cache_dir.
+          progress "genesis | cache" "entry $cache_key:  $(red miss) ($cache_path)"
+          local tmpdir
+          tmpdir=$(mktemp -d)
+          trap 'rm -rf "$tmpdir"' EXIT
+          genesis create-cache "$profile_json" "$tmpdir" "$genesis_cache_dir"
+          rm -rf "$cache_path"
+          mkdir -p "$(dirname "$cache_path")"
+          mv "$tmpdir" "$cache_path"
+          trap - EXIT
+          info genesis "available in $cache_path"
         fi
 
         echo >&2
 
         realpath "$cache_path";;
-
-    cache-test )
-        local usage="USAGE:  wb genesis $op GENESIS-CACHE-DIR"
-        local cache_dir=${1:?$usage}
-        local version
-
-        version=$(cat "$cache_dir"/layout.version 2>/dev/null || echo "unknown")
-
-        if [[ ! "$version" == "$global_genesis_format_version" ]]; then
-          info genesis "cache entry at $cache_dir is incompatible:  layout version '$version' does not match current: $global_genesis_format_version"
-          return 1;
-        fi
-        return 0
-        ;;
 
     genesis-from-preset )
         local usage="USAGE: wb genesis $op PRESET GENESIS-DIR"
@@ -144,24 +124,6 @@ case "$op" in
         cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis-shelley.json)" "$dir/genesis.shelley.json"
         cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis.alonzo.json)"  "$dir/genesis.alonzo.json"
         cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/genesis.conway.json)"  "$dir/genesis.conway.json"
-        ;;
-
-    actually-genesis )
-        local usage="USAGE: wb genesis $op PROFILE-JSON NODE-SPECS DIR"
-        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
-        local dir=${3:-$(mktemp -d)}
-        local cache_key_input=${4:-$(genesis profile-cache-key-input "$WB_SHELL_PROFILE_DATA"/profile.json)}
-        local cache_key=${5:-$(genesis profile-cache-key "$WB_SHELL_PROFILE_DATA"/profile.json)}
-
-        progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
-
-        genesis create "$profile_json" "$dir"
-
-        info genesis "sealing"
-        cat <<<"$cache_key_input"               > "$dir"/cache.key.input
-        cat <<<"$cache_key"                     > "$dir"/cache.key
-        cat <<<"$global_genesis_format_version" > "$dir"/layout.version
         ;;
 
     # -- Dispatched to backend -------------------------------------------------
@@ -192,26 +154,44 @@ case "$op" in
         fi
         ;;
 
-    # Called by: genesis.sh (actually-genesis).
-    # $1: profile JSON file path.
-    # $2: output directory.
-    # Creates the genesis files in the directory.
-    # Profiles with a preset never reach here, prepare-cache-entry handles it.
-    create )
-        "genesis-create-$genesis_backend" "$@"
+    # Called by: genesis.sh prepare-cache-entry.
+    # $1: profile JSON.
+    # $2: genesis cache root.
+    # The backend resolves its own cache key and returns 0 if a valid
+    # (current-format) entry exists, 1 otherwise.
+    cache-hit )
+        "genesis-cache-hit-$genesis_backend" "$@"
+        ;;
+
+    # Called by: genesis.sh prepare-cache-entry (into a temp dir) and runner.nix
+    # (into its $out).
+    # $1: profile JSON.
+    # $2: output dir.
+    # $3: genesis cache root ($cacheDir/genesis, for the ripper sub-caches).
+    # Runs the backend create (genesis files/symlinks + the backend's own
+    # marker), then writes the shared cache.key / cache.key.input (derived from
+    # the profile).
+    # The caller commits $2. Presets never reach here, prepare-cache-entry handles them.
+    create-cache )
+        local profile_json=${1:?}
+        local outdir=${2:?}
+        local genesis_cache_dir=${3:-$(envjqr 'cacheDir')/genesis}
+        "genesis-create-cache-$genesis_backend" "$profile_json"   "$outdir" "$genesis_cache_dir"
+        genesis profile-cache-key-input   "$profile_json" > "$outdir"/cache.key.input
+        genesis profile-cache-key         "$profile_json" > "$outdir"/cache.key
         ;;
 
     # Called by: run.sh.
     # $1: profile JSON file path (run dir's profile.json, e.g. run/current/profile.json).
-    # $2: timing JSON string (from `profile allocate-time`).
-    # $3: genesis cache entry path (e.g. ~/.cache/cardano-workbench/genesis/ci-test-coay-...).
-    # $4: output directory (run dir's genesis/, e.g. run/current/genesis).
+    # $2: genesis cache entry path (e.g. ~/.cache/cardano-workbench/genesis/ci-test-coay-...).
+    # $3: output directory (run dir's genesis/, e.g. run/current/genesis).
+    # $4: timing JSON string (from `profile allocate-time`).
     # Profiles with a preset short-circuit here.
     derive-from-cache )
-        local usage="USAGE: wb genesis derive-from-cache PROFILE-JSON TIMING CACHE-ENTRY OUTDIR"
+        local usage="USAGE: wb genesis derive-from-cache PROFILE-JSON CACHE-ENTRY-DIR OUTDIR TIMING"
         local profile_json=${1:?$usage}
-        local cache_entry=${3:?$usage}
-        local outdir=${4:?$usage}
+        local cache_entry=${2:?$usage}
+        local outdir=${3:?$usage}
         # Skip the backend and copy genesis*.json from the cache entry into $outdir.
         if profile has-preset "$profile_json"; then
           local preset
@@ -225,30 +205,35 @@ case "$op" in
         ;;
 
     # ==========================================================================
-    # Shared protocol stubs for eras the profile leaves null.
+    # Per-era zero-spec emitters (compact JSON from genesis/zero/genesis/).
     # ==========================================================================
     #
-    # cardano-node's config parser requires ConwayGenesisFile and
-    # DijkstraGenesisFile unconditionally. Profiles that, for example, target a
-    # pre-Chang (or pre-Dijkstra) protocol version leave ".genesis.conway" or
-    # ".genesis.dijkstra" null on purpose.
-    # The stubs below satisfy the parser independent of the activation of those
-    # eras: the workbench must omit the matching TestConwayHardForkAtEpoch and
-    # TestDijkstraHardForkAtEpoch from the node config in that case (see
-    # nix/workbench/service/nodes.nix), so the stub content is loaded but never
-    # as live parameters.
-    #
-    # Stubs are sourced from the zero preset (single canonical source of truth
-    # for "schema-valid but inert" genesis content). Output is compact (single
-    # line) because the ripper backend's assembly step uses sed 's/}$//' to
-    # strip the trailing brace before splicing in the dataset side
-    # (initialDReps for conway).
+    # The single access point to the zero preset specs (named after the genesis
+    # files: zero-spec-ERA), so backends never touch global_basedir. Two uses:
+    #  - null-era stub (conway/dijkstra): cardano-node's parser requires those
+    #    genesis files unconditionally; a profile targeting a pre-Chang/pre-Dijkstra
+    #    version leaves ".genesis.{conway,dijkstra}" null, so we emit an inert spec
+    #    that parses but is never activated (the matching TestConwayHardForkAtEpoch
+    #    / TestDijkstraHardForkAtEpoch is omitted, see service/nodes.nix).
+    #  - ripper dataset base (shelley/alonzo/conway): the neutral specs the ripper
+    #    feeds to create-testnet-data; dataset-cache-ensure injects minUTxOValue /
+    #    dRepDeposit into them (these emitters themselves never inject).
+    # Output is compact (single line) because the ripper's assembly uses
+    # sed 's/}$//'. No byron: it has no create-testnet-data spec input (cli defaults).
 
-    conway-stub-spec )
+    zero-spec-shelley )
+      jq -c . "$global_basedir/genesis/zero/genesis/shelley.json"
+      ;;
+
+    zero-spec-alonzo )
+      jq -c . "$global_basedir/genesis/zero/genesis/alonzo.json"
+      ;;
+
+    zero-spec-conway )
       jq -c . "$global_basedir/genesis/zero/genesis/conway.json"
       ;;
 
-    dijkstra-stub-spec )
+    zero-spec-dijkstra )
       jq -c . "$global_basedir/genesis/zero/genesis/dijkstra.json"
       ;;
 

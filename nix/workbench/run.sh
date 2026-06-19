@@ -497,8 +497,7 @@ EOF
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
                  genesis prepare-cache-entry \
-                  "$profile_data"/profile.json \
-                  "$profile_data"/node-specs.json)
+                  "$profile_data"/profile.json)
         fi
 
         ## 2. decide the tag:
@@ -614,9 +613,9 @@ EOF
         then fail "internal error:  no genesis cache entry"
         else genesis derive-from-cache      \
                      "$dir"/profile.json    \
-                     "$timing"              \
                      "$genesis_cache_entry" \
-                     "$dir"/genesis
+                     "$dir"/genesis         \
+                     "$timing"
         fi
         echo >&2
         ## Add global_basedir Voltaire Plutus guardrails script

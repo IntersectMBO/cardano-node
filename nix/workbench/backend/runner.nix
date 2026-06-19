@@ -141,7 +141,6 @@ let
   workbench-profile-run =
     let
       profileJson = profileBundle.profile.JSON;
-      nodeSpecsJson = profileBundle.node-specs.JSON;
       # Genesis files creation.
       genesisFiles = pkgs.runCommand "workbench-run-genesis-${profileName}"
         { requiredSystemFeatures = [ "benchmark" ];
@@ -150,15 +149,9 @@ let
         ''
         mkdir $out
 
-        cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
-        cache_key=$(      wb genesis profile-cache-key       ${profileJson})
-
-        wb genesis actually-genesis \
-          "${profileJson}"          \
-          "${nodeSpecsJson}"        \
-          "$out"                    \
-          "$cache_key_input"        \
-          "$cache_key"
+        wb genesis create-cache \
+          "${profileJson}"      \
+          "$out"
         ''
       ;
       # Run the profile.

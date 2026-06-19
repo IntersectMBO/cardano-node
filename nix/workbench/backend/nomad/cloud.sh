@@ -881,15 +881,42 @@ deploy-genesis-nomadcloud() {
   # ("Used by the workbench") for the inventory and the per-file rationale.
   local is_voting
   is_voting=$(jq --raw-output '.workloads | any( .name == "voting")' "${dir}"/profile.json)
+  # Performance: prevent `find` from descending into directories whose contents
+  # will never reach the tar. Otherwise it readdirs every entry under genesis/
+  # just to test it against the include filter, and the per-delegator and
+  # per-drep subdirs alone can hold tens of thousands of entries each. On
+  # profiles of that size the readdir cost dominates the whole tar step.
+  #
+  # Always-pruned subtrees:
+  # - cache-entry/ is the whole-cache symlink left by the ripper backend.
+  #   Its useful sub-paths are already reachable directly under genesis/ via the
+  #   per-key symlinks, so descending it would also bloat the tar with
+  #   duplicates.
+  # - byron-gen-command/, delegate-keys/, genesis-keys/ only hold files the
+  #   remote nodes never read.
+  local prune_args=(
+        -path "*/genesis/cache-entry"
+    -o  -path "*/genesis/byron-gen-command"
+    -o  -path "*/genesis/delegate-keys"
+    -o  -path "*/genesis/genesis-keys"
+  )
+  # Performance (continued): stake-delegators/ and drep-keys/ are the two
+  # largest subtrees under genesis/ on most profiles. Voting profiles ship
+  # selected files from both, so for those we have to walk them. For every other
+  # profile, pruning them is by far the biggest single win.
+  if test "${is_voting}" != "true"
+  then
+    prune_args+=(
+      -o  -path "*/genesis/stake-delegators"
+      -o  -path "*/genesis/drep-keys"
+    )
+  fi
+  # Include patterns are evaluated against whatever survives the prune above.
   # `-name` matches just the basename and is enough for files whose basename is
   # unique in the tree (the genesis JSON files, the guardrails script).
   # `-path "*/genesis/..."` is used everywhere else: `kes.skey`, `utxo.skey`
   # etc. appear under more than one directory and the containing dir is what
-  # tells them apart. Anchoring on `*/genesis/` also makes the patterns robust
-  # against the run-dir layout: anything under the cache subdir
-  # (`cache-entry/dataset/pools-keys/...` today, anything else tomorrow) is
-  # automatically excluded, so we do not have to keep a literal cache-dir name
-  # in sync with this file.
+  # tells them apart.
   local include_args=(
     # Five genesis JSON files referenced by the node config via
     # Byron/Shelley/Alonzo/Conway/DijkstraGenesisFile.
@@ -918,8 +945,9 @@ deploy-genesis-nomadcloud() {
     )
   fi
   find -L "${dir}"/genesis                              \
-    \( "${include_args[@]}" \)                          \
-    -printf "%P\n"                                      \
+      \( "${prune_args[@]}" \) -prune                   \
+    -o                                                  \
+      \( "${include_args[@]}" \) -printf "%P\n"         \
     | tar --create --zstd                               \
       --dereference --hard-dereference                  \
       --file="${dir}"/"${genesis_file_name}"            \

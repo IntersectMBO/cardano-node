@@ -6,12 +6,16 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-jq, profile-cache-key-jq,
-#   genesis-create-jq, derive-from-cache-jq
+#   genesis-cache-hit-jq, genesis-create-cache-jq, derive-from-cache-jq
+
+# jq's cache format marker is the "layout.version" file: genesis-create-cache-jq
+# writes it, genesis-cache-hit-jq gates the cache hit on it. (Atomic commit is the
+# top-level caller's job; the ripper backend versions via its keys instead.)
+genesis_jq_layout_version=June-22-2026
 
 profile-cache-key-input-jq() {
     set -euo pipefail
     local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-
     local args=(
         --slurpfile profile "$profile_json"
         --arg profile_json "$profile_json"
@@ -25,10 +29,7 @@ profile-cache-key-input-jq() {
 
 profile-cache-key-jq() {
     set -euo pipefail
-    local usage="USAGE: wb genesis profile-cache-key PROFILE-JSON"
-    local profile_json=${1:?$usage}
     local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-
     local args=(
         --arg params_hash "$(genesis profile-cache-key-input "$profile_json" | sha1sum | cut -c-7)"
         --slurpfile profile "$profile_json"
@@ -39,11 +40,29 @@ profile-cache-key-jq() {
     jq 'include "genesis"; profile_genesis_cache_entry_name($profile[0]; $params_hash)' "${args[@]}" "$profile_json"
 }
 
-# Entry point for genesis creation.
-# Keeps in the provided directory all the output of `create-testnet-data`.
-genesis-create-jq() {
+# Cache hit iff the entry exists and its layout.version matches this format.
+# Resolves its own cache key from the profile (via the dispatcher, so the
+# modular backend's delegation still picks the modular key).
+genesis-cache-hit-jq() {
+    local profile_json=${1:?}
+    local genesis_cache_dir=${2:?}
+    local entry
+    entry="$genesis_cache_dir/$(genesis profile-cache-key "$profile_json")"
+    if test -d "$entry"
+    then
+      test "$(cat "$entry"/layout.version 2>/dev/null || true)" = "$genesis_jq_layout_version"
+    else
+      false
+    fi
+}
+
+# Materializes all of `create-testnet-data`'s output in $dir, plus jq's
+# layout.version format marker. $3 is the genesis cache root (unused by jq).
+# The shared cache.key / cache.key.input are written by `genesis create-cache`.
+genesis-create-cache-jq() {
     local profile_json=$1
     local dir=$2
+    # $3 (genesis cache root) is unused by jq: it writes everything into $dir.
 
     mkdir -p "$dir"
 
@@ -57,7 +76,7 @@ genesis-create-jq() {
     else
       # Stub that is parseable but it should never be activated to stay inert.
       # Activation check in service/nodes.nix (TestConwayHardForkAtEpoch).
-      genesis conway-stub-spec                    > "$dir/conway-genesis.spec.json"
+      genesis zero-spec-conway                    > "$dir/conway-genesis.spec.json"
     fi
 
     # TODO if profile_json.composition.dense_pool_density != 1 -> create-testnet-data does not support dense pools
@@ -77,15 +96,18 @@ genesis-create-jq() {
     #   spec generation step here.
     progress genesis "$(colorise cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}")"
     cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}"
-    info genesis "create-testnet-data genesis available in $dir"
+
+    # jq's format marker, checked by genesis-cache-hit-jq. (Atomic commit and the shared
+    # cache.key / cache.key.input are the caller's job, in `genesis create-cache`.)
+    cat <<<"$genesis_jq_layout_version" > "$dir"/layout.version
 }
 
 derive-from-cache-jq() {
-    local usage="USAGE: wb genesis derive-from-cache PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
+    local usage="USAGE: wb genesis derive-from-cache PROFILE-JSON CACHE-ENTRY-DIR OUTDIR TIMING-JSON-EXPR"
     local profile_json=${1:?$usage}
-    local timing=${2:?$usage}
-    local cache_entry=${3:?$usage}
-    local outdir=${4:?$usage} # output directory (run dir's genesis/, e.g. run/current/genesis).
+    local cache_entry=${2:?$usage}
+    local outdir=${3:?$usage} # output directory (run dir's genesis/, e.g. run/current/genesis).
+    local timing=${4:?$usage}
 
     mkdir -p "$outdir"
 

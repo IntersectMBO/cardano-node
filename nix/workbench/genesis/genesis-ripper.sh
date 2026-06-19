@@ -1,13 +1,11 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 #
 # Dataset-cached genesis backend.
 # Used when WB_GENESIS_RIPPER=1.
 #
 # Implements the backend interface:
 #   profile-cache-key-input-ripper, profile-cache-key-ripper,
-#   genesis-create-ripper,
-#   derive-from-cache-ripper
+#   genesis-cache-hit-ripper, genesis-create-cache-ripper, derive-from-cache-ripper
 #
 # Three-level cache:
 #
@@ -17,11 +15,16 @@
 #     needing this exact dataset combination reuses the entry as-is.
 #     Can be expensive to create, which is the main reason the cache exists.
 #     Stores:
-#     - byron.dataset.json   {bootStakeholders, heavyDelegation, nonAvvmBalances}
-#     - shelley.dataset.json {genDelegs, initialFunds, staking, maxLovelaceSupply}
+#     - dataset.byron.json   {bootStakeholders, heavyDelegation, nonAvvmBalances}
+#     - dataset.shelley.json {genDelegs, initialFunds, staking, maxLovelaceSupply}
 #                            (with our profiles it can be 500MB+)
-#     - conway.dataset.json  {initialDReps, delegs}
+#     - dataset.conway.json  {initialDReps, delegs}
 #                            (with our profiles it can be 200MB+)
+#     - spec.{shelley,alonzo,conway}.json
+#                            the exact specs fed to create-testnet-data (zero
+#                            specs + injected minUTxOValue / dRepDeposit), kept
+#                            for reproducibility.
+#     - cache.key.input      the dataset-cache-key-input JSON (debugging).
 #     - byron-gen-command/genesis-keys.000.key
 #     - delegate-keys/delegateN/
 #         { kes.skey, kes.vkey, key.skey, key.vkey
@@ -46,25 +49,28 @@
 #
 # - Level 2: protocol cache ($cache_dir/genesis/protocol/)
 #     Keyed by hash of genesis.byron + genesis.shelley + genesis.alonzo +
-#     genesis.conway + genesis.dijkstra from the profile.
+#     genesis.conway + genesis.dijkstra (minus dataset and timing fields) from
+#     the profile.
 #     Each entry is unique and independent of any profile: any profile with
 #     this exact protocol params combination reuses the entry as-is.
 #     Cheap to create, the cache exists mostly to make protocol-param
 #     sharing across profiles visible.
 #     Stores the spec-derived parts WITHOUT dataset fields and WITHOUT
 #     startTime / systemStart (which are per-run):
-#     - byron.protocol.json    (spec minus dataset fields and startTime)
-#     - shelley.protocol.json  (spec minus dataset fields and systemStart)
-#     - alonzo.protocol.json   (complete spec)
-#     - conway.protocol.json   (spec minus dataset fields)
-#     - dijkstra.protocol.json (complete spec)
+#     - protocol.byron.json    (spec minus dataset fields and startTime)
+#     - protocol.shelley.json  (spec minus dataset fields and systemStart)
+#     - protocol.alonzo.json   (complete spec)
+#     - protocol.conway.json   (spec minus dataset fields)
+#     - protocol.dijkstra.json (complete spec)
+#     - cache.key.input        the protocol-cache-key-input JSON (debugging).
 #
 # - Level 3: genesis cache ($cache_dir/genesis/)
 #     Keyed by: profile name + protocol hash + dataset hash.
 #     Placeholder for easy finding of the dataset and protocol entries used.
 #
 # - Final level: the genesis dir in the run directory ($run_dir/genesis).
-#     Assembled from level 1 + level 2 + startTime / systemStart using cat/sed/printf.
+#     Assembled from level 1 + level 2 + startTime / systemStart using only
+#     simple and fast cat/sed/printf.
 #     Byron, Shelley and Conway are assembled here (not symlinked):
 #       - Byron   because it contains startTime.
 #       - Shelley because of the dataset payload and contains systemStart.
@@ -79,14 +85,21 @@
 # -- Backend interface ---------------------------------------------------------
 # ==============================================================================
 
-# The cache-key input combines protocol params hash and dataset hash.
+# The ripper has no "layout.version" file (that is a jq-backend concept). Its
+# cache layout/format version is folded into every cache key below, so a layout
+# change (renamed files, new split, ...) bumps this and orphans the old entries
+# automatically.
+# Bump on any change to what/how the ripper caches.
+genesis_ripper_layout_version="v0.0"
+
+# The cache-key input combines protocol hash, dataset hash and layout version.
 # (The profile name is prepended by profile-cache-key-ripper below.)
 profile-cache-key-input-ripper() {
   local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
   local proto_hash dataset_hash
-  proto_hash=$(protocol-cache-key-hash  "$profile_json")
-  dataset_hash=$(dataset-cache-key-hash "$profile_json")
-  echo "${proto_hash}-${dataset_hash}"
+  proto_hash=$(protocol-cache-key-input-hash  "$profile_json")
+  dataset_hash=$(dataset-cache-key-input-hash "$profile_json")
+  echo "${proto_hash}-${dataset_hash}-${genesis_ripper_layout_version}"
 }
 
 profile-cache-key-ripper() {
@@ -96,42 +109,48 @@ profile-cache-key-ripper() {
   echo "${name}-$(profile-cache-key-input-ripper "$profile_json")"
 }
 
-# Ensure sub-caches exist.
-# Creates symlinks to the dataset cache entry and protocol cache entry and
-# pre-assembles the genesis JSON files as far as possible: those that are small
-# and don't change per run (no dataset fields and no time fields).
-# What is missing here is left for derive-from-cache-ripper.
-genesis-create-ripper() {
+# Cache hit iff the versioned entry exists AND its dataset/protocol sub-caches
+# still resolve. The entry is committed atomically (top-level mv), but its
+# dataset/ and protocol/ are symlinks to separate sub-cache entries that may be
+# pruned independently, so in that cases we report a miss to let it regenerate.
+# The format version is folded into the cache key (see
+# genesis_ripper_layout_version), so an old-format entry has a different path
+# and won't match. Resolves its own cache key from the profile (via the
+# dispatcher).
+genesis-cache-hit-ripper() {
+  local profile_json=${1:?}
+  local genesis_cache_dir=${2:?}
+  local entry
+  entry="$genesis_cache_dir/$(genesis profile-cache-key "$profile_json")"
+  test -d "$entry/dataset" && test -d "$entry/protocol"
+}
+
+# Build the level-3 entry in $outdir (a fresh dir; the top-level caller commits
+# it with an atomic mv). Ensures the dataset and protocol sub-caches under
+# $genesis_cache_dir (each atomic on its own) and links them. No layout.version
+# (the ripper's format version is in the cache keys). The shared cache.key /
+# cache.key.input are written by `genesis create-cache`. $3 is the genesis cache root.
+genesis-create-cache-ripper() {
   local profile_json=$1
   local outdir=$2
+  local genesis_cache_dir=${3:-$(envjqr 'cacheDir')/genesis}
 
   mkdir -p "$outdir"
 
-  # Ensure the dataset cache and the protocol cache exist and add symlinks.
-  if ! test -d "$outdir/dataset"
-  then
-    local dataset_entry
-    dataset_entry=$(dataset-cache-ensure   "$profile_json")
-    # If the link is broken (-d above is false) it is replaced here (-f below).
-    ln -sf "$dataset_entry" "$outdir/dataset"
-  fi
-  if ! test -d "$outdir/protocol"
-  then
-    local protocol_entry
-    protocol_entry=$(protocol-cache-ensure "$profile_json")
-    # If the link is broken (-d above is false) it is replaced here (-f below).
-    ln -sf "$protocol_entry" "$outdir/protocol"
-  fi
+  # Ensure the dataset and protocol sub-caches exist and link them in.
+  local dataset_entry protocol_entry
+  dataset_entry=$(dataset-cache-ensure   "$profile_json" "$genesis_cache_dir")
+  ln -sf "$dataset_entry"  "$outdir/dataset"
+  protocol_entry=$(protocol-cache-ensure "$profile_json" "$genesis_cache_dir")
+  ln -sf "$protocol_entry" "$outdir/protocol"
 
-  # - Byron: changes with every run (startTime field). Ignored here.
-  # - Shelley: changes with every run (systemStart field). Ignored here.
+  # - Byron: changes per run (startTime). Assembled in derive-from-cache-ripper.
+  # - Shelley: changes per run (systemStart). Assembled in derive-from-cache-ripper.
   # - Alonzo: protocol parameters only, no dataset fields. Can simply link.
-  ln -s "protocol/alonzo.protocol.json"   "$outdir/genesis.alonzo.json"
-  # - Conway: protocol parameters + dataset. Potentially big file. Ignored here.
+  ln -s "protocol/protocol.alonzo.json"   "$outdir/genesis.alonzo.json"
+  # - Conway: protocol parameters + dataset. Assembled in derive-from-cache-ripper.
   # - Dijkstra: protocol parameters only, no dataset fields. Can simply link.
-  ln -s "protocol/dijkstra.protocol.json" "$outdir/genesis.dijkstra.json"
-
-  info genesis "genesis cache entry created in $outdir"
+  ln -s "protocol/protocol.dijkstra.json" "$outdir/genesis.dijkstra.json"
 }
 
 # Populate the run directory from the genesis cache entry.
@@ -142,11 +161,11 @@ genesis-create-ripper() {
 #   - Conway  because of the dataset payload.
 # Keep it simple: cat/sed/printf.
 derive-from-cache-ripper() {
-  local usage="USAGE: wb genesis derive-from-cache PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
+  local usage="USAGE: wb genesis derive-from-cache PROFILE-JSON CACHE-ENTRY-DIR OUTDIR TIMING-JSON-EXPR"
   local profile_json=${1:?$usage}
-  local timing=${2:?$usage}
-  local cache_entry=${3:?$usage}
-  local outdir=${4:?$usage} # output directory (run dir's genesis/, e.g. run/current/genesis).
+  local cache_entry=${2:?$usage}
+  local outdir=${3:?$usage} # output directory (run dir's genesis/, e.g. run/current/genesis).
+  local timing=${4:?$usage}
 
   # Preset profiles are handled by the genesis.sh top-level `derive-from-cache`
   # dispatcher and never reach this backend.
@@ -158,7 +177,7 @@ derive-from-cache-ripper() {
   ln -s "$cache_entry"                 "$outdir"/cache-entry
   ln -s "$cache_entry"/cache.key       "$outdir"
   ln -s "$cache_entry"/cache.key.input "$outdir"
-  ln -s "$cache_entry"/layout.version  "$outdir"
+  # No layout.version: the ripper versions its cache via the keys, not a marker.
 
   # Key directories as symlinks from cache (create-testnet-data output names).
   for keydir in byron-gen-command delegate-keys drep-keys genesis-keys pools-keys stake-delegators utxo-keys
@@ -172,33 +191,34 @@ derive-from-cache-ripper() {
 
   # Byron and Shelley change per run (startTime / systemStart).
   # Assembled from protocol + dataset + per-run timing using cat/sed/printf.
+  # Each protocol.*/dataset.* file is a non-empty compact JSON object, so the splice yields valid JSON.
   local system_start_epoch system_start
   system_start_epoch=$(jq -r '.start' <<<"$timing")
   system_start=$(jq -r '.systemStart' <<<"$timing")
   # Byron (always small).
   {
-    sed 's/}$//' "$cache_entry/protocol/byron.protocol.json"
+    sed 's/}$//' "$cache_entry/protocol/protocol.byron.json"
     printf ',"startTime":%s' "$system_start_epoch"
     printf ','
-    tail -c +2 "$cache_entry/dataset/byron.dataset.json"
+    tail -c +2 "$cache_entry/dataset/dataset.byron.json"
   } > "$outdir/genesis.byron.json"
   # Shelley (can be 500MB+).
   {
-    sed 's/}$//' "$cache_entry/protocol/shelley.protocol.json"
+    sed 's/}$//' "$cache_entry/protocol/protocol.shelley.json"
     printf ',"systemStart":"%s"' "$system_start"
     printf ','
-    tail -c +2 "$cache_entry/dataset/shelley.dataset.json"
+    tail -c +2 "$cache_entry/dataset/dataset.shelley.json"
   } > "$outdir/genesis.shelley.json"
 
   # Conway (can be 200MB+).
   # Only tied to a dataset + protocol. No timing.
-  # When the profile leaves .genesis.conway null, protocol/conway.protocol.json
+  # When the profile leaves .genesis.conway null, protocol/protocol.conway.json
   # is the zero stub but we still need to merge the dataset side (initialDReps
   # and delegs) to produce a parseable file for the node config.
   {
-    sed 's/}$//' "$cache_entry/protocol/conway.protocol.json"
+    sed 's/}$//' "$cache_entry/protocol/protocol.conway.json"
     printf ','
-    tail -c +2 "$cache_entry/dataset/conway.dataset.json"
+    tail -c +2 "$cache_entry/dataset/dataset.conway.json"
   } > "$outdir/genesis.conway.json"
 }
 
@@ -212,9 +232,9 @@ dataset-cache-key() {
   # The human readable prefix.
   local key_text
   key_text=$(dataset-cache-key-text "$profile_json")
-  # The hash of the full resulting dataset.
+  # The hash of the dataset cache-key input (the params that determine the dataset).
   local key_hash
-  key_hash=$(dataset-cache-key-hash "$profile_json")
+  key_hash=$(dataset-cache-key-input-hash "$profile_json")
   # Append the hash at the end, makes it easier to filter if needed.
   echo "${key_text}-${key_hash}"
 }
@@ -241,37 +261,47 @@ dataset-cache-key-text() {
     "$profile_json"
 }
 
-# The hash of a unique dataset combination (48 bits).
-dataset-cache-key-hash() {
+# The cache-key input: canonical JSON of ALL dataset parameters (fixed literal
+# key order, so already deterministic without `-S`). The trailing layout-version
+# orphans old entries when the cache format changes (see
+# genesis_ripper_layout_version).
+# Written verbatim into each dataset cache entry as cache.key.input (debugging).
+dataset-cache-key-input() {
   local profile_json=$1
-    # A hash of ALL dataset parameters.
-    jq -c                                                  \
-      '{ "committee-keys":   0
-       , "genesis-keys":     .composition.n_bft_hosts
-       , "pools":            .composition.n_pools
-       , "stake-delegators": .derived.delegators_effective
-       , "drep-keys":        .genesis.dreps
-       , "stuffed-utxo":     .derived.utxo_stuffed
-       , "utxo-keys":        .genesis.utxo_keys
-       , "total-supply":     .derived.supply_total
-       , "delegated-supply": .derived.supply_delegated
-       , "testnet-magic":    .genesis.network_magic
-       }'                                                  \
-      "$profile_json"                                      \
-  | sha1sum                                                \
-  | cut -c-12
+  jq -c                                      \
+    --arg v "$genesis_ripper_layout_version" \
+    '{ "committee-keys":     0
+     , "genesis-keys":       .composition.n_bft_hosts
+     , "pools":              .composition.n_pools
+     , "stake-delegators":   .derived.delegators_effective
+     , "drep-keys":          .genesis.dreps
+     , "stuffed-utxo":       .derived.utxo_stuffed
+     , "utxo-keys":          .genesis.utxo_keys
+     , "total-supply":       .derived.supply_total
+     , "delegated-supply":   .derived.supply_delegated
+     , "testnet-magic":      .genesis.network_magic
+     , "stuffed-utxo-value": (.genesis.shelley.protocolParams.minUTxOValue // 0)
+     , "drep-deposit":       (.genesis.conway.dRepDeposit // 0)
+     , "layout-version":     $v
+     }'                                      \
+    "$profile_json"
+}
+
+# The hash of the dataset cache-key input (48 bits).
+dataset-cache-key-input-hash() {
+  local profile_json=$1
+  dataset-cache-key-input "$profile_json" | sha1sum | cut -c-12
 }
 
 # Ensure a dataset cache entry exists. If not, create it.
 # Returns the cache entry path on stdout.
 dataset-cache-ensure() {
   local profile_json=$1
-  local cache_dir=${2:-$(envjqr 'cacheDir')}
-  local zero_dir="$global_basedir/genesis/zero/genesis"
+  local genesis_cache_dir=${2:-$(envjqr 'cacheDir')/genesis}
 
   local cache_entry outdir
   cache_entry=$(dataset-cache-key "$profile_json")
-  outdir="$cache_dir"/genesis/dataset/"$cache_entry"
+  outdir="$genesis_cache_dir"/dataset/"$cache_entry"
 
   if test -d "$outdir"
   then
@@ -282,6 +312,8 @@ dataset-cache-ensure() {
     local tmpdir
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
+    # Keep the cache-key input for debugging (like the level-3 genesis cache).
+    dataset-cache-key-input "$profile_json" > "$tmpdir/cache.key.input"
     # Extract dataset parameters from canonical profile fields
     local bfts pools delegators dreps stuffed utxo_keys supply_t supply_d magic
     bfts=$(jq       --raw-output '.composition.n_bft_hosts'      "$profile_json")
@@ -293,19 +325,33 @@ dataset-cache-ensure() {
     supply_t=$(jq   --raw-output '.derived.supply_total'         "$profile_json")
     supply_d=$(jq   --raw-output '.derived.supply_delegated'     "$profile_json")
     magic=$(jq      --raw-output '.genesis.network_magic'        "$profile_json")
-    # Run `create-testnet-data` with the "zero" preset specs from
-    # profile/presets/zero/genesis/ (see its README for details).
-    #
-    # These are minimal/neutral spec files: they satisfy cardano-cli's
-    # required --spec-{shelley,alonzo,conway} arguments without carrying
-    # meaningful protocol parameters. We only want create-testnet-data to
-    # materialize the DATASET fields (driven by --pools, --stake-delegators,
-    # --total-supply, etc.); the protocol parameters live in a separate cache
-    # (level 2), so we don't want them entangled here.
-    #
-    # Using zeroed specs is what makes the dataset cache independent of the
-    # protocol: the same dataset params always produce byte-identical dataset
-    # fields regardless of which era / protocol-params the profile uses.
+    # Feed create-testnet-data the per-era zero specs (genesis zero-spec-ERA):
+    # neutral specs that satisfy `--spec-{shelley,alonzo,conway}` without
+    # carrying meaningful protocol params, so the output is just the DATASET
+    # fields.
+    # Exception: create-testnet-data bakes two protocol params into dataset
+    # fields, so inject them into the specs:
+    # - shelley minUTxOValue -> the lovelace value of each stuffed UTxO.
+    # - conway dRepDeposit   -> the deposit recorded on each initialDReps entry.
+    # Both are part of dataset-cache-key-input so the entry stays uniquely keyed.
+    local min_utxo_value drep_deposit
+    min_utxo_value=$(jq -r '.genesis.shelley.protocolParams.minUTxOValue // 0' "$profile_json")
+    drep_deposit=$(jq   -r '.genesis.conway.dRepDeposit                  // 0' "$profile_json")
+    # Shelley.
+      genesis zero-spec-shelley             \
+    | jq                                    \
+        --argjson v "$min_utxo_value"       \
+        '.protocolParams.minUTxOValue = $v' \
+    > "$tmpdir/spec.shelley.json"
+    # Alonzo.
+      genesis zero-spec-alonzo              \
+    > "$tmpdir/spec.alonzo.json"
+    # Conway.
+      genesis zero-spec-conway              \
+    | jq                                    \
+        --argjson v "$drep_deposit"         \
+        '.dRepDeposit = $v'                 \
+    > "$tmpdir/spec.conway.json"
     progress genesis "creating dataset cache: $outdir ($tmpdir)"
     # Use `cardano-cli latest` rather than workbench's `eraName`:
     # - The era passed to `cardano-cli genesis create-testnet-data` only selects
@@ -315,9 +361,9 @@ dataset-cache-ensure() {
     #   spec generation step here.
     cardano-cli latest genesis create-testnet-data \
       --out-dir "$tmpdir"                          \
-      --spec-shelley "$zero_dir/shelley.json"      \
-      --spec-alonzo  "$zero_dir/alonzo.json"       \
-      --spec-conway  "$zero_dir/conway.json"       \
+      --spec-shelley "$tmpdir/spec.shelley.json"   \
+      --spec-alonzo  "$tmpdir/spec.alonzo.json"    \
+      --spec-conway  "$tmpdir/spec.conway.json"    \
       --committee-keys   0                         \
       --start-time       "1970-01-01T00:00:00Z"    \
       --genesis-keys     "$bfts"                   \
@@ -336,12 +382,12 @@ dataset-cache-ensure() {
       jq -c                                                     \
         '{bootStakeholders, heavyDelegation, nonAvvmBalances}'  \
         "$tmpdir/byron-genesis.json"                            \
-    > "$tmpdir/byron.dataset.json"
+    > "$tmpdir/dataset.byron.json"
     # - Shelley:
       jq -c                                                     \
         '{genDelegs, initialFunds, staking, maxLovelaceSupply}' \
         "$tmpdir/shelley-genesis.json"                          \
-    > "$tmpdir/shelley.dataset.json"
+    > "$tmpdir/dataset.shelley.json"
     # - Conway: Default to "{}" if cardano-cli omits initialDReps or delegs:
     #   cardano-node's parser accepts {} but rejects null.
       jq -c                                                     \
@@ -349,7 +395,7 @@ dataset-cache-ensure() {
          , delegs:       (.delegs       // {})
          }'                                                     \
         "$tmpdir/conway-genesis.json"                           \
-    > "$tmpdir/conway.dataset.json"
+    > "$tmpdir/dataset.conway.json"
     # Remove the not needed files produced by create-testnet-data.
     rm "$tmpdir/byron-genesis.json"
     rm "$tmpdir/byron.genesis.spec.json"
@@ -385,7 +431,7 @@ protocol-cache-key() {
   key_text=$(protocol-cache-key-text "$profile_json")
   # The hash of the full resulting protocol parameters.
   local key_hash
-  key_hash=$(protocol-cache-key-hash "$profile_json")
+  key_hash=$(protocol-cache-key-input-hash "$profile_json")
   # Append the hash at the end, makes it easier to filter if needed.
   echo "${key_text}-${key_hash}"
 }
@@ -413,79 +459,102 @@ protocol-cache-key-text() {
     "$profile_json"
 }
 
-# The hash of a unique protocol parameters combination (48 bits).
-protocol-cache-key-hash() {
+# The cache-key input: the protocol spec per era MINUS the dataset and timing
+# fields (the same deletions protocol-cache-ensure applies to the stored content),
+# so the key identifies exactly what is cached and is shared across profiles
+# that differ only in dataset/timing. Written into each entry as
+# cache.key.input.
+# Keep these del lists in sync with protocol-cache-ensure.
+protocol-cache-key-input() {
   local profile_json=$1
-  # A hash of ALL protocol parameters.
-    jq -c -S                                    \
-      '{ byron:    ( .genesis.byron    // {} ),
-         shelley:  ( .genesis.shelley  // {} ),
-         alonzo:   ( .genesis.alonzo   // {} ),
-         conway:   ( .genesis.conway   // {} ),
-         dijkstra: ( .genesis.dijkstra // {} )
-       }'                                       \
-      "$profile_json"                           \
-  | sha1sum                                     \
-  | cut -c-12
+  # -S sorts keys for a canonical hash, so layout-version's source position is
+  # cosmetic; kept last to match dataset-cache-key-input.
+  jq -c -S                                   \
+    --arg v "$genesis_ripper_layout_version" \
+    '{ byron:    ( .genesis.byron    // {}
+                 | del(.bootStakeholders, .heavyDelegation, .nonAvvmBalances,   .startTime  )
+                 )
+     , shelley:  ( .genesis.shelley  // {}
+                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart)
+                 )
+     , alonzo:   ( .genesis.alonzo   // {} )
+     , conway:   ( .genesis.conway   // {}
+                 | del(.initialDReps, .delegs)
+                 )
+     , dijkstra: ( .genesis.dijkstra // {} )
+     , "layout-version": $v
+     }'                                      \
+    "$profile_json"
+}
+
+# The hash of the protocol cache-key input (48 bits).
+protocol-cache-key-input-hash() {
+  local profile_json=$1
+  protocol-cache-key-input "$profile_json" | sha1sum | cut -c-12
 }
 
 # Ensure a protocol cache entry exists. If not, create it.
 # Returns the cache entry path on stdout.
 protocol-cache-ensure() {
   local profile_json=$1
-  local cache_dir=${2:-$(envjqr 'cacheDir')}
+  local genesis_cache_dir=${2:-$(envjqr 'cacheDir')/genesis}
 
   local cache_entry outdir
   cache_entry=$(protocol-cache-key "$profile_json")
-  outdir="$cache_dir"/genesis/protocol/"$cache_entry"
+  outdir="$genesis_cache_dir"/protocol/"$cache_entry"
 
-  if test -d "${outdir}"
+  if test -d "$outdir"
   then
-    info genesis "protocol parameters cache hit: ${outdir}"
+    info genesis "protocol parameters cache hit: $outdir"
   else
-    info genesis "protocol parameters cache miss: ${outdir}"
-    mkdir -p "${outdir}"
+    info genesis "protocol parameters cache miss: $outdir"
+    # Create in a temporary directory and move if no errors.
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+    # Keep the cache-key input for debugging (like the level-3 genesis cache).
+    protocol-cache-key-input "$profile_json" > "$tmpdir/cache.key.input"
     # Generate specs from profile and strip dataset fields and time fields.
     # All specs are small (<10KB), using `jq` is fine here but MUST be compact
     # JSON (-c) because the merge step uses sed 's/}$//' which only works on
     # single-line JSON.
     # - Byron: remove dataset fields and timing.
-    if test "$(jq -r '.genesis.byron // "null"' "${profile_json}")" != "null"
+    if test "$(jq -r '.genesis.byron // "null"' "$profile_json")" != "null"
     then
-        jq -c                                   \
+        jq -c                            \
           ' .genesis.byron
           | del( .bootStakeholders
                , .heavyDelegation
                , .nonAvvmBalances
                , .startTime
-               )'                               \
-         "${profile_json}"                      \
-      > "${outdir}/byron.protocol.json"
+               )'                        \
+         "$profile_json"                 \
+      > "$tmpdir/protocol.byron.json"
     else
       fatal "empty .genesis.byron in profile"
     fi
     # - Shelley: remove dataset fields and timing.
-    if test "$(jq -r '.genesis.shelley // "null"' "${profile_json}")" != "null"
+    if test "$(jq -r '.genesis.shelley // "null"' "$profile_json")" != "null"
     then
-        jq -c                                   \
+        jq -c                            \
           ' .genesis.shelley
           | del( .genDelegs
                , .initialFunds
                , .staking
                , .maxLovelaceSupply
-               , .systemStart)'                 \
-          "${profile_json}"                     \
-      > "${outdir}/shelley.protocol.json"
+               , .systemStart)'          \
+          "$profile_json"                \
+      > "$tmpdir/protocol.shelley.json"
     else
       fatal "empty .genesis.shelley in profile"
     fi
     # - Alonzo: nothing to do, only compact it.
-    if test "$(jq -r '.genesis.alonzo // "null"' "${profile_json}")" != "null"
+    if test "$(jq -r '.genesis.alonzo // "null"' "$profile_json")" != "null"
     then
-        jq -c                                   \
-          '.genesis.alonzo'                     \
-          "${profile_json}"                     \
-      > "${outdir}/alonzo.protocol.json"
+        jq -c                            \
+          '.genesis.alonzo'              \
+          "$profile_json"                \
+      > "$tmpdir/protocol.alonzo.json"
     else
       fatal "empty .genesis.alonzo in profile"
     fi
@@ -493,35 +562,40 @@ protocol-cache-ensure() {
     #   ConwayGenesisFile unconditionally. When the profile has a null or empty
     #   ".genesis.conway" (e.g. pre-Chang profiles with "pparamsEpoch" < 507) we
     #   emit a "zero" stub that passes the validation.
-    if test "$(jq -r '.genesis.conway // "null"' "${profile_json}")" != "null"
+    if test "$(jq -r '.genesis.conway // "null"' "$profile_json")" != "null"
     then
-        jq -c                                   \
+        jq -c                            \
           '.genesis.conway
           | del( .initialDReps
-               , .delegs)'                      \
-          "${profile_json}"                     \
-      > "${outdir}/conway.protocol.json"
+               , .delegs)'               \
+          "$profile_json"                \
+      > "$tmpdir/protocol.conway.json"
     else
         # Stub that is parseable but it should never be activated.
         # Activation check in service/nodes.nix (TestConwayHardForkAtEpoch).
-        genesis conway-stub-spec > "${outdir}/conway.protocol.json"
+        genesis zero-spec-conway > "$tmpdir/protocol.conway.json"
     fi
     # - Dijkstra: always emit a file because cardano-node's config parser requires
     #   DijkstraGenesisFile unconditionally. When the profile has a null or empty
     #   ".genesis.dijkstra" we emit a "zero" stub that passes the validation.
-    if test "$(jq -r '.genesis.dijkstra // "null"' "${profile_json}")" != "null"
+    if test "$(jq -r '.genesis.dijkstra // "null"' "$profile_json")" != "null"
     then
-        jq -c                                    \
-	  '.genesis.dijkstra'                    \
-          "${profile_json}"                      \
-      > "${outdir}/dijkstra.protocol.json"
+        jq -c                            \
+          '.genesis.dijkstra'            \
+          "$profile_json"                \
+      > "$tmpdir/protocol.dijkstra.json"
     else
         # Stub that is parseable but it should never be activated.
         # Activation check in service/nodes.nix (TestDijkstraHardForkAtEpoch).
-        genesis dijkstra-stub-spec > "${outdir}/dijkstra.protocol.json"
+        genesis zero-spec-dijkstra > "$tmpdir/protocol.dijkstra.json"
     fi
+    # Move the whole tmpdir to the cache entry. No fake data is left behind!
+    mkdir -p "$(dirname "$outdir")"
+    mv "$tmpdir" "$outdir"
+    trap - EXIT
+    info genesis "protocol parameters cached: $outdir"
   fi
 
-  echo "${outdir}"
+  echo "$outdir"
 }
 

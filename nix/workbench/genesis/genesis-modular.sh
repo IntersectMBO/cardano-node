@@ -5,7 +5,7 @@
 #
 # Implements the backend interface:
 #   profile-cache-key-input-modular, profile-cache-key-modular,
-#   genesis-create-modular, derive-from-cache-modular
+#   genesis-cache-hit-modular, genesis-create-cache-modular, derive-from-cache-modular
 
 profile-cache-key-input-modular() {
     set -euo pipefail
@@ -31,10 +31,15 @@ profile-cache-key-modular() {
     evaluate --profile "${profile_json}" genesis.cache-key | jq -r
 }
 
+# Same cache-hit test as legacy (uses jq's layout.version marker).
+genesis-cache-hit-modular() {
+    genesis-cache-hit-jq "$@";
+}
+
 # Entry point for genesis creation (delegates to legacy; modular only
 # replaces cache-key/byron generation, not the create-testnet-data call).
-genesis-create-modular() {
-    genesis-create-jq "$@";
+genesis-create-cache-modular() {
+    genesis-create-cache-jq "$@";
 }
 
 # Same derive-from-cache as legacy.

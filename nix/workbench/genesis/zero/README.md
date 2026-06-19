@@ -19,19 +19,21 @@ this zero baseline.
 The ripper (`nix/workbench/genesis/genesis-ripper.sh`) splits each genesis file
 into two orthogonal halves and caches them separately:
 
-- **Dataset** — the heavy fields driven by `--pools`, `--stake-delegators`,
+- **Dataset**: the heavy fields driven by `--pools`, `--stake-delegators`,
   `--total-supply`, ... (`initialFunds`, `staking`, `genDelegs`,
   `bootStakeholders`, `initialDReps`, `delegs`, ...). Cached in
   `$cache_dir/genesis/dataset/`.
-- **Protocol** — the protocol parameters (slot/epoch length, cost models,
+- **Protocol**: the protocol parameters (slot/epoch length, cost models,
   governance thresholds, ...). Cached in `$cache_dir/genesis/protocol/`.
 
 Two profiles that share dataset knobs but tweak pparams reuse one dataset entry,
 two profiles that share pparams but vary sizing reuse one protocol entry. The
 zero specs in this directory are what makes that decoupling possible: feeding
-them as `--spec-*` inputs to `create-testnet-data` guarantees the dataset output
-is independent of any meaningful pparams, so identical dataset knobs always
-produce byte-identical fields.
+them as `--spec-*` inputs to `create-testnet-data` keeps the dataset output
+independent of the pparams. The two pparams create-testnet-data does bake into
+dataset fields (shelley `minUTxOValue`, conway `dRepDeposit`) are injected into
+temp specs and folded into the dataset cache key by `dataset-cache-ensure`, so
+identical dataset knobs still produce byte-identical fields.
 
 At run start, `derive-from-cache-ripper` stitches dataset + protocol + per-run
 timing (`startTime`, `systemStart`) into the final
@@ -139,165 +141,165 @@ never read by the workbench. Listed for awareness:
   `delegation-cert.000.json`): Byron CLI artifacts. Same reason as the byron
   pool files: the workbench never enters Byron-era operation.
 
-## What each parameter changes in JSON files
+## What each parameter writes into the JSON
 
-### Always-present, unchanged files
+Two of the five output files never vary: `alonzo-genesis.json` and
+`dijkstra-genesis.json` are byte-identical across all flag combinations (and
+there is no `--spec-dijkstra`). The other three carry every flag-driven field,
+documented one file per section below. In each section the table is
+authoritative: one row per top-level key, with its driver and its size, value, or
+shape. Every top-level key not listed is fixed by the zero spec and identical in
+every output.
 
-- `alonzo-genesis.json`   (byte-identical across all parameter combinations)
-- `dijkstra-genesis.json` (byte-identical across all parameter combinations, no `--spec-dijkstra`)
+All key-derived values in these files (key hashes, public keys, certificates,
+addresses, DRep and pool IDs) are regenerated on every run: identical flags
+produce different key material but the same structure, counts, and monetary
+values. This holds for every era below.
 
-### Per-era top-level mutability map
+### Parameter to field index
 
-The only top-level keys whose presence or value depends on the CLI flags below.
-Every other top-level key in `byron`/`shelley`/`conway` is fixed by the zero
-spec and is the same in every output.
+Reverse lookup, parameter to the keys it writes. For a key's size, guard, and
+shape see its row in the per-file section. Activation guards (the minimum values
+that make a field non-empty) are in **When each parameter takes effect** above.
 
-| Parameter            | byron-genesis.json                                                | shelley-genesis.json                                                                                          | conway-genesis.json                                                                                                            |
-|----------------------|-------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| `--total-supply`     | --                                                                | `maxLovelaceSupply`; `initialFunds` values                                                                    | --                                                                                                                             |
-| `--delegated-supply` | --                                                                | `initialFunds` values (splits lovelace between UTxO and staked entries)                                       | --                                                                                                                             |
-| `--utxo-keys`        | --                                                                | `initialFunds` (adds `60`-prefix enterprise-address entries)                                                  | --                                                                                                                             |
-| `--pools`            | `bootStakeholders`, `heavyDelegation`, `nonAvvmBalances` (entries when `--pools >= 2`; see Byron section) | `staking.pools` (size = `min(--pools, --stake-delegators)`; empty when either is `0`)                         | --                                                                                                                             |
-| `--stake-delegators` | --                                                                | When `--pools >= 1`: `initialFunds` (adds `00`-prefix staked-address entries), `staking.stake`, `staking.pools` | `delegs` (only when `--drep-keys >= 1`; size = `--stake-delegators`; each entry is a stake-key hash → randomly-picked DRep) |
-| `--genesis-keys`     | --                                                                | `genDelegs` (maps genesis cold-key hash → delegate + VRF; size = `--genesis-keys`)                            | --                                                                                                                             |
-| `--drep-keys`        | --                                                                | --                                                                                                            | `initialDReps` (size = `--drep-keys`); `delegs` (only when `--stake-delegators >= 1`; see row above)                            |
-| `--stuffed-utxo`     | --                                                                | `initialFunds` (adds `60`-prefix entries with 0 lovelace)                                                     | --                                                                                                                             |
-| `--testnet-magic`    | --                                                                | `networkMagic`                                                                                                | --                                                                                                                             |
-| `--start-time`       | `startTime` (epoch seconds)                                       | `systemStart` (ISO-8601 UTC string)                                                                           | --                                                                                                                             |
+| Parameter            | Top-level keys it writes |
+|----------------------|--------------------------|
+| `--total-supply`     | shelley `maxLovelaceSupply`, `initialFunds` (values) |
+| `--delegated-supply` | shelley `initialFunds` (UTxO vs staked split) |
+| `--utxo-keys`        | shelley `initialFunds` (enterprise entries) |
+| `--stuffed-utxo`     | shelley `initialFunds` (enterprise entries) |
+| `--stake-delegators` | shelley `initialFunds` (base entries), `staking.stake`; conway `delegs` |
+| `--pools`            | byron `bootStakeholders`, `heavyDelegation`, `nonAvvmBalances`; shelley `staking.pools` |
+| `--genesis-keys`     | shelley `genDelegs` |
+| `--drep-keys`        | conway `initialDReps`, `delegs` |
+| `--testnet-magic`    | shelley `networkMagic` |
+| `--start-time`       | byron `startTime`, shelley `systemStart` |
 
-See the per-era sections below for field shapes, randomness, and cross-era
-references (e.g. shelley's `staking.stake` keys vs. conway's `delegs` keys).
+## byron-genesis.json
 
-## Byron (byron-genesis.json)
+Only `--pools` shapes byron content. `--start-time` writes the top-level
+`startTime` scalar (a per-run timing field, hardcoded to `1970-01-01T00:00:00Z`
+in the test sweep). Nothing else touches byron.
 
-Within the dataset parameters above, only `--pools` shapes the content of
-`byron-genesis.json` (`--start-time` writes the top-level `startTime` scalar,
-but is a per-run timing field, hardcoded to `1970-01-01T00:00:00Z` in the test
-sweep). No other parameter changes byron.
+| Top-level key      | Driven by      | Count / value |
+|--------------------|----------------|---------------|
+| `bootStakeholders` | `--pools`      | `max(pools, 1)` entries, weight 1 each |
+| `heavyDelegation`  | `--pools`      | `max(pools, 1)` entries |
+| `nonAvvmBalances`  | `--pools`      | `max(pools, 1)` entries, `3,000,000,000` each (hardcoded) |
+| `startTime`        | `--start-time` | per-run epoch seconds |
 
-The three fields `bootStakeholders`, `heavyDelegation` and `nonAvvmBalances`
-always have at least 1 entry (a default BFT entry), even with `--pools 0`.
-Setting `--pools 1` produces the same structure as `--pools 0`. Additional
-entries appear starting at `--pools 2`.
+The three `--pools` fields always have at least one entry (a default BFT entry),
+so `--pools 0` and `--pools 1` give the same structure; extra entries begin at
+`--pools 2`. The `nonAvvmBalances` value is always `3,000,000,000` per entry
+regardless of `--total-supply`, `--delegated-supply`, or anything else; it is
+Byron-era lovelace, a separate ledger from Shelley's `initialFunds`.
 
-| pools | `bootStakeholders`        | `heavyDelegation` | `nonAvvmBalances` |
-|-------|---------------------------|-------------------|-------------------|
-| 0     | 1 entry (weight 1)        | 1 entry           | 1 x 3,000,000,000 |
-| 1     | 1 entry (weight 1)        | 1 entry           | 1 x 3,000,000,000 |
-| 5     | 5 entries (weight 1 each) | 5 entries         | 5 x 3,000,000,000 |
-
-The value in `nonAvvmBalances` is always **3,000,000,000 per entry**, hardcoded.
-It does not change with `--total-supply`, `--delegated-supply`, or any other
-parameter. This is Byron-era lovelace in a separate ledger from Shelley's
-`initialFunds`.
+| pools | entries per field |
+|-------|-------------------|
+| 0     | 1                 |
+| 1     | 1                 |
+| 5     | 5                 |
 
 ### `byron-gen-command/`
 
 Always present, but its contents depend on `--pools`:
 
-- `genesis-keys.NNN.key`: `max(--pools, 1)` files, numbered `000` onwards.
-- `delegate-keys.000.key` and `delegation-cert.000.json`: only when `--pools = 0` (the BFT pair).
+- `genesis-keys.NNN.key`: `max(--pools, 1)` files, numbered from `000`.
+- `delegate-keys.000.key` and `delegation-cert.000.json`: only when `--pools 0` (the BFT pair).
 
 | pools | files in `byron-gen-command/` |
 |-------|-------------------------------|
 | 0     | `genesis-keys.000.key`, `delegate-keys.000.key`, `delegation-cert.000.json` |
 | 1     | `genesis-keys.000.key` |
-| 5     | `genesis-keys.000.key`, `genesis-keys.001.key`, `genesis-keys.002.key`, `genesis-keys.003.key`, `genesis-keys.004.key` |
+| 5     | `genesis-keys.000.key` ... `genesis-keys.004.key` |
 
-### Cryptographic material
+## shelley-genesis.json
 
-All cryptographic material in these three fields (key hashes, public keys,
-delegation certs, and Byron addresses) is **randomly generated on every run**.
-Two calls with identical parameters will produce different keys and addresses
-but the same structure and the same monetary values.
+Always exactly **15 top-level keys**: 9 fixed by the zero spec, plus 6 shaped by
+the flags (`genDelegs`, `initialFunds`, `maxLovelaceSupply`, `networkMagic`,
+`staking`, `systemStart`).
 
-## Shelley (shelley-genesis.json)
+### Static keys (from the zero spec)
 
-`shelley-genesis.json` always has exactly **15 top-level keys**. Nine come
-straight from the zero spec and are byte-identical in every output; the
-remaining six (`genDelegs`, `initialFunds`, `maxLovelaceSupply`, `networkMagic`,
-`staking`, `systemStart`) are shaped by the CLI flags.
-`staking` is broken out into its two sub-fields (`staking.pools` and
-`staking.stake`) below because they have independent activation rules.
+Identical in every output regardless of any flag. `securityParam` and
+`activeSlotsCoeff` are the only non-zero values; both are pinned because the
+parser rejects `0` for them.
 
-### Static (zero-spec) top-level keys
+| Key                 | Value                        |
+|---------------------|------------------------------|
+| `activeSlotsCoeff`  | `0.01`                       |
+| `epochLength`       | `0`                          |
+| `maxKESEvolutions`  | `0`                          |
+| `networkId`         | `"Mainnet"` (see note)       |
+| `protocolParams`    | all sub-fields `0` / neutral |
+| `securityParam`     | `1`                          |
+| `slotLength`        | `0`                          |
+| `slotsPerKESPeriod` | `0`                          |
+| `updateQuorum`      | `0`                          |
 
-These nine keys appear in every output with the same value regardless of any
-flag (`securityParam` and `activeSlotsCoeff` are the only non-zero values,
-both are pinned in the zero spec because the parser rejects `0` for them).
+`networkId` vs `networkMagic`: `--testnet-magic 42` overwrites `networkMagic`
+(`764824073` -> `42`) but never touches `networkId`, which stays at the spec's
+`"Mainnet"`. Pool `accountAddress` records still read `"network": "Testnet"`
+because that field comes from the flag-supplied network, not from `networkId`.
+This is a `cardano-cli` quirk, not a local change.
 
-| Key                    | Value                          |
-|------------------------|--------------------------------|
-| `activeSlotsCoeff`     | `1.0E-9`                       |
-| `epochLength`          | `0`                            |
-| `maxKESEvolutions`     | `0`                            |
-| `networkId`            | `"Mainnet"` (see note below)   |
-| `protocolParams`       | all sub-fields `0` / neutral   |
-| `securityParam`        | `1`                            |
-| `slotLength`           | `0`                            |
-| `slotsPerKESPeriod`    | `0`                            |
-| `updateQuorum`         | `0`                            |
+### Flag-shaped keys
 
-Note on `networkId` vs `networkMagic`: `--testnet-magic 42` overwrites
-`networkMagic` (`764824073` → `42`), but **does not** touch the `networkId`
-field, which stays at the spec's `"Mainnet"`. Despite that, the addresses
-emitted inside `staking.pools[*].accountAddress` carry
-`"network": "Testnet"`. This is a `cardano-cli` quirk, not a bug introduced
-here.
+| Key                 | Driven by                                             | Size / value                                                                            | Absent (guard fails) |
+|---------------------|-------------------------------------------------------|----------------------------------------------------------------------------------------|----------------------|
+| `maxLovelaceSupply` | `--total-supply`                                      | verbatim copy (the ledger cap, not the distributed total)                              | `0`                  |
+| `networkMagic`      | `--testnet-magic`                                     | verbatim copy (always `42` here)                                                        | always set           |
+| `systemStart`       | `--start-time`                                        | ISO-8601 UTC string; per-run timing                                                     | always set           |
+| `genDelegs`         | `--genesis-keys`                                      | size = `--genesis-keys`; shape below                                                    | `{}`                 |
+| `initialFunds`      | `--utxo-keys`, `--stuffed-utxo`, `--stake-delegators` | entry table below; values from `--total-supply` / `--delegated-supply` / `minUTxOValue` | `{}`                 |
+| `staking.pools`     | `--pools` and `--stake-delegators`                    | size = `min(pools, stake-delegators)`; shape below                                      | `{}`                 |
+| `staking.stake`     | `--stake-delegators` (needs `--pools >= 1`)           | size = `--stake-delegators`; shape below                                                | `{}`                 |
 
-### Mutable top-level keys
+`systemStart` is per-run: the ripper strips it from the protocol cache and
+re-injects it from the profile's timing at assembly.
 
-| Key                 | Driven by                                        | Default when guard fails |
-|---------------------|--------------------------------------------------|--------------------------|
-| `genDelegs`         | `--genesis-keys`                                 | `{}`                     |
-| `initialFunds`      | `--utxo-keys`, `--stuffed-utxo`, `--stake-delegators` (×`--pools >= 1`); values from `--total-supply`, `--delegated-supply` | `{}` |
-| `maxLovelaceSupply` | `--total-supply`                                 | `0`                      |
-| `networkMagic`      | `--testnet-magic`                                | (no guard; always set)   |
-| `staking.pools`     | `--pools` AND `--stake-delegators`               | `{}`                     |
-| `staking.stake`     | `--stake-delegators` (only when `--pools >= 1`)  | `{}`                     |
-| `systemStart`       | `--start-time`                                   | (no guard; always set)   |
+### Field shapes
 
-#### `genDelegs`
-
-Size = `--genesis-keys` (`0` when the flag is `0`).
-Each entry maps a genesis cold-key hash to its delegation:
+`genDelegs` maps a genesis cold-key hash to its delegation:
 
 ```
 "<genesis-cold-key-hash-28B>": { "delegate": "<28B>", "vrf": "<32B>" }
 ```
 
-All three hashes are randomly generated per call.
+`initialFunds` is a flat `<address-hex>` -> `<lovelace>` map merging up to three
+streams. The address prefix separates staked (`00`) from enterprise (`60`), but
+`--utxo-keys` and `--stuffed-utxo` share the `60` prefix and are told apart only
+by value:
 
-#### `initialFunds`
+| Stream               | Prefix          | Bytes | Hex len | Value per entry |
+|----------------------|-----------------|-------|---------|-----------------|
+| `--utxo-keys`        | `60` enterprise | 29    | 58      | `utxo_each` (Section 4) |
+| `--stuffed-utxo`     | `60` enterprise | 29    | 58      | `minUTxOValue` from `--spec-shelley` (`0` under the zero spec) |
+| `--stake-delegators` | `00` base       | 57    | 114     | `staked_each` (Section 4) |
 
-A flat map of `<address-hex>` → `<lovelace>` aggregating up to three streams.
-The address byte tells them apart:
+One entry per stream (`<address-hex>: <lovelace>`):
 
-| Source              | Address prefix | Total bytes | Hex length | Value                                                                |
-|---------------------|----------------|-------------|------------|----------------------------------------------------------------------|
-| `--utxo-keys`       | `60` (enterprise) | 29       | 58         | `utxo_each` = floor(utxo_total / utxo-keys) — see section 4          |
-| `--stuffed-utxo`    | `60` (enterprise) | 29       | 58         | `0` always                                                           |
-| `--stake-delegators` (active only when `--pools >= 1`) | `00` (base) | 57 | 114 | `staked_each` = floor(staked_total / stake-delegators) — see section 4 |
+```
+"60<payment-hash-28B>": <utxo_each>                    # --utxo-keys
+"60<payment-hash-28B>": 0                              # --stuffed-utxo (value = minUTxOValue)
+"00<payment-hash-28B><stake-hash-28B>": <staked_each>  # --stake-delegators
+```
 
-Total entry count = `utxo-keys + stuffed-utxo + (stake-delegators if pools >= 1 else 0)`.
+Total entries = `utxo-keys + stuffed-utxo + stake-delegators`, the
+stake-delegator stream present only when `--pools >= 1`. Each stream's per-entry
+value is `floor(slice / count)`, except its first entry, which also absorbs the
+division remainder. The slice math (the 10% withheld, the `--delegated-supply`
+split) is in Section 4.
 
-The exact lovelace math (10% reserves, splits driven by `--delegated-supply`) is
-documented under **Section 4. Funds distribution**.
+> **Spec-derived stuffed value.** The stuffed-UTxO value is not hardcoded:
+> `create-testnet-data` sets each stuffed entry to `minUTxOValue` from
+> `--spec-shelley` (`mkStuffedUtxo`, `Run.hs:924`), `0` here only because the zero
+> spec zeroes it. The ripper injects the profile's `minUTxOValue` into the dataset
+> shelley spec and folds it into the dataset cache key, so the stuffed value
+> matches the real (`jq`) genesis even for a `pparamsEpoch` (~208-289) where it is
+> non-zero. Same handling as the conway `dRepDeposit`.
 
-#### `maxLovelaceSupply`
-
-Set verbatim to `--total-supply` (default `0`). Not divided by anything; this is
-the ledger cap, not the distributed total.
-
-#### `networkMagic`
-
-Set verbatim to `--testnet-magic` (we always pass `42`). Unrelated to
-`networkId` (see note above).
-
-#### `staking.pools`
-
-Size = `min(--pools, --stake-delegators)`. Empty when either is `0`.
-Each entry maps a pool ID to a fully-zeroed pool record:
+`staking.pools` maps a pool ID to a fully-zeroed pool record:
 
 ```
 "<pool-id-28B>": {
@@ -308,67 +310,77 @@ Each entry maps a pool ID to a fully-zeroed pool record:
 }
 ```
 
-#### `staking.stake`
-
-Size = `--stake-delegators` when `--pools >= 1`; otherwise `0`.
-Each entry maps a stake-key hash to a pool ID it delegates to:
+`staking.stake` maps a stake-key hash to the pool ID it delegates to:
 
 ```
 "<stake-key-hash-28B>": "<pool-id-28B>"
 ```
 
-Delegations are spread **evenly** across the `min(pools, stake-delegators)`
-pools (e.g. `--pools 5 --stake-delegators 10` → exactly 2 stake keys per
-pool). The stake-key hashes are the **same hashes** referenced by
-`conway-genesis.json::delegs` (when both `--stake-delegators >= 1` AND
-`--drep-keys >= 1`).
+Delegations spread evenly across the `min(pools, stake-delegators)` pools
+(`--pools 5 --stake-delegators 10` gives 2 stake keys per pool; any remainder
+front-loads onto the first pools). These stake-key hashes are the same ones in
+`conway-genesis.json::delegs`.
 
-#### `systemStart`
+### Sizes by pools x stake-delegators
 
-ISO-8601 UTC string equal to `--start-time`, hardcoded to
-`1970-01-01T00:00:00Z` in this analysis. Per-run timing field — the ripper
-backend strips it from the protocol-cache file and re-injects it from the
-profile's timing at run assembly.
+| pools | stake-delegators | `staking.pools` | `staking.stake` |
+|-------|------------------|-----------------|-----------------|
+| 0     | 0                | 0               | 0               |
+| 0     | 10               | 0               | 0               |
+| 1     | 0                | 0               | 0               |
+| 1     | 1                | 1               | 1               |
+| 1     | 10               | 1               | 10              |
+| 5     | 1                | 1               | 1               |
+| 5     | 10               | 5               | 10 (2 per pool) |
 
-### Per-pair examples
+## conway-genesis.json
 
-Sanity-check rows:
+Only `--drep-keys` and `--stake-delegators` shape conway content; every other
+top-level key comes from the zero spec.
 
-| pools | stake-delegators | `staking.pools` size | `staking.stake` size |
-|-------|------------------|----------------------|----------------------|
-| 0     | 0                | 0                    | 0                    |
-| 0     | 10               | 0                    | 0                    |
-| 1     | 0                | 0                    | 0                    |
-| 1     | 1                | 1                    | 1                    |
-| 1     | 10               | 1                    | 10                   |
-| 5     | 1                | 1                    | 1                    |
-| 5     | 10               | 5                    | 10 (2 per pool)      |
+| Key            | Driven by                              | Size / shape |
+|----------------|----------------------------------------|--------------|
+| `initialDReps` | `--drep-keys`                          | size = `--drep-keys`; each entry `{ deposit, expiry }` (see below) |
+| `delegs`       | `--drep-keys` and `--stake-delegators` | size = `--stake-delegators`; stake-key hash -> DRep ID |
 
-## Conway (conway-genesis.json)
+Both are omitted when their guard fails:
 
-Only `--drep-keys` and `--stake-delegators` shape the content of
-`conway-genesis.json`. Every other top-level key comes from the zero spec and
-is fixed.
+| drep-keys | stake-delegators | `initialDReps` | `delegs`  |
+|-----------|------------------|----------------|-----------|
+| 0         | 0                | absent         | absent    |
+| 0         | >= 1             | absent         | absent    |
+| D >= 1    | 0                | D entries      | absent    |
+| D >= 1    | N >= 1           | D entries      | N entries |
 
-| drep-keys | stake-delegators | `initialDReps`           | `delegs`                                                       |
-|-----------|------------------|--------------------------|----------------------------------------------------------------|
-| 0         | 0                | absent                   | absent                                                         |
-| 0         | >= 1             | absent                   | absent                                                         |
-| D >= 1    | 0                | D entries                | absent                                                         |
-| D >= 1    | N >= 1           | D entries                | N entries (each stake-key hash randomly assigned to one of D DReps) |
+`create-testnet-data` drops `initialDReps`/`delegs` entirely when empty; the
+ripper projects each to `{}` while building `dataset.conway.json`, so the
+assembled `genesis.conway.json` always has both keys (cardano-node's parser
+rejects `null` but accepts `{}`).
 
-Both `initialDReps` and `delegs` are **omitted entirely** from
-`conway-genesis.json` when their guard fails. The ripper backend then projects
-each missing field to `{}` while building `conway.dataset.json`, so the
-assembled `genesis.conway.json` always exposes both keys — cardano-node's
-parser tolerates `{}` but rejects `null`.
+`initialDReps` keys a DRep ID to its deposit and expiry:
 
-Each `initialDReps` entry has fixed values `deposit: 1000000`, `expiry: 1000`
-that don't depend on any flag.
+```
+"keyHash-<drep-id-28B>": { "deposit": <coin>, "expiry": 1000 }
+```
 
-The stake-key hashes used in `delegs` are the **same hashes** that appear in
-`shelley-genesis.json::staking.stake`. Like all key material here, the
-hashes themselves are randomly generated per run.
+- `expiry` is hardcoded by `create-testnet-data` (`drepExpiry = EpochNo 1_000`,
+  `Run.hs:522`); not a spec or flag value.
+- `deposit = max(1000000, dRepDeposit)`, with `dRepDeposit` from the
+  `--spec-conway` params (`Run.hs:488,515`). It is `1000000` here only because the
+  zero spec sets `dRepDeposit: 0`; a profile with `dRepDeposit: 500000000` makes
+  every entry `500000000`. The ripper injects the profile's value into the dataset
+  conway spec and folds it into the dataset cache key, so the result matches the
+  real (`jq`) backend. Same handling as the stuffed-UTxO value above.
+
+`delegs` keys a stake-key hash to the DRep it delegates to:
+
+```
+"keyHash-<stake-hash-28B>": { "dRep": "drep-keyHash-<drep-id-28B>", "kind": "DelegVote" }
+```
+
+The pairing is round-robin, not random: delegator `i` delegates to DRep
+`i mod drep-keys`, so each `dRep` value references an `initialDReps` key. The
+stake-key hashes are the same ones in `shelley-genesis.json::staking.stake`.
 
 # 4. Funds distribution
 
@@ -395,16 +407,11 @@ staked_total = delegated-supply - floor(delegated-supply / 10)
 staked_each = floor(staked_total / stake-delegators)
 ```
 
-UTxO key addresses use enterprise address format (prefix `60`).
-Staked delegator addresses use staked address format (prefix `00`).
-
-`--delegated-supply` controls how the supply is split between these two groups.
-Without it (or set to 0), the full supply (minus reserves) goes to UTxO keys.
-It requires `--utxo-keys >= 1` or (`--pools >= 1` AND `--stake-delegators >= 1`)
-to have any visible effect.
-
-`staking.pools` in shelley-genesis.json = min(pools, stake-delegators).
-`staking.stake` = stake-delegators (when pools >= 1), otherwise 0.
+`--delegated-supply` sets the staked slice; the rest (`total-supply` minus
+`delegated-supply`) funds the UTxO slice. Set it to `0` and the whole supply
+(minus the withheld 10%) goes to UTxO keys. Address prefixes, per-stream entry
+counts, and the activation guard live in the **shelley-genesis.json** section
+above.
 
 Example with `--total-supply 1000000 --delegated-supply 500000` (`maxLovelaceSupply` = 1,000,000):
 
@@ -461,11 +468,11 @@ Verified in
 
 ## What we don't benchmark
 
-- **Hot-key authorization** — each member's `AuthCommitteeHotKey` cert (cold-sig over hot key).
-- **CC vote transactions** — at mainnet thresholds each ratifying action accumulates ~`threshold × |CC|` of them.
-- **Vote aggregation under non-zero threshold** — counting YES/NO/Abstain across active members per action vs. the short-circuit.
-- **`CommitteeState` bookkeeping** — hot-key map, resignations, expirations.
-- **No-Confidence / Update-Committee actions** — inert without a real CC to remove or replace.
+- **Hot-key authorization**: each member's `AuthCommitteeHotKey` cert (cold-sig over hot key).
+- **CC vote transactions**: at mainnet thresholds each ratifying action accumulates ~`threshold x |CC|` of them.
+- **Vote aggregation under non-zero threshold**: counting YES/NO/Abstain across active members per action vs. the short-circuit.
+- **`CommitteeState` bookkeeping**: hot-key map, resignations, expirations.
+- **No-Confidence / Update-Committee actions**: inert without a real CC to remove or replace.
 
 To exercise any of these: set `committee.members` to N keys with `threshold = 2/3`,
 `committeeMinSize = N`, and have the workload submit `AuthCommitteeHotKey`
