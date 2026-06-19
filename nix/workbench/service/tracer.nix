@@ -34,11 +34,6 @@ let
         } // optionalAttrs   backend.useCabalRun  {
           executable     = "cardano-tracer";
         #########################################
-        } // optionalAttrs profile.tracer.rtview {
-          RTView         = {
-            epHost = "127.0.0.1";
-            epPort = 3300;
-          };
         } // optionalAttrs (profile.tracer.timeseries or false) {
           timeseries     = {
             epHost = "127.0.0.1";

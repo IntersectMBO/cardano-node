@@ -313,7 +313,6 @@
     "cluster_startup_overhead_s": 40
   },
   "tracer": {
-    "rtview": false,
     "ekg": false,
     "withresources": false,
     "timeseries": false
@@ -323,7 +322,7 @@
   "name": "ci-test-dense10-coay",
   "overlay": {},
   "derived": {
-    "supply_delegated": 1E+16,
+    "supply_delegated": 1e+16,
     "supply_total": 10010000000000000,
     "utxo_delegated": 0,
     "utxo_generated": 18000,

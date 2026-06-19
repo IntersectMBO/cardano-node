@@ -58,7 +58,7 @@ sendNotification emailSettings newEvents nodeIdsWithNames =
   body = preface <> events
 
   preface = T.intercalate nl
-    [ "This is a notification from Cardano RTView service."
+    [ "This is a notification from cardano-tracer."
     , ""
     , "The following " <> (if onlyOne then "event" else "events") <> " occurred:"
     , ""

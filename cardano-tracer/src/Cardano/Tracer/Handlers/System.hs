@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.System
@@ -46,16 +45,16 @@ getPathToChartColorsDir TracerEnv{teStateDir} = do
 getPathToConfigDir :: Maybe FilePath -> IO FilePath
 getPathToConfigDir rtvSD = do
   configDir <- getStateDir rtvSD D.XdgConfig
-  let pathToRTViewConfigDir = configDir </> rtViewRootDir
-  D.createDirectoryIfMissing True pathToRTViewConfigDir
-  return pathToRTViewConfigDir
+  let pathToConfigDir = configDir </> tracerStateRootDir
+  D.createDirectoryIfMissing True pathToConfigDir
+  return pathToConfigDir
 
 getPathToBackupDir :: TracerEnv -> IO FilePath
 getPathToBackupDir TracerEnv{teStateDir} = do
   dataDir <- getStateDir teStateDir D.XdgData
-  let pathToRTViewBackupDir = dataDir </> rtViewRootDir </> "backup"
-  D.createDirectoryIfMissing True pathToRTViewBackupDir
-  return pathToRTViewBackupDir
+  let pathToBackupDir = dataDir </> tracerStateRootDir </> "backup"
+  D.createDirectoryIfMissing True pathToBackupDir
+  return pathToBackupDir
 
 getStateDir
   :: Maybe FilePath
@@ -64,5 +63,5 @@ getStateDir
 getStateDir Nothing xdgDir = D.getXdgDirectory xdgDir ""
 getStateDir (Just stateDir) _ = return stateDir
 
-rtViewRootDir :: FilePath
-rtViewRootDir = "cardano-rt-view"
+tracerStateRootDir :: FilePath
+tracerStateRootDir = "cardano-tracer"

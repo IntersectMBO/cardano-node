@@ -9,20 +9,12 @@ module Cardano.Tracer.Acceptors.Utils
   ( prepareDataPointRequestor
   , prepareMetricsStores
   , removeDisconnectedNode
-  , notifyAboutNodeDisconnected
   , store
   ) where
 
-#if RTVIEW
-import           Cardano.Logging (SeverityS (..))
-#endif
 import qualified Cardano.Timeseries.Component as Timeseries
 import           Cardano.Timeseries.Domain.Types (MetricIdentifier)
 import           Cardano.Tracer.Environment
-#if RTVIEW
-import           Cardano.Tracer.Handlers.Notifications.Types
-import           Cardano.Tracer.Handlers.Notifications.Utils
-#endif
 import           Cardano.Tracer.Time (getTimeMs)
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
@@ -35,9 +27,6 @@ import           Data.Foldable
 import qualified Data.Map.Strict as M
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as S
-#if RTVIEW
-import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-#endif
 import qualified System.Metrics as EKG
 import           System.Metrics.ReqResp
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore,
@@ -104,22 +93,6 @@ removeDisconnectedNode tracerEnv connId =
  where
   TracerEnv{teConnectedNodes, teConnectedNodesNames, teAcceptedMetrics, teDPRequestors} = tracerEnv
   nodeId = connIdToNodeId connId
-
-notifyAboutNodeDisconnected
-  :: Show addr
-  => TracerEnvRTView
-  -> ConnectionId addr
-  -> IO ()
-#if RTVIEW
-notifyAboutNodeDisconnected TracerEnvRTView{teEventsQueues} connId = do
-  now <- systemToUTCTime <$> getSystemTime
-  addNewEvent teEventsQueues EventNodeDisconnected $ Event nodeId now Warning msg
- where
-  nodeId = connIdToNodeId connId
-  msg = "Node is disconnected"
-#else
-notifyAboutNodeDisconnected _ _ = pure ()
-#endif
 
 store :: TracerEnv -> NodeId -> (EKG.Store, TVar MetricsLocalStore) -> Response -> IO ()
 store tracerEnv (NodeId nodeId) (ekgStore, localStore) resp@(ResponseMetrics ms) = do
