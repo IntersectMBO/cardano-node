@@ -182,3 +182,11 @@ source-repository-package
   location: https://github.com/f-f/ekg-forward
   tag: b24b3aba2806ce223c62f8ce3e267ec92dcc52e2
   --sha256: sha256-s5Hxxm04HmFVmdBjAnFEsJEhTqr5Z/uiB4K1s2VaVwE=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: 8761e5c7ad09935376ec440cf33919b7544b5975
+  --sha256: sha256-uMExJzjeRB3DZi27zBgfdXArxiNen4e9poavE58atuI=
+  subdir:
+    cardano-config

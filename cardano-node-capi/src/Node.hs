@@ -1,11 +1,8 @@
 module Node where
 
-import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
-                   renderHelpDoc)
+import qualified Cardano.Configuration as CC
 import           Cardano.Node.Run (runNode)
 
-import           Data.Aeson (eitherDecodeStrict)
-import           Data.ByteString.Char8 (pack)
 import           Options.Applicative
 
 import           Foreign.C (CString, peekCString)
@@ -19,10 +16,13 @@ foreign export ccall "runNode" crunNode :: Int -> Ptr CString -> IO ()
 crunNode :: Int -> Ptr CString -> IO ()
 crunNode argc argv = peekArray argc argv >>= mapM peekCString >>= \args ->
     case execParserPure pref opts args of
-        Success pnc -> runNode pnc
+        Success cli -> runNode cli
         Failure f   -> print f
         CompletionInvoked _ -> putStrLn "Completion Invoked?"
   where
     pref = prefs showHelpOnEmpty
-    opts = info nodeCLIParser
+    opts = info (nodeRunParser <**> helper)
         ( fullDesc <> progDesc "Start node of the Cardano blockchain." )
+    nodeRunParser =
+      subparser $
+        command "run" (info (CC.parseCliArgs <**> helper) (progDesc "Run the node."))
