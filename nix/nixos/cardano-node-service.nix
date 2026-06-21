@@ -76,13 +76,13 @@ let
             ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
-          baseConfig
-            // optionalAttrs (cfg.withUtxoHdLsmt i){
-              LedgerDB = {
-                Backend = "V2LSM";
-                LSMDatabasePath = cfg.lsmDatabasePath i;
-              };
+          recursiveUpdate
+          baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
+            LedgerDB = {
+              Backend = "V2LSM";
+              LSMDatabasePath = cfg.lsmDatabasePath i;
             };
+          });
     in i: let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
