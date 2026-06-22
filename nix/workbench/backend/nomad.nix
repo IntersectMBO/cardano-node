@@ -176,6 +176,12 @@ let
         # Avoid nix cache misses on every commit because of `set-git-rev`.
         flake-output = "cardanoNodePackages.tx-generator.passthru.noGitRev";
       };
+      tx-centrifuge = rec {
+        # Local reference only used if not "cloud".
+        nix-store-path = haskellProject.exes.tx-centrifuge;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "cardanoNodePackages.tx-centrifuge";
+      };
     }
   ;
 
