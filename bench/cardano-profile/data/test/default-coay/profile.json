@@ -315,7 +315,6 @@
     ]
   },
   "tracer": {
-    "rtview": false,
     "ekg": false,
     "withresources": false,
     "timeseries": false

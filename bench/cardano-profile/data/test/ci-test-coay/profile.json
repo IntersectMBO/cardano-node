@@ -313,7 +313,6 @@
     "cluster_startup_overhead_s": 40
   },
   "tracer": {
-    "rtview": false,
     "ekg": false,
     "withresources": false,
     "timeseries": false

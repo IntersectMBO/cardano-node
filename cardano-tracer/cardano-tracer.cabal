@@ -16,11 +16,6 @@ build-type:             Simple
 extra-doc-files:        README.md
                         CHANGELOG.md
 
-flag rtview
-  description:          Enable RTView. False by default. Enable with `-f +rtview`.
-  default:              False
-  manual:               True
-
 flag systemd
   description:          Enable systemd support.
   default:              True
@@ -31,7 +26,6 @@ common project-config
   build-depends:        base >= 4.14 && < 5
 
   default-extensions:   BlockArguments
-                      , CPP
                       , DerivingStrategies
                       , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
@@ -42,9 +36,6 @@ common project-config
 
   if flag(systemd) && os(linux)
     cpp-options:        -DSYSTEMD
-
-  if flag(rtview)
-    CPP-Options:        -DRTVIEW=1
 
   ghc-options:          -Wall
                         -Wcompat
@@ -64,50 +55,6 @@ library
 
 
   hs-source-dirs:       src
-
-  if flag(rtview)
-    exposed-modules:    Cardano.Tracer.Handlers.RTView.Run
-                        Cardano.Tracer.Handlers.RTView.Utils
-
-                        Cardano.Tracer.Handlers.RTView.State.Displayed
-                        Cardano.Tracer.Handlers.RTView.State.EraSettings
-                        Cardano.Tracer.Handlers.RTView.State.Historical
-                        Cardano.Tracer.Handlers.RTView.State.Last
-
-                        Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
-                        Cardano.Tracer.Handlers.RTView.UI.CSS.Own
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.About
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Body
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Main
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
-                        Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
-                        Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
-                        Cardano.Tracer.Handlers.RTView.UI.JS.Charts
-                        Cardano.Tracer.Handlers.RTView.UI.JS.Utils
-                        Cardano.Tracer.Handlers.RTView.UI.Img.Icons
-                        Cardano.Tracer.Handlers.RTView.UI.Charts
-                        Cardano.Tracer.Handlers.RTView.UI.Logs
-                        Cardano.Tracer.Handlers.RTView.UI.Notifications
-                        Cardano.Tracer.Handlers.RTView.UI.Theme
-                        Cardano.Tracer.Handlers.RTView.UI.Types
-                        Cardano.Tracer.Handlers.RTView.UI.Utils
-
-                        Cardano.Tracer.Handlers.RTView.Update.Chain
-                        Cardano.Tracer.Handlers.RTView.Update.EKG
-                        Cardano.Tracer.Handlers.RTView.Update.EraSettings
-                        Cardano.Tracer.Handlers.RTView.Update.Historical
-                        Cardano.Tracer.Handlers.RTView.Update.KES
-                        Cardano.Tracer.Handlers.RTView.Update.Leadership
-                        Cardano.Tracer.Handlers.RTView.Update.Logs
-                        Cardano.Tracer.Handlers.RTView.Update.NodeInfo
-                        Cardano.Tracer.Handlers.RTView.Update.NodeState
-                        Cardano.Tracer.Handlers.RTView.Update.Nodes
-                        Cardano.Tracer.Handlers.RTView.Update.Reload
-                        Cardano.Tracer.Handlers.RTView.Update.Resources
-                        Cardano.Tracer.Handlers.RTView.Update.Transactions
 
   exposed-modules:      Cardano.Tracer.Acceptors.Client
                         Cardano.Tracer.Acceptors.Run
@@ -154,20 +101,10 @@ library
 
   autogen-modules:      Paths_cardano_tracer
 
-  if flag(rtview)
-    build-depends:
-                        cardano-git-rev ^>=0.2.2
-                      , cassava
-                      , string-qq
-                      , threepenny-gui
-                      , utf8-string
-
   if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
+                      , unordered-containers
     other-modules:      Cardano.Tracer.Handlers.Logs.Journal.Systemd
-
-  if (flag(systemd) && os(linux)) || flag(rtview)
-    build-depends:      unordered-containers
 
   build-depends:        aeson >= 2.1.0.0
                       , async
@@ -448,8 +385,6 @@ benchmark cardano-tracer-bench
 
   main-is:              cardano-tracer-bench.hs
 
-  if flag(rtview)
-    build-depends:      stm <2.5.2 || >=2.5.3
   build-depends:        cardano-tracer
                       , criterion
                       , directory

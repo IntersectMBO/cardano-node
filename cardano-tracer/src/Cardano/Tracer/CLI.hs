@@ -30,7 +30,7 @@ parseTracerParams = TracerParams
           strOption
             (    long "state-dir"
               <> metavar "FILEPATH"
-              <> help "If specified, RTView saves its state in this directory"
+              <> help "If specified, cardano-tracer saves its state in this directory"
               <> completer (bashCompleter "file")
             )
         )

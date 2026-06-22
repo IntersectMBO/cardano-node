@@ -19,11 +19,6 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Rotator
 import           Cardano.Tracer.Handlers.Metrics.Servers
 import           Cardano.Tracer.Handlers.ReForwarder
-#if RTVIEW
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.Handlers.RTView.Run
-#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
@@ -34,9 +29,6 @@ import           Control.Applicative
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, link)
 import           Control.Concurrent.Extra (newLock)
-#if RTVIEW
-import           Control.Concurrent.STM.TVar (newTVarIO)
-#endif
 import           Control.Exception (SomeException, try)
 import           Control.Monad
 import           Data.Aeson (decodeFileStrict')
@@ -53,12 +45,6 @@ runCardanoTracer :: TracerParams -> IO ()
 runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
   !tr <- mkTraceBundle $ SeverityF $ logSeverity <|> Just Info          -- default severity filter to Info
   traceWith tr.assorted TracerBuildInfo
-#if RTVIEW
-    { ttBuiltWithRTView = True
-#else
-    { ttBuiltWithRTView = False
-#endif
-    }
   traceWith tr.assorted TracerParamsAre
     { ttConfigPath     = tracerConfig
     , ttStateDir       = stateDir
@@ -67,12 +53,7 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 
   config <- readTracerConfig tracerConfig
   traceWith tr.assorted TracerConfigIs
-    { ttConfig            = config
-#if RTVIEW
-    , ttWarnRTViewMissing = False
-#else
-    , ttWarnRTViewMissing = case hasRTView config of { Just{} -> True; Nothing -> False; }
-#endif
+    { ttConfig = config
     }
 
   for_ (resourceFreq config) \msInterval -> do
@@ -91,34 +72,20 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 -- | Runs all internal services of the tracer.
 doRunCardanoTracer
   :: TracerConfig        -- ^ Tracer's configuration.
-  -> Maybe FilePath      -- ^ Path to RTView's internal state files.
+  -> Maybe FilePath      -- ^ Path to tracer's internal state files.
   -> TraceBundle
   -> ProtocolsBrake      -- ^ The flag we use to stop all the protocols.
   -> DataPointRequestors -- ^ The DataPointRequestors to ask 'DataPoint's.
   -> IO ()
-doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
+doRunCardanoTracer config stateDir tr protocolsBrake dpRequestors = do
   traceWith tr.assorted TracerInitStarted
   connectedNodes      <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
   mHelp               <- loadMetricsHelp $ metricsHelp config
 
-#if RTVIEW
-  savedTO <- initSavedTraceObjects
-
-  chainHistory     <- initBlockchainHistory
-  resourcesHistory <- initResourcesHistory
-  txHistory        <- initTransactionsHistory
-#endif
-
   currentLogLock <- newLock
   currentDPLock  <- newLock
-
-  traceWith tr.assorted TracerInitEventQueues
-#if RTVIEW
-  eventsQueues   <- initEventsQueues tr.assorted rtViewStateDir connectedNodesNames dpRequestors currentDPLock
-  rtViewPageOpened <- newTVarIO False
-#endif
 
   (reforwardTraceObject,_trDataPoint) <- initReForwarder config tr.assorted
 
@@ -140,30 +107,14 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
         , teTracer                = tr.assorted
         , teReforwardTraceObjects = reforwardTraceObject
         , teRegistry              = registry
-        , teStateDir              = rtViewStateDir
+        , teStateDir              = stateDir
         , teMetricsHelp           = mHelp
         , teTimeseriesHandle      = timeseriesHandle
         }
 
-      tracerEnvRTView :: TracerEnvRTView
-      tracerEnvRTView = TracerEnvRTView
-#if RTVIEW
-        { teSavedTO           = savedTO
-        , teBlockchainHistory = chainHistory
-        , teResourcesHistory  = resourcesHistory
-        , teTxHistory         = txHistory
-        , teEventsQueues      = eventsQueues
-        , teRTViewPageOpened  = rtViewPageOpened
-        }
-#endif
-
   -- Specify what should be done before 'cardano-tracer' stops.
   beforeProgramStops $ do
     traceWith tr.assorted TracerShutdownInitiated
-#if RTVIEW
-    backupAllHistory tracerEnv tracerEnvRTView
-    traceWith tr.assorted TracerShutdownHistBackup
-#endif
     applyBrake (teProtocolsBrake tracerEnv)
     traceWith tr.assorted TracerShutdownComplete
 
@@ -171,10 +122,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
   sequenceConcurrently_
     [ runLogsRotator    tracerEnv
     , runMetricsServers tracerEnv
-    , runAcceptors      tracerEnv tracerEnvRTView
-#if RTVIEW
-    , runRTView         tracerEnv tracerEnvRTView
-#endif
+    , runAcceptors      tracerEnv
     ]
 
 -- NB. this fails silently if there's any read or decode error when an external JSON file is provided

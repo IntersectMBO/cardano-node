@@ -597,8 +597,7 @@ instance Aeson.FromJSON Entrypoints where
 --------------------------------------------------------------------------------
 
 data Tracer = Tracer
-  { rtview :: Bool
-  , ekg :: Bool
+  { ekg :: Bool
   , withresources :: Bool
   , timeseries :: Bool
   }

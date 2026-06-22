@@ -32,20 +32,20 @@ import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 --   There are two "network modes" for acceptors:
 --   1. Server mode, when the tracer accepts connections from any number of nodes.
 --   2. Client mode, when the tracer initiates connections to specified number of nodes.
-runAcceptors :: TracerEnv -> TracerEnvRTView -> IO ()
-runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
+runAcceptors :: TracerEnv -> IO ()
+runAcceptors tracerEnv@TracerEnv{teTracer} = do
   traceWith teTracer $ TracerStartedAcceptors network
   case network of
     AcceptAt howToConnect ->
       -- Run one server that accepts connections from the nodes.
       runInLoop
-        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect))
+        (runAcceptorsServer tracerEnv howToConnect $ acceptorsConfigs (show howToConnect))
         (handleOnInterruption howToConnect) initialPauseInSec 10
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
       forConcurrently_ (NE.nub localSocks) \howToConnect ->
         runInLoop
-          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (show howToConnect))
+          (runAcceptorsClient tracerEnv howToConnect $ acceptorsConfigs (show howToConnect))
           (handleOnInterruption howToConnect) initialPauseInSec 30
  where
   handleOnInterruption howToConnect (SomeException e)

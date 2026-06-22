@@ -73,7 +73,7 @@ When defining profiles try keeping the same order as in the `Profile` type:
 - Cluster
 - Analysis
 
-And common modifiers `P.traceForwardingOn  . P.newTracing . P.tracerRtview`
+And common modifiers `P.traceForwardingOn . P.newTracing`
 next to the name.
 
 -}

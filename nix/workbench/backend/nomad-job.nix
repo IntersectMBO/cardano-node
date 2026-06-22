@@ -791,7 +791,7 @@ let
                   # and EKG and prometheus ports clash!
                   (builtins.removeAttrs
                     profileBundle.tracer-service.config
-                    [ "hasEKG" "hasPrometheus" "hasRTView" ]
+                    [ "hasEKG" "hasPrometheus" ]
                   )
                   # Make it easier to download every log
                   {

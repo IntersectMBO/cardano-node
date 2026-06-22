@@ -30,7 +30,7 @@ createAndSendEmail settings@EmailSettings {esEmailTo, esEmailFrom, esSubject} bo
   sendEmail settings $ simpleMail' to from esSubject body
  where
   to   = Address Nothing esEmailTo
-  from = Address (Just "Cardano RTView") esEmailFrom
+  from = Address (Just "cardano-tracer") esEmailFrom
   body = LT.fromStrict bodyMessage
 
 createAndSendTestEmail
@@ -38,7 +38,7 @@ createAndSendTestEmail
   -> IO StatusMessage
 createAndSendTestEmail settings = createAndSendEmail settings body
  where
-  body = "This is a test notification from Cardano RTView. Congrats: your email settings are correct!"
+  body = "This is a test notification from cardano-tracer. Congrats: your email settings are correct!"
 
 sendEmail
   :: EmailSettings
