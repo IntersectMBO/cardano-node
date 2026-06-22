@@ -2,12 +2,6 @@
 
 ## NEXT
 
-## 0.6.0 (June 2026)
-* Remove RTView: the experimental opt-in browser dashboard (`flag rtview`) has been
-  removed entirely. The `hasRTView` field is removed from `TracerConfig`. The
-  `threepenny-gui`, `cassava`, `string-qq`, `cardano-git-rev`, and `utf8-string`
-  dependencies that were RTView-only are no longer required.
-
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an
   `application/x-www-form-urlencoded` body (Prometheus wire format).
@@ -27,6 +21,9 @@
 * JSON wire format of query responses aligned with Prometheus conventions
   (see `cardano-timeseries-io` 1.1.0 changelog for details).
 * Sanitize `nodeName` string when used as a target directory for log output.
+* Remove RTView: the experimental opt-in browser dashboard (`flag rtview`) has been
+  removed entirely. The `hasRTView` field is removed from `TracerConfig`. Dependencies that were RTView-only
+  are no longer required.
 
 ## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed
