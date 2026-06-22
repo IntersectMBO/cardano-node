@@ -16,10 +16,6 @@ index-state:
   , hackage.haskell.org 2026-06-10T14:43:25Z
   , cardano-haskell-packages 2026-06-10T14:16:00Z
 
-active-repositories:
-  , :rest
-  , cardano-haskell-packages:override
-
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
