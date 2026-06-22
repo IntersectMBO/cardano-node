@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -22,17 +23,19 @@ import           Cardano.Rpc.Server.Config (makeRpcConfig)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs,
+                   mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 
 import           Data.Bifunctor (first)
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Monoid (Last (..))
 import           Data.String
 import           Data.Text (Text)
 
+import           Data.Aeson (eitherDecode)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
@@ -284,11 +287,61 @@ eExpectedConfig = do
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
-    , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncLedgerDbConfig = LedgerDbConfiguration defaultSnapshotPolicyArgs DefaultQueryBatchSize V2InMemory noDeprecatedOptions
     , ncRpcConfig
     , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     }
+
+-- | Test that the legacy flat LedgerDB snapshot config format (options directly
+-- under LedgerDB) parses identically to the new nested Snapshots format.
+--
+-- TODO: this test could be removed once the old format is deprecated.
+prop_legacySnapshotFormat_POM :: Property
+prop_legacySnapshotFormat_POM =
+  withTests 1 . Hedgehog.property $ do
+    let legacyJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"LedgerDB\": {"
+          <> "  \"Backend\": \"V2InMemory\","
+          <> "  \"SnapshotInterval\": 4320,"
+          <> "  \"NumOfDiskSnapshots\": 2"
+          <> "} }"
+        newJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"LedgerDB\": {"
+          <> "  \"Backend\": \"V2InMemory\","
+          <> "  \"Snapshots\": {"
+          <> "    \"SnapshotInterval\": 4320,"
+          <> "    \"NumOfDiskSnapshots\": 2"
+          <> "  }"
+          <> "} }"
+    legacyConfig :: PartialNodeConfiguration <- evalEither $ eitherDecode legacyJson
+    newConfig    :: PartialNodeConfiguration <- evalEither $ eitherDecode newJson
+    pncLedgerDbConfig legacyConfig === pncLedgerDbConfig newConfig
+
+-- | Test that the named \"Mithril\" snapshot policy selects
+-- 'mithrilSnapshotPolicyArgs' as a whole.
+prop_mithrilSnapshotPolicy_POM :: Property
+prop_mithrilSnapshotPolicy_POM =
+  withTests 1 . Hedgehog.property $ do
+    let json = "{ " <> dummyRequiredValues <> ", "
+          <> "\"LedgerDB\": {"
+          <> "  \"Backend\": \"V2InMemory\","
+          <> "  \"Snapshots\": \"Mithril\""
+          <> "} }"
+    config :: PartialNodeConfiguration <- evalEither $ eitherDecode json
+    getLast (pncLedgerDbConfig config) ===
+      Just (LedgerDbConfiguration mithrilSnapshotPolicyArgs DefaultQueryBatchSize V2InMemory noDeprecatedOptions)
+
+dummyRequiredValues :: LBS.ByteString
+dummyRequiredValues = mconcat
+  [ "\"ByronGenesisFile\": \"x\""
+  , ", \"ShelleyGenesisFile\": \"x\""
+  , ", \"AlonzoGenesisFile\": \"x\""
+  , ", \"ConwayGenesisFile\": \"x\""
+  , ", \"LastKnownBlockVersion-Major\": 0"
+  , ", \"LastKnownBlockVersion-Minor\": 0"
+  , ", \"LastKnownBlockVersion-Alt\": 0"
+  ]
 
 -- -----------------------------------------------------------------------------
 
