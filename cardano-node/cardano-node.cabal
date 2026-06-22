@@ -232,6 +232,7 @@ test-suite cardano-node-test
                       , contra-tracer
                       , directory
                       , filepath
+                      , fs-api
                       , hedgehog
                       , hedgehog-corpus
                       , hedgehog-extras ^>= 0.10
@@ -240,7 +241,6 @@ test-suite cardano-node-test
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
-                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml

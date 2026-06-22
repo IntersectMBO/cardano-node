@@ -46,18 +46,19 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Backend as V2
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
+import qualified Ouroboros.Consensus.Storage.PerasCertDB as PerasCertDB
+import qualified Ouroboros.Consensus.Storage.PerasVoteDB as PerasVoteDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
-import qualified Ouroboros.Consensus.Storage.PerasVoteDB as PerasVoteDB
-import qualified Ouroboros.Consensus.Storage.PerasCertDB as PerasCertDB
 
 import           Data.Aeson (Object, ToJSON, Value (Object, String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -1667,20 +1668,21 @@ instance MetaTrace (PerasVoteDB.TraceEvent blk) where
   documentFor (Namespace _ ["GarbageCollected"]) = Just "GarbageCollected"
   documentFor _ = Nothing
 
-instance LogFormatting (PerasVoteDB.TraceEvent blk) where
-  forHuman (PerasVoteDB.AddVote {}) = "PerasVoteDB.AddVote"
-  forHuman (PerasVoteDB.GarbageCollected {}) = "PerasVoteDB.GarbageCollected"
+instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
+  forHuman (PerasVoteDB.AddVote voteId _vote result) =
+    "Peras vote " <> Text.pack (show voteId) <> ": " <> Text.pack (show result)
+  forHuman (PerasVoteDB.GarbageCollected slotNo) =
+    "Peras vote DB garbage collected at slot " <> Text.pack (show slotNo)
 
-  forMachine _dtal (PerasVoteDB.AddVote cert _ _) =
-    mconcat
-      [ "kind" .= String "AddVote"
-      , "cert" .= String (Text.pack $ show cert)
-      ]
+  forMachine _dtal (PerasVoteDB.AddVote voteId _vote result) =
+    mconcat [ "kind" .= String "AddVote"
+            , "voteId" .= String (Text.pack $ show voteId)
+            , "result" .= String (Text.pack $ show result)
+            ]
   forMachine _dtal (PerasVoteDB.GarbageCollected slotNo) =
-    mconcat
-      [ "kind" .= String "GarbageCollected"
-      , "slotNo" .= String (Text.pack $ show slotNo)
-      ]
+    mconcat [ "kind" .= String "GarbageCollected"
+            , "slot" .= String (Text.pack $ show slotNo)
+            ]
 
   asMetrics _ = []
 
@@ -1701,19 +1703,20 @@ instance MetaTrace (PerasCertDB.TraceEvent blk) where
   documentFor _ = Nothing
 
 instance LogFormatting (PerasCertDB.TraceEvent blk) where
-  forHuman (PerasCertDB.AddCert _ _ _) = "PerasCertDB.AddCert"
-  forHuman (PerasCertDB.GarbageCollected _slotNo) = "PerasCertDB.GarbageCollected"
+  forHuman (PerasCertDB.AddCert roundNo _cert result) =
+    "Peras certificate for round " <> Text.pack (show roundNo) <> ": " <> Text.pack (show result)
+  forHuman (PerasCertDB.GarbageCollected slotNo) =
+    "Peras certificate DB garbage collected at slot " <> Text.pack (show slotNo)
 
-  forMachine _dtal (PerasCertDB.AddCert cert _ _) =
-    mconcat
-      [ "kind" .= String "AddCert"
-      , "cert" .= String (Text.pack $ show cert)
-      ]
+  forMachine _dtal (PerasCertDB.AddCert roundNo _cert result) =
+    mconcat [ "kind" .= String "AddCert"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "result" .= String (Text.pack $ show result)
+            ]
   forMachine _dtal (PerasCertDB.GarbageCollected slotNo) =
-    mconcat
-      [ "kind" .= String "GarbageCollected"
-      , "slotNo" .= String (Text.pack $ show slotNo)
-      ]
+    mconcat [ "kind" .= String "GarbageCollected"
+            , "slot" .= String (Text.pack $ show slotNo)
+            ]
 
   asMetrics _ = []
 
@@ -1788,8 +1791,13 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
-  forHuman (LedgerDB.SnapshotRequestDelayed {}) = "LedgerDB.SnapshotRequestDelayed"
-  forHuman (LedgerDB.SnapshotRequestCompleted) = "LedgerDB.SnapshotRequestCompleted"
+  forHuman (LedgerDB.SnapshotRequestDelayed _snapshotRequestTime delayBeforeSnapshotting slots) =
+    Text.unwords [ "Scheduling to take ledger state snapshots at slots "
+                 , showT (NonEmpty.toList slots)
+                 , ", with a randomised delay of"
+                 , showT delayBeforeSnapshotting
+                 ]
+  forHuman LedgerDB.SnapshotRequestCompleted = "Completed taking a ledger state snapshot"
   forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
     Text.unwords [ "Taking ledger snapshot"
                  , showT snap
@@ -1828,11 +1836,13 @@ instance ( StandardHash blk
              " Snapshot was created for a different backend. Convert it with `snapshot-converter`."
         _ -> ""
 
-  -- TODO: Create a proper log for SnapshotRequestDelayed
-  forMachine _ (LedgerDB.SnapshotRequestDelayed _ _ _) =
+  forMachine _dtals (LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots) =
     mconcat [ "kind" .= String "SnapshotRequestDelayed"
+            , "requestTime" .= show snapshotRequestTime
+            , "delayBeforeSnapshotting" .= show delayBeforeSnapshotting
+            , "slots" .= toJSON (NonEmpty.toList slots)
             ]
-  forMachine _ (LedgerDB.SnapshotRequestCompleted) =
+  forMachine _dtals LedgerDB.SnapshotRequestCompleted =
     mconcat [ "kind" .= String "SnapshotRequestCompleted"
             ]
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
@@ -1856,8 +1866,8 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
 
-    severityFor  (Namespace _ ["SnapshotRequestDelayed"]) _ = Just Info
-    severityFor  (Namespace _ ["SnapshotRequestCompleted"]) _ = Just Info
+    severityFor  (Namespace _ ["SnapshotRequestDelayed"]) _ = Just Debug
+    severityFor  (Namespace _ ["SnapshotRequestCompleted"]) _ = Just Debug
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
@@ -1875,12 +1885,18 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
          , " seems to be from an old node or different backend, it will"
          , " be deleted"
          ]
+    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
+        "A delayed snapshot request was issued. The snapshot will be initiated at the specified timestamp, with the specified delay and for the specified slots"
+    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
+        "The delayed snapshot request was completed"
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
+      , Namespace [] ["SnapshotRequestDelayed"]
+      , Namespace [] ["SnapshotRequestCompleted"]
       ]
 
 --------------------------------------------------------------------------------

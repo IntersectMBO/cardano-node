@@ -28,6 +28,7 @@ module Cardano.Node.Configuration.POM
 where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
+import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
 import           Cardano.Logging.Types
 import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
@@ -45,10 +46,10 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
+                   SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
+                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
 import           Ouroboros.Consensus.Util.Args (OverrideOrDefault (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (
-                   SnapshotFrequency (..), SnapshotFrequencyArgs (..), SnapshotPolicyArgs (..),
-                   defaultSnapshotPolicyArgs, NumOfDiskSnapshots (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
@@ -65,6 +66,7 @@ import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
@@ -74,8 +76,6 @@ import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-
-import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
@@ -517,25 +517,52 @@ instance FromJSON PartialNodeConfiguration where
              return $ Just $ LedgerDbConfiguration spArgs DefaultQueryBatchSize V2InMemory deprecatedOpts
 
            Just ledgerDB -> flip (withObject "LedgerDB") ledgerDB $ \o -> do
-             ldbSnapInterval <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval o) .!= UseDefault
-             ldbSnapNum      <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum o)           .!= UseDefault
-             ldbSnapOffset   <- (fmap Override <$> o .:? "SlotOffset") .!= UseDefault
-             ldbSnapRateLimit<- (fmap (Override . secondsToDiffTime) <$> o .:? "RateLimit") .!= UseDefault
-             qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
-             backend         <- o .:? "Backend" .!= "V2InMemory"
-             selector        <- case backend of
+             -- Parse snapshot options from an object, honouring any top-level
+             -- (deprecated) SnapshotInterval / NumOfDiskSnapshots overrides.
+             let parseSnapshotOpts s = do
+                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= UseDefault
+                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= UseDefault
+                   sOffset    <- (fmap Override <$> s .:? "SlotOffset") .!= UseDefault
+                   sRateLimit <- (fmap (Override . secondsToDiffTime) <$> s .:? "RateLimit") .!= UseDefault
+                   sMinDelay  <- s .:? "MinDelay"
+                   sMaxDelay  <- s .:? "MaxDelay"
+                   sDelayRange <-
+                         case (sMinDelay, sMaxDelay) of
+                           (Just minDelay, Just maxDelay) ->
+                             if minDelay <= maxDelay then
+                               pure (Override (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay)))
+                             else fail $ "Invalid ledger snapshot delay range, MinDelay > MaxDelay: "
+                                       <> show minDelay <> " > " <> show maxDelay
+                           _ -> pure UseDefault
+                   let sf = SnapshotFrequencyArgs {
+                           sfaInterval = sInterval
+                         , sfaOffset = sOffset
+                         , sfaRateLimit = sRateLimit
+                         , sfaDelaySnapshotRange = sDelayRange
+                         }
+                   pure $ SnapshotPolicyArgs (SnapshotFrequency sf) sNum
+
+             qsize    <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
+             backend  <- o .:? "Backend" .!= "V2InMemory"
+             selector <- case backend of
                "V2InMemory" -> return V2InMemory
                "V2LSM" -> do
                  lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
                  pure $ V2LSM lsmPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
-             let sf = SnapshotFrequencyArgs {
-                     sfaInterval = ldbSnapInterval
-                   , sfaOffset = ldbSnapOffset
-                   , sfaRateLimit = ldbSnapRateLimit
-                   , sfaDelaySnapshotRange = UseDefault
-                   }
-                 spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) ldbSnapNum
+
+             -- A named policy (e.g. `Snapshots: Mithril`) selects a whole predefined
+             -- set of args; an object is parsed field-by-field; absence falls back to
+             -- the legacy top-level options for backward compatibility.
+             mSnapshotsVal <- o .:? "Snapshots"
+             spArgs <- case mSnapshotsVal of
+               Just (String name) -> case name of
+                 "Mithril" -> pure mithrilSnapshotPolicyArgs
+                 _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
+                          <> ". Expected \"Mithril\" or an object with snapshot options."
+               Just sv -> withObject "Snapshots" parseSnapshotOpts sv
+               Nothing -> parseSnapshotOpts o
+
              pure $ Just $ LedgerDbConfiguration spArgs qsize selector deprecatedOpts
 
       parseByronProtocol v = do

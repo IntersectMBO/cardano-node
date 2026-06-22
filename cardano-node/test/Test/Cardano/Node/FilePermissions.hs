@@ -14,42 +14,39 @@ module Test.Cardano.Node.FilePermissions
   ( tests
   ) where
 
-import           Control.Monad.Except
-import           "contra-tracer" Control.Tracer
-import           Control.Tracer.Arrow
-import           Data.Foldable
-import           Data.IORef
-import           System.Directory (removeFile)
-
 import           Cardano.Api
+
 import           Cardano.Node.Run (checkVRFFilePermissions)
+import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
+
+import           Control.Exception (bracket)
 import           Control.Monad (Monad (..))
+import           Control.Monad.Except
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           "contra-tracer" Control.Tracer
+import           Control.Tracer.Arrow
 import           Data.Bool (Bool, not)
 import           Data.Either (Either (..))
 import           Data.Eq ((==))
+import           Data.Foldable
 import           Data.Foldable (foldl', length)
 import           Data.Function (const, ($), (.))
+import           Data.IORef
 import qualified Data.List as L
 import           Data.Maybe (Maybe (..))
 import           Data.Semigroup (Semigroup (..))
-import           Hedgehog
-import           Hedgehog.Internal.Property (Group (..), failWith)
+import           System.Directory (removeFile)
 import           System.IO (FilePath, IO)
-import           Text.Show (Show (..))
-import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
-import           Control.Exception (bracket)
-
-#ifdef UNIX
-
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
+import           Text.Show (Show (..))
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Property (Group (..), failWith)
 #endif
 
 
@@ -166,7 +163,7 @@ mkCapturingTracer = do
   messages <- liftIO $ newIORef []
   let registerMessage :: String -> IO ()
       registerMessage msg = atomicModifyIORef messages (\msgs -> (msgs <> [msg], ()))
-  pure (Tracer registerMessage, messages)
+  pure (Tracer (emit registerMessage), messages)
 #endif
 
 -- -----------------------------------------------------------------------------
