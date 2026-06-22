@@ -67,9 +67,6 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
-package snap-server
-  flags: -openssl
-
 package bitvec
   flags: -simd
 
