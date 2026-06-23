@@ -6,32 +6,51 @@
 Module      : Cardano.Benchmarking.Script.Ogmios
 Description : Submit transactions through an Ogmios endpoint.
 
-This is a functional submission transport, not a benchmarking one: it
-submits strictly one transaction per round trip over a single WebSocket
-connection, ignores any TPS pacing, and reports no submission metrics
-beyond a sent/failed count traced at debug level. The high-level config
-compiler therefore only selects it together with @debugMode: true@.
+Submit transactions through an <https://ogmios.dev Ogmios> WebSocket
+endpoint, as JSON-RPC 2.0 @submitTransaction@ calls.
 
-Throughput is bounded by the round-trip time to the endpoint, since at
-most one request is in flight at a time. Ogmios itself supports
-pipelining many requests per connection, correlated by the JSON-RPC
-@id@ — a paced sender/receiver pair with an in-flight window is the
-natural next step should this transport ever need to carry
-benchmark-grade load. Until then, do not draw throughput conclusions
-from runs submitted this way.
+== What this is (and is not)
 
-Note that only transaction submission goes through Ogmios. Everything
-else still talks to the local node directly: protocol-parameter and era
-queries as well as protocol startup use the node socket and config
-file, so tx-generator keeps requiring local node access even when
-submitting through a remote endpoint.
+This is a __functional submission transport, not a benchmarking one__:
 
-Rejected transactions make the run fail. Streams of chained setup
-transactions (genesis import, splitting) abort at the first rejection —
-everything after it would be doomed anyway — while the benchmarking
-phase's stream of independent transactions is submitted to the end and
-the action fails afterwards if anything was rejected. Either way the
-process exits non-zero, so exit codes can be trusted in scripts.
+* one transaction per round trip, over a single WebSocket connection;
+* TPS pacing is ignored;
+* no submission metrics — only a sent/failed count, traced at debug level.
+
+__Using Ogmios requires @debugMode: true@__ — the high-level config
+compiler rejects an @ogmiosUrl@ config that does not also set it.
+
+== Throughput
+
+Throughput is bounded by the round-trip time to the endpoint: at most one
+request is in flight at a time.
+
+Ogmios /can/ pipeline many requests per connection, correlated by the
+JSON-RPC @id@. A paced sender/receiver pair with an in-flight window is the
+natural next step, should this transport ever need to carry benchmark-grade
+load. Until then, __do not draw throughput conclusions from runs submitted
+this way__.
+
+== What still uses the local node
+
+Only transaction /submission/ goes through Ogmios. Everything else talks to
+the local node directly:
+
+* protocol-parameter and era queries;
+* protocol startup.
+
+So tx-generator still needs local node access (socket + config file) even
+when submitting to a remote endpoint.
+
+== Rejected transactions
+
+A rejected transaction __fails the run__: the process exits non-zero, so
+exit codes can be trusted in scripts. /How/ it fails depends on the phase:
+
+* __Setup__ (genesis import, splitting) — chained transactions, so it aborts
+  at the first rejection; everything after it would be doomed anyway.
+* __Benchmark__ — independent transactions, so the whole stream is submitted,
+  then the action fails afterwards if anything was rejected.
 -}
 module Cardano.Benchmarking.Script.Ogmios
   ( OgmiosResult (..)
