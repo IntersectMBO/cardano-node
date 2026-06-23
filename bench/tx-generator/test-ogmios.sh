@@ -10,9 +10,18 @@
 #   cardano-*     ← inputs.cardano-node.packages.{cardano-node,cardano-cli,cardano-testnet}
 #   tx-generator  ← locally-built (cabal)
 #
+# The ogmios ref MUST be fetched with submodules: ogmios pulls hjsonpointer,
+# hjsonschema and wai-routes from git submodules that its cabal.project needs,
+# and a plain `github:` ref downloads a tarball that omits them, so haskell.nix
+# then fails with "modules/hjsonpointer does not contain any .cabal file". The
+# `git+https://…?submodules=1` fetcher pulls them; `github:…?submodules=1` does
+# not (it is silently ignored), and the flake's own `self.submodules = true` is
+# not enough either. Override with a like-for-like ref, e.g.:
+#   bash bench/tx-generator/test-ogmios.sh 'git+https://github.com/IntersectMBO/ogmios?submodules=1&ref=<branch>'
+#
 set -euo pipefail
 
-OGMIOS_FLAKE="${1:-github:IntersectMBO/ogmios/master}"
+OGMIOS_FLAKE="${1:-git+https://github.com/IntersectMBO/ogmios?submodules=1&ref=testnet-tx-gen-tests}"
 TESTNET_MAGIC=42
 OGMIOS_PORT=11337
 
@@ -29,13 +38,23 @@ echo "=== Resolving nix packages ==="
 echo "  ogmios flake: $OGMIOS_FLAKE"
 
 # ogmios: packages.ogmios-exe
-OGMIOS=$(nix build "${OGMIOS_FLAKE}#ogmios" --no-link --print-out-paths)
+OGMIOS=$(nix build "${OGMIOS_FLAKE}#ogmios" --no-link --print-out-paths)/bin/ogmios
 
-# cardano-node tools: input ref from the ogmios flake (uses tag, not hash)
+# cardano-node tools: input ref from the ogmios flake (uses tag, not hash).
+# Requires the ogmios flake to declare a cardano-node input — the test
+# branch does, but e.g. ogmios master does not, in which case the jq below
+# yields "github:null/null/null". Guard against that with a clear error.
 CN_FLAKE=$(nix flake metadata "${OGMIOS_FLAKE}" --json \
   | jq -r '.locks.nodes["cardano-node"].original
            | "github:\(.owner)/\(.repo)/\(.ref)"')
 echo "  cardano-node flake: $CN_FLAKE"
+case "$CN_FLAKE" in
+  *null*)
+    echo "ERROR: ogmios flake '$OGMIOS_FLAKE' has no usable cardano-node input."
+    echo "       Use an ogmios ref that declares one (e.g. ...&ref=testnet-tx-gen-tests)."
+    exit 1
+    ;;
+esac
 
 CARDANO_NODE=$(nix build "${CN_FLAKE}#cardano-node" --no-link --print-out-paths)/bin/cardano-node
 CARDANO_CLI=$(nix build "${CN_FLAKE}#cardano-cli" --no-link --print-out-paths)/bin/cardano-cli
