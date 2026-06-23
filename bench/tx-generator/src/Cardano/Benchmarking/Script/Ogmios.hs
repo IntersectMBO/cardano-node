@@ -80,6 +80,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either.Extra (maybeToEither)
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -202,12 +203,12 @@ submitLoop onRejection traceSubmitFail conn stream reqId sent failed = do
 
 parseOgmiosUrl :: String -> Either String (String, Int, String)
 parseOgmiosUrl urlStr = do
-  uri <- note ("Invalid Ogmios URL: " ++ urlStr) $ parseURI urlStr
+  uri <- maybeToEither ("Invalid Ogmios URL: " ++ urlStr) $ parseURI urlStr
   -- WS.runClient speaks plaintext TCP only, so accepting wss:// (or any
   -- other scheme) here would silently drop the security the URL asks for.
   unless (uriScheme uri == "ws:") $
     Left $ "Unsupported scheme in Ogmios URL (only plain ws:// is supported): " ++ urlStr
-  auth <- note ("No authority in Ogmios URL: " ++ urlStr) $ uriAuthority uri
+  auth <- maybeToEither ("No authority in Ogmios URL: " ++ urlStr) $ uriAuthority uri
   when (null $ uriRegName auth) $
     Left $ "No host in Ogmios URL: " ++ urlStr
   port <- case uriPort auth of
@@ -220,9 +221,8 @@ parseOgmiosUrl urlStr = do
         p  -> p
   return (uriRegName auth, port, path)
  where
-  note msg = maybe (Left msg) Right
   parsePort p = case readMaybe p of
-    Just n | n >= 1 && n <= 65535 -> Right n
+    Just n | n >= 1 && n <= 65_535 -> Right n
     _ -> Left $ "Invalid port in Ogmios URL: " ++ urlStr
 
 mkSubmitRequest :: IsShelleyBasedEra era => Tx era -> Int -> Value
@@ -257,7 +257,7 @@ parseOgmiosResponse bs =
       Just resultVal -> do
         txId <- Aeson.withObject "result" (\r -> do
           txObj <- r .: "transaction"
-          Aeson.withObject "transaction" (\t -> t .: "id") txObj
+          Aeson.withObject "transaction" (.: "id") txObj
           ) resultVal
         return $ OgmiosSuccess txId
       Nothing -> do
