@@ -189,7 +189,6 @@ library
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
-                      , yaml
 
 executable cardano-node
   import:               project-config
