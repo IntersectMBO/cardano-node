@@ -51,6 +51,7 @@ import           Cardano.Api.Experimental (Some (..))
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Node.Configuration.Adapter (nodeConfigurationFromFile)
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
@@ -232,9 +233,8 @@ getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStac
   SystemStart . G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
   where
     decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
-    decodeNodeConfiguration (File file) = do
-      partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
-      fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
+    decodeNodeConfiguration (File file) =
+      ncProtocolConfig <$> ExceptT (nodeConfigurationFromFile file)
     decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
     decodeGenesisFile fp = withExceptT (docToString . prettyError) $
       Byron.readGenesis (GenesisFile fp) Nothing RequiresNoMagic
