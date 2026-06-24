@@ -113,14 +113,5 @@
     "Startup.DiffusionInit": {
       "severity": "Info"
     }
-  },
-  "TurnOnLogMetrics": true,
-  "TurnOnLogging": true,
-  "UseTraceDispatcher": true,
-  "defaultBackends": [],
-  "defaultScribes": [],
-  "minSeverity": "Critical",
-  "options": {},
-  "setupBackends": [],
-  "setupScribes": []
+  }
 }

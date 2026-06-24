@@ -20,7 +20,7 @@
     }
   },
   "MaxKnownMajorProtocolVersion": 2,
-  "MinNodeVersion": "10.7.0",
+  "MinNodeVersion": "11.1.0",
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresNoMagic",
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
@@ -109,8 +109,5 @@
     "Startup.DiffusionInit": {
       "severity": "Info"
     }
-  },
-  "TurnOnLogMetrics": true,
-  "TurnOnLogging": true,
-  "UseTraceDispatcher": true
+  }
 }
