@@ -51,11 +51,7 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex
--- dmq-node dropped: the latest CHaP version (0.4.2.0) requires
--- ouroboros-network:framework-tracing, a sublib that doesn't exist
--- in the leios-prototype-remake network fork. Re-add once a newer
--- dmq-node release tracks the post-split network layout.
+extra-packages: alex, dmq-node >= 0.4.2.0
 
 program-options
   ghc-options: -Werror
