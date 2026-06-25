@@ -311,7 +311,7 @@
           "db-analyser"
           "db-synthesizer"
           "db-truncater"
-          "dmq-node"
+          # "dmq-node" FIXME: not updated within leios-prototype
           "kes-agent"
           "kes-agent-control"
           "snapshot-converter"
