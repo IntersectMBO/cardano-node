@@ -24,6 +24,14 @@ flag systemd
   default:              True
   manual:               False
 
+flag ghc-debug
+  description:          Link the ghc-debug stub into the cardano-node executable and
+                        wrap main with withGhcDebug, exposing a GHC_DEBUG_SOCKET unix
+                        socket for heap snapshotting. Off by default; enabled only for
+                        dedicated debug/profiling builds.
+  default:              False
+  manual:               True
+
 common project-config
   default-language:     Haskell2010
 
@@ -227,7 +235,12 @@ executable cardano-node
     ghc-options:        "-with-rtsopts=-T -I0 -A16m -qg1 -qb1 -N2 --disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
+                        GhcDebugWrap
   autogen-modules:      Paths_cardano_node
+
+  if flag(ghc-debug)
+    cpp-options:        -DGHC_DEBUG
+    build-depends:      ghc-debug-stub
 
   build-depends:        base
                       , cardano-crypto-class

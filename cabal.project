@@ -32,6 +32,17 @@ constraints:
 package acts
   flags: -finitary
 
+-- Enable the cardano-node `ghc-debug` flag at PLAN time so ghc-debug-stub is
+-- resolved into the install plan and wired as a dependency of the cardano-node
+-- exe. Setting it only via a haskell.nix module flag is too late: the plan
+-- (and its --exact-configuration --dependency list) is computed from this file
+-- with the flag at its default, so the stub would be missing at configure.
+-- The stub is always linked in builds off this branch, but `main` only starts
+-- the ghc-debug socket server when GHC_DEBUG_SOCKET is set, so a node with no
+-- socket configured behaves exactly like an uninstrumented one.
+package cardano-node
+  flags: +ghc-debug
+
 packages:
   cardano-node
   cardano-node-capi
@@ -49,6 +60,12 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-resources
   trace-forward
+  -- Headless ghc-debug snapshotter, exposed as the cardano-ghc-debug-snapshot
+  -- flake exe alongside the ghc-debug-instrumented cardano-node-ghc-debug node.
+  -- Pulls ghc-debug-client from the Hackage index (resolves to the 0.5.x family
+  -- on GHC 9.6.7 -- ghc-debug is pinned to the compiler's ghc-heap, so the newer
+  -- 0.8.x targets a newer GHC; the 0.5.x API used here is identical).
+  ghc-debug-snapshot
 
 -- Needed when cross compiling
 extra-packages: alex

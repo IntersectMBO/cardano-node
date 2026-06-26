@@ -1,0 +1,21 @@
+cabal-version: 3.0
+name:          ghc-debug-snapshot
+version:       0.1.0.0
+synopsis:      Headless ghc-debug heap snapshotter for cardano-node debug images
+description:   A tiny ghc-debug client that connects to a running,
+               ghc-debug-instrumented process over its GHC_DEBUG_SOCKET unix
+               socket, pauses it, writes a self-contained heap snapshot to a
+               file, and exits. The snapshot can be shipped elsewhere and
+               analysed offline with GHC.Debug.Snapshot.snapshotRun.
+license:       Apache-2.0
+author:        IOG
+maintainer:    operations@iohk.io
+build-type:    Simple
+
+executable cardano-ghc-debug-snapshot
+  hs-source-dirs:     app
+  main-is:            Main.hs
+  default-language:   Haskell2010
+  ghc-options:        -threaded -rtsopts -Wall
+  build-depends:      base
+                    , ghc-debug-client

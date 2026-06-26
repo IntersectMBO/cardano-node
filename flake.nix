@@ -151,6 +151,18 @@
             recursiveUpdate
             (set-git-rev node-ipe)
             {passthru = {noGitRev = node-ipe;};};
+          # As `cardano-node-ipe`, but also linked with the ghc-debug stub (the
+          # `ghc-debug` cabal flag) so the heap can be snapshotted on demand over
+          # `$GHC_DEBUG_SOCKET`. Pair with the `cardano-ghc-debug-snapshot` exe
+          # (surfaced from project.exes) to capture, then analyse the snapshot
+          # offline with `GHC.Debug.Snapshot.snapshotRun`. See `ghcDebug` in
+          # nix/haskell.nix and ghc-debug-snapshot/README.md.
+          cardano-node-ghc-debug = let
+            node-ghc-debug = project.ghcDebug.exes.cardano-node;
+          in
+            recursiveUpdate
+            (set-git-rev node-ghc-debug)
+            {passthru = {noGitRev = node-ghc-debug;};};
           cardano-cli = let
             cli = cardano-cli.components.exes.cardano-cli;
           in

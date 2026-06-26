@@ -474,6 +474,19 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           ];
         }];
       };
+      # As `infoTableMapped`, but additionally links the ghc-debug stub into the
+      # cardano-node executable (via the package's `ghc-debug` cabal flag, which
+      # also wraps `main` with `withGhcDebug`). The node then serves the
+      # ghc-debug protocol on `$GHC_DEBUG_SOCKET`, so a client -- the
+      # `cardano-ghc-debug-snapshot` exe -- can pause it and write a
+      # self-contained heap snapshot for offline retainer analysis with
+      # `GHC.Debug.Snapshot.snapshotRun`. Built on top of `infoTableMapped` so
+      # the snapshot's closures still carry IPE source mapping where available.
+      ghcDebug = final.infoTableMapped.appendModule {
+        modules = [{
+          packages.cardano-node.flags.ghc-debug = true;
+        }];
+      };
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
@@ -486,6 +499,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
                   infoTableMapped = lib.getAttrFromPath path final.infoTableMapped.hsPkgs;
+                  ghcDebug = lib.getAttrFromPath path final.ghcDebug.hsPkgs;
                 };
               }
           else value)
