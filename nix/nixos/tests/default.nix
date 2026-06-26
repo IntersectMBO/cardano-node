@@ -30,4 +30,10 @@ in {
 
   # Tests a mainnet edge node with submit-api using nixos service config.
   cardanoNodeEdge = callTest ./cardano-node-edge.nix {};
+
+  # Tests the OCI image under a read-only root, a non-root UID in group 0, and
+  # a private /tmp: container startup, the fixed 0700 runtime dir, merged-config
+  # genesis path rewriting, the env snapshot/alias, the fail-fast on a missing
+  # writable /tmp, and that cli mode does not require /tmp.
+  cardanoNodeOciReadonly = callTest ./cardano-node-oci-readonly.nix {dockerImage = pkgs.dockerImage;};
 }
