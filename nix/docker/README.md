@@ -223,9 +223,9 @@ output must similarly be directed to a writable mount, for example:
   +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -p -RTS
 ```
 
-The read-only, non-root and private-`/tmp` behaviors are exercised by the
-`nixosTests/cardanoNodeOciReadonly` NixOS test
-(`nix build .#checks.<system>.nixosTests/cardanoNodeOciReadonly`).
+The read-only, non-root and private-`/tmp` behaviors of all three images are
+exercised by the `nixosTests/cardanoOciReadonly` NixOS test
+(`nix build .#checks.<system>.nixosTests/cardanoOciReadonly`).
 
 
 ## Non-Root User
