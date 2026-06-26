@@ -120,12 +120,14 @@ docker run \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
 
-The resulting merged config and topology are written to
-`/tmp/cardano-{{,tracer-}config,topology}-merged.json`
-and used as the runtime configuration.
-Relative file references are rewritten to absolute paths
-anchored at `/opt/cardano/config/$NETWORK/`
-so they resolve from the new location.
+The resulting merged config and topology are written to a private,
+per-container runtime directory under `/tmp` (see
+[Read-Only Root Filesystem](#read-only-root-filesystem) for the exact path)
+as `config-merged.json` / `topology-merged.json` (node) or
+`tracer-config-merged.json` (tracer), and used as the runtime configuration.
+Relative file references (the config's `*File` keys and the topology's
+`peerSnapshotFile`) are rewritten to absolute paths anchored at
+`/opt/cardano/config/$NETWORK/` so they resolve from the new location.
 
 
 ## CLI Mode
@@ -158,27 +160,72 @@ default state directory locations, `/{data,ipc,logs}`, will work for both modes.
 
 
 ## Read-Only Root Filesystem
-The image is compatible with `--read-only` (Docker/Podman) and
+Under a normal writable root filesystem no `/tmp` mount is needed. This holds
+for every mode, run as root or as a non-root user, so existing deployments need
+no change.
+
+A writable `/tmp` must be supplied explicitly only when the root filesystem is
+made read-only. The image is compatible with `--read-only` (Docker/Podman) and
 `securityContext.readOnlyRootFilesystem: true` (Kubernetes), provided the
 runtime supplies writable storage for the state directories described above
-(`/data`, `/ipc`, `/logs`) and a writable `/tmp` (tmpfs or `emptyDir`).
+(`/data`, `/ipc`, `/logs`) and a writable `/tmp` (tmpfs or `emptyDir`). Under
+`--read-only` this applies to every run mode except `cli`, which does not use
+`/tmp`.
 
-A resolved-configuration snapshot is written at runtime to `/tmp/cardano-env`
-and can be `source`d for an interactive debug shell inside the container.
-The legacy path `/usr/local/bin/env` is preserved as a symlink to
-`/tmp/cardano-env` for backwards compatibility.
+For example, scripts mode with a read-only root filesystem, a per-container
+tmpfs at `/tmp`, and named volumes for the state directories:
+```
+docker run \
+  --read-only \
+  --tmpfs /tmp \
+  -v mainnet-data:/data \
+  -v mainnet-ipc:/ipc \
+  -v mainnet-logs:/logs \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
+All runtime-generated artifacts (the merged config/topology and the env
+snapshot below) are written under a private, `0700` runtime directory that
+the entrypoint creates in `/tmp`, at a fixed, predictable per-role path:
 
-In "scripts" mode, GHC RTS profiling output (`cardano-node.stats`,
-`cardano-node.prof`, `cardano-node.hp`, etc.) is directed to `/logs/` so the
-image keeps working when profiling is enabled under a read-only root.
-In "custom" mode the operator chooses the RTS flags, so any profiling output
-must similarly be directed to a writable mount, for example:
+```
+/tmp/cardano-node/      # node image:   config-merged.json, topology-merged.json, env
+/tmp/cardano-tracer/    # tracer image: tracer-config-merged.json, env
+```
+
+The path is fixed so operators and tooling can refer to the effective
+config/topology dependably. The entrypoint creates the directory atomically
+with `mkdir -m 700` and refuses to start if the path already exists and is
+not a private directory it owns, so it never follows an attacker-planted
+symlink. A consequence of the fixed name is that **a `/tmp` mount must not be
+shared across containers of the same role** — a second node (or tracer)
+container sharing one `/tmp` would refuse to start rather than collide. Use a
+per-container `/tmp`.
+
+A resolved-configuration snapshot is written at runtime to `env` inside that
+directory and can be `source`d for an interactive debug shell inside the
+container. The path `/usr/local/bin/env` is preserved as a symlink to it for
+backwards compatibility, so `source /usr/local/bin/env` keeps working. This
+is the supported way to locate the effective configuration: sourcing it
+exports `CARDANO_CONFIG`, `CARDANO_TOPOLOGY`, the socket path, etc. as the
+node was actually launched with.
+
+In "scripts" mode GHC RTS output is directed to `/logs/` so the image keeps
+working under a read-only root. The lightweight machine-readable RTS summary
+(`/logs/cardano-node.stats`, written at process exit) is always produced; the
+heavier profiling/eventlog outputs are produced only when profiling or eventlog
+is enabled. In "custom" mode the operator chooses the RTS flags, so any such
+output must similarly be directed to a writable mount, for example:
 ```
 ... run \
   --config /opt/cardano/config/mainnet/config.json \
   ... \
   +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -p -RTS
 ```
+
+The read-only, non-root and private-`/tmp` behaviors are exercised by the
+`nixosTests/cardanoNodeOciReadonly` NixOS test
+(`nix build .#checks.<system>.nixosTests/cardanoNodeOciReadonly`).
 
 
 ## Non-Root User
@@ -195,6 +242,20 @@ perm, the non-root user needs to run with primary group 0 (the Kubernetes
 default for `runAsUser`) or with supplementary group 0. In Kubernetes
 you can also set `securityContext.fsGroup: 0` to have the kubelet chown
 the volume on mount. For Docker, `--user <uid>:0` is the equivalent.
+
+For example, the read-only invocation above, run as a non-root UID in
+group 0:
+```
+docker run \
+  --read-only \
+  --tmpfs /tmp \
+  --user 1000:0 \
+  -v mainnet-data:/data \
+  -v mainnet-ipc:/ipc \
+  -v mainnet-logs:/logs \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
 
 The image defaults to running as root; specify a UID explicitly
 to opt into a non-root run.

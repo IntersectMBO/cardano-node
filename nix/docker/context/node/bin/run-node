@@ -98,7 +98,7 @@ printRunEnv () {
 #
 writeRootEnv () {
 
-cat << EOF > /tmp/cardano-env
+cat << EOF > "$CARDANO_RUNTIME_DIR/env"
 #!/usr/bin/env bash
 
 # Docker run ENV vars
@@ -106,30 +106,30 @@ EOF
 
 if [[ -n ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
   echo "CARDANO_SHELLEY_KES_AGENT_SOCKET=\"$CARDANO_SHELLEY_KES_AGENT_SOCKET\"" \
-    >> /tmp/cardano-env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=\"$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT\"" \
-    >> /tmp/cardano-env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_CONNECT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_NETWORK_CONNECT=\"$CARDANO_TRACER_SOCKET_NETWORK_CONNECT\"" \
-    >> /tmp/cardano-env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=\"$CARDANO_TRACER_SOCKET_PATH_ACCEPT\"" \
-    >> /tmp/cardano-env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=\"$CARDANO_TRACER_SOCKET_PATH_CONNECT\"" \
-    >> /tmp/cardano-env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 
-cat << EOF >> /tmp/cardano-env
+cat << EOF >> "$CARDANO_RUNTIME_DIR/env"
 CARDANO_BIND_ADDR="$CARDANO_BIND_ADDR"
 CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 CARDANO_CONFIG="$CARDANO_CONFIG"
