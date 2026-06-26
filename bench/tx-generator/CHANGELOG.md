@@ -2,18 +2,21 @@
 
 ## 2.17 -- Jun 2026
 
-* **New `Ogmios` submit mode** — send transactions over an Ogmios WebSocket
-  instead of the local socket / Node-to-Node protocols.
-  * Turn it on with the optional `ogmiosUrl` key, e.g.
-    `"ogmiosUrl": "ws://127.0.0.1:1337"`.
+* **New remote submission endpoint** — send transactions to a remote endpoint
+  instead of the local socket / Node-to-Node protocols, behind a generic,
+  backend-agnostic transport interface.
+  * Turn it on with the optional `submissionEndpointType` and
+    `submissionEndpointURI` keys, which must be set together, e.g.
+    `"submissionEndpointType": "Ogmios", "submissionEndpointURI": "ws://127.0.0.1:1337"`.
+  * The only endpoint type currently supported is `Ogmios`: each transaction is
+    sent over a WebSocket as a JSON-RPC 2.0 `submitTransaction` call.
   * It reroutes **every** phase, but only tx submission: genesis fund import, UTxO splitting, and benchmarking.
-  * Each transaction is sent as a JSON-RPC 2.0 `submitTransaction` call.
   * It is a **functional transport, not a benchmark**: no TPS pacing, no metrics.
-    * So it requires `debugMode: true`. The compiler rejects `ogmiosUrl` on its own.
+    * So it requires `debugMode: true`. The compiler rejects an endpoint config on its own.
   * **A rejected transaction fails the whole run** (the process exits non-zero):
     * Setup phases stop at the first rejection.
     * The benchmark phase finishes the stream, then fails if anything was rejected.
-    * Rejections are traced through the normal pipeline, including the detail Ogmios reports.
+    * Rejections are traced through the normal pipeline, including the detail the endpoint reports.
 
 * **Fix: clean exit for non-benchmark runs.** Scripts that never start the
   Node-to-Node benchmark machinery now exit cleanly instead of crashing at

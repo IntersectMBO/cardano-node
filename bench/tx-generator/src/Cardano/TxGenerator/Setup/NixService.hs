@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -11,6 +12,7 @@
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
        , NodeDescription (..)
+       , SubmissionEndpointType (..)
        , defaultKeepaliveTimeout
        , getKeepaliveTimeout
        , getNodeAlias
@@ -59,10 +61,26 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_sigKey               :: SigningKeyFile In
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeDescription
-  , _nix_ogmiosUrl            :: Maybe String
+  , _nix_submissionEndpointType :: Maybe SubmissionEndpointType
+  , _nix_submissionEndpointURI  :: Maybe String
   } deriving (Show, Eq)
 
 deriving instance Generic NixServiceOptions
+
+-- | Which kind of endpoint 'submissionEndpointURI' addresses. Currently only
+-- Ogmios is supported; this is the extension point for further submission
+-- backends.
+data SubmissionEndpointType
+  = Ogmios
+  deriving (Show, Eq, Generic)
+
+instance FromJSON SubmissionEndpointType where
+  parseJSON = withText "SubmissionEndpointType" $ \t -> case t of
+    "Ogmios" -> pure Ogmios
+    _        -> fail $ "unknown submissionEndpointType: " ++ show t
+
+instance ToJSON SubmissionEndpointType where
+  toJSON Ogmios = String "Ogmios"
 
 -- only works on JSON Object types
 data NodeDescription =

@@ -32,8 +32,9 @@ module Cardano.Benchmarking.Script.Types (
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
         , ScriptBudget(AutoScript, StaticScriptBudget)
         , ScriptSpec(..)
+        , SubmissionEndpointType(..)
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode, Ogmios)
+                NodeToNode, SubmitToEndpoint)
         , TargetNodes
         , TxList(..)
 ) where
@@ -44,7 +45,8 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
-import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
+import           Cardano.TxGenerator.Setup.NixService (NodeDescription,
+                   SubmissionEndpointType (..))
 import           Cardano.TxGenerator.Types
 
 import           Prelude
@@ -185,7 +187,7 @@ data SubmitMode where
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
-  Ogmios      :: !String -> SubmitMode
+  SubmitToEndpoint :: !SubmissionEndpointType -> !String -> SubmitMode
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

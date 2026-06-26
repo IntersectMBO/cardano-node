@@ -72,6 +72,7 @@ library
                         Cardano.Benchmarking.Script.Env
                         Cardano.Benchmarking.Script.Ogmios
                         Cardano.Benchmarking.Script.Selftest
+                        Cardano.Benchmarking.Script.Submission
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
                         Cardano.Benchmarking.Tracer

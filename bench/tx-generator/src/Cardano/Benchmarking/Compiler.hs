@@ -198,20 +198,20 @@ benchmarkingPhase wallet collateralWallet = do
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
   txParams <- askNixOption txGenTxParams
-  ogmiosUrl <- askNixOption _nix_ogmiosUrl
+  endpoint <- resolveSubmissionEndpoint
   doneWallet <- newWallet "done_wallet"
-  -- Ogmios is a functional submission transport, not a benchmarking one: it
-  -- ignores tps and targetNodes and produces no submission metrics, so a
-  -- config that asks for a real benchmark must fail fast here instead of
-  -- running unpaced and unmeasured.
-  submitMode <- case (ogmiosUrl, debugMode) of
-    (Just url, True)  -> pure $ Ogmios url
-    (Just _,   False) -> throwCompileError $ SomeCompilerError
-      "ogmiosUrl is a functional submission transport: it ignores tps and \
-      \targetNodes and produces no benchmark metrics. Set debugMode: true \
-      \to acknowledge this, or remove ogmiosUrl to run a real benchmark."
-    (Nothing,  True)  -> pure LocalSocket
-    (Nothing,  False) -> pure $ Benchmark targetNodes tps txCount
+  -- A submission endpoint is a functional submission transport, not a
+  -- benchmarking one: it ignores tps and targetNodes and produces no
+  -- submission metrics, so a config that asks for a real benchmark must fail
+  -- fast here instead of running unpaced and unmeasured.
+  submitMode <- case (endpoint, debugMode) of
+    (Just (eType, uri), True)  -> pure $ SubmitToEndpoint eType uri
+    (Just _,            False) -> throwCompileError $ SomeCompilerError
+      "submissionEndpointURI is a functional submission transport: it ignores \
+      \tps and targetNodes and produces no benchmark metrics. Set debugMode: \
+      \true to acknowledge this, or remove it to run a real benchmark."
+    (Nothing,           True)  -> pure LocalSocket
+    (Nothing,           False) -> pure $ Benchmark targetNodes tps txCount
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
@@ -261,9 +261,21 @@ askNixOption :: (NixServiceOptions -> v) -> Compiler v
 askNixOption = asks
 
 getSetupSubmitMode :: Compiler SubmitMode
-getSetupSubmitMode = do
-  ogmiosUrl <- askNixOption _nix_ogmiosUrl
-  return $ maybe LocalSocket Ogmios ogmiosUrl
+getSetupSubmitMode =
+  maybe LocalSocket (uncurry SubmitToEndpoint) <$> resolveSubmissionEndpoint
+
+-- | Resolve the configured submission endpoint, requiring its type and URI to
+-- be set together (or both omitted).
+resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointType, String))
+resolveSubmissionEndpoint = do
+  mType <- askNixOption _nix_submissionEndpointType
+  mUri  <- askNixOption _nix_submissionEndpointURI
+  case (mType, mUri) of
+    (Nothing, Nothing) -> pure Nothing
+    (Just t,  Just u)  -> pure $ Just (t, u)
+    _ -> throwCompileError $ SomeCompilerError
+      "submissionEndpointType and submissionEndpointURI must be set together \
+      \(or both omitted)."
 
 delay :: Compiler ()
 delay = cmd1 Delay _nix_init_cooldown

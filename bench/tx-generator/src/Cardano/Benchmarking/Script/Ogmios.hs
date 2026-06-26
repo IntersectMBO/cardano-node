@@ -4,10 +4,11 @@
 
 {-|
 Module      : Cardano.Benchmarking.Script.Ogmios
-Description : Submit transactions through an Ogmios endpoint.
+Description : Ogmios backend for the transaction submission transport.
 
-Submit transactions through an <https://ogmios.dev Ogmios> WebSocket
-endpoint, as JSON-RPC 2.0 @submitTransaction@ calls.
+An <https://ogmios.dev Ogmios> WebSocket backend for the generic
+'Cardano.Benchmarking.Script.Submission.SubmitTransport': transactions are
+submitted as JSON-RPC 2.0 @submitTransaction@ calls.
 
 == What this is (and is not)
 
@@ -17,8 +18,9 @@ This is a __functional submission transport, not a benchmarking one__:
 * TPS pacing is ignored;
 * no submission metrics — only a sent/failed count, traced at debug level.
 
-__Using Ogmios requires @debugMode: true@__ — the high-level config
-compiler rejects an @ogmiosUrl@ config that does not also set it.
+__Using a submission endpoint requires @debugMode: true@__ — the high-level
+config compiler rejects a @submissionEndpointURI@ config that does not also
+set it.
 
 == Throughput
 
@@ -53,27 +55,18 @@ exit codes can be trusted in scripts. /How/ it fails depends on the phase:
   then the action fails afterwards if anything was rejected.
 -}
 module Cardano.Benchmarking.Script.Ogmios
-  ( OgmiosResult (..)
-  , OnRejection (..)
-  , onRejectionFor
-  , parseOgmiosResponse
-  , parseOgmiosUrl
-  , submitAllOgmios
+  ( parseOgmiosUrl
+  , withOgmiosTransport
   ) where
 
 import           Cardano.Api (IsShelleyBasedEra, Tx, serialiseToCBOR)
 
-import           Cardano.Benchmarking.LogTypes (BenchTracers (..), TraceBenchTxSubmit (..))
-import           Cardano.Benchmarking.Script.Env (ActionM, getBenchTracers, liftTxGenError,
-                   traceDebug)
-import           Cardano.Benchmarking.Script.Types (Generator (..))
-import           Cardano.Benchmarking.Wallet (TxStream)
-import           Cardano.Logging (traceWith)
+import           Cardano.Benchmarking.Script.Submission (SubmitTransport (..))
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Prelude
 
-import           Control.Exception (Handler (..), IOException, catches)
+import           Control.Exception (Exception, Handler (..), IOException, catches, throwIO)
 import           Control.Monad (unless, when)
 import           Data.Aeson (Value (..), object, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -81,16 +74,16 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either.Extra (maybeToEither)
+import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Network.URI (parseURI, uriAuthority, uriPath, uriPort, uriRegName, uriScheme)
 import qualified Network.WebSockets as WS
+import           Prettyprinter (Pretty (..), parens, (<+>))
 import           System.Timeout (timeout)
 import           Text.Read (readMaybe)
-
-import           Streaming
 
 -- | The port Ogmios listens on by default.
 defaultOgmiosPort :: Int
@@ -101,102 +94,79 @@ defaultOgmiosPort = 1337
 responseTimeout :: Int
 responseTimeout = 90_000_000
 
--- | How to proceed when Ogmios rejects a transaction.
-data OnRejection
-  = AbortOnRejection    -- ^ stop the stream at the first rejection
-  | ContinueOnRejection -- ^ submit the whole stream, then fail if anything was rejected
-  deriving (Eq, Show)
+-- | A transaction rejection reported by Ogmios, carried as the error type of
+-- the 'SubmitTransport' and rendered for tracing via 'Pretty'. Deliberately
+-- not exported: the submission loop only needs to render it, so no other
+-- module should depend on its shape.
+data OgmiosRejection = OgmiosRejection !Int !Text !Value
 
--- | Setup-phase generators (genesis import, splitting) emit chains of
--- interdependent transactions: once one is rejected, everything after it
--- is doomed, so abort right away. The benchmarking phase's 'NtoM' stream
--- consists of mutually independent transactions, so submit it to the end
--- and let the final tally decide.
-onRejectionFor :: Generator -> OnRejection
-onRejectionFor generator = case generator of
-  NtoM {}        -> ContinueOnRejection
-  Take _ g       -> onRejectionFor g
-  Cycle g        -> onRejectionFor g
-  Sequence gs
-    | any ((ContinueOnRejection ==) . onRejectionFor) gs -> ContinueOnRejection
-  _              -> AbortOnRejection
+instance Pretty OgmiosRejection where
+  pretty (OgmiosRejection code msg dat) =
+    "Ogmios submit failed:" <+> pretty msg <+> parens ("code" <+> pretty code)
+      <> case dat of
+           Null -> mempty
+           _    -> ", details:" <+> pretty (Text.decodeUtf8 (LBS.toStrict (Aeson.encode dat)))
 
-submitAllOgmios :: forall era. IsShelleyBasedEra era
-  => OnRejection -> String -> TxStream IO era -> ActionM ()
-submitAllOgmios onRejection url txStream =
+-- | A protocol-level fault: no or late response, an unparseable response, or a
+-- mismatched JSON-RPC id. The connection is out of sync and unusable, so this
+-- aborts the whole run rather than counting as a transaction rejection.
+newtype OgmiosProtocolError = OgmiosProtocolError String
+  deriving Show
+
+instance Exception OgmiosProtocolError
+
+-- | Open a WebSocket connection to an Ogmios endpoint and run an action with a
+-- 'SubmitTransport' backed by it. Connection-level and protocol faults are
+-- surfaced as a 'Left' 'TxGenError'.
+withOgmiosTransport
+  :: forall era a. IsShelleyBasedEra era
+  => String
+  -> (SubmitTransport era OgmiosRejection -> IO (Either TxGenError a))
+  -> IO (Either TxGenError a)
+withOgmiosTransport url use =
   case parseOgmiosUrl url of
-    Left err -> liftTxGenError $ TxGenError err
-    Right (host, port, path) -> do
-      tracers <- getBenchTracers
-      -- per-transaction rejections must reach the trace stream like every
-      -- other submission event, not stdout; the loop itself runs in plain
-      -- IO under the WebSocket client, so hand it a prebuilt trace action
-      let traceSubmitFail :: Int -> Text -> Value -> IO ()
-          traceSubmitFail code msg errData =
-            traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubError $ Text.concat
-              [ "Ogmios submit failed: ", msg
-              , " (code ", Text.pack (show code), ")"
-              , case errData of
-                  Null -> ""
-                  dat  -> ", details: "
-                            <> Text.decodeUtf8 (LBS.toStrict (Aeson.encode dat))
-              ]
-      traceDebug $ "Ogmios: connecting to " ++ url
-      result <- liftIO $
-        WS.runClient host port path (\conn -> submitLoop onRejection traceSubmitFail conn txStream 0 0 0)
-          `catches`
-            [ Handler $ \(e :: WS.HandshakeException)  -> connectionFailure e
-            , Handler $ \(e :: WS.ConnectionException) -> connectionFailure e
-            , Handler $ \(e :: IOException)            -> connectionFailure e
-            ]
-      case result of
-        Left err -> liftTxGenError err
-        Right (sent, failed) -> do
-          traceDebug $ "Ogmios: done, " ++ show sent ++ " sent, " ++ show failed ++ " failed"
-          -- a rejected transaction is a functional failure; report it as
-          -- such so the run's exit code can be trusted
-          when (failed > 0) $ liftTxGenError $ TxGenError $
-            "Ogmios: " ++ show failed ++ " of " ++ show (sent + failed)
-              ++ " transactions were rejected"
+    Left err -> return $ Left $ TxGenError err
+    Right (host, port, path) ->
+      WS.runClient host port path runWithConn
+        `catches`
+          [ Handler $ \(e :: WS.HandshakeException)  -> connectionFailure e
+          , Handler $ \(e :: WS.ConnectionException) -> connectionFailure e
+          , Handler $ \(e :: IOException)            -> connectionFailure e
+          , Handler $ \(OgmiosProtocolError m)       -> return $ Left $ TxGenError $ "Ogmios: " ++ m
+          ]
  where
-  connectionFailure :: Show e => e -> IO (Either TxGenError (Int, Int))
+  runWithConn conn = do
+    -- a per-connection counter mirrors each request's JSON-RPC id, so a
+    -- response can be matched back to the request that produced it
+    reqIdRef <- newIORef 0
+    use SubmitTransport { submitOne = ogmiosSubmitOne conn reqIdRef }
+  connectionFailure :: Show e => e -> IO (Either TxGenError a)
   connectionFailure e = return $ Left $ TxGenError $ "Ogmios connection failure: " ++ show e
 
-submitLoop :: IsShelleyBasedEra era
-  => OnRejection
-  -> (Int -> Text -> Value -> IO ())
-  -> WS.Connection -> TxStream IO era -> Int -> Int -> Int -> IO (Either TxGenError (Int, Int))
-submitLoop onRejection traceSubmitFail conn stream reqId sent failed = do
-  step <- Streaming.inspect stream
-  case step of
-    Left () -> return $ Right (sent, failed)
-    Right (Left err :> _rest) -> return $ Left err
-    Right (Right tx :> rest) -> do
-      WS.sendTextData conn $ Aeson.encode (mkSubmitRequest tx reqId)
-      mResp <- timeout responseTimeout $ WS.receiveData conn
-      case mResp of
-        Nothing -> return $ Left $ TxGenError $
-          "Ogmios: no response to request " ++ show reqId
-            ++ " within " ++ show (responseTimeout `div` 1_000_000) ++ "s"
-        Just resp -> case parseOgmiosResponse resp of
-          Left parseErr ->
-            return $ Left $ TxGenError $ "Ogmios response parse error: " ++ parseErr
-          Right (respId, result)
-            -- a mismatched (or null) id is a protocol-level fault, not a
-            -- transaction rejection: the connection is out of sync, so stop
-            | respId /= Just reqId -> return $ Left $ TxGenError $
-                "Ogmios: response id mismatch: expected " ++ show reqId
-                  ++ ", got " ++ show respId ++ " (" ++ describe result ++ ")"
-            | OgmiosError code errMsg errData <- result -> do
-                traceSubmitFail code errMsg errData
-                case onRejection of
-                  AbortOnRejection -> return $ Left $ TxGenError $
-                    "Ogmios: transaction rejected: " ++ Text.unpack errMsg
-                      ++ " (code " ++ show code ++ ")"
-                  ContinueOnRejection ->
-                    submitLoop onRejection traceSubmitFail conn rest (reqId + 1) sent (failed + 1)
-            | otherwise ->
-                submitLoop onRejection traceSubmitFail conn rest (reqId + 1) (sent + 1) failed
+-- | Submit a single transaction and await its response on the same connection.
+-- A transaction rejection is returned as 'Left'; a protocol-level fault throws
+-- 'OgmiosProtocolError' (caught by 'withOgmiosTransport').
+ogmiosSubmitOne
+  :: IsShelleyBasedEra era
+  => WS.Connection -> IORef Int -> Tx era -> IO (Either OgmiosRejection ())
+ogmiosSubmitOne conn reqIdRef tx = do
+  reqId <- atomicModifyIORef' reqIdRef $ \n -> (n + 1, n)
+  WS.sendTextData conn $ Aeson.encode (mkSubmitRequest tx reqId)
+  mResp <- timeout responseTimeout $ WS.receiveData conn
+  case mResp of
+    Nothing -> throwIO $ OgmiosProtocolError $
+      "no response to request " ++ show reqId
+        ++ " within " ++ show (responseTimeout `div` 1_000_000) ++ "s"
+    Just resp -> case parseOgmiosResponse resp of
+      Left parseErr -> throwIO $ OgmiosProtocolError $ "response parse error: " ++ parseErr
+      Right (respId, result)
+        -- a mismatched (or null) id means the connection is out of sync
+        | respId /= Just reqId -> throwIO $ OgmiosProtocolError $
+            "response id mismatch: expected " ++ show reqId
+              ++ ", got " ++ show respId ++ " (" ++ describe result ++ ")"
+        | OgmiosError code errMsg errData <- result ->
+            return $ Left $ OgmiosRejection code errMsg errData
+        | otherwise -> return $ Right ()
  where
   describe (OgmiosSuccess txId)  = "success, tx " ++ Text.unpack txId
   describe (OgmiosError _ msg _) = "error: " ++ Text.unpack msg
