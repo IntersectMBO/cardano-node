@@ -202,6 +202,12 @@ in {
         description = ''
           Haskell profiling types which are available and will be applied to
           the cardano-node binary if declared.
+
+          Note: the default `profilingArgs` always include the lightweight
+          `--machine-readable -t...cardano-node.stats` RTS summary (written at
+          exit, useful in any build). The cost-centre/heap profiling flags and
+          the `-po` output stem are only added when this is not "none" or
+          `eventlog` is enabled.
         '';
       };
 
@@ -789,11 +795,13 @@ in {
         default = let
           prefix = if cfg.profilingOutputDir == null then "" else "${cfg.profilingOutputDir}/";
         in
-             optionals (cfg.profiling != "none" || cfg.eventlog) [
-               "--machine-readable"
-               "-t${prefix}cardano-node.stats"
-               "-po${prefix}cardano-node"
-             ]
+             # Always emit the lightweight machine-readable RTS/GC summary at
+             # exit. It works in any build, costs nothing, and is useful
+             # telemetry. The OCI images use the profilingOutputDir option to
+             # ensure it lands on a writable mount under a read-only-root OCI
+             # image.
+             [ "--machine-readable" "-t${prefix}cardano-node.stats" ]
+          ++ optionals (cfg.profiling != "none" || cfg.eventlog) [ "-po${prefix}cardano-node" ]
           ++ optional (cfg.eventlog) "-l"
           ++ (
                     if cfg.profiling == "time"           then ["-p"]
