@@ -97,7 +97,7 @@ let
 in pkgs.runCommand name {
     nativeBuildInputs = with pkgs.pkgsBuildBuild; [
       haskellBuildUtils bintools jq nix zip
-    ];
+    ] ++ lib.optionals (platform == "macos") [ pkgs.darwin.sigtool ];
   } ''
   mkdir -p $out release/{bin,share}
   cd release
@@ -118,6 +118,12 @@ in pkgs.runCommand name {
   ${lib.optionalString (platform == "macos") (lib.concatMapStrings (exe: ''
     rewrite-libs bin ${exe}/bin/*
   '') exes)}
+
+  ${lib.optionalString (platform == "macos") ''
+    # rewrite-libs edits Mach-O LC_LOAD_DYLIB entries, which invalidates
+    # the ad-hoc signature emitted by iohk-nix's setGitRev -> re-sign
+    codesign --force --sign - bin/*
+  ''}
 
   ${if (platform == "win")
     then "zip -r $out/${name}.zip ."
