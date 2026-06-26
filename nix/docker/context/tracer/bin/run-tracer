@@ -25,7 +25,10 @@ printRunEnv () {
 
   echo "CARDANO_CONFIG=$CARDANO_CONFIG"
   echo "CARDANO_STATE_DIR=$CARDANO_STATE_DIR"
-  [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]] && echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
+
+  if [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]]; then
+    echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
+  fi
 }
 
 #####################################################################
