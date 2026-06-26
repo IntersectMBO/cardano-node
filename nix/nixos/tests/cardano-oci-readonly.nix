@@ -1,33 +1,40 @@
 {
   pkgs,
   dockerImage,
+  tracerDockerImage,
+  submitApiDockerImage,
   ...
 }: let
   inherit (pkgs) lib;
 
-  # The image ref as `docker load` will tag it (repoName:gitrev).
+  # Image refs as `docker load` will tag them (repoName:gitrev).
   imageRef = "${dockerImage.imageName}:${dockerImage.imageTag}";
+  tracerImageRef = "${tracerDockerImage.imageName}:${tracerDockerImage.imageTag}";
+  submitApiImageRef = "${submitApiDockerImage.imageName}:${submitApiDockerImage.imageTag}";
 
   network = "preview";
 
-  # Harmless config/topology merge keys, present only to exercise merge mode
-  # which is what triggers the /tmp runtime dir + relative-path rewriting.
-  # The double quotes are backslash-escaped because these are interpolated
-  # into double-quoted Python string literals in the testScript below.
+  # Harmless merge keys, present only to exercise merge mode which is what
+  # triggers the /tmp runtime dir + relative-path rewriting. The double quotes
+  # are backslash-escaped because these are interpolated into double-quoted
+  # Python string literals in the testScript below.
   configMerge = ''{\"MaxConcurrencyBulkSync\":2}'';
   topologyMerge = ''{\"useLedgerAfterSlot\":1}'';
+  tracerConfigMerge = ''{\"verbosity\":\"Minimum\"}'';
 
   rt = "/tmp/cardano-node";
+  tracerRt = "/tmp/cardano-tracer";
 in {
-  name = "cardano-node-oci-readonly-test";
+  name = "cardano-oci-readonly-test";
 
   nodes = {
     machine = {...}: {
       nixpkgs.pkgs = pkgs;
 
-      # Room for the image load + overlay + a starting node db.
-      virtualisation.diskSize = 8192;
-      virtualisation.memorySize = 3072;
+      # Room for loading three images (node, tracer, submit-api) + overlay +
+      # a starting node/tracer.
+      virtualisation.diskSize = 10240;
+      virtualisation.memorySize = 4096;
       virtualisation.docker.enable = true;
     };
   };
@@ -103,5 +110,37 @@ in {
 
     # Cli mode must NOT require a writable /tmp (read-only, no tmpfs).
     machine.succeed("docker run --rm --read-only ${imageRef} cli version")
+
+    # Tracer image: same read-only + non-root + merge-mode behavior as the
+    # node, minus the genesis/topology rewrites as tracer config has no
+    # relative file references.
+    machine.succeed("docker load -i ${tracerDockerImage}")
+    machine.succeed(
+        "docker run -d --name t1 --read-only --tmpfs /tmp --user 1000:0 "
+        "-v t1data:/data -v t1ipc:/ipc -v t1logs:/logs "
+        "-e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${tracerConfigMerge}' "
+        "${tracerImageRef}"
+    )
+    # Give the entrypoint time to write artifacts and exec the tracer. If the
+    # container exits early, surface its logs rather than failing later with an
+    # opaque `docker exec` timeout against a dead container.
+    machine.sleep(10)
+    if machine.succeed("docker inspect -f '{{.State.Running}}' t1").strip() != "true":
+        _, logs = machine.execute("docker logs t1 2>&1")
+        raise Exception("tracer container exited early; docker logs:\n" + logs)
+    machine.succeed("docker exec t1 sh -c '[ \"$(stat -c %a ${tracerRt})\" = 700 ]'")
+    machine.succeed("docker exec t1 test -f ${tracerRt}/tracer-config-merged.json")
+    machine.succeed("docker exec t1 test -f ${tracerRt}/env")
+    machine.succeed(
+        "docker exec --user 1000:0 t1 sh -c "
+        "'. /usr/local/bin/env && [ -n \"$CARDANO_CONFIG\" ]'"
+    )
+    machine.succeed("docker rm -f t1")
+
+    # Submit-api image: stateless (no env snapshot / merge / state writes),
+    # so it only needs to execute under --read-only and as non-root.
+    machine.succeed("docker load -i ${submitApiDockerImage}")
+    machine.succeed("docker run --rm --read-only --user 1000:0 ${submitApiImageRef} --help >/dev/null")
   '';
 }
