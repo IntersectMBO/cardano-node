@@ -142,6 +142,15 @@
             recursiveUpdate
             (set-git-rev node)
             {passthru = {noGitRev = node;};};
+          # Info-table-profiled (IPE) cardano-node exe; see `infoTableMapped`
+          # in nix/haskell.nix. Exposed as a distinct package so deployments
+          # opt in per-machine -- the default `cardano-node` stays non-profiled.
+          cardano-node-ipe = let
+            node-ipe = project.infoTableMapped.exes.cardano-node;
+          in
+            recursiveUpdate
+            (set-git-rev node-ipe)
+            {passthru = {noGitRev = node-ipe;};};
           cardano-cli = let
             cli = cardano-cli.components.exes.cardano-cli;
           in

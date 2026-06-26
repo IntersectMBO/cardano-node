@@ -448,6 +448,32 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             (name: { flags.asserts = true; });
         }];
       };
+      # Info-table provenance (IPE) build: compiles *every* package in the
+      # plan with `-finfo-table-map -fdistinct-constructor-tables` so that
+      # low-overhead `+RTS -hi` heap profiles map allocations back to their
+      # source location. Unlike `profiled`, this uses the vanilla (non-prof)
+      # RTS and adds no cost-centre instrumentation. The top-level `ghcOptions`
+      # is the project-wide module option, applied to every component of every
+      # source-built package -- the analog of cabal's `package *`.
+      #
+      # Caveat: a package that sets its own `components.<c>.ghcOptions`
+      # *replaces* that default rather than appending, so it would miss the IPE
+      # flags. plutus-core does exactly that (`-fexternal-interpreter`), so
+      # re-add the flags at the same per-component path -- per-component
+      # `ghcOptions` lists merge by concatenation across modules, so plutus-core
+      # ends up with both.
+      infoTableMapped = final.appendModule {
+        modules = [{
+          ghcOptions = [
+            "-finfo-table-map"
+            "-fdistinct-constructor-tables"
+          ];
+          packages.plutus-core.components.library.ghcOptions = [
+            "-finfo-table-map"
+            "-fdistinct-constructor-tables"
+          ];
+        }];
+      };
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
@@ -459,6 +485,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                 passthru = {
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
+                  infoTableMapped = lib.getAttrFromPath path final.infoTableMapped.hsPkgs;
                 };
               }
           else value)
