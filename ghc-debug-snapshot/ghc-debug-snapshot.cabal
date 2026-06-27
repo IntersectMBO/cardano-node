@@ -19,3 +19,14 @@ executable cardano-ghc-debug-snapshot
   ghc-options:        -threaded -rtsopts -Wall
   build-depends:      base
                     , ghc-debug-client
+
+-- Offline analyzer: load a snapshot (no live process) and write a closure-type
+-- census. Use to read off ARR_WORDS/STACK/TSO and to diff two snapshots.
+executable cardano-ghc-debug-analyze
+  hs-source-dirs:     app
+  main-is:            Analyze.hs
+  default-language:   Haskell2010
+  ghc-options:        -threaded -rtsopts -Wall
+  build-depends:      base
+                    , ghc-debug-client
+                    , containers
