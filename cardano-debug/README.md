@@ -34,14 +34,18 @@ where GHC records it.
 ## Build the image
 
 ```sh
-nix build .#dockerImage/node-ghc-debug
-docker load -i result    # loads ghcr.io/intersectmbo/cardano-node-ghc-debug:<gitrev>
+nix build .#dockerImage/node-debug
+docker load -i result    # loads ghcr.io/intersectmbo/cardano-node-debug:<gitrev>
 ```
 
-The image is published under a distinct repo name (`cardano-node-ghc-debug`) so
-it can never clobber a production `cardano-node` tag. The `ghc-debug` cabal flag
-is **off by default**; only this image turns it on, so ordinary builds are byte
--for-byte unaffected.
+The image is published under a distinct repo name (`cardano-node-debug`) so it
+can never clobber a production `cardano-node` tag. On this branch the `ghc-debug`
+cabal flag is enabled project-wide (it has to be, so `ghc-debug-stub` lands in
+the install plan), so the stub is linked into *every* build — but it stays
+**dormant unless `GHC_DEBUG_SOCKET` is set**, so a node with no socket configured
+behaves exactly like an uninstrumented one. What makes this image distinct is
+that it is built `infoTableMapped` (see below), bundles the `cardano-debug`
+client, and presets the socket env.
 
 ## Run it
 

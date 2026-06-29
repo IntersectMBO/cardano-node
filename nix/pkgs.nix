@@ -117,7 +117,7 @@ in with final;
       script = "node";
     };
 
-  dockerImageGhcDebug =
+  dockerImageNodeDebug =
     let
       defaultConfig = {
         stateDir = "/data";
@@ -134,7 +134,7 @@ in with final;
       # to any host with no glibc / Nix-store deps.
       cardano-debug =
         cardanoNodeProject.projectCross.musl64.hsPkgs.cardano-debug.components.exes.cardano-debug;
-      repoName = "ghcr.io/intersectmbo/cardano-node-ghc-debug";
+      repoName = "ghcr.io/intersectmbo/cardano-node-debug";
       scripts = import ./scripts.nix {
         inherit pkgs;
         customConfigs = [ defaultConfig customConfig ];

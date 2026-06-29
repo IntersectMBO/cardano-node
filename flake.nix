@@ -152,12 +152,12 @@
           # snapshot the heap, then analyse offline with
           # `GHC.Debug.Snapshot.snapshotRun`. See `ghcDebug`/`infoTableMapped`
           # in nix/haskell.nix and cardano-debug/README.md.
-          cardano-node-ghc-debug = let
-            node-ghc-debug = project.ghcDebug.exes.cardano-node;
+          cardano-node-debug = let
+            node-debug = project.ghcDebug.exes.cardano-node;
           in
             recursiveUpdate
-            (set-git-rev node-ghc-debug)
-            {passthru = {noGitRev = node-ghc-debug;};};
+            (set-git-rev node-debug)
+            {passthru = {noGitRev = node-debug;};};
           cardano-cli = let
             cli = cardano-cli.components.exes.cardano-cli;
           in
@@ -275,7 +275,7 @@
             muslProject.hsPkgs.cardano-debug.components.exes.cardano-debug;
 
           "dockerImage/node" = pkgs.dockerImage;
-          "dockerImage/node-ghc-debug" = pkgs.dockerImageGhcDebug;
+          "dockerImage/node-debug" = pkgs.dockerImageNodeDebug;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
           "dockerImage/tracer" = pkgs.tracerDockerImage;
 

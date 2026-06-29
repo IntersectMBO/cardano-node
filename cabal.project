@@ -61,7 +61,7 @@ packages:
   trace-resources
   trace-forward
   -- Headless ghc-debug snapshotter + offline analyzer, bundled into the
-  -- ghc-debug docker image (see nix/pkgs.nix dockerImageGhcDebug). Pulls
+  -- ghc-debug docker image (see nix/pkgs.nix dockerImageNodeDebug). Pulls
   -- ghc-debug-client from the Hackage index (resolves to the 0.5.x family on
   -- GHC 9.6.7 -- ghc-debug is pinned to the compiler's ghc-heap; the 0.5.x API
   -- used here is identical).

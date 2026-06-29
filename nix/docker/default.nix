@@ -30,7 +30,7 @@
 # can be snapshotted. Copied (not symlinked) so the one binary both runs
 # in-container and `docker cp`'s out to another host (e.g. to snapshot against
 # an ssh-forwarded GHC_DEBUG_SOCKET) with no glibc / Nix-store deps. Used by the
-# `dockerImageGhcDebug` image only; null for normal images.
+# `dockerImageNodeDebug` image only; null for normal images.
 , cardano-debug ? null
 
 # Set gitrev to null, to ensure the version below is used
