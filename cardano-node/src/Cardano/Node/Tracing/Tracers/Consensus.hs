@@ -1168,6 +1168,16 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
+  forMachine dtal (TraceMempoolCacheHit point)=
+    mconcat
+      [ "kind" .= String "TraceMempoolCacheHit"
+      , "point" .= forMachine dtal point
+      ]
+  forMachine dtal (TraceMempoolCacheMiss point)=
+    mconcat
+      [ "kind" .= String "TraceMempoolCacheMiss"
+      , "point" .= forMachine dtal point
+      ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1201,6 +1211,8 @@ instance
   asMetrics TraceMempoolAttemptingAdd {} = []
 
   asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
+  asMetrics TraceMempoolCacheHit {} = [ CounterM "mempool.cache-hit-count" (Just 1) ]
+  asMetrics TraceMempoolCacheMiss {} = [ CounterM "mempool.cache-miss-count" (Just 1) ]
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1219,6 +1231,8 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
     namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+    namespaceFor TraceMempoolCacheHit {} = Namespace [] ["CacheHit"]
+    namespaceFor TraceMempoolCacheMiss {} = Namespace [] ["CacheMiss"]
 
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
@@ -1229,6 +1243,8 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
     severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
+    severityFor (Namespace [] ["CacheHit"]) _ = Just Info
+    severityFor (Namespace [] ["CacheMiss"]) _ = Just Info
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1253,6 +1269,11 @@ instance MetaTrace (TraceEventMempool blk) where
       [ ("txsSyncDuration", "Latest time to sync the mempool in ms after block adoption")
       , (txsSyncDurationTotalCounterName, "Cumulative time spent syncing the mempool in ms after block adoption")
       ]
+    metricsDocFor (Namespace _ ["CacheHit"]) =
+      [ ("mempool.cache-hit-count", "Total count of cache hits") ]
+    metricsDocFor (Namespace _ ["CacheMiss"]) =
+      [ ("mempool.cache-miss-count", "Total count of cache hits")
+      ]
     metricsDocFor _ = []
 
     documentFor (Namespace _ ["AddedTx"]) = Just
@@ -1276,6 +1297,10 @@ instance MetaTrace (TraceEventMempool blk) where
       "Mempool is about to try to validate and add a transaction."
     documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
       "LedgerDB moved to an alternative fork between two reads during re-sync."
+    documentFor (Namespace _ ["CacheHit"]) = Just
+      "Forge got a cache hit."
+    documentFor (Namespace _ ["CacheMiss"]) = Just
+      "Forge got a cache miss."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1287,6 +1312,8 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
       , Namespace [] ["TipMovedBetweenSTMBlocks"]
+      , Namespace [] ["CacheHit"]
+      , Namespace [] ["CacheMiss"]
       ]
 
 --------------------------------------------------------------------------------
