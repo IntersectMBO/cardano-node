@@ -45,12 +45,15 @@
 #   ./verify-ipe-flags.sh --all           # SLOW: classify every hsPkgs entry
 #   ./verify-ipe-flags.sh --all --out DIR # write outputs under DIR instead of the default
 #
-# With --all, all three artifacts are written automatically into a unique
+# With --all, all four artifacts are written automatically into a unique
 # timestamped directory (default ./ipe-verification/ipe-all-<timestamp>/, or
 # DIR if --out is given):
-#   report.txt   per-package, space-aligned columns: <status> <reason> <package>
-#   summary.txt  per-DRV,     space-aligned columns: <STATUS> /nix/store/...drv
-#   dump/        each checked component's `nix derivation show` JSON
+#   report.txt    per-package, space-aligned columns: <status> <reason> <package>
+#   summary.txt   per-DRV,     space-aligned columns: <STATUS> /nix/store/...drv
+#   overview.txt  the short end-of-run summary (reason counts + FLAGGED/MISSING
+#                 totals); also printed to stdout. Keeps it from being lost in
+#                 scrollback behind the long report/summary files.
+#   dump/         each checked component's `nix derivation show` JSON
 #
 # Reasons: FLAGGED (has-flags / via-exe / via-versioned), MISSING (missing-flags),
 # SKIP (boot-nonreinstallable / no-built-version / no-library-or-exe / eval-error).
@@ -82,13 +85,14 @@ rc=0
 ERRF="$(mktemp)"; trap 'rm -f "$ERRF"' EXIT
 SWEEP=0
 
-# --all auto-produces report + summary + dump under one timestamped dir.
-REPORT=""; SUMMARY=""; DUMP=""
+# --all auto-produces report + summary + overview + dump under one timestamped dir.
+REPORT=""; SUMMARY=""; OVERVIEW=""; DUMP=""
 if [ "$ALL" = 1 ]; then
   : "${OUT:=ipe-verification/ipe-all-$(date +%Y%m%d-%H%M%S)}"
   DUMP="$OUT/dump"
   REPORT="$OUT/report.txt"
   SUMMARY="$OUT/summary.txt"
+  OVERVIEW="$OUT/overview.txt"
   mkdir -p "$DUMP"
   : > "$SUMMARY"
 fi
@@ -235,23 +239,28 @@ if [ "$ALL" = 1 ]; then
   [ -t 2 ] && printf '\r\033[K' >&2
 
   echo
-  echo "## Summary"
-  echo "entries enumerated: ${total}"
-  printf '  %-22s %s\n' "reason" "count"
-  printf '  %-22s %s\n' "----------------------" "-----"
-  for r in has-flags via-exe via-versioned missing-flags boot-nonreinstallable no-built-version no-library-or-exe eval-error; do
-    [ -n "${C[$r]:-}" ] && printf '  %-22s %d\n' "$r" "${C[$r]}"
-  done
+  # The short overview block goes to BOTH stdout and overview.txt (the long
+  # report.txt/summary.txt are easy to lose this in; `tee` keeps a copy).
   flagged_total=$(( ${C[has-flags]:-0} + ${C[via-exe]:-0} + ${C[via-versioned]:-0} ))
-  echo
-  echo "FLAGGED (source-built, both flags): ${flagged_total}"
-  echo "MISSING (source-built, lacks flag): ${#missing[@]}"
-  [ "${#missing[@]}" -gt 0 ] && printf '    %s\n' "${missing[@]}"
-  echo
-  echo "outputs written under ${OUT}/:"
-  echo "  report.txt   ($(grep -c . "$REPORT") lines incl header)   per-package status/reason"
-  echo "  summary.txt  ($(grep -c . "$SUMMARY") lines)              per-DRV STATUS + /nix/store path"
-  echo "  dump/        ($(ls -1 "$DUMP" 2>/dev/null | wc -l) files)            each checked drv JSON"
+  {
+    echo "## Summary  (variant=${VARIANT})"
+    echo "entries enumerated: ${total}"
+    printf '  %-22s %s\n' "reason" "count"
+    printf '  %-22s %s\n' "----------------------" "-----"
+    for r in has-flags via-exe via-versioned missing-flags boot-nonreinstallable no-built-version no-library-or-exe eval-error; do
+      [ -n "${C[$r]:-}" ] && printf '  %-22s %d\n' "$r" "${C[$r]}"
+    done
+    echo
+    echo "FLAGGED (source-built, both flags): ${flagged_total}"
+    echo "MISSING (source-built, lacks flag): ${#missing[@]}"
+    [ "${#missing[@]}" -gt 0 ] && printf '    %s\n' "${missing[@]}"
+    echo
+    echo "outputs written under ${OUT}/:"
+    echo "  report.txt    ($(grep -c . "$REPORT") lines incl header)   per-package status/reason"
+    echo "  summary.txt   ($(grep -c . "$SUMMARY") lines)              per-DRV STATUS + /nix/store path"
+    echo "  overview.txt                       this short summary"
+    echo "  dump/         ($(ls -1 "$DUMP" 2>/dev/null | wc -l) files)            each checked drv JSON"
+  } | tee "$OVERVIEW"
 fi
 
 echo

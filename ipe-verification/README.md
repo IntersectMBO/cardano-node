@@ -119,10 +119,12 @@ set), `no-built-version`, `no-library-or-exe`, `eval-error`.
   ghc-debug-stub checks on the `ghcDebug` and default `cardano-node` exes (both
   must have the stub). Options:
     - `--all` — exhaustive (slow) IPE sweep: enumerates every `hsPkgs` entry and
-      classifies each (`FLAGGED` / `MISSING` / `SKIP`), auto-writing three
+      classifies each (`FLAGGED` / `MISSING` / `SKIP`), auto-writing four
       artifacts into a timestamped dir (default `ipe-verification/ipe-all-<ts>/`):
       `report.txt` (per-package), `summary.txt` (per-DRV STATUS + store path),
-      and `dump/` (each checked drv JSON). Takes many minutes.
+      `overview.txt` (the short end-of-run summary — reason counts + FLAGGED /
+      MISSING totals, also printed to stdout), and `dump/` (each checked drv
+      JSON). Takes many minutes.
     - `--out DIR` — write the `--all` outputs under `DIR`.
   Env: `SYS` (default `x86_64-linux`), `PROJ`
   (default `.#legacyPackages.$SYS.cardanoNodeProject`),
