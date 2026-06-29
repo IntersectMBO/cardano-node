@@ -70,8 +70,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , chaindb
 
   -- Node
-  -- LMDB or LSMT True or False.
-  , lmdb, lsmt
+  -- LSMT True or False.
+  , lsmt
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's --shutdown-on-*-sync.
@@ -175,8 +175,7 @@ empty = Types.Profile {
   }
   , Types.chaindb = Nothing
   , Types.node = Types.Node {
-      Types.utxo_lmdb = False
-    , Types.utxo_lsmt = False
+      Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
@@ -589,9 +588,6 @@ chaindb (mainnetServer, mainnetExplorer) (ledgerServer, ledgerExplorer) p =
 
 node :: (Types.Node -> Types.Node) -> Types.Profile -> Types.Profile
 node f p = p {Types.node = f (Types.node p)}
-
-lmdb :: Types.Profile -> Types.Profile
-lmdb = node (\n -> n {Types.utxo_lmdb = True})
 
 lsmt :: Types.Profile -> Types.Profile
 lsmt = node (\n -> n {Types.utxo_lsmt = True})

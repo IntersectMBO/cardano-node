@@ -143,7 +143,7 @@ profilesCloud =
       -- PParams overlays and calibration for 4 tx per block memory full.
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
-      -- LMDB helper. Node config add the "hostvolume"s as a cluster constraint.
+      -- LSMT helper. Node config add the "hostvolume"s as a cluster constraint.
       ephemeral =
                 -- The name of the defined volume in the Nomad Client config and
                 -- where to mount it inside the isolated chroot.
@@ -169,10 +169,8 @@ profilesCloud =
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000
   , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
-  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . ephemeral . P.lmdb
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
-  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . ephemeral . P.lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0
   , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000
@@ -187,7 +185,6 @@ profilesCloud =
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . blockMem2x
   , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
-  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . ephemeral . P.lmdb
   , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . ephemeral . P.lsmt
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000

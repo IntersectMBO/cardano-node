@@ -706,8 +706,8 @@ allocate-run-nomadcloud() {
       # even if modules have the same name from a Nomad perspective, in each
       # client the real path is defined in Nomad's config file and may differ!
       # It's "slow" (fetches individual client configs), done only if necessary.
-      if    test "${node_name}" != "explorer"                                  \
-         && jqtest '.node.utxo_lmdb or .node.utxo_lsmt' "${dir}"/profile.json  \
+      if    test "${node_name}" != "explorer"              \
+         && jqtest '.node.utxo_lsmt' "${dir}"/profile.json \
          && jqtest '(.cluster.nomad.host_volumes.producer | length) > 0' "${dir}"/profile.json
       then
         # Iterate over the profile's Nomad "host_volumes" array by key/index.
