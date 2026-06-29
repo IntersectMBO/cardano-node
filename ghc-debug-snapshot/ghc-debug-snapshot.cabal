@@ -30,3 +30,5 @@ executable cardano-ghc-debug-analyze
   build-depends:      base
                     , ghc-debug-client
                     , containers
+                    , bytestring
+                    , text
