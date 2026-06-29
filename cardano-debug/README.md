@@ -118,26 +118,23 @@ sending: `zstd leak-2026-06-26.snapshot`.
 
 A snapshot is analysed with **no live process** via
 `GHC.Debug.Snapshot.snapshotRun`. Analyse with the **same GHC (9.6.7)** the node
-was built with so heap layout interpretation matches. Two routes:
+was built with so heap layout interpretation matches. The `cardano-debug` binary
+carries three offline subcommands (they only read the snapshot file, no live
+node):
 
-1. **Interactive**: point `ghc-debug-brick` at the snapshot and explore the
-   dominator/retainer tree for the `ARR_WORDS` / `STACK` bands.
-2. **Scripted**: the same `cardano-debug` binary carries three offline
-   subcommands (they only read the snapshot file, no live node):
+```sh
+# -hT-style closure-type census → TSV (count / total size / max per type).
+# Diff two snapshots to isolate which band is growing.
+cardano-debug census  leak.snapshot [census.tsv]
 
-   ```sh
-   # -hT-style closure-type census → TSV (count / total size / max per type).
-   # Diff two snapshots to isolate which band is growing.
-   cardano-debug census  leak.snapshot [census.tsv]
+# Walk retainer chains of ARR_WORDS closures (payload ≥ minBytes) up to the
+# GC roots, annotated with IPE source locations — what holds the byte buffers.
+cardano-debug retain  leak.snapshot [maxPaths] [minBytes]
 
-   # Walk retainer chains of ARR_WORDS closures (payload ≥ minBytes) up to the
-   # GC roots, annotated with IPE source locations — what holds the byte buffers.
-   cardano-debug retain  leak.snapshot [maxPaths] [minBytes]
-
-   # Census every TSO by (why_blocked | threadLabel) — what the (leaked) threads
-   # ARE and what they are blocked on; ouroboros labels its mini-protocol threads.
-   cardano-debug threads leak.snapshot
-   ```
+# Census every TSO by (why_blocked | threadLabel) — what the (leaked) threads
+# ARE and what they are blocked on; ouroboros labels its mini-protocol threads.
+cardano-debug threads leak.snapshot
+```
 
 This is the step that turns "the leak is raw byte buffers + thread stacks" into
 "this structure / these threads retain them" — which the `-hi` profile alone
