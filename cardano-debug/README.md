@@ -7,7 +7,7 @@ stacks) closures that dominate the `-hi` heap profile but, by construction, carr
 no allocation-site identity of their own — their *retainers* do, and a snapshot
 lets us walk up to them.
 
-## Design: capture in the field, analyse at home (option B)
+## Design: capture in the field, analyse at home
 
 The image does exactly one thing in the field: **capture a self-contained
 snapshot file** and let you ship it back. There is deliberately **no automated
