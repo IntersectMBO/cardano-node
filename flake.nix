@@ -246,9 +246,17 @@
                 cardano-node-rev = pkgs.gitrev;
               })
             .workbench-profile-run;
+          muslProject =
+            if system == "x86_64-linux"
+            then project.projectCross.musl64
+            else project.projectCross.aarch64-multiplatform-musl;
         in {
+          cardano-ghc-debug-snapshot-static =
+            muslProject.hsPkgs.ghc-debug-snapshot.components.exes.cardano-ghc-debug-snapshot;
+
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/node-ipe" = pkgs.dockerImageInfoTableMapped;
+          "dockerImage/node-ghc-debug" = pkgs.dockerImageGhcDebug;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
           "dockerImage/tracer" = pkgs.tracerDockerImage;
 

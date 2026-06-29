@@ -137,6 +137,30 @@ in with final;
       script = "node";
     };
 
+  dockerImageGhcDebug =
+    let
+      defaultConfig = {
+        stateDir = "/data";
+        dbPrefix = "db";
+        socketPath = "/ipc/node.socket";
+      };
+      set-git-rev = import ./set-git-rev.nix { inherit pkgs; };
+    in
+    callPackage ./docker {
+      exe = "cardano-node";
+      cardano-node = set-git-rev cardanoNodePackages.cardano-node.passthru.ghcDebug;
+      ghc-debug-snapshot = cardanoNodePackages.cardano-ghc-debug-snapshot;
+      # Static (musl) snapshot client, copied into the image for off-host use.
+      ghc-debug-snapshot-static =
+        cardanoNodeProject.projectCross.musl64.hsPkgs.ghc-debug-snapshot.components.exes.cardano-ghc-debug-snapshot;
+      repoName = "ghcr.io/intersectmbo/cardano-node-ghc-debug";
+      scripts = import ./scripts.nix {
+        inherit pkgs;
+        customConfigs = [ defaultConfig customConfig ];
+      };
+      script = "node";
+    };
+
   submitApiDockerImage =
     let
       defaultConfig = {
