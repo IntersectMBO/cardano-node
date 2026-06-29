@@ -462,6 +462,12 @@ project.appendOverlays (with haskellLib.projectOverlays; [
         }];
       };
 
+      ghcDebug = final.infoTableMapped.appendModule {
+        modules = [{
+          packages.cardano-node.flags.ghc-debug = true;
+        }];
+      };
+
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
@@ -474,6 +480,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
                   infoTableMapped = lib.getAttrFromPath path final.infoTableMapped.hsPkgs;
+                  ghcDebug = lib.getAttrFromPath path final.ghcDebug.hsPkgs;
                 };
               }
           else value)
