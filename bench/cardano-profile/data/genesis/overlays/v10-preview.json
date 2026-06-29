@@ -1,0 +1,26 @@
+{
+  "description": "PlutusV2 cost-model entries for the integerToByteString / byteStringToInteger families (Plutus's `batch4b`) that were prepared in Plutus's source but never carried onto mainnet. Why they're not on mainnet: (1) Plutus PR #6056 (May 2024, https://github.com/IntersectMBO/plutus/pull/6056) added batch4b to V2 at `plominPV` in `builtinsIntroducedIn` explicitly as a test of the 'add builtins to an existing ledger language' upgrade mechanism, NOT as a mainnet deployment plan. (2) `builtinsIntroducedIn` only controls which builtins the language can evaluate under a given PV; the on-chain cost-model values are a separate governance object updated by cost-model update proposals. (3) The Plomin hard fork (PV 10, mainnet epoch 537) was activated by an update proposal that carried only V3's `batch5` cost-model values; no proposal extending V2's cost model with batch4b was ever submitted/passed, so db-sync shows V2 stays at 175 params throughout (cost_model_id 260, active from epoch 526). (4) These costs are not stranded forever: Plutus PR #7223 (July 2025, https://github.com/IntersectMBO/plutus/pull/7223) makes all V1/V2 builtins cumulatively available at `vanRossemPV` (PV 11), so a future comprehensive V1/V2 cost-model update could naturally bundle batch4b in. This overlay is an opt-in sandbox for benchmarks that want to model the hypothetical V2 extension; cost values are the speculative ones previously carried inline at epoch 492 of `epoch-timeline.json`.",
+  "epoch_params": {
+    "shelley": {
+      "protocolParams": {
+        "protocolVersion": {
+          "major": 10
+        }
+      }
+    }
+  },
+  "cost_model": {
+    "plutusV2": {
+      "integerToByteString-cpu-arguments-c0": 1293828,
+      "integerToByteString-cpu-arguments-c1": 28716,
+      "integerToByteString-cpu-arguments-c2": 63,
+      "integerToByteString-memory-arguments-intercept": 0,
+      "integerToByteString-memory-arguments-slope": 1,
+      "byteStringToInteger-cpu-arguments-c0": 1006041,
+      "byteStringToInteger-cpu-arguments-c1": 43623,
+      "byteStringToInteger-cpu-arguments-c2": 251,
+      "byteStringToInteger-memory-arguments-intercept": 0,
+      "byteStringToInteger-memory-arguments-slope": 1
+    }
+  }
+}

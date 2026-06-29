@@ -2,6 +2,8 @@
 , haskellProject
 , backend
 , profile
+## Workbench's long-form ledger era name (`conway`, `babbage`, ...).
+, eraName
 , nodeSpecs
 , node-services
 }:
@@ -9,6 +11,7 @@
 with pkgs.lib;
 
 let
+
   # If there is an "explorer" node, the generator will run there!
   # TODO: Repeated code, add the generator's node name to profile.json
   runningNode = if builtins.hasAttr "explorer" nodeSpecs
@@ -40,7 +43,7 @@ let
   finaliseGeneratorService =
     profile: svc: recursiveUpdate svc
       ({
-        sigKey              = "../genesis/utxo-keys/utxo1.skey";
+        sigKey              = "../genesis/utxo-keys/utxo1/utxo.skey";
         runScriptFile       = "run-script.json";
         ## path to the config and socket of the locally running node.
         nodeConfigFile      = "../${runningNode}/config.json";
@@ -85,7 +88,9 @@ let
     in
         finaliseGeneratorService profile
         {
-          inherit (profile) era;
+          # tx-generator's NixOS service module accepts the long lowercase
+          # ledger era name, which is what the workbench's `eraName` is.
+          era = eraName;
 
           targetNodes = __mapAttrs
             (name: { name, port, ...}@nodeSpec:

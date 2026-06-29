@@ -236,11 +236,12 @@
         (let
           workbenchTest = {
             profileName,
+            eraName,
             workbenchStartArgs ? [],
           }:
             (pkgs.workbench-runner
               {
-                inherit profileName workbenchStartArgs;
+                inherit profileName eraName workbenchStartArgs;
                 backendName = "supervisor";
                 useCabalRun = false;
                 cardano-node-rev = pkgs.gitrev;
@@ -253,12 +254,14 @@
 
           # This is a very light profile, no caching and pinning needed.
           workbench-ci-test = workbenchTest {
-            profileName = "ci-test-hydra-coay";
-            workbenchStartArgs = ["--create-testnet-data"];
+            profileName = "ci-test-hydra";
+            eraName     = "conway";
+            workbenchStartArgs = [];
           };
           workbench-ci-test-trace = workbenchTest {
-            profileName = "ci-test-hydra-coay";
-            workbenchStartArgs = ["--create-testnet-data" "--trace"];
+            profileName = "ci-test-hydra";
+            eraName     = "conway";
+            workbenchStartArgs = ["--trace"];
           };
 
           inherit (pkgs) all-profiles-json profile-data-nomadperf;

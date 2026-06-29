@@ -27,16 +27,17 @@ project.shellFor {
 
     ${workbench-runner.workbench-envars}
 
-    progress "profile name"            $WB_SHELL_PROFILE
-    progress "backend name"            $WB_BACKEND
+    progress "profile name"            $WB_SHELL_PROFILE_NAME
+    progress "era name"                $WB_SHELL_ERA_NAME
+    progress "backend name"            $WB_BACKEND_NAME
     progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
     progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
-    progress "WB_CREATE_TESTNET_DATA=" $WB_CREATE_TESTNET_DATA
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
+    progress "WB_GENESIS_RIPPER="      $WB_GENESIS_RIPPER
 
     function parse_git_branch() {
         git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'

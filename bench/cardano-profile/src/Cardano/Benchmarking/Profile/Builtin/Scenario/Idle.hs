@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Scenario.Idle (
-  profilesNoEraIdle
+  profilesIdle
 ) where
 
 --------------------------------------------------------------------------------
@@ -23,8 +23,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraIdle :: [Types.Profile]
-profilesNoEraIdle =
+profilesIdle :: [Types.Profile]
+profilesIdle =
   let idle =
           P.empty & B.base
         . P.idle

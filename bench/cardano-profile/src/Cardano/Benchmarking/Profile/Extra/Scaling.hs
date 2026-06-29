@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Extra.Scaling (
-  profilesNoEraScalingLocal, profilesNoEraScalingCloud
+  profilesScalingLocal, profilesScalingCloud
 , nomadSsd -- Cluster needed to define the "latency-*" profile.
 ) where
 
@@ -33,8 +33,8 @@ base =
   . P.traceForwardingOn
   . P.analysisStandard
 
-profilesNoEraScalingLocal :: [Types.Profile]
-profilesNoEraScalingLocal =
+profilesScalingLocal :: [Types.Profile]
+profilesScalingLocal =
   let fastStartup =
           P.empty & base
         . P.loopback
@@ -44,8 +44,8 @@ profilesNoEraScalingLocal =
     fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariant300
   ]
 
-profilesNoEraScalingCloud :: [Types.Profile]
-profilesNoEraScalingCloud =
+profilesScalingCloud :: [Types.Profile]
+profilesScalingCloud =
   let utxoScale =
           P.empty & base
         . P.regions [Types.AWS Types.EU_CENTRAL_1]

@@ -186,7 +186,7 @@ allocate-run-nomadexec() {
   # Update the Nomad Job specs file accordingly
   ## - Job Name
   ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
-  ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
+  ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-coay.nom"".
   local nomad_job_name=$(basename "${dir}")
   backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
   # The job file is "slightly" modified (jq) to suit the running environment.

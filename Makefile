@@ -7,10 +7,9 @@ include nix.mk
 PROJECT_NAME = cardano-node
 NUM_PROC     = $(nproc --all)
 
-## One of:  shey alra mary alzo bage coay
-ERA     ?= coay
-
-PROFILE ?= default-${ERA}
+PROFILE ?= default
+## One of:  shelley allegra mary alonzo babbage conway dijkstra
+ERA     ?= conway
 BACKEND ?= supervisor
 REV     ?= master
 ITER    ?=
@@ -66,8 +65,8 @@ workbench-internals-walkthrough:
 ##
 ## Base targets:
 ##
-shell:                                           ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
+shell:                                           ## Nix shell, (workbench from /nix/store), vars: PROFILE, ERA, CMD, RUN
+	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr eraName ${ERA} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'useCabalRun' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
 shell-prof: ARGS += --arg 'profiledBuild' true --arg 'profilingType' '"space-heap"'  ## Nix shell, everything Haskell built profiled and run with `-hT`.
@@ -96,7 +95,7 @@ $(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 # Dynamic local/supervisor profile targets.
 playground-%:
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
+	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $* --argstr eraName ${ERA} --argstr backendName supervisor
 
 ###
 ### Misc

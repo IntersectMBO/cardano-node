@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Model (
-  profilesNoEraModel
+  profilesModel
 ) where
 
 --------------------------------------------------------------------------------
@@ -27,8 +27,8 @@ modelFor7Epochs =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraModel :: [Types.Profile]
-profilesNoEraModel =
+profilesModel :: [Types.Profile]
+profilesModel =
   ------------------------------------------------------------------------------
   -- model: 4 nodes, FixedLoaded and "--shutdown-on-slot-synced 56000"
   ------------------------------------------------------------------------------

@@ -23,19 +23,19 @@ import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.NodeSpecs.Tests as NodeSpecs
 import qualified Paths_cardano_profile as Paths
 -- Static / built-in / profiles part of the test-suite.
-import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
-import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
-import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
-import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
-import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
-import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
-import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
-import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesEmpty)
+import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesForgeStress)
+import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesK3)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesDense)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesDish)
+import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesMiniature)
+import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesModel)
+import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesPlutuscall)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesChainsync)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesIdle)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesTracerOnly)
+import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesScalingLocal, profilesScalingCloud)
 
 --------------------------------------------------------------------------------
 
@@ -48,7 +48,6 @@ tests =  Tasty.testGroup "cardano-profile"
     testGroupTypes
   , testGroupMap
   , testGroupOverlay
-  , testGroupEra
   , NodeSpecs.tests
   ]
 
@@ -95,11 +94,11 @@ ciTestBage = Types.Profile {
     , Types.n_dense_pools = 0
     , Types.n_pool_hosts = 2
   }
-  , Types.era = Types.Babbage
   , Types.chaindb = Nothing
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 300
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = KeyMap.fromList [
         ("activeSlotsCoeff", Aeson.Number 5.0e-2)
       , ("epochLength", Aeson.Number 600.0)
@@ -325,6 +324,7 @@ ciTestBage = Types.Profile {
     , ("maxValueSize",Aeson.Number 5000.0)
     ]
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 1
     , Types.epoch_length = 600
     , Types.active_slots_coeff = 0.05
@@ -419,17 +419,7 @@ ciTestBage = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 40
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = [
-          Aeson.String "--testnet-magic", Aeson.Number 42.0
-        , Aeson.String "--supply", Aeson.String "10000000000000"
-        , Aeson.String "--gen-utxo-keys", Aeson.Number 1.0
-        , Aeson.String "--gen-genesis-keys", Aeson.Number 0.0
-        , Aeson.String "--supply-delegated", Aeson.String "2000000000000000"
-        , Aeson.String "--gen-pools", Aeson.Number 2.0
-        , Aeson.String "--gen-stake-delegs", Aeson.Number 2.0
-        , Aeson.String "--num-stuffed-utxo", Aeson.String "000000"
-      ]
-    , Types.createTestnetDataArgs = [
+      Types.createTestnetDataArgs = [
           Aeson.String "--testnet-magic", Aeson.Number 42.0
         , Aeson.String "--total-supply", Aeson.String "2010000000000000"
         , Aeson.String "--utxo-keys", Aeson.Number 1.0
@@ -463,23 +453,23 @@ profiles = Map.fromList $ map
 -- All profiles without an overlay.
 profilesRaw :: [Types.Profile]
 profilesRaw =
-     profilesNoEraCloud
-  ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
-  ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
-  ++ profilesNoEraK3               -- K3
+     profilesCloud
+  ++ profilesEmpty            -- Empty datasets running `FixedLoaded`.
+  ++ profilesForgeStress      -- All the "forge-stress*" profiles.
+  ++ profilesK3               -- K3
   -- Legacy.
-  ++ profilesNoEraDense
-  ++ profilesNoEraDish
-  ++ profilesNoEraMiniature
-  ++ profilesNoEraModel            --
-  ++ profilesNoEraPlutuscall       --
+  ++ profilesDense
+  ++ profilesDish
+  ++ profilesMiniature
+  ++ profilesModel            --
+  ++ profilesPlutuscall       --
   -- Empty datasets not running `FixedLoaded`.
-  ++ profilesNoEraChainsync        -- Scenario `Chainsync`
-  ++ profilesNoEraIdle             -- Scenario `Idle`
-  ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+  ++ profilesChainsync        -- Scenario `Chainsync`
+  ++ profilesIdle             -- Scenario `Idle`
+  ++ profilesTracerOnly       -- Scenario `TracerOnly`
   -- Extra modules
-  ++ profilesNoEraScalingLocal
-  ++ profilesNoEraScalingCloud
+  ++ profilesScalingLocal
+  ++ profilesScalingCloud
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
@@ -487,7 +477,7 @@ testGroupMap :: Tasty.TestTree
 testGroupMap = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (Without overlay)"
   [ testCase "Profiles (Builtin)" $ do
-      fp <- Paths.getDataFileName "data/all-profiles-coay.json"
+      fp <- Paths.getDataFileName "data/all-profiles.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -535,18 +525,6 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.composition profiles)
             )
           ----------------------------------------------------------------------
-          -- Show first profile with differences in the Era type.
-          ----------------------------------------------------------------------
-          mapM_
-            (uncurry $ assertEqual
-              ("Profile == (decode \"" ++ fp ++ "\") - Era")
-            )
-            -- Map.Map to keep the key / profile name.
-            (zip
-              (Map.assocs $ Map.map Types.era allProfiles)
-              (Map.assocs $ Map.map Types.era profiles)
-            )
-          ----------------------------------------------------------------------
           -- Show first profile with differences in the Genesis type (main).
           ----------------------------------------------------------------------
           mapM_
@@ -555,21 +533,23 @@ testGroupMap = Tasty.testGroup
             )
             -- Map.Map to keep the key / profile name.
             (zip
-              -- Everything except "shelley", "alonzo" and "conway".
+              -- Everything except "shelley", "alonzo", "conway" and "dijkstra".
               (Map.assocs $ Map.map
                 (\p -> (Types.genesis p) {
-                  Types.shelley = mempty
-                , Types.alonzo = mempty
-                , Types.conway = mempty
+                  Types.shelley  = mempty
+                , Types.alonzo   = mempty
+                , Types.conway   = mempty
+                , Types.dijkstra = mempty
                 })
                 allProfiles
               )
-              -- Everything except "shelley", "alonzo" and "conway".
+              -- Everything except "shelley", "alonzo", "conway" and "dijkstra".
               (Map.assocs $ Map.map
                 (\p -> (Types.genesis p) {
-                  Types.shelley = mempty
-                , Types.alonzo = mempty
-                , Types.conway = mempty
+                  Types.shelley  = mempty
+                , Types.alonzo   = mempty
+                , Types.conway   = mempty
+                , Types.dijkstra = mempty
                 })
                 profiles
               )
@@ -609,6 +589,18 @@ testGroupMap = Tasty.testGroup
             (zip
               (Map.assocs $ Map.map (Types.conway . Types.genesis) allProfiles)
               (Map.assocs $ Map.map (Types.conway . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Dijkstra).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Dijkstra)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.dijkstra . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.dijkstra . Types.genesis) profiles)
             )
           ----------------------------------------------------------------------
           -- Show first profile with differences in the ChainDB type.
@@ -802,27 +794,3 @@ testGroupOverlay = Tasty.testGroup
             (Types.overlay profileWithOverlay)
   ]
 
-testGroupEra :: Tasty.TestTree
-testGroupEra = Tasty.testGroup
-  "Cardano.Benchmarking.Profile.addEras"
-  [ testCase "Era specific profiles" $
-      let
-        isDefined = (`Set.member` Map.keysSet (Profile.addEras profiles))
-        failures  =
-          [ "ci-bench-plutusv3-ripemd-bage"     -- PlutusV3 - should require PV 9.0 / Conway
-          , "ci-bench-plutus-secp-schnorr-alzo" -- PlutusV2 - should require PV 7.0 / Babbage
-          , "ci-test-plutus-mary"               -- PlutusV1 - should require PV 5.0 / Alonzo
-          ]
-        successes =
-          [ "ci-bench-plutusv3-ripemd-coay"
-          , "ci-bench-plutus-secp-schnorr-bage"
-          , "ci-test-plutus-alzo"
-          ]
-      in do
-        assertEqual "Profiles that are expected to not be defined, yet they are:"
-          []
-          (filter isDefined failures)
-        assertEqual "Profiles that are expected to be defined, but some are missing:"
-          successes
-          (filter isDefined successes)
-  ]

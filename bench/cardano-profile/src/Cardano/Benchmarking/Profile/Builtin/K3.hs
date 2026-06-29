@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.K3 (
-  profilesNoEraK3
+  profilesK3
 ) where
 
 --------------------------------------------------------------------------------
@@ -18,8 +18,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraK3 :: [Types.Profile]
-profilesNoEraK3 =
+profilesK3 :: [Types.Profile]
+profilesK3 =
   ------------------------------------------------------------------------------
   -- k3: 3 nodes and no "--shutdown-on-slot-synced" and no "--shutdown-on-block-synced"
   ------------------------------------------------------------------------------

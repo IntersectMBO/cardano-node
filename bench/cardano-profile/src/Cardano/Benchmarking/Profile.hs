@@ -3,23 +3,19 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile
-       ( addEras
-       , realize
-       ) where
+module Cardano.Benchmarking.Profile ( realize ) where
 
 --------------------------------------------------------------------------------
 
 import           Prelude
 import           Control.Monad (foldM)
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           System.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
--- Package: containers.
-import qualified Data.Map.Strict as Map
 -- Package: text.
 import qualified Data.Text            as Text
 -- Package: scientific.
@@ -37,20 +33,18 @@ realize =
     -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
     --                         profiles. This are all candidates to be removed
     --                         when we finally switch from `jq` to this.
-    -- 2) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
-    --                           property) creates the "genesis" property
-    --                           using "epoch-timeline.json" and applying the
-    --                           genesis specific overlays ("pparamsOverlays"
-    --                           property).
-    -- 3) `overlay`: Applies an optional JSON object as an "overlay". The
-    --               object is read from an envar ("WB_PROFILE_OVERLAY") in
-    --               the `main` function and can override anything (some may
-    --               overridden by later steps) as long as the result is a
-    --               valid `Profile`.
-    -- 4)  `derive`: Fills the "derive" property.
-    -- 5)  `finalize`: Applies fixes (porting infelicities) needed to fill
-    --                 the "cli_args" property that is also filled here.
-    -- 6) "presets": A special case of `overlay` above. The JSON file to apply
+    -- 2) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch" property)
+    --                           creates the "genesis" property using
+    --                           "epoch-timeline.json" and applying the genesis
+    --                           specific overlays ("pparamsOverlays" property).
+    -- 3) `overlay`: Applies an optional JSON object as an "overlay". The object
+    --               is read from an envar ("WB_PROFILE_OVERLAY") in the `main`
+    --               function and can override anything (some may be overridden
+    --               by later steps) as long as the result is a valid `Profile`.
+    -- 4) `derive`: Fills the "derive" property.
+    -- 5) `finalize`: Applies fixes (porting infelicities) needed to fill the
+    --                "cli_args" property that is also filled here.
+    -- 6) `presets`: A special case of `overlay` above. The JSON file to apply
     --               as an overlay has its name defined in the "preset"
     --               property. This file has to be defined in the Cabal file.
     preset
@@ -111,78 +105,310 @@ addUnusedDefaults p =
 -- Step 2.
 --------------------------------------------------------------------------------
 
--- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties
---   using the profile's epoch number and overlay names.
+getEpochNumber :: HasCallStack => Types.Profile -> Integer
+getEpochNumber profile =
+  let number = Types.pparamsEpoch $ Types.genesis profile
+  in if number <= 0
+     then error $    "Profile \"" ++ Types.name profile
+                  ++ "\" has epoch number = " ++ show number
+     else number
+
+-- The genesis overlay files are applied to the "genesis" property and the ones
+-- available are defined as functions in `Primitives`.
+getOverlay :: String -> IO Genesis.Epoch
+getOverlay overlayName = do
+  let dataFileName = "data/genesis/overlays/" ++ overlayName ++ ".json"
+  fp <- Paths.getDataFileName dataFileName
+  eitherValue <- Aeson.eitherDecodeFileStrict fp
+  return $ case eitherValue of
+    (Right epoch) -> epoch
+    (Left e) -> error $ "\"" ++ fp ++ "\": " ++ e
+
+-- | Fill the "genesis" object "byron", "shelley", "alonzo" and "conway"
+--   properties using the profile's epoch number and overlay names. Creates the
+--   merged Epoch once (timeline + overlays + profile-supplied params) and then
+--   completes two sub-steps that share that Epoch:
+--     2a) `genesisParams`:     protocol parameters (byron / shelley / alonzo /
+--                              conway).
+--     2b) `genesisCostModels`: Plutus cost-model placements on top.
 shelleyAlonzoConway :: Types.Profile -> Types.Profile
 shelleyAlonzoConway profile =
   let epochNumber  = getEpochNumber profile
       -- Collects all the genesis properties from "epoch-timeline.json".
       epoch  = unsafePerformIO $ Genesis.epochTimeline epochNumber
-      -- Apply the genesis overlays ("pparamsOverlays").
+      -- Apply the genesis overlays ("pparamsOverlays") to it.
       epoch' = unsafePerformIO $ foldM
-        (flip genesisOverlay)
+        (\acc overlayName -> do
+                 overlayEpoch <- getOverlay overlayName
+                 -- Right-biased merge of both JSON objects at all depths.
+                 return $ acc <> overlayEpoch
+        )
         epoch
         (Types.pparamsOverlays $ Types.genesis profile)
-      -- Any property that was set before by the user takes precedence.
-      epoch'' = (<>)
-                  epoch'
-                  (Genesis.Epoch
-                    (Just $ Types.shelley $ Types.genesis profile)
-                    (Just $ Types.alonzo  $ Types.genesis profile)
-                    (       Types.conway  $ Types.genesis profile)
-                  )
-      genesis f p = p {Types.genesis = f (Types.genesis p)}
-  -- Fill the profile's genesis field.
-  in genesis (\g -> g {
-      Types.pparamsEpoch = epochNumber
+      -- Properties set by the user in the profile take precedence.
+      epoch'' =    epoch'
+                <> Genesis.Epoch
+                     (Genesis.EpochParams
+                       (Just $ Types.byron    $ Types.genesis profile)
+                       (Just $ Types.shelley  $ Types.genesis profile)
+                       (Just $ Types.alonzo   $ Types.genesis profile)
+                       (       Types.conway   $ Types.genesis profile)
+                       (       Types.dijkstra $ Types.genesis profile)
+                     )
+                     -- Cost models don't come from the profile, only from
+                     -- epochTimeline + overlays, they contribute nothing here.
+                     mempty
+      -- Both sub-steps consume the same merged Epoch.
+      g = genesisCostModels (Genesis.cost_model epoch'')
+        $ genesisParams (Genesis.epoch_params epoch'') (Types.genesis profile)
+  in profile { Types.genesis = g { Types.pparamsEpoch = epochNumber } }
+
+-- Step 2a.
+--------------------------------------------------------------------------------
+
+-- | Fill "byron", "shelley", "alonzo" and "conway" on the Genesis with the
+--   protocol-parameter side of the merged Epoch from `shelleyAlonzoConway`.
+--   Cost models are NOT touched here, see `genesisCostModels` (Step 2b).
+genesisParams :: Genesis.EpochParams -> Types.Genesis -> Types.Genesis
+genesisParams epochParams g =
+  g { -- "byron", "shelley" and "alonzo" must exists.
+      Types.byron =
+        case Genesis.byron epochParams of
+          (Just byronKeyMap) ->
+            -- Merge profile-specific "k" / "protocolMagic" into the existing
+            -- "protocolConsts" preserving "vssMaxTTL" and "vssMinTTL".
+            let existingConsts =
+                  case KeyMap.lookup "protocolConsts" byronKeyMap of
+                    Just (Aeson.Object o) -> o
+                    _                     -> KeyMap.empty
+                mergedConsts =
+                    KeyMap.insert "k"
+                      (Aeson.Number $ fromInteger $ Types.parameter_k g)
+                  $ KeyMap.insert "protocolMagic"
+                      (Aeson.Number $ fromInteger $ Types.network_magic g)
+                      existingConsts
+            in KeyMap.insert "protocolConsts"
+                 (Aeson.Object mergedConsts)
+                 byronKeyMap
+          Nothing -> error "No \"byron\" JSON object from epoch-timeline.json"
     , Types.shelley =
-        -- The "shelley" object in "epoch-timeline.json" entries is directly the
-        -- "protocolParams" object used in the node's "shelley-genesis.json".
-        -- We have to add "slotLength", "epochLength", "securityParam" and
-        -- "activeSlotsCoeff" that are treated as first class citizens in this
-        -- library, instead of JSON/KeyMap.
-        case Genesis.shelley epoch'' of
+        case Genesis.shelley epochParams of
           (Just sheyKeyMap) -> foldl
             (\acc (k,v) -> KeyMap.insert k v acc)
             sheyKeyMap
             [
-              ("slotLength", Aeson.Number $ realToFrac $ Types.slot_duration g)
-            , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
-            , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
+            -- We have to add "slotLength", "epochLength", "securityParam" and
+            -- "activeSlotsCoeff" that are treated as first class citizens in
+            -- this library, instead of JSON/KeyMap.
+              ("slotLength",       Aeson.Number $ realToFrac  $ Types.slot_duration g)
+            , ("epochLength",      Aeson.Number $ fromInteger $ Types.epoch_length g)
+            , ("securityParam",    Aeson.Number $ fromInteger $ Types.parameter_k g)
             , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
-            , ("protocolParams",
-                case KeyMap.lookup "protocolParams" sheyKeyMap of
-                  (Just shey) -> shey
-                  Nothing -> error "No \"protocolParams\" JSON object in \"shelley\" property"
-              )
+            -- The timeline carries mainnet's networkId / networkMagic.
+            , ("networkId",        Aeson.String "Testnet")
+            , ("networkMagic",     Aeson.Number $ fromInteger $ Types.network_magic g)
             ]
           Nothing -> error "No \"shelley\" JSON object from epoch-timeline.json"
-    , Types.alonzo  =
-        case Genesis.alonzo epoch'' of
-          (Just alzo) -> alzo
-          Nothing -> error "No \"alonzo\" JSON object from epoch-timeline.json"
-    -- The only "optional" genesis property.
-    , Types.conway = Genesis.conway epoch''
-    }) profile
+    , Types.alonzo =
+        case Genesis.alonzo epochParams of
+          (Just a) -> a
+          Nothing  -> error "No \"alonzo\" JSON object from epoch-timeline.json"
+    -- Optional "conway" and "dijkstra".
+    , Types.conway = Genesis.conway epochParams
+    , Types.dijkstra = Genesis.dijkstra epochParams
+    }
 
-getEpochNumber :: HasCallStack => Types.Profile -> Integer
-getEpochNumber profile =
-  let number = Types.pparamsEpoch $ Types.genesis profile
-  in if number <= 0
-     then error $ "Profile \"" ++ Types.name profile ++ "\" has epoch number = " ++ show number
-     else number
+-- Step 2b.
+--------------------------------------------------------------------------------
 
--- The genesis overlay files are applied to the "genesis" property and the ones
--- available are defined as functions in `Primitives`.
-genesisOverlay :: String -> Genesis.Epoch -> IO Genesis.Epoch
-genesisOverlay overlayName epochParams = do
-  let dataFileName = "data/genesis/overlays/" ++ overlayName ++ ".json"
-  fp <- Paths.getDataFileName dataFileName
-  eitherValue <- Aeson.eitherDecodeFileStrict fp
-  return $ case eitherValue of
-    -- Right-biased merge of both JSON objects at all depths.
-    (Right epoch) -> epochParams <> epoch
-    (Left e) -> error $ "\"" ++ fp ++ "\": " ++ e
+-- | Write the Plutus cost models into the Genesis's "alonzo" and "conway".
+--   Cost models can land in three fields of the generated genesis JSON:
+--     * `alonzo.costModels`:             mainnet alonzo-genesis shape.
+--     * `conway.plutusV3CostModel`:      mainnet conway-genesis shape.
+--     * `alonzo.extraConfig.costModels`: testnet/benchmark override.
+--                                        Not present on mainnet.
+--   The two mainnet top-level fields have strict parsers that lock the
+--   STRUCTURE to what mainnet shipped with at each era's hard fork: their
+--   values are free to set, but the entry COUNT (and for V3, also the FORM)
+--   cannot change. Specifically:
+--     * `alonzo.costModels` accepts PlutusV1 only, exactly 166 entries,
+--       in either object or array form (online mainnet file uses an object)
+--       (since IntersectMBO/cardano-ledger#5379 restricted to PlutusV1).
+--     * `conway.plutusV3CostModel` is array-only, exactly 251 entries
+--       (since IntersectMBO/cardano-ledger#5241 enforced the count there).
+--   Any cost-parameter ADDITIONS subsequent hard forks made on mainnet (the 10
+--   V2 entries added at Chang, the 46 V3 entries added at epoch 537) are
+--   applied internally by the hard-fork combinator based on the protocol
+--   version, not by extending those genesis fields.
+--   `alonzo.extraConfig.costModels` was added to bypass those structural locks
+--   for testnets and benchmarks (IntersectMBO/cardano-ledger#5342, landed in
+--   IntersectMBO/cardano-ledger#5379; surfaced for cardano-cli in
+--   IntersectMBO/cardano-cli#1352): it accepts V1/V2/V3 keys and skips the
+--   exact-count check the top-level parsers enforce. Its object form is
+--   still capped at each language's init names (extras are silently dropped
+--   at parse time), so the ARRAY form is the only one that actually carries
+--   entries past those counts, and that is what we emit there.
+--   `alonzoInjectCostModels` applies the content as a per-language
+--   REPLACEMENT at the Alonzo era transition.
+--
+--   Expects `genesisParams` (Step 2a) to have already populated the base
+--   "alonzo" and "conway" KeyMaps on the Genesis.
+genesisCostModels :: Genesis.CostModel -> Types.Genesis -> Types.Genesis
+genesisCostModels costModel g =
+  let
+      -- Cardano-ledger's canonical init param counts: the number of named cost
+      -- parameters each language had when first introduced in its genesis file
+      -- (see libs/cardano-ledger-core/.../CostModels.hs:231-239).
+      -- The strict TOP-LEVEL parsers (V1 at `alonzo.costModels`, V3 at
+      -- `conway.plutusV3CostModel`) require exactly this count.
+      -- The lenient `alonzo.extraConfig.costModels` parser does NOT validate
+      -- the input length in either form. In OBJECT form it walks the first N
+      -- canonical init names and silently ignores any extra keys, so only
+      -- those N entries ever reach runtime. In ARRAY form length validation
+      -- is deferred to Plutus's `mkEvaluationContext` downstream. The array
+      -- form at extraConfig is therefore the only path that can actually
+      -- carry entries past this count to runtime.
+      v1InitCount = 166 :: Int
+      v2InitCount = 175 :: Int
+      v3InitCount = 251 :: Int
+      -- PlutusV1.
+      -- Introduced: Alonzo hard fork (Alonzo era, epoch 290 mainnet) as an
+      -- OBJECT of 166 named cost parameters at `alonzo.costModels.PlutusV1` in
+      -- alonzo-genesis.json.
+      --
+      -- Updated: Vasil (epoch 366) tweaked 100 entries; Valentine (394) tweaked
+      -- 2; Chang (507) tweaked 85. V1 has never gained a parameter, total is
+      -- still 166.
+      --
+      -- Placement: We emit the first 166 canonical entries as the OBJECT at
+      -- `alonzo.costModels.PlutusV1` (mainnet shape). If the input ever carries
+      -- more than 166 entries (future proofing), the FULL set also goes as an
+      -- ARRAY to `alonzo.extraConfig.costModels.PlutusV1`; the lenient parser
+      -- defers array length validation to Plutus's mkEvaluationContext.
+      --
+      -- Naming: If any of the extras have a name not in `plutusV1CostNames`,
+      -- the list throws an error (on purpose), signalling that the workbench's
+      -- name list must be extended.
+      (v1AtTopLevel, v1AtExtra) =
+        let v1Full   = fromMaybe KeyMap.empty (Genesis.plutusV1 costModel)
+            n        = KeyMap.size v1Full
+            val name = case KeyMap.lookup (Key.fromString name) v1Full of
+              Just v  -> v
+              Nothing -> error $ "PlutusV1 cost model missing canonical entry: " ++ name
+        in if n == 0
+           then (Nothing, Nothing)
+           else if n < v1InitCount
+                then error $    "PlutusV1 cost model has " ++ show n
+                             ++ " entries; need at least " ++ show v1InitCount
+                else let first166 = KeyMap.fromList
+                           [ (Key.fromString name, val name)
+                           | name <- take v1InitCount Genesis.plutusV1CostNames
+                           ]
+                         extra    = if n > v1InitCount
+                                    then Just $ Aeson.toJSON
+                                           [ val name
+                                           | name <- take n Genesis.plutusV1CostNames
+                                           ]
+                                    else Nothing
+                     in (Just (Aeson.Object first166), extra)
+      -- PlutusV2.
+      -- Introduced: Vasil hard fork (Babbage era, epoch 366 mainnet) with
+      -- 175 named cost parameters.
+      --
+      -- Updated: Valentine (epoch 394) tweaked 7 entries; Chang (epoch 507)
+      -- ADDED 10 new and tweaked 90 (current total 185).
+      --
+      -- Placement: V2 has no top-level home (`alonzo.costModels` is V1-only),
+      -- so its only path to runtime is `alonzo.extraConfig.costModels.PlutusV2`.
+      -- We emit the FULL V2 set as an ARRAY (canonical order); the lenient
+      -- parser defers array length validation to Plutus's mkEvaluationContext.
+      --
+      -- Naming: If any of the entries have a name not in `plutusV2CostNames`,
+      -- the list throws an error (on purpose), signalling that the workbench's
+      -- name list must be extended.
+      v2AtExtra =
+        let v2Full   = fromMaybe KeyMap.empty (Genesis.plutusV2 costModel)
+            n        = KeyMap.size v2Full
+            val name = case KeyMap.lookup (Key.fromString name) v2Full of
+              Just v  -> v
+              Nothing -> error $ "PlutusV2 cost model missing canonical entry: " ++ name
+        in if n == 0
+           then Nothing
+           else if n < v2InitCount
+                then error $    "PlutusV2 cost model has " ++ show n
+                             ++ " entries; need at least " ++ show v2InitCount
+                else Just $ Aeson.toJSON
+                       [ val name
+                       | name <- take n Genesis.plutusV2CostNames
+                       ]
+      -- PlutusV3.
+      -- Introduced: Chang hard fork (Conway era, epoch 507 mainnet) as an
+      -- ARRAY of 251 cost parameters at `conway.plutusV3CostModel` in
+      -- conway-genesis.json.
+      --
+      -- Updated: at epoch 537 an on-chain parameter update ADDED 46 new entries
+      -- (current total 297).
+      --
+      -- Placement: We emit the canonical first 251 entries as the ARRAY at
+      -- `conway.plutusV3CostModel` (mainnet shape). When the input carries
+      -- more than 251 entries, the FULL set ALSO goes as an ARRAY to
+      -- `alonzo.extraConfig.costModels.PlutusV3`; the lenient parser defers
+      -- array length validation to Plutus's mkEvaluationContext.
+      --
+      -- Naming: If any of the entries have a name not in `plutusV3CostNames`,
+      -- the list throws an error (on purpose), signalling that the workbench's
+      -- name list must be extended.
+      (v3AtTopLevel, v3AtExtra) =
+        let v3Full   = fromMaybe KeyMap.empty (Genesis.plutusV3 costModel)
+            n        = KeyMap.size v3Full
+            val name = case KeyMap.lookup (Key.fromString name) v3Full of
+              Just v  -> v
+              Nothing -> error $ "PlutusV3 cost model missing canonical entry: " ++ name
+        in if n == 0
+           then (Nothing, Nothing)
+           else if n < v3InitCount
+                then error $    "PlutusV3 cost model has " ++ show n
+                             ++ " entries; need at least " ++ show v3InitCount
+                else let full     = [ val name
+                                    | name <- take n Genesis.plutusV3CostNames
+                                    ]
+                         topLevel = Aeson.toJSON (take v3InitCount full)
+                         extra    = if n > v3InitCount
+                                    then Just (Aeson.toJSON full)
+                                    else Nothing
+                     in (Just topLevel, extra)
+      -- alonzo.extraConfig.costModels content: a PlutusV* sub-key is
+      -- included only when its version yielded a Just above.
+      extraEntries = catMaybes
+        [ (,) "PlutusV1" <$> v1AtExtra
+        , (,) "PlutusV2" <$> v2AtExtra
+        , (,) "PlutusV3" <$> v3AtExtra
+        ]
+      mExtraConfig =
+        if null extraEntries
+        then Nothing
+        else Just $ Aeson.Object $
+               KeyMap.singleton "costModels"
+                                (Aeson.Object (KeyMap.fromList extraEntries))
+  in g {
+      Types.alonzo =
+        let alzoBase = Types.alonzo g
+            withCM = case v1AtTopLevel of
+              Nothing -> alzoBase
+              Just o  -> KeyMap.insert "costModels"
+                                       (Aeson.Object (KeyMap.singleton "PlutusV1" o))
+                                       alzoBase
+            withExtra = case mExtraConfig of
+              Nothing -> withCM
+              Just ec -> KeyMap.insert "extraConfig" ec withCM
+        in withExtra
+    , Types.conway =
+        case (Types.conway g, v3AtTopLevel) of
+          (Nothing, Nothing)  -> Nothing
+          (Just c,  Nothing)  -> Just c
+          (Nothing, Just arr) -> Just $ KeyMap.singleton "plutusV3CostModel" arr
+          (Just c,  Just arr) -> Just $ KeyMap.insert    "plutusV3CostModel" arr c
+    }
 
 -- Step 3.
 --------------------------------------------------------------------------------
@@ -201,7 +427,7 @@ overlay profile =
 -- Fills the "derive" property.
 -- "derive" needs above "shelley", "alonzo" and "conway" properties.
 derive :: Types.Profile -> Types.Profile
-derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
+derive p@(Types.Profile _ _ _ comp gsis _ n gtor _ _ _ ana _ _ _ _) =
   let 
       -- Absolute/epoch durations:
       ----------------------------
@@ -384,30 +610,11 @@ finalize profile =
   in profile''
 
 cliArgs :: Types.Profile -> Types.Profile
-cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
+cliArgs p@(Types.Profile _ _ _ comp gsis _ _ _ _ _ _ _ dved _ _ _) =
   let --toJson = map (\(k,n) -> )
       fmtDecimal i =
            Scientific.formatScientific Scientific.Fixed (Just 0) (fromInteger i / 100000)
         ++ "00000"
-      createStakedArgs =
-        [
-          Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
-        , Aeson.String "--supply",           Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis
-        , Aeson.String "--gen-utxo-keys",    Aeson.Number $ fromInteger $ Types.utxo_keys gsis
-        , Aeson.String "--gen-genesis-keys", Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
-        , Aeson.String "--supply-delegated", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
-        , Aeson.String "--gen-pools",        Aeson.Number $ fromInteger $ Types.n_pools comp
-        , Aeson.String "--gen-stake-delegs", Aeson.Number $ fromInteger $ Types.delegators_effective dved
-        , Aeson.String "--num-stuffed-utxo", Aeson.String $ Text.pack $ fmtDecimal $ Types.utxo_stuffed dved
-        ]
-        ++
-        if Types.dense_pool_density comp /= 1
-        then
-          [ 
-            Aeson.String "--bulk-pool-cred-files", Aeson.Number $ fromInteger $ Types.n_dense_hosts comp
-          , Aeson.String "--bulk-pools-per-file",  Aeson.Number $ fromInteger $ Types.dense_pool_density comp
-          ]
-        else []
       createTestnetDataArgs =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
@@ -426,8 +633,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
         , Aeson.String "initialPoolCoin",    Aeson.String $ Text.pack $ fmtDecimal $ Types.pool_coin gsis
         ]
   in  p {Types.cli_args = Types.CliArgs {
-            Types.createStakedArgs = createStakedArgs
-          , Types.createTestnetDataArgs = createTestnetDataArgs
+            Types.createTestnetDataArgs = createTestnetDataArgs
           , Types.pools = poolsArgs
         }}
 
@@ -470,31 +676,3 @@ unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
 -- If not an object prefer the right value.
 unionWithKey _ _ b = b
 
-
--- Post-processing
---------------------------------------------------------------------------------
-
--- | Specialize profile to all valid eras and add era suffix(es) to profile name.
---   An era is considered valid based on the protocol version a profile might define.
-addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
-addEras = foldMap
-  (\profile -> Map.fromList $
-      catMaybes
-        [ addEra profile Types.Shelley "shey"
-        , addEra profile Types.Allegra "alra"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-
-addEra :: Types.Profile -> Types.Era -> String -> Maybe (String, Types.Profile)
-addEra p era suffix
-  | Just (major, _) <- Types.profileProtocolVersion p
-  , era < Types.firstEraForMajorVersion major
-    = Nothing
-  | otherwise
-    = let name = Types.name p
-          newName = name ++ "-" ++ suffix
-      in Just (newName, p {Types.name = newName, Types.era = era})

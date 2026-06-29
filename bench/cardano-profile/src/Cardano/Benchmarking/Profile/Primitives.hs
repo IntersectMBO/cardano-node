@@ -148,13 +148,14 @@ empty = Types.Profile {
     , Types.n_dense_pools = 0
     , Types.n_pool_hosts = 0
   }
-  , Types.era = Types.Conway
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 0
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = mempty
     , Types.alonzo = mempty
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 0
     , Types.epoch_length = 0
     , Types.active_slots_coeff = 0
@@ -240,8 +241,7 @@ empty = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 0
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = []
-    , Types.createTestnetDataArgs = []
+      Types.createTestnetDataArgs = []
     , Types.pools = []
   }
   , Types.preset = mempty
