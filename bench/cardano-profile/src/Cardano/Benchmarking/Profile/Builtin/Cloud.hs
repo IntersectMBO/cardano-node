@@ -168,7 +168,6 @@ profilesCloud =
   , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000
-  , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
   -- Plutus (pre-Voltaire profiles)
@@ -184,7 +183,6 @@ profilesCloud =
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . blockMem2x
-  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
   , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . ephemeral . P.lsmt
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000
