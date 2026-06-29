@@ -248,6 +248,7 @@
             .workbench-profile-run;
         in {
           "dockerImage/node" = pkgs.dockerImage;
+          "dockerImage/node-ipe" = pkgs.dockerImageInfoTableMapped;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
           "dockerImage/tracer" = pkgs.tracerDockerImage;
 

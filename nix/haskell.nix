@@ -448,6 +448,20 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             (name: { flags.asserts = true; });
         }];
       };
+
+      infoTableMapped = final.appendModule {
+        modules = [{
+          ghcOptions = [
+            "-finfo-table-map"
+            "-fdistinct-constructor-tables"
+          ];
+          packages.plutus-core.components.library.ghcOptions = [
+            "-finfo-table-map"
+            "-fdistinct-constructor-tables"
+          ];
+        }];
+      };
+
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
@@ -459,6 +473,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                 passthru = {
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
+                  infoTableMapped = lib.getAttrFromPath path final.infoTableMapped.hsPkgs;
                 };
               }
           else value)
