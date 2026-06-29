@@ -93,8 +93,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e3803b0c86fc0b5f0a7b8f3a977aebf5afe31b8b
-  --sha256: sha256-PxhS4cB4pnP+izLMOTfsyjrEUCsW2aSEMUKl603Bpk4=
+  tag: 52eb268ae0fa22c6f1b35fd3cf7642dedd6f63cc
+  --sha256: sha256-8gY1Ux96k/ghBg2njjvVlCfo/MIFLc6kE3F+47hpSIE=
 
 -- Points to cardano-ledger/leios-prototype
 source-repository-package

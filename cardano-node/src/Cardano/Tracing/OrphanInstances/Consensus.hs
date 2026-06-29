@@ -305,6 +305,8 @@ instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation TraceMempoolSyncNotNeeded{} = Debug
   getSeverityAnnotation TraceMempoolSynced{} = Debug
   getSeverityAnnotation TraceMempoolAttemptingAdd{} = Debug
+  getSeverityAnnotation TraceMempoolCacheHit{} = Info
+  getSeverityAnnotation TraceMempoolCacheMiss{} = Info
 
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
@@ -1622,6 +1624,16 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk)
   toObject _verb TraceMempoolTipMovedBetweenSTMBlocks =
     mconcat
       [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
+      ]
+  toObject verb (TraceMempoolCacheHit point)=
+    mconcat
+      [ "kind" .= String "TraceMempoolCacheHit"
+      , "point" .= toObject verb point
+      ]
+  toObject verb (TraceMempoolCacheMiss point)=
+    mconcat
+      [ "kind" .= String "TraceMempoolCacheMiss"
+      , "point" .= toObject verb point
       ]
 
 instance ToObject MempoolSize where
