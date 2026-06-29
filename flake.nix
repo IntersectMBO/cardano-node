@@ -142,6 +142,22 @@
             recursiveUpdate
             (set-git-rev node)
             {passthru = {noGitRev = node;};};
+          # Info-table-profiled (IPE) cardano-node exe additionally linked with
+          # the ghc-debug stub (the `ghc-debug` cabal flag), exposed as a
+          # distinct package so deployments opt in per-machine (nix/systemd, no
+          # docker) -- the default `cardano-node` stays non-profiled. The stub
+          # is dormant unless `$GHC_DEBUG_SOCKET` is set, so this also serves as
+          # the plain IPE build for `-hi` profiling when the socket is unset.
+          # When set, pair with the `cardano-debug` exe (a flake output) to
+          # snapshot the heap, then analyse offline with
+          # `GHC.Debug.Snapshot.snapshotRun`. See `ghcDebug`/`infoTableMapped`
+          # in nix/haskell.nix and cardano-debug/README.md.
+          cardano-node-ghc-debug = let
+            node-ghc-debug = project.ghcDebug.exes.cardano-node;
+          in
+            recursiveUpdate
+            (set-git-rev node-ghc-debug)
+            {passthru = {noGitRev = node-ghc-debug;};};
           cardano-cli = let
             cli = cardano-cli.components.exes.cardano-cli;
           in
@@ -259,7 +275,6 @@
             muslProject.hsPkgs.cardano-debug.components.exes.cardano-debug;
 
           "dockerImage/node" = pkgs.dockerImage;
-          "dockerImage/node-ipe" = pkgs.dockerImageInfoTableMapped;
           "dockerImage/node-ghc-debug" = pkgs.dockerImageGhcDebug;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
           "dockerImage/tracer" = pkgs.tracerDockerImage;

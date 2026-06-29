@@ -117,26 +117,6 @@ in with final;
       script = "node";
     };
 
-  dockerImageInfoTableMapped =
-    let
-      defaultConfig = {
-        stateDir = "/data";
-        dbPrefix = "db";
-        socketPath = "/ipc/node.socket";
-      };
-      set-git-rev = import ./set-git-rev.nix { inherit pkgs; };
-    in
-    callPackage ./docker {
-      exe = "cardano-node";
-      cardano-node = set-git-rev cardanoNodePackages.cardano-node.passthru.infoTableMapped;
-      repoName = "ghcr.io/intersectmbo/cardano-node-ipe";
-      scripts = import ./scripts.nix {
-        inherit pkgs;
-        customConfigs = [ defaultConfig customConfig ];
-      };
-      script = "node";
-    };
-
   dockerImageGhcDebug =
     let
       defaultConfig = {
