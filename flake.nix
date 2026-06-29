@@ -251,7 +251,11 @@
             then project.projectCross.musl64
             else project.projectCross.aarch64-multiplatform-musl;
         in {
-          cardano-debug-static =
+          # Fully-static (musl) ghc-debug client. Overrides the auto-collected
+          # dynamic exe of the same name: we ship only the static build so the
+          # one binary runs in-container AND copies out to any host with no
+          # glibc / Nix-store deps.
+          cardano-debug =
             muslProject.hsPkgs.cardano-debug.components.exes.cardano-debug;
 
           "dockerImage/node" = pkgs.dockerImage;

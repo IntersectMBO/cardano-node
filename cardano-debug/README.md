@@ -67,38 +67,38 @@ docker exec <container> take-snapshot /data/leak-2026-06-26.snapshot
 `take-snapshot` is a thin wrapper around `cardano-debug snapshot <out>
 <socket>`; you can call that directly too.
 
-## Capture from outside the container (static `musl` binary)
+## Capture from outside the container
 
 The snapshot client caches the **entire heap in its own RAM** before writing the
 file, so on a memory-tight node, capturing *inside* the container can push its
-cgroup toward OOM. To avoid that — or to capture from another machine — the image
-also ships a **fully-static (musl)** client at
-`/usr/local/bin/cardano-debug-static`. It has no glibc / Nix-store
-dependencies, so it runs anywhere:
+cgroup toward OOM. To avoid that — or to capture from another machine — run the
+client off-container. `cardano-debug` is a **fully-static (musl)** binary with no
+glibc / Nix-store dependencies, so the *same* binary the image ships also runs
+anywhere once copied out:
 
 ```sh
 # copy it out of the image …
-docker cp <container>:/usr/local/bin/cardano-debug-static .
+docker cp <container>:/usr/local/bin/cardano-debug .
 # … or build/ship it standalone:
-nix build .#cardano-debug-static     # → result/bin/...
+nix build .#cardano-debug     # → result/bin/cardano-debug
 ```
 
 ghc-debug speaks a **unix socket** (`GHC_DEBUG_SOCKET=/ipc/ghc-debug.socket` in
-the image), so point the static client at that socket from off-container:
+the image), so point the client at that socket from off-container:
 
 ```sh
 # (a) on the Docker HOST, if /ipc is a volume mount — capture RAM lands on the
 #     host, NOT the container's memory cgroup:
-./cardano-debug-static snapshot /tmp/heap.snapshot /path/to/ipc/ghc-debug.socket
+./cardano-debug snapshot /tmp/heap.snapshot /path/to/ipc/ghc-debug.socket
 
 # (b) from a different host — forward the socket over ssh (unix↔unix), or socat a
 #     TCP port to it, then run against the forwarded socket:
 ssh -L /tmp/ghcdbg.sock:/ipc/ghc-debug.socket <host>
-./cardano-debug-static snapshot /tmp/heap.snapshot /tmp/ghcdbg.sock
+./cardano-debug snapshot /tmp/heap.snapshot /tmp/ghcdbg.sock
 ```
 
 Either way the node only pays the stop-the-world pause and streams its heap out;
-the heap-sized client cache lives on whatever host runs the static binary.
+the heap-sized client cache lives on whatever host runs the binary.
 
 ## Ship it back
 

@@ -24,17 +24,14 @@
 , snapshot-converter
 , scripts
 
-# Optional: the headless ghc-debug `cardano-debug` exe. When non-null, it and a
-# `take-snapshot` helper are installed, and the image exports GHC_DEBUG_SOCKET
-# so the bundled (ghc-debug-instrumented) node can be snapshotted. Used by the
+# Optional: the headless ghc-debug `cardano-debug` exe (a fully-static musl
+# build). When non-null, it and a `take-snapshot` helper are installed, and the
+# image exports GHC_DEBUG_SOCKET so the bundled (ghc-debug-instrumented) node
+# can be snapshotted. Copied (not symlinked) so the one binary both runs
+# in-container and `docker cp`'s out to another host (e.g. to snapshot against
+# an ssh-forwarded GHC_DEBUG_SOCKET) with no glibc / Nix-store deps. Used by the
 # `dockerImageGhcDebug` image only; null for normal images.
 , cardano-debug ? null
-
-# Optional: a fully-static (musl) build of the `cardano-debug` client, installed
-# at a fixed path so it can be `docker cp`'d out and run OUTSIDE the container
-# (e.g. on another host against an ssh-forwarded GHC_DEBUG_SOCKET). Copied (not
-# symlinked) so it extracts as a standalone binary with no /nix/store deps.
-, cardano-debug-static ? null
 
 # Set gitrev to null, to ensure the version below is used
 , gitrev ? null
@@ -210,15 +207,12 @@ in
       ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
       ${lib.optionalString (cardano-debug != null) ''
-        # ghc-debug client + operator helper (debug images only)
-        ln -sv ${cardano-debug}/bin/cardano-debug usr/local/bin/cardano-debug
+        # Static (musl) ghc-debug client + operator helper (debug images only).
+        # Copied (real file, no store deps) so `docker cp` yields a standalone
+        # binary that also runs off-container.
+        cp -vL ${cardano-debug}/bin/cardano-debug usr/local/bin/cardano-debug
+        chmod 0755 usr/local/bin/cardano-debug
         cp -v ${takeSnapshot}/bin/take-snapshot usr/local/bin/take-snapshot
-      ''}
-      ${lib.optionalString (cardano-debug-static != null) ''
-        # Static (musl) cardano-debug client for copy-out / off-host use. Copied
-        # (real file, no store deps) so `docker cp` yields a standalone binary.
-        cp -vL ${cardano-debug-static}/bin/cardano-debug usr/local/bin/cardano-debug-static
-        chmod 0755 usr/local/bin/cardano-debug-static
       ''}
 
       # Create iohk-nix network configs, organized by network directory.

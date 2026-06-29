@@ -149,9 +149,10 @@ in with final;
     callPackage ./docker {
       exe = "cardano-node";
       cardano-node = set-git-rev cardanoNodePackages.cardano-node.passthru.ghcDebug;
-      cardano-debug = cardanoNodePackages.cardano-debug;
-      # Static (musl) snapshot client, copied into the image for off-host use.
-      cardano-debug-static =
+      # Fully-static (musl) ghc-debug client. Copied (not symlinked) into the
+      # image so the single binary both runs in-container and `docker cp`'s out
+      # to any host with no glibc / Nix-store deps.
+      cardano-debug =
         cardanoNodeProject.projectCross.musl64.hsPkgs.cardano-debug.components.exes.cardano-debug;
       repoName = "ghcr.io/intersectmbo/cardano-node-ghc-debug";
       scripts = import ./scripts.nix {
