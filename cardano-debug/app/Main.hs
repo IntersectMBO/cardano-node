@@ -1,23 +1,38 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | Offline analyzer for a ghc-debug snapshot (no live process required).
+-- | @cardano-debug@ — a tiny ghc-debug tool for cardano-node debug images.
 --
---   cardano-ghc-debug-analyze census  <snapshot> [out.tsv]
+-- One executable, dispatching on its first argument:
+--
+--   cardano-debug snapshot <out> [sock]
+--       Connect to a running, ghc-debug-instrumented process over its
+--       @GHC_DEBUG_SOCKET@ unix socket, pause it, write a self-contained heap
+--       snapshot to @out@, then close the connection (resuming the process)
+--       and exit. This is the only subcommand that runs in the field; it
+--       contains no analysis logic. The snapshot is portable and is analysed
+--       later, offline, by the subcommands below.
+--
+--   cardano-debug census  <snap> [out.tsv]
 --       -hT-style closure-type census (count / total size / max per type).
 --       Read off ARR_WORDS / STACK / TSO; diff two snapshots to isolate growth.
 --
---   cardano-ghc-debug-analyze retain   <snapshot> [maxPaths] [minBytes]
+--   cardano-debug retain  <snap> [maxPaths] [minBytes]
 --       Walk retainer chains of ARR_WORDS closures up to the GC roots, annotated
 --       with IPE source locations -- i.e. what retains the leaked byte buffers.
 --
---   cardano-ghc-debug-analyze threads  <snapshot>
+--   cardano-debug threads <snap>
 --       Census every TSO grouped by (why_blocked | threadLabel) with count and
 --       total stack size -- i.e. what the (leaked) threads ARE and what they are
 --       blocked on. ouroboros labels its mini-protocol threads, so this names
 --       per-connection threads directly.
+--
+-- The census/retain/threads subcommands run with *no live process* via
+-- 'snapshotRun' (re-exported by "GHC.Debug.Client"); only @snapshot@ touches a
+-- running node.
 module Main (main) where
 
 import           GHC.Debug.Client
+import           GHC.Debug.Snapshot (makeSnapshot)
 import           GHC.Debug.Profile (censusClosureType, closureCensusBy, writeCensusByClosureType)
 import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainers)
 
@@ -32,7 +47,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TEE
-import           System.Environment (getArgs)
+import           System.Environment (getArgs, lookupEnv)
 import           System.Exit (die)
 import           System.IO (hPutStrLn, stderr)
 
@@ -40,21 +55,38 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    ("census" : snap : rest) -> censusMode snap (listToMaybe rest)
-    ("retain" : snap : rest) ->
+    ("snapshot" : out : rest)  -> snapshotMode out (listToMaybe rest)
+    ("census"   : snap : rest) -> censusMode snap (listToMaybe rest)
+    ("retain"   : snap : rest) ->
       retainMode snap (maybe 20 read (listToMaybe rest))
                       (maybe 0 read (listToMaybe (drop 1 rest)))
-    ("threads" : snap : _)   -> threadsMode snap
+    ("threads"  : snap : _)    -> threadsMode snap
     _ -> die usage
   where
     listToMaybe (x:_) = Just x
     listToMaybe []    = Nothing
     usage = unlines
       [ "usage:"
-      , "  cardano-ghc-debug-analyze census  <snapshot> [out.tsv]"
-      , "  cardano-ghc-debug-analyze retain  <snapshot> [maxPaths] [minBytes]"
-      , "  cardano-ghc-debug-analyze threads <snapshot>"
+      , "  cardano-debug snapshot <out> [sock]      capture a live heap snapshot (field)"
+      , "  cardano-debug census   <snap> [out.tsv]  closure-type census (offline)"
+      , "  cardano-debug retain   <snap> [maxPaths] [minBytes]  ARR_WORDS retainer chains (offline)"
+      , "  cardano-debug threads  <snap>            TSO census by why_blocked|label (offline)"
       ]
+
+-- | Connect to a live debuggee, pause it, write a self-contained snapshot, exit.
+snapshotMode :: FilePath -> Maybe FilePath -> IO ()
+snapshotMode out mSockArg = do
+  sock <- case mSockArg of
+    Just s  -> pure s
+    Nothing ->
+      lookupEnv "GHC_DEBUG_SOCKET"
+        >>= maybe (die "GHC_DEBUG_SOCKET is unset; pass the socket path as the 2nd argument") pure
+  hPutStrLn stderr ("ghc-debug: connecting to debuggee socket " <> sock)
+  withDebuggeeConnect sock $ \e -> do
+    hPutStrLn stderr ("ghc-debug: pausing process, writing snapshot to " <> out)
+    makeSnapshot e out
+    hPutStrLn stderr "ghc-debug: snapshot written"
+  hPutStrLn stderr "ghc-debug: connection closed (process resumed)"
 
 -- | Closure-type census written to a TSV (key:total:count:max:avg).
 censusMode :: FilePath -> Maybe FilePath -> IO ()

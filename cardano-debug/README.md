@@ -20,10 +20,12 @@ Two halves of ghc-debug:
 - **Debuggee** = the node, built with the `ghc-debug` cabal flag (links
   `ghc-debug-stub`, wraps `main` with `withGhcDebug`). It serves the ghc-debug
   protocol on the unix socket named by `GHC_DEBUG_SOCKET`.
-- **Debugger** = `cardano-ghc-debug-snapshot` (this package), a tiny headless
-  client that connects to that socket, pauses the process, writes a snapshot,
-  and exits. Snapshotting is *client-side* in ghc-debug — the stub alone cannot
-  write a snapshot, which is why this client is bundled.
+- **Debugger** = `cardano-debug` (this package), a tiny headless client. Its
+  `snapshot` subcommand connects to that socket, pauses the process, writes a
+  snapshot, and exits. Snapshotting is *client-side* in ghc-debug — the stub
+  alone cannot write a snapshot, which is why this client is bundled. The same
+  binary also analyses a shipped-back snapshot offline (`census` / `retain` /
+  `threads`, see below).
 
 The node is additionally built `infoTableMapped` (`-finfo-table-map
 -fdistinct-constructor-tables`), so closures in the snapshot map back to source
@@ -62,7 +64,7 @@ docker exec <container> take-snapshot /data/leak-2026-06-26.snapshot
 > enough to miss slots / drop peers. Capture deliberately, ideally during low
 > activity, not on a tight timer.
 
-`take-snapshot` is a thin wrapper around `cardano-ghc-debug-snapshot <out>
+`take-snapshot` is a thin wrapper around `cardano-debug snapshot <out>
 <socket>`; you can call that directly too.
 
 ## Capture from outside the container (static `musl` binary)
@@ -71,14 +73,14 @@ The snapshot client caches the **entire heap in its own RAM** before writing the
 file, so on a memory-tight node, capturing *inside* the container can push its
 cgroup toward OOM. To avoid that — or to capture from another machine — the image
 also ships a **fully-static (musl)** client at
-`/usr/local/bin/cardano-ghc-debug-snapshot-static`. It has no glibc / Nix-store
+`/usr/local/bin/cardano-debug-static`. It has no glibc / Nix-store
 dependencies, so it runs anywhere:
 
 ```sh
 # copy it out of the image …
-docker cp <container>:/usr/local/bin/cardano-ghc-debug-snapshot-static .
+docker cp <container>:/usr/local/bin/cardano-debug-static .
 # … or build/ship it standalone:
-nix build .#cardano-ghc-debug-snapshot-static     # → result/bin/...
+nix build .#cardano-debug-static     # → result/bin/...
 ```
 
 ghc-debug speaks a **unix socket** (`GHC_DEBUG_SOCKET=/ipc/ghc-debug.socket` in
@@ -87,12 +89,12 @@ the image), so point the static client at that socket from off-container:
 ```sh
 # (a) on the Docker HOST, if /ipc is a volume mount — capture RAM lands on the
 #     host, NOT the container's memory cgroup:
-./cardano-ghc-debug-snapshot-static /tmp/heap.snapshot /path/to/ipc/ghc-debug.socket
+./cardano-debug-static snapshot /tmp/heap.snapshot /path/to/ipc/ghc-debug.socket
 
 # (b) from a different host — forward the socket over ssh (unix↔unix), or socat a
 #     TCP port to it, then run against the forwarded socket:
 ssh -L /tmp/ghcdbg.sock:/ipc/ghc-debug.socket <host>
-./cardano-ghc-debug-snapshot-static /tmp/heap.snapshot /tmp/ghcdbg.sock
+./cardano-debug-static snapshot /tmp/heap.snapshot /tmp/ghcdbg.sock
 ```
 
 Either way the node only pays the stop-the-world pause and streams its heap out;
@@ -116,20 +118,21 @@ was built with so heap layout interpretation matches. Two routes:
 
 1. **Interactive**: point `ghc-debug-brick` at the snapshot and explore the
    dominator/retainer tree for the `ARR_WORDS` / `STACK` bands.
-2. **Scripted** (sketch), using `ghc-debug-client`:
+2. **Scripted**: the same `cardano-debug` binary carries three offline
+   subcommands (they only read the snapshot file, no live node):
 
-   ```haskell
-   import GHC.Debug.Client
-   import GHC.Debug.Snapshot (snapshotRun)
-   import GHC.Debug.Retainers  -- findRetainersOf / addLocationToStack etc.
+   ```sh
+   # -hT-style closure-type census → TSV (count / total size / max per type).
+   # Diff two snapshots to isolate which band is growing.
+   cardano-debug census  leak.snapshot [census.tsv]
 
-   main :: IO ()
-   main = snapshotRun "leak.snapshot" $ \e -> do
-     run e $ do
-       roots <- gcRoots
-       -- e.g. census ARR_WORDS, then walk retainer chains up to the nearest
-       -- IPE-named closure to identify what holds the byte buffers / stacks.
-       ...
+   # Walk retainer chains of ARR_WORDS closures (payload ≥ minBytes) up to the
+   # GC roots, annotated with IPE source locations — what holds the byte buffers.
+   cardano-debug retain  leak.snapshot [maxPaths] [minBytes]
+
+   # Census every TSO by (why_blocked | threadLabel) — what the (leaked) threads
+   # ARE and what they are blocked on; ouroboros labels its mini-protocol threads.
+   cardano-debug threads leak.snapshot
    ```
 
 This is the step that turns "the leak is raw byte buffers + thread stacks" into

@@ -24,17 +24,17 @@
 , snapshot-converter
 , scripts
 
-# Optional: the headless ghc-debug snapshotter exe. When non-null, it and a
+# Optional: the headless ghc-debug `cardano-debug` exe. When non-null, it and a
 # `take-snapshot` helper are installed, and the image exports GHC_DEBUG_SOCKET
 # so the bundled (ghc-debug-instrumented) node can be snapshotted. Used by the
 # `dockerImageGhcDebug` image only; null for normal images.
-, ghc-debug-snapshot ? null
+, cardano-debug ? null
 
-# Optional: a fully-static (musl) build of the snapshot client, installed at a
-# fixed path so it can be `docker cp`'d out and run OUTSIDE the container (e.g.
-# on another host against an ssh-forwarded GHC_DEBUG_SOCKET). Copied (not
+# Optional: a fully-static (musl) build of the `cardano-debug` client, installed
+# at a fixed path so it can be `docker cp`'d out and run OUTSIDE the container
+# (e.g. on another host against an ssh-forwarded GHC_DEBUG_SOCKET). Copied (not
 # symlinked) so it extracts as a standalone binary with no /nix/store deps.
-, ghc-debug-snapshot-static ? null
+, cardano-debug-static ? null
 
 # Set gitrev to null, to ensure the version below is used
 , gitrev ? null
@@ -126,7 +126,7 @@ let
     fi
     echo "[take-snapshot] socket=$SOCK out=$OUT"
     echo "[take-snapshot] NOTE: this pauses the node for the duration of the capture."
-    ${ghc-debug-snapshot}/bin/cardano-ghc-debug-snapshot "$OUT" "$SOCK"
+    ${cardano-debug}/bin/cardano-debug snapshot "$OUT" "$SOCK"
     echo "[take-snapshot] wrote $OUT ($(du -h "$OUT" | cut -f1))."
     echo "[take-snapshot] Copy it off the container (docker cp / volume) and ship it back for offline analysis."
   '';
@@ -209,16 +209,16 @@ in
       ln -sv ${db-truncater}/bin/db-truncater usr/local/bin/db-truncater
       ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
-      ${lib.optionalString (ghc-debug-snapshot != null) ''
-        # ghc-debug snapshotter + operator helper (debug images only)
-        ln -sv ${ghc-debug-snapshot}/bin/cardano-ghc-debug-snapshot usr/local/bin/cardano-ghc-debug-snapshot
+      ${lib.optionalString (cardano-debug != null) ''
+        # ghc-debug client + operator helper (debug images only)
+        ln -sv ${cardano-debug}/bin/cardano-debug usr/local/bin/cardano-debug
         cp -v ${takeSnapshot}/bin/take-snapshot usr/local/bin/take-snapshot
       ''}
-      ${lib.optionalString (ghc-debug-snapshot-static != null) ''
-        # Static (musl) snapshot client for copy-out / off-host use. Copied
+      ${lib.optionalString (cardano-debug-static != null) ''
+        # Static (musl) cardano-debug client for copy-out / off-host use. Copied
         # (real file, no store deps) so `docker cp` yields a standalone binary.
-        cp -vL ${ghc-debug-snapshot-static}/bin/cardano-ghc-debug-snapshot usr/local/bin/cardano-ghc-debug-snapshot-static
-        chmod 0755 usr/local/bin/cardano-ghc-debug-snapshot-static
+        cp -vL ${cardano-debug-static}/bin/cardano-debug usr/local/bin/cardano-debug-static
+        chmod 0755 usr/local/bin/cardano-debug-static
       ''}
 
       # Create iohk-nix network configs, organized by network directory.
@@ -236,7 +236,7 @@ in
 
     config = {
       EntryPoint = [ "entrypoint" ];
-    } // lib.optionalAttrs (ghc-debug-snapshot != null) {
+    } // lib.optionalAttrs (cardano-debug != null) {
       # Make the instrumented node serve ghc-debug here; `take-snapshot` reads
       # the same variable. Placed under /ipc so it shares the standard volume.
       Env = [ "GHC_DEBUG_SOCKET=${ghcDebugSocket}" ];

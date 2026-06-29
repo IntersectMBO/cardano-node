@@ -251,8 +251,8 @@
             then project.projectCross.musl64
             else project.projectCross.aarch64-multiplatform-musl;
         in {
-          cardano-ghc-debug-snapshot-static =
-            muslProject.hsPkgs.ghc-debug-snapshot.components.exes.cardano-ghc-debug-snapshot;
+          cardano-debug-static =
+            muslProject.hsPkgs.cardano-debug.components.exes.cardano-debug;
 
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/node-ipe" = pkgs.dockerImageInfoTableMapped;
