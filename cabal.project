@@ -72,7 +72,7 @@ package bitvec
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
-  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+  haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
 
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
