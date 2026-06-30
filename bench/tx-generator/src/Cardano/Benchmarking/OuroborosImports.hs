@@ -7,7 +7,6 @@ module Cardano.Benchmarking.OuroborosImports
   (
     CardanoBlock
   , LocalSubmitTx
-  , LoggingLayer
   , PaymentKey
   , ShelleyGenesis
   , SigningKey
@@ -27,7 +26,6 @@ import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlo
 
 import           Cardano.CLI.Type.Common (SigningKeyFile)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
-import           Cardano.Node.Configuration.Logging (LoggingLayer)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -40,21 +38,19 @@ import           Prelude
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
-toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo CardanoBlock
-toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst $ protocolInfo @IO info
+toProtocolInfo :: SomeConsensusProtocol -> IO (ProtocolInfo CardanoBlock)
+toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst <$> protocolInfo @IO info
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
-protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
-protocolToTopLevelConfig ptcl = pInfoConfig
- where
-   ProtocolInfo {pInfoConfig} = toProtocolInfo ptcl
+protocolToTopLevelConfig :: SomeConsensusProtocol -> IO (TopLevelConfig CardanoBlock)
+protocolToTopLevelConfig ptcl = pInfoConfig <$> toProtocolInfo ptcl
 
-protocolToCodecConfig :: SomeConsensusProtocol -> CodecConfig CardanoBlock
-protocolToCodecConfig = configCodec . protocolToTopLevelConfig
+protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig CardanoBlock)
+protocolToCodecConfig = fmap configCodec . protocolToTopLevelConfig
 
-protocolToNetworkId :: SomeConsensusProtocol -> NetworkId
+protocolToNetworkId :: SomeConsensusProtocol -> IO NetworkId
 protocolToNetworkId ptcl
-  = Testnet $ getNetworkMagic $ configBlock $ protocolToTopLevelConfig ptcl
+  = Testnet . getNetworkMagic . configBlock <$> protocolToTopLevelConfig ptcl
 
 makeLocalConnectInfo :: NetworkId -> SocketPath -> LocalNodeConnectInfo
 makeLocalConnectInfo networkId socketPath

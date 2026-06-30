@@ -83,10 +83,8 @@ topology = Tasty.testGroup
     [
       "chainsync-early-alonzo",
       "chainsync-early-alonzo-notracer",
-      "chainsync-early-alonzo-oldtracing",
       "chainsync-early-byron",
       "chainsync-early-byron-notracer",
-      "chainsync-early-byron-oldtracing"
     ]
   --}
     testCase "chainsync-early-alonzo-coay" $ do
@@ -125,9 +123,7 @@ topology = Tasty.testGroup
     }
     [
       "ci-bench-nomadperf",
-      "ci-bench-oldtracing-nomadperf",
       "ci-test-nomadperf",
-      "ci-test-oldtracing-nomadperf"
     ]
   --}
   , testCase "ci-test-nomadperf-coay" $ do
@@ -170,7 +166,6 @@ topology = Tasty.testGroup
     }
     [
       "default-nomadperf",
-      "oldtracing-nomadperf"
     ]
   --}
   , testCase "default-nomadperf-coay" $ do
@@ -243,7 +238,6 @@ topology = Tasty.testGroup
       "value-drep1k-nomadperf",
       "value-nomadperf",
       "value-nomadperfssd",
-      "value-oldtracing-nomadperf",
       "value-volt-cgmem-nomadperf",
       "value-volt-lmdb-cgmem-nomadperf",
       "value-volt-lmdb-nomadperf",
@@ -360,7 +354,6 @@ topology = Tasty.testGroup
       "epoch-transition",
       "fast",
       "fast-notracer",
-      "fast-oldtracing",
       "fast-plutus"
     ]
   --}
@@ -492,7 +485,6 @@ topology = Tasty.testGroup
     [
       "trace-bench",
       "trace-bench-notracer",
-      "trace-bench-oldtracing",
       "trace-bench-rtview",
       "trace-full",
       "trace-full-rtview"
@@ -581,7 +573,6 @@ topology = Tasty.testGroup
       "forge-stress-pre-large-rtsqg1",
       "forge-stress-pre-large-rtsqg1N4",
       "idle",
-      "oldtracing",
       "plutus",
       "plutus-secp-ecdsa",
       "plutus-secp-schnorr",

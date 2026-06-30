@@ -30,11 +30,6 @@ import           Cardano.Benchmarking.Types
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Common ()
-import           Cardano.Tracing.OrphanInstances.Consensus ()
-import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block
                    (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
@@ -106,7 +101,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
       fail (T.unpack err)
     let (stillUnacked, acked) = L.splitAtEnd ack unAcked
     let newStats = stats { stsAcked = stsAcked stats + Ack ack }
-    traceWith bmtr $ SubmissionClientDiscardAcknowledged  (getTxId . getTxBody <$> acked)
+    traceWith bmtr $ SubmissionClientDiscardAcknowledged  (txIdFromTx <$> acked)
     return (txSource, UnAcked stillUnacked, newStats)
 
   queueNewTxs :: [Tx era] -> LocalState era -> LocalState era
@@ -135,8 +130,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     let stateC@(_, UnAcked outs , stats) = queueNewTxs newTxs stateB
 
     traceWith tr $ idListTrace (ToAnnce newTxs) blocking
-    traceWith bmtr $ SubmissionClientReplyTxIds (getTxId . getTxBody <$> newTxs)
-    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> outs)
+    traceWith bmtr $ SubmissionClientReplyTxIds (txIdFromTx <$> newTxs)
+    traceWith bmtr $ SubmissionClientUnAcked (txIdFromTx <$> outs)
 
     case blocking of
       SingBlocking -> case NE.nonEmpty newTxs of
@@ -160,12 +155,12 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
          reqTxIds = fmap fromGenTxId txIds
     traceWith tr $ ReqTxs (length reqTxIds)
     let UnAcked ua = unAcked
-        uaIds = getTxId . getTxBody <$> ua
-        (toSend, _retained) = L.partition ((`L.elem` reqTxIds) . getTxId . getTxBody) ua
+        uaIds = txIdFromTx <$> ua
+        (toSend, _retained) = L.partition ((`L.elem` reqTxIds) . txIdFromTx) ua
         missIds = reqTxIds L.\\ uaIds
 
     traceWith tr $ TxList (length toSend)
-    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> ua)
+    traceWith bmtr $ SubmissionClientUnAcked (txIdFromTx <$> ua)
     traceWith bmtr $ TraceBenchTxSubServReq reqTxIds
     unless (L.null missIds) $
       traceWith bmtr $ TraceBenchTxSubServUnav missIds
@@ -194,6 +189,10 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId _ = error "TODO: fix incomplete match"
+
+  txIdFromTx :: Tx era -> TxId
+  txIdFromTx (ShelleyTx sbe tx) =
+    shelleyBasedEraConstraints sbe $ fromShelleyTxId $ Ledger.txIdTxBody (tx ^. Ledger.bodyTxL)
 
   tokIsBlocking :: SingBlockingStyle a -> Bool
   tokIsBlocking = \case

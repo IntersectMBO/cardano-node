@@ -4,46 +4,91 @@
 -- testnet configurations depend on this module so that directory
 -- layout changes are kept in sync at compile time.
 module Cardano.Node.Testnet.Paths
-  ( defaultNodeName
+  ( -- * Node paths
+    defaultNodeName
   , defaultNodeDataDir
+  , defaultConfigFile
+  , defaultPortFile
+  , defaultNodeEnvFile
+    -- * Socket paths
+  , defaultSocketDir
+  , defaultSocketName
+  , defaultSocketPath
+    -- * UTxO key paths
   , defaultUtxoKeyDir
   , defaultUtxoSKeyPath
   , defaultUtxoVKeyPath
   , defaultUtxoAddrPath
-  , defaultSocketDir
-  , defaultSocketName
-  , defaultSocketPath
-  , defaultConfigFile
-  , defaultPortFile
+    -- * Genesis paths
+  , defaultGenesisFilepath
+    -- * Committee key paths
+  , defaultCommitteeName
+  , defaultCommitteeKeysDir
+  , defaultCommitteeVkeyFp
+  , defaultCommitteeSkeyFp
+    -- * DRep key paths
+  , defaultDRepName
+  , defaultDRepKeysDir
+  , defaultDRepDir
+  , defaultDRepVkeyFp
+  , defaultDRepSkeyFp
+    -- * SPO key paths
+  , defaultSpoName
+  , defaultSpoKeysDir
+  , defaultSpoColdVKeyFp
+  , defaultSpoColdSKeyFp
+  , defaultSpoVrfVKeyFp
+  , defaultSpoVrfSKeyFp
+  , defaultSpoStakingRewardVKeyFp
+  , defaultSpoStakingRewardSKeyFp
+  , defaultSpoKesVKeyFp
+  , defaultSpoKesSKeyFp
+  , defaultSpoOpcertCounterFp
+  , defaultSpoOpcertCertFp
+  , defaultSpoByronDelegationCertFp
+  , defaultSpoByronDelegateKeyFp
+    -- * Delegator key paths
+  , defaultDelegatorName
+  , defaultDelegatorStakeKeysDir
+  , defaultDelegatorStakeDir
+  , defaultDelegatorStakeVKeyFp
+  , defaultDelegatorStakeSKeyFp
   ) where
 
+import           Cardano.Api (CardanoEra, docToString, pretty)
+
+import           Data.Char (toLower)
 import           System.FilePath ((</>))
 
--- | The name of a node: @"node" <> show n@
+-- ---------------------------------------------------------------------
+-- Node paths
+-- ---------------------------------------------------------------------
+
+-- | Testnet configuration file name: @"configuration.yaml"@
+defaultConfigFile :: FilePath
+defaultConfigFile = "configuration.yaml"
+
+-- | Directory name component for a node, e.g. @"node1"@, @"node2"@
 defaultNodeName :: Int -> String
 defaultNodeName n = "node" <> show n
 
--- | Relative path to a node's data directory: @"node-data" </> defaultNodeName n@
+-- | Relative path to a node's data directory
 defaultNodeDataDir :: Int -> FilePath
 defaultNodeDataDir n = "node-data" </> defaultNodeName n
 
--- | Relative path to a UTxO key directory: @"utxo-keys" </> "utxo" <> show n@
-defaultUtxoKeyDir :: Int -> FilePath
-defaultUtxoKeyDir n = "utxo-keys" </> "utxo" <> show n
+-- | Relative path to the file containing a node's assigned port number
+defaultPortFile :: Int -> FilePath
+defaultPortFile n = defaultNodeDataDir n </> "port"
 
--- | Relative path to a UTxO signing key: @defaultUtxoKeyDir n </> "utxo.skey"@
-defaultUtxoSKeyPath :: Int -> FilePath
-defaultUtxoSKeyPath n = defaultUtxoKeyDir n </> "utxo.skey"
+-- | Relative path to a node's environment file
+defaultNodeEnvFile :: Int -> FilePath
+defaultNodeEnvFile n = defaultNodeDataDir n </> "env"
 
--- | Relative path to a UTxO verification key: @defaultUtxoKeyDir n </> "utxo.vkey"@
-defaultUtxoVKeyPath :: Int -> FilePath
-defaultUtxoVKeyPath n = defaultUtxoKeyDir n </> "utxo.vkey"
+-- ---------------------------------------------------------------------
+-- Socket paths
+-- ---------------------------------------------------------------------
 
--- | Relative path to a UTxO address file: @defaultUtxoKeyDir n </> "utxo.addr"@
-defaultUtxoAddrPath :: Int -> FilePath
-defaultUtxoAddrPath n = defaultUtxoKeyDir n </> "utxo.addr"
-
--- | Socket directory name: @"socket"@
+-- | Top-level directory for node sockets: @"socket"@
 defaultSocketDir :: FilePath
 defaultSocketDir = "socket"
 
@@ -51,14 +96,163 @@ defaultSocketDir = "socket"
 defaultSocketName :: FilePath
 defaultSocketName = "sock"
 
--- | Relative path to a node's socket: @defaultSocketDir </> defaultNodeName n </> defaultSocketName@
+-- | Relative path to a node's UNIX domain socket
 defaultSocketPath :: Int -> FilePath
 defaultSocketPath n = defaultSocketDir </> defaultNodeName n </> defaultSocketName
 
--- | Main node configuration file name: @"configuration.yaml"@
-defaultConfigFile :: FilePath
-defaultConfigFile = "configuration.yaml"
+-- ---------------------------------------------------------------------
+-- UTxO key paths
+-- ---------------------------------------------------------------------
 
--- | Relative path to a node's port file: @defaultNodeDataDir n </> "port"@
-defaultPortFile :: Int -> FilePath
-defaultPortFile n = defaultNodeDataDir n </> "port"
+-- | Directory for a UTxO key set
+defaultUtxoKeyDir :: Int -> FilePath
+defaultUtxoKeyDir n = "utxo-keys" </> "utxo" <> show n
+
+-- | Relative path to a UTxO signing key
+defaultUtxoSKeyPath :: Int -> FilePath
+defaultUtxoSKeyPath n = defaultUtxoKeyDir n </> "utxo.skey"
+
+-- | Relative path to a UTxO verification key
+defaultUtxoVKeyPath :: Int -> FilePath
+defaultUtxoVKeyPath n = defaultUtxoKeyDir n </> "utxo.vkey"
+
+-- | Relative path to a UTxO address file
+defaultUtxoAddrPath :: Int -> FilePath
+defaultUtxoAddrPath n = defaultUtxoKeyDir n </> "utxo.addr"
+
+-- ---------------------------------------------------------------------
+-- Genesis paths
+-- ---------------------------------------------------------------------
+
+-- | Era-specific genesis file name, e.g. @"conway-genesis.json"@. Generated by @create-testnet-data@ — don't change it.
+defaultGenesisFilepath :: CardanoEra a -> FilePath
+defaultGenesisFilepath era =
+  map toLower (docToString (pretty era)) <> "-genesis.json"
+
+-- ---------------------------------------------------------------------
+-- Committee key paths
+-- ---------------------------------------------------------------------
+
+-- | File name stem for committee key files, e.g. @"committee1"@
+defaultCommitteeName :: Int -> String
+defaultCommitteeName n = "committee" <> show n
+
+-- | Top-level directory for committee key files: @"committee-keys"@
+defaultCommitteeKeysDir :: FilePath
+defaultCommitteeKeysDir = "committee-keys"
+
+-- | Relative path to a committee member's verification key
+defaultCommitteeVkeyFp :: Int -> FilePath
+defaultCommitteeVkeyFp n = defaultCommitteeKeysDir </> defaultCommitteeName n <> ".vkey"
+
+-- | Relative path to a committee member's signing key
+defaultCommitteeSkeyFp :: Int -> FilePath
+defaultCommitteeSkeyFp n = defaultCommitteeKeysDir </> defaultCommitteeName n <> ".skey"
+
+-- ---------------------------------------------------------------------
+-- DRep key paths
+-- ---------------------------------------------------------------------
+
+-- | File name stem for DRep key files, e.g. @"drep1"@
+defaultDRepName :: Int -> String
+defaultDRepName n = "drep" <> show n
+
+-- | Top-level directory for DRep key files: @"drep-keys"@
+defaultDRepKeysDir :: FilePath
+defaultDRepKeysDir = "drep-keys"
+
+-- | Directory for a single DRep's key files
+defaultDRepDir :: Int -> FilePath
+defaultDRepDir n = defaultDRepKeysDir </> defaultDRepName n
+
+-- | Relative path to a DRep's verification key
+defaultDRepVkeyFp :: Int -> FilePath
+defaultDRepVkeyFp n = defaultDRepDir n </> "drep.vkey"
+
+-- | Relative path to a DRep's signing key
+defaultDRepSkeyFp :: Int -> FilePath
+defaultDRepSkeyFp n = defaultDRepDir n </> "drep.skey"
+
+-- ---------------------------------------------------------------------
+-- SPO key paths
+-- ---------------------------------------------------------------------
+
+-- | File name stem for SPO key files, e.g. @"pool1"@
+defaultSpoName :: Int -> String
+defaultSpoName n = "pool" <> show n
+
+-- | Directory for a SPO's key files
+defaultSpoKeysDir :: Int -> FilePath
+defaultSpoKeysDir n = "pools-keys" </> defaultSpoName n
+
+-- | Relative path to a SPO's cold verification key
+defaultSpoColdVKeyFp :: Int -> FilePath
+defaultSpoColdVKeyFp n = defaultSpoKeysDir n </> "cold.vkey"
+
+-- | Relative path to a SPO's cold signing key
+defaultSpoColdSKeyFp :: Int -> FilePath
+defaultSpoColdSKeyFp n = defaultSpoKeysDir n </> "cold.skey"
+
+-- | Relative path to a SPO's VRF verification key
+defaultSpoVrfVKeyFp :: Int -> FilePath
+defaultSpoVrfVKeyFp n = defaultSpoKeysDir n </> "vrf.vkey"
+
+-- | Relative path to a SPO's VRF signing key
+defaultSpoVrfSKeyFp :: Int -> FilePath
+defaultSpoVrfSKeyFp n = defaultSpoKeysDir n </> "vrf.skey"
+
+-- | Relative path to a SPO's staking reward verification key
+defaultSpoStakingRewardVKeyFp :: Int -> FilePath
+defaultSpoStakingRewardVKeyFp n = defaultSpoKeysDir n </> "staking-reward.vkey"
+
+-- | Relative path to a SPO's staking reward signing key
+defaultSpoStakingRewardSKeyFp :: Int -> FilePath
+defaultSpoStakingRewardSKeyFp n = defaultSpoKeysDir n </> "staking-reward.skey"
+
+-- | Relative path to a SPO's KES verification key
+defaultSpoKesVKeyFp :: Int -> FilePath
+defaultSpoKesVKeyFp n = defaultSpoKeysDir n </> "kes.vkey"
+
+-- | Relative path to a SPO's KES signing key
+defaultSpoKesSKeyFp :: Int -> FilePath
+defaultSpoKesSKeyFp n = defaultSpoKeysDir n </> "kes.skey"
+
+-- | Relative path to a SPO's operational certificate counter
+defaultSpoOpcertCounterFp :: Int -> FilePath
+defaultSpoOpcertCounterFp n = defaultSpoKeysDir n </> "opcert.counter"
+
+-- | Relative path to a SPO's operational certificate
+defaultSpoOpcertCertFp :: Int -> FilePath
+defaultSpoOpcertCertFp n = defaultSpoKeysDir n </> "opcert.cert"
+
+-- | Relative path to a SPO's Byron delegation certificate
+defaultSpoByronDelegationCertFp :: Int -> FilePath
+defaultSpoByronDelegationCertFp n = defaultSpoKeysDir n </> "byron-delegation.cert"
+
+-- | Relative path to a SPO's Byron delegate key
+defaultSpoByronDelegateKeyFp :: Int -> FilePath
+defaultSpoByronDelegateKeyFp n = defaultSpoKeysDir n </> "byron-delegate.key"
+
+-- ---------------------------------------------------------------------
+-- Delegator key paths
+-- ---------------------------------------------------------------------
+
+-- | File name stem for delegator key files, e.g. @"delegator1"@
+defaultDelegatorName :: Int -> String
+defaultDelegatorName n = "delegator" <> show n
+
+-- | Top-level directory for stake delegator key files: @"stake-delegators"@
+defaultDelegatorStakeKeysDir :: FilePath
+defaultDelegatorStakeKeysDir = "stake-delegators"
+
+-- | Directory for a single delegator's stake key files
+defaultDelegatorStakeDir :: Int -> FilePath
+defaultDelegatorStakeDir n = defaultDelegatorStakeKeysDir </> defaultDelegatorName n
+
+-- | Relative path to a delegator's stake verification key
+defaultDelegatorStakeVKeyFp :: Int -> FilePath
+defaultDelegatorStakeVKeyFp n = defaultDelegatorStakeDir n </> "staking.vkey"
+
+-- | Relative path to a delegator's stake signing key
+defaultDelegatorStakeSKeyFp :: Int -> FilePath
+defaultDelegatorStakeSKeyFp n = defaultDelegatorStakeDir n </> "staking.skey"

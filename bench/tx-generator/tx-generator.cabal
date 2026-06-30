@@ -109,32 +109,24 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.0 || ^>= 11.1
+                      , cardano-api ^>= 11.3
                       , cardano-binary
-                      , cardano-cli ^>= 11.0 || ^>= 11.1
+                      , cardano-cli ^>= 11.1
                       , cardano-crypto-class
-                      , cardano-crypto-wrapper
                       , cardano-data
                       , cardano-diffusion ^>= 1.0
                       , cardano-git-rev ^>= 0.2.2
-                      , cardano-ledger-alonzo
                       , cardano-ledger-api
-                      , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
-                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
-                      , constraints-extras
                       , directory
                       , dlist
                       , extra
                       , filepath
-                      , formatting
-                      , generic-monoid
-                      , ghc-prim
                       , io-classes:{io-classes, strict-stm}
                       , microlens
                       , mtl
@@ -142,7 +134,7 @@ library
                       , network-mux
                       , optparse-applicative
                       , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
-                      , ouroboros-network:{api, framework, framework-tracing, tracing, ouroboros-network, protocols} >= 1.1
+                      , ouroboros-network:{api, framework, tracing, ouroboros-network, protocols} >= 1.1
                       , plutus-ledger-api
                       , plutus-tx
                       , random
@@ -158,7 +150,6 @@ library
                       , trace-forward
                       , transformers
                       , transformers-except
-                      , unordered-containers
                       , yaml
                       -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
                       , either
@@ -195,12 +186,12 @@ executable calibrate-script
                       , aeson
                       , aeson-pretty
                       , bytestring
+                      , cardano-api
                       , containers
                       , directory
                       , extra
                       , filepath
                       , optparse-applicative
-                      , cardano-api
                       , text
                       , transformers
                       , transformers-except

@@ -20,8 +20,6 @@ import           Cardano.Ledger.Dijkstra.PParams
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import qualified Data.ByteString.Lazy as LB
 

@@ -71,10 +71,13 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { creationEra = asbe
         , creationNodes =
-            SpoNodeOptions [] :|
-          [ SpoNodeOptions []
-          , SpoNodeOptions []
-          ]
+            TestnetNodesWithOptions
+              { optSpoNodes = NodeWithOptions Nothing [] :|
+                [ NodeWithOptions Nothing []
+                , NodeWithOptions Nothing []
+                ]
+              , optRelayNodes = []
+              }
         }
       eraString = eraToString sbe
 
@@ -264,7 +267,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
-    startNode (TmpAbsolutePath work) "test-spo" testnetDefaultIpv4Address newNodePort testnetMagic
+    startNode (TmpAbsolutePath work) "test-spo" testnetDefaultIpv4Address newNodePort testnetMagic Nothing
         [ "run"
         , "--config", unFile configurationFile
         , "--topology", topologyFile

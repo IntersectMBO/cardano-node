@@ -19,27 +19,7 @@ let
                                        , buildProject
                                        , ...
                                        }:
-    let
-      # Fetch proto-lens with submodules and fix symlinks for plan and build phases
-      protoLensSrc = pkgs.fetchgit {
-        url = "https://github.com/google/proto-lens";
-        rev = "20de5227947b0c37dd6852dcc6f2db1cd5889cee";
-        sha256 = "sha256-VUYU2swjU7L8Zdu6Zfz6jo2ulW5uPhAamt2GjH5hZRY=";
-        fetchSubmodules = true;
-      };
-      fixProtoLensSrc = pkgs.runCommand "proto-lens-fixed" {} ''
-        mkdir -p $out
-        cp -a ${protoLensSrc}/. $out/
-        chmod -R +w $out
-        # Fix proto-lens-imports symlink in proto-lens
-        rm -rf $out/proto-lens/proto-lens-imports/google
-        cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens/proto-lens-imports/
-        # Fix proto-src symlink in proto-lens-protobuf-types
-        rm -rf $out/proto-lens-protobuf-types/proto-src
-        cp -r ${protoLensSrc}/google/protobuf/src $out/proto-lens-protobuf-types/proto-src
-        chmod -R -w $out
-      '';
-    in {
+    {
       src = ../.;
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then windowsCompilerNixName else "ghc967");
@@ -67,7 +47,6 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
-        "https://github.com/google/proto-lens/20de5227947b0c37dd6852dcc6f2db1cd5889cee" = fixProtoLensSrc;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";
@@ -75,7 +54,6 @@ let
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
           alejandra
-          lmdb
           nix-prefetch-git
           pkg-config
           git
@@ -90,6 +68,13 @@ let
         ];
 
         withHoogle = true;
+
+        # https://github.com/channable/alfred-margaret/pull/76
+        tools.hoogle = {
+          cabalProjectLocal = ''
+            constraints: any.alfred-margaret <2.1.1.0 || >2.1.1.0
+          '';
+        };
       };
 
 
@@ -151,6 +136,8 @@ let
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
 
+            # GHC 9.6.7 haddock panics on TopTx type family (tyConStupidTheta)
+            packages.cardano-api.components.library.doHaddock = false;
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
@@ -178,6 +165,11 @@ let
             #  export ISERV_ARGS="-v +RTS -Dl"
             #  export PROXY_ARGS=-v
             #'';
+
+            # Tests broken under Wine: System.IO.Temp file operations fail
+            packages.cardano-profile.components.tests.cardano-profile-test.buildable = lib.mkForce false;
+            packages.cardano-topology.components.tests.cardano-topology-test.buildable = lib.mkForce false;
+            packages.trace-schema-gen.components.tests.trace-schema-gen-test.buildable = lib.mkForce false;
           })
           ({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.4" >= 0) {
             # lib:ghc is a bit annoying in that it comes with it's own build-type:Custom, and then tries
@@ -223,7 +215,6 @@ let
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
                 "configuration/cardano/mainnet-config.json"
-                "configuration/cardano/mainnet-config-legacy.json"
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
@@ -390,30 +381,6 @@ let
           # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
           # not build for windows on a per package bases (rather than using --disable-tests).
           # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
-
-          # TODO remove this module when removing proto-lens SRP
-          # Override proto-lens source to use fixed symlinks (inputMap provides the fixed
-          # source for plan computation; this module provides it for the build phase)
-          ({lib, config, ...}: let
-            protoLensPackages = [
-              "proto-lens"
-              "proto-lens-arbitrary"
-              "proto-lens-discrimination"
-              "proto-lens-optparse"
-              "proto-lens-protobuf-types"
-              "proto-lens-protoc"
-              "proto-lens-runtime"
-              "proto-lens-setup"
-              "proto-lens-tests-dep"
-              "proto-lens-tests"
-              "discrimination-ieee754"
-              "proto-lens-benchmarks"
-            ];
-          in {
-            packages = lib.genAttrs
-              (builtins.filter (p: config.packages ? ${p}) protoLensPackages)
-              (p: { src = lib.mkForce (fixProtoLensSrc + "/${p}"); });
-          })
         ];
     });
 in

@@ -39,16 +39,16 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 11.0 || ^>= 11.1
+                      , cardano-api ^>= 11.3
                       , cardano-binary
-                      , cardano-cli ^>= 11.0 || ^>= 11.1
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-cli ^>= 11.1
+                      , cardano-crypto-class ^>=2.5
                       , containers
                       , ekg-core
                       , http-media
                       , mtl
                       , network
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus:cardano
                       , ouroboros-network:{protocols}
                       , prometheus >= 2.2.4
@@ -84,7 +84,7 @@ executable cardano-submit-api
   hs-source-dirs:       app
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-git-rev ^>=0.2.2
@@ -99,4 +99,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-crypto-class ^>=2.5

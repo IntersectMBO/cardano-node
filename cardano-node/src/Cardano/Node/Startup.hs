@@ -211,6 +211,27 @@ prepareNodeInfo
   -> IO NodeInfo
 prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
   nodeName <- prepareNodeName
+  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
+  let getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
+      systemStartTime :: UTCTime
+      systemStartTime =
+        case whichP of
+          Api.ByronBlockType ->
+            getSystemStartByron
+          Api.ShelleyBlockType ->
+            let DegenLedgerConfig cfgShelley = configLedger cfg
+            in getSystemStartShelley cfgShelley
+          Api.CardanoBlockType ->
+            let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway cfgDijkstra = configLedger cfg
+            in minimum [ getSystemStartByron
+                       , getSystemStartShelley cfgShelley
+                       , getSystemStartShelley cfgAllegra
+                       , getSystemStartShelley cfgMary
+                       , getSystemStartShelley cfgAlonzo
+                       , getSystemStartShelley cfgBabbage
+                       , getSystemStartShelley cfgConway
+                       , getSystemStartShelley cfgDijkstra
+                       ]
   return $ NodeInfo
     { niName            = nodeName
     , niProtocol        = pack . show . ncProtocol $ nc
@@ -220,29 +241,6 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     , niSystemStartTime = systemStartTime
     }
  where
-  cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
-
-  systemStartTime :: UTCTime
-  systemStartTime =
-    case whichP of
-      Api.ByronBlockType ->
-        getSystemStartByron
-      Api.ShelleyBlockType ->
-        let DegenLedgerConfig cfgShelley = configLedger cfg
-        in getSystemStartShelley cfgShelley
-      Api.CardanoBlockType ->
-        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway cfgDijkstra = configLedger cfg
-        in minimum [ getSystemStartByron
-                   , getSystemStartShelley cfgShelley
-                   , getSystemStartShelley cfgAllegra
-                   , getSystemStartShelley cfgMary
-                   , getSystemStartShelley cfgAlonzo
-                   , getSystemStartShelley cfgBabbage
-                   , getSystemStartShelley cfgConway
-                   , getSystemStartShelley cfgDijkstra
-                   ]
-
-  getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
   getSystemStartShelley = sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig
 
   prepareNodeName =

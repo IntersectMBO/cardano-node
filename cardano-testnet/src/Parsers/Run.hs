@@ -91,7 +91,7 @@ runCardanoOptions = \case
     let dirName = envPath fromEnvOptions
     unlessM (doesDirectoryExist dirName) $ error $ "The provided path does not exist or is not a directory: " <> dirName
     conf <- mkConfigAbs dirName
-    nodes <- readNodeOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
+    nodes <- readNodesWithOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
     runSimpleApp . runResourceT $ do
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
       void $ cardanoTestnet nodes fromEnvRuntimeOptions

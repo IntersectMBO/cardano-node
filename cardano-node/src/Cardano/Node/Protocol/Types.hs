@@ -30,7 +30,7 @@ data Protocol = CardanoProtocol
   deriving (Eq, Generic)
 
 instance Show Protocol where
-  show CardanoProtocol = "Byron; Shelley"
+  show CardanoProtocol = "Cardano"
 
 deriving instance NFData Protocol
 deriving instance NoThunks Protocol
@@ -52,5 +52,5 @@ data SomeConsensusProtocol where
                                           , Ouroboros.Consensus.Storage.LedgerDB.Forker.ResolveLeiosBlock blk
                                           )
                            => Api.BlockType blk
-                           -> Api.ProtocolInfoArgs blk
+                           -> Api.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol

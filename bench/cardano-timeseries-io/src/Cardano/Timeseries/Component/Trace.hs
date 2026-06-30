@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use :" #-}
 
 module Cardano.Timeseries.Component.Trace(TimeseriesTrace(..)) where
 
-import           Cardano.Logging (LogFormatting (..), SeverityS (..))
+import           Cardano.Logging (DetailLevel (DDetailed), LogFormatting (..), SeverityS (..))
 import           Cardano.Logging.Types (MetaTrace (..), Namespace (..))
 import           Cardano.Timeseries.API
 import           Cardano.Timeseries.Component.Types
+import           Cardano.Timeseries.Domain.Types (SeriesIdentifier)
 
 import           Data.Aeson (toJSON)
-import           Data.Aeson.Key (fromText)
 import           Data.Aeson.KeyMap (singleton)
 import           Data.Aeson.Types ((.=))
 import           Data.Text (Text)
@@ -17,8 +19,7 @@ import           Data.Word (Word64)
 data TimeseriesTrace = TimeseriesTraceCreate (Maybe TimeseriesConfig)
                      | TimeseriesTraceReconfigure (Maybe TimeseriesConfig)
                      | TimeseriesTraceInsert
-                         Text -- ^ Origin key
-                         Text -- ^ Origin value
+                         SeriesIdentifier
                          Timestamp
                          [(MetricIdentifier, Double)] -- ^ Payload
                      | TimeseriesTraceIssueExecute QueryId Text
@@ -33,25 +34,29 @@ instance LogFormatting TimeseriesTrace where
     singleton "cfg" (toJSON cfg)
   forMachine _ (TimeseriesTraceReconfigure cfg) =
     singleton "cfg" (toJSON cfg)
-  forMachine _ (TimeseriesTraceInsert originKey originValue t batch) = mconcat
+  forMachine _ (TimeseriesTraceInsert series t batch) = mconcat
     [
-      fromText originKey .= originValue
+      "labels" .= series
     ,
       "timestamp" .= t
     ,
       "batch" .= batch
     ]
-  forMachine _ (TimeseriesTraceIssueExecute queryId queryText) = mconcat
+  forMachine d (TimeseriesTraceIssueExecute queryId queryText) = mconcat $
     [
       "query_id" .= queryId
-    ,
-      "query_text" .= queryText
     ]
-  forMachine _ (TimeseriesTraceYieldExecute queryId result) = mconcat
+    ++
+    [
+      "query_text" .= queryText | d >= DDetailed
+    ]
+  forMachine d (TimeseriesTraceYieldExecute queryId result) = mconcat $
     [
       "query_id" .= queryId
-    ,
-      "query_result" .= either asText showT result
+    ]
+    ++
+    [
+      "query_result" .= either asText showT result | d >= DDetailed
     ]
   forMachine _ (TimeseriesTracePrune retMs) =
     singleton "retention_millis" (toJSON retMs)
@@ -79,7 +84,8 @@ instance MetaTrace TimeseriesTrace where
   severityFor (Namespace [] ["Timeseries", "Insert"])        _ = Just Debug -- That one clogs up the traces, hence lower severity
   severityFor (Namespace [] ["Timeseries", "IssueExecute"])  _ = Just Info
   severityFor (Namespace [] ["Timeseries", "YieldExecute"])  _ = Just Info
-  severityFor (Namespace [] ["Timeseries", "Prune"])         _ = Just Info
+  severityFor (Namespace [] ["Timeseries", "Prune"])         _ = Just Debug -- That one might also be frequent,
+                                                                            -- depending on the configuration
   severityFor _                                              _ = Nothing
 
   documentFor (Namespace [] ["Timeseries", "Create"])       = Just "A timeseries handle has been created."

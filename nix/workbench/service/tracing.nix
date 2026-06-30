@@ -7,11 +7,11 @@ cfg:
 
 with lib;
 let
+
   trace-dispatcher =
     recursiveUpdate
-    (removeAttrs (removeLegacyTracingOptions cfg) ["TraceOptionForwarder"])
+    (removeAttrs cfg ["TraceOptionForwarder"])
   {
-    UseTraceDispatcher   = true;
     TraceOptionResourceFrequency = 1000;
     TraceOptionNodeName = nodeSpec.name;
 
@@ -113,112 +113,7 @@ let
       };
   };
 
-
-
-  iohk-monitoring =
-    recursiveUpdate
-    (removeAttrs cfg
-      [ "setupScribes" ])
-  {
-    defaultScribes = [
-      [ "StdoutSK" "stdout" ]
-    ];
-    setupScribes =
-      [{
-        scKind   = "StdoutSK";
-        scName   = "stdout";
-        scFormat = "ScJson";
-      }];
-    minSeverity                 = "Debug";
-    TraceMempool                = true;
-    TraceTxInbound              = true;
-    TraceBlockFetchClient       = true;
-    TraceBlockFetchServer       = true;
-    TraceChainSyncHeaderServer  = true;
-    TraceChainSyncClient        = true;
-    TraceGsm                    = true;
-
-    ## needs to be explicit when new tracing is the node's default
-    UseTraceDispatcher          = false;
-
-    options = {
-      mapBackends = {
-        "cardano.node.resources" = [ "KatipBK" ];
-      };
-    };
-  };
-
-  ##
-  ## removeLegacyTracingOptions :: NodeConfig -> NodeConfig
-  ##
-  removeLegacyTracingOptions = cfg:
-    removeAttrs cfg
-    [
-      "TraceAcceptPolicy"
-      "TraceBlockchainTime"
-      "TraceBlockFetchClient"
-      "TraceBlockFetchDecisions"
-      "TraceBlockFetchProtocol"
-      "TraceBlockFetchProtocolSerialised"
-      "TraceBlockFetchServer"
-      "TraceChainDb"
-      "TraceChainSyncClient"
-      "TraceChainSyncBlockServer"
-      "TraceChainSyncHeaderServer"
-      "TraceChainSyncProtocol"
-      "TraceConnectionManager"
-      "TraceConnectionManagerCounters"
-      "TraceConnectionManagerTransitions"
-      "DebugPeerSelectionInitiator"
-      "DebugPeerSelectionInitiatorResponder"
-      "TraceDiffusionInitialization"
-      "TraceDnsResolver"
-      "TraceDnsSubscription"
-      "TraceErrorPolicy"
-      "TraceForge"
-      "TraceForgeStateInfo"
-      "TraceHandshake"
-      "TraceIpSubscription"
-      "TraceKeepAliveClient"
-      "TraceLedgerPeers"
-      "TraceLocalChainSyncProtocol"
-      "TraceLocalConnectionManager"
-      "TraceLocalErrorPolicy"
-      "TraceLocalHandshake"
-      "TraceLocalInboundGovernor"
-      "TraceLocalRootPeers"
-      "TraceLocalServer"
-      "TraceLocalStateQueryProtocol"
-      "TraceLocalTxMonitorProtocol"
-      "TraceLocalTxSubmissionProtocol"
-      "TraceLocalTxSubmissionServer"
-      "TraceMempool"
-      "TraceMux"
-      "TraceLocalMux"
-      "TracePeerSelection"
-      "TracePeerSelectionCounters"
-      "TracePeerSelectionActions"
-      "TracePublicRootPeers"
-      "TraceServer"
-      "TraceInboundGovernor"
-      "TraceInboundGovernorCounters"
-      "TraceInboundGovernorTransitions"
-      "TraceTxInbound"
-      "TraceTxOutbound"
-      "TraceTxSubmissionProtocol"
-      "TraceTxSubmission2Protocol"
-      "TracingVerbosity"
-      "defaultBackends"
-      "defaultScribes"
-      "hasEKG"
-      "hasPrometheus"
-      "minSeverity"
-      "options"
-      "rotation"
-      "setupBackends"
-      "setupScribes"
-    ];
 in
 {
-  inherit trace-dispatcher iohk-monitoring;
+  inherit trace-dispatcher;
 }.${tracing_backend}

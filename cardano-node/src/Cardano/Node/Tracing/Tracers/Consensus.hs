@@ -27,7 +27,9 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
-import           Cardano.Node.Queries (HasKESInfo (..))
+import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
+                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -35,7 +37,6 @@ import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -45,10 +46,7 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, HasTxs (..), LedgerSupportsMempool, TxMeasure,
-                   TxMeasureMetrics (..), txForgetValidated, txId)
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..), leiosEbTxs,
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
                    TraceEventMempool (..), jsonMempoolRejectionDetails)
@@ -69,6 +67,7 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -76,7 +75,7 @@ import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
-import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
 import           Data.Int (Int64)
@@ -87,6 +86,9 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+enclosingValue :: ToJSON a => Enclosing' a -> Value
+enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]
+enclosingValue (FallingEdgeWith a) = object [ "edge" .= toJSON a ]
 
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
@@ -155,7 +157,7 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
 -- ChainSyncClient Tracer
 --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
   forHuman = \case
     TraceDownloadedHeader pt ->
@@ -661,15 +663,13 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk, ToJSON (HeaderHash blk))
+instance (Show peer, ToJSON peer, LogFormatting peer, HasHeader blk)
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
   forMachine dtal (PeersFetch xs) =
     mconcat [ "kind" .= String "PeerFetch"
-            , "decisions" .= if dtal >= DMaximum
-                               then toJSON (Verbose <$> xs)
-                               else toJSON xs
+            , "decisions" .= map (forMachine dtal) xs
             ]
   forMachine _dtal (PeerStarvedUs peer) =
     mconcat [ "kind" .= String "PeerStarvedUs"
@@ -1041,6 +1041,7 @@ instance ( HasHeader blk
 instance MetaTrace SanityCheckIssue where
 
   namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
+  namespaceFor _ = Namespace [] ["SanityCheckIssue"]
 
   severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
   severityFor _ _ = Nothing
@@ -1055,8 +1056,12 @@ instance LogFormatting SanityCheckIssue where
     mconcat [ "kind" .= String "InconsistentSecurityParam"
             , "error" .= String (Text.pack $ show e)
             ]
+  forMachine _ _ =
+    mconcat [ "kind" .= String "SnapshotIssue"
+            ]
   forHuman (InconsistentSecurityParam e) =
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
+  forHuman _ = "SnapshotIssue"
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
@@ -1105,7 +1110,8 @@ impliesMempoolTimeoutSoft = \case
 instance
   ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
-  , ToJSON (GenTxId blk)
+  , Show (GenTxId blk)
+  , ConvertTxId blk
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
   ) => LogFormatting (TraceEventMempool blk) where
@@ -1144,7 +1150,7 @@ instance
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsRemoved" .= txs0
+      , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
@@ -1162,7 +1168,7 @@ instance
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
-      , "enclosingTime" .= et
+      , "enclosingTime" .= enclosingValue et
       ]
   forMachine _dtal TraceMempoolTipMovedBetweenSTMBlocks =
     mconcat
@@ -1299,14 +1305,12 @@ instance ( tx ~ GenTx blk
          , HasHeader blk
          , HasKESInfo blk
          , HasTxId (GenTx blk)
-         , HasTxs blk
          , LedgerSupportsProtocol blk
          , LedgerSupportsMempool blk
          , SerialiseNodeToNodeConstraints blk
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
          , Show (TxId (GenTx blk))
-         , TxMeasureMetrics (TxMeasure blk)
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
@@ -1562,32 +1566,9 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot _point blk mempoolSize blkMeasure) =
-    let blkTxCount    = length (extractTxs blk)
-        blkTxBytes    = unByteSize32 (txMeasureMetricTxSizeBytes blkMeasure)
-        mempoolTxs    = msNumTxs mempoolSize
-        mempoolBytes  = unByteSize32 (msNumBytes mempoolSize)
-        restTxCount   = fromIntegral mempoolTxs - blkTxCount
-        restTxBytes   = fromIntegral mempoolBytes - fromIntegral blkTxBytes :: Int
-    in [ IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)
-       , CounterM "Forge.forged" Nothing
-       , CounterM "Forge.ranking-block.total-count" Nothing
-       , CounterM "Forge.ranking-block.total-tx-count"
-           (Just $ fromIntegral blkTxCount)
-       , CounterM "Forge.ranking-block.total-tx-bytes"
-           (Just $ fromIntegral blkTxBytes)
-       , CounterM "Forge.ranking-block.total-tx-xu-memory"
-           (Just . fromIntegral $ txMeasureMetricExUnitsMemory blkMeasure)
-       , CounterM "Forge.ranking-block.total-tx-xu-time"
-           (Just . fromIntegral $ txMeasureMetricExUnitsSteps blkMeasure)
-       , CounterM "Forge.ranking-block.total-tx-ref-script-size-bytes"
-           (Just . fromIntegral . unByteSize32
-               $ txMeasureMetricRefScriptsSizeBytes blkMeasure)
-       , CounterM "Forge.rest-in-mempool.total-tx-count"
-           (Just $ fromIntegral restTxCount)
-       , CounterM "Forge.rest-in-mempool.total-tx-bytes"
-           (Just $ fromIntegral restTxBytes)
-       ]
+  asMetrics (TraceForgedBlock slot _ _ _ _) =
+    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
+     CounterM "Forge.forged" Nothing]
   asMetrics (TraceDidntAdoptBlock _slot _) =
     [CounterM "Forge.didnt-adopt" Nothing]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
@@ -1689,25 +1670,8 @@ instance MetaTrace (TraceForgeEvent blk) where
   metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
   metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
   metricsDocFor (Namespace _ ["ForgedBlock"]) =
-    [ ("forgedSlotLast", "Slot number of the last forged block")
-    , ("Forge.forged", "Counter of forged blocks")
-    , ("Forge.ranking-block.total-count",
-       "Counter of forged ranking blocks")
-    , ("Forge.ranking-block.total-tx-count",
-       "Total number of transactions in the forged ranking block")
-    , ("Forge.ranking-block.total-tx-bytes",
-       "Total transaction bytes in the forged ranking block")
-    , ("Forge.ranking-block.total-tx-xu-memory",
-       "Total execution units (memory) in the forged ranking block")
-    , ("Forge.ranking-block.total-tx-xu-time",
-       "Total execution units (time) in the forged ranking block")
-    , ("Forge.ranking-block.total-tx-ref-script-size-bytes",
-       "Total reference script size bytes in the forged ranking block")
-    , ("Forge.rest-in-mempool.total-tx-count",
-       "Number of transactions still in the mempool after forging the ranking block")
-    , ("Forge.rest-in-mempool.total-tx-bytes",
-       "Total transaction bytes still in the mempool after forging the ranking block")
-    ]
+    [("forgedSlotLast", "Slot number of the last forged block"),
+     ("Forge.forged", "Counter of forged blocks")]
   metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
     [("Forge.didnt-adopt", "")]
   metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
@@ -2352,70 +2316,88 @@ instance MetaTrace KESAgentClientTrace where
     fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])
 
 --------------------------------------------------------------------------------
--- Consensus.LeiosKernel / Consensus.LeiosPeer
---
--- Delegate to the compact 'traceLeios*ToObject' helpers from
--- 'LeiosDemoTypes' so we get structured per-event objects instead of dumping
--- the derived 'Show'.
+-- Leios
 --------------------------------------------------------------------------------
 
+-- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
+-- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
 instance LogFormatting TraceLeiosKernel where
-  forHuman = showT
   forMachine _dtal = traceLeiosKernelToObject
-
-  asMetrics TraceLeiosBlockForged{eb, ebMeasure} =
-    [ CounterM "Forge.endorser-block.total-count" Nothing
-    , CounterM "Forge.endorser-block.total-tx-count"
-        (Just . fromIntegral . length $ leiosEbTxs eb)
-    , CounterM "Forge.endorser-block.total-tx-bytes"
-        (Just . fromInteger . toInteger . unByteSize32
-            . txMeasureMetricTxSizeBytes $ ebMeasure)
-    , CounterM "Forge.endorser-block.total-tx-xu-memory"
-        (Just . fromInteger . toInteger
-            . txMeasureMetricExUnitsMemory $ ebMeasure)
-    , CounterM "Forge.endorser-block.total-tx-xu-time"
-        (Just . fromInteger . toInteger
-            . txMeasureMetricExUnitsSteps $ ebMeasure)
-    , CounterM "Forge.endorser-block.total-tx-ref-script-size-bytes"
-        (Just . fromInteger . toInteger . unByteSize32
-            . txMeasureMetricRefScriptsSizeBytes $ ebMeasure)
-    ]
+  forHuman = \case
+    MkTraceLeiosKernel msg          -> "LeiosKernel: " <> Text.pack msg
+    TraceLeiosBlockAcquired pt      -> "EB body acquired: "        <> Text.pack (show pt)
+    TraceLeiosBlockPointMissing pt  -> "EB point missing on body acquisition: " <> Text.pack (show pt)
+    TraceLeiosBlockTxsAcquired pt   -> "EB txs acquired: "         <> Text.pack (show pt)
+    TraceLeiosBlockForged{slot, eb} ->
+      "EB forged at slot " <> showT slot <> ": " <> Text.pack (show eb)
+    TraceLeiosBlockStored{slot, eb} ->
+      "EB stored at slot " <> showT slot <> ": " <> Text.pack (show eb)
+    TraceLeiosBlockAnnounced{announcedEbPoint} ->
+      "EB announced: " <> Text.pack (show announcedEbPoint)
+    TraceLeiosBlockCertified{atSlot, certifiedPoint} ->
+      "EB certified at slot " <> showT atSlot <> ": " <> Text.pack (show certifiedPoint)
+    TraceLeiosVoted{weight}         -> "Leios voted, weight=" <> showT (fromRational @Double weight)
+    TraceLeiosVoteAcquired{}        -> "Leios vote acquired"
+    TraceLeiosCertified{rbHash}     -> "Leios cert assembled for RB " <> Text.pack (show rbHash)
+    TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
+    TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
   asMetrics _ = []
 
 instance MetaTrace TraceLeiosKernel where
-  namespaceFor _ = Namespace [] ["TraceLeiosKernel"]
+  namespaceFor MkTraceLeiosKernel{}          = Namespace [] ["Msg"]
+  namespaceFor TraceLeiosBlockAcquired{}     = Namespace [] ["BlockAcquired"]
+  namespaceFor TraceLeiosBlockPointMissing{} = Namespace [] ["BlockPointMissing"]
+  namespaceFor TraceLeiosBlockTxsAcquired{}  = Namespace [] ["BlockTxsAcquired"]
+  namespaceFor TraceLeiosBlockForged{}       = Namespace [] ["BlockForged"]
+  namespaceFor TraceLeiosBlockStored{}       = Namespace [] ["BlockStored"]
+  namespaceFor TraceLeiosBlockAnnounced{}    = Namespace [] ["BlockAnnounced"]
+  namespaceFor TraceLeiosBlockCertified{}    = Namespace [] ["BlockCertified"]
+  namespaceFor TraceLeiosVoted{}             = Namespace [] ["Voted"]
+  namespaceFor TraceLeiosVoteAcquired{}      = Namespace [] ["VoteAcquired"]
+  namespaceFor TraceLeiosCertified{}         = Namespace [] ["Certified"]
+  namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
+  namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
 
-  severityFor _ (Just TraceLeiosDbException{}) = Just Error
-  severityFor _ (Just TraceLeiosDb{}) = Just Warning
-  severityFor _ _ = Just Debug
+  severityFor (Namespace _ ["DbException"])        _ = Just Error
+  severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
+  severityFor _                                    _ = Just Info
 
   documentFor _ = Nothing
-  allNamespaces = [Namespace [] ["TraceLeiosKernel"]]
 
-  metricsDocFor _ =
-    [ ("Forge.endorser-block.total-count",
-       "Counter of forged endorser blocks")
-    , ("Forge.endorser-block.total-tx-count",
-       "Total number of transactions in the forged endorser block")
-    , ("Forge.endorser-block.total-tx-bytes",
-       "Total transaction bytes in the forged endorser block")
-    , ("Forge.endorser-block.total-tx-xu-memory",
-       "Total execution units (memory) in the forged endorser block")
-    , ("Forge.endorser-block.total-tx-xu-time",
-       "Total execution units (time) in the forged endorser block")
-    , ("Forge.endorser-block.total-tx-ref-script-size-bytes",
-       "Total reference script size bytes in the forged endorser block")
+  allNamespaces =
+    [ Namespace [] ["Msg"]
+    , Namespace [] ["BlockAcquired"]
+    , Namespace [] ["BlockPointMissing"]
+    , Namespace [] ["BlockTxsAcquired"]
+    , Namespace [] ["BlockForged"]
+    , Namespace [] ["BlockStored"]
+    , Namespace [] ["BlockAnnounced"]
+    , Namespace [] ["BlockCertified"]
+    , Namespace [] ["Voted"]
+    , Namespace [] ["VoteAcquired"]
+    , Namespace [] ["Certified"]
+    , Namespace [] ["DbException"]
+    , Namespace [] ["Db"]
     ]
 
 instance LogFormatting TraceLeiosPeer where
-  forHuman = showT
   forMachine _dtal = traceLeiosPeerToObject
+  forHuman = \case
+    MkTraceLeiosPeer msg            -> "LeiosPeer: " <> Text.pack msg
+    TraceLeiosPeerDbException e     -> "Leios peer DB exception: " <> Text.pack (show e)
+  asMetrics _ = []
 
 instance MetaTrace TraceLeiosPeer where
-  namespaceFor _ = Namespace [] ["TraceLeiosPeer"]
+  namespaceFor MkTraceLeiosPeer{}          = Namespace [] ["Msg"]
+  namespaceFor TraceLeiosPeerDbException{} = Namespace [] ["DbException"]
 
-  severityFor _ (Just TraceLeiosPeerDbException{}) = Just Error
-  severityFor _ _ = Just Debug
+  severityFor (Namespace _ ["DbException"]) _ = Just Error
+  severityFor _ _                             = Just Info
 
   documentFor _ = Nothing
-  allNamespaces = [Namespace [] ["TraceLeiosPeer"]]
+
+  allNamespaces =
+    [ Namespace [] ["Msg"]
+    , Namespace [] ["DbException"]
+    ]
+

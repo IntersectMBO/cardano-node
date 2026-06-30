@@ -13,18 +13,16 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-03-26T20:21:33Z
-  , cardano-haskell-packages 2026-05-02T16:21:41Z
-
-active-repositories:
-  , :rest
-  , cardano-haskell-packages:override
+  , hackage.haskell.org 2026-06-10T14:43:25Z
+  , cardano-haskell-packages 2026-06-29T12:05:19Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
   -- haskell.nix tries to use 0.7.1.5 for some reason
-  , any.proto-lens >= 0.7.1.6
+  , any.proto-lens >= 0.7.1.7
+  -- https://github.com/channable/alfred-margaret/pull/76
+  , any.alfred-margaret < 2.1.1.0 || > 2.1.1.0
 
 -- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
 -- which sidesteps the GHC type-checker plugin incompatibility with
@@ -44,7 +42,6 @@ packages:
   bench/locli
   bench/plutus-scripts-bench
   bench/tx-generator
-  bench/cardano-recon-framework
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-resources
@@ -76,9 +73,6 @@ package bitvec
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
-allow-newer:
-  , katip:Win32
-
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
 allow-newer:
@@ -93,25 +87,39 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e3803b0c86fc0b5f0a7b8f3a977aebf5afe31b8b
-  --sha256: sha256-PxhS4cB4pnP+izLMOTfsyjrEUCsW2aSEMUKl603Bpk4=
+  tag: bc6f23493a3d4359f53f2ccbcf687a3f97177dac
+  --sha256: sha256-sjJ2ySMEgkph5rxwx1L6HgPwK38A3CgXlI1xlwZCMVc=
 
--- Points to cardano-ledger/leios-prototype
+-- Points to ouroboros-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 4bf2edca4ccbf18d4e2574b1544a2cf7ffc992eb
-  --sha256: sha256-rFFN26bjo0Wji9htl5Bj5Et7m3FsREv72vdP91fo8+o=
+  tag: 245e63dcd335e3ca29823609e4aaa8f5f096a425
+  --sha256: sha256-chsapfNnY/V7y1snBzjP0LSVnYl/Axt6GjahTPNOKj0=
   subdir:
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/small-steps
+    libs/cardano-ledger-binary
     libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    eras/mary/impl
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
     eras/dijkstra/impl
 
 -- Points to ouroboros-network/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: ff3e39af5aa51d4d89c23c72d67716fd9bfcc516
-  --sha256: sha256-Ctw/Vi8j9KyDtVm0NK+Jk0COtPi1kpL4lHfUF8/eCgI=
+  tag: 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42
+  --sha256: sha256-fIqpI2whstetodpiONmUDVgnhTpzXeq1/gmzuHItK5A=
   subdir:
     ouroboros-network
     cardano-diffusion
@@ -121,8 +129,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 856cb3f2aa11ca78d3fcc6bd20864075bf6e9075
-  --sha256: sha256-TqHVLjYGY73EJDtaWQUi5y6yQZSpngQV3Z+Wu5JYmII=
+  tag: 959c3180b8d23ca8a5fc85a2150c47a9fdea06eb
+  --sha256: sha256-ItzSd17AR04RgEUKy+3LJ+1AYxFXAAfUIvhxgNXrpN8=
   subdir:
     cardano-api
     cardano-api-gen
@@ -136,25 +144,37 @@ source-repository-package
   subdir:
     cardano-cli
 
-if impl(ghc >= 9.12)
-  -- GHC 9.12 support - master branch
-  source-repository-package
-    type: git
-    location: https://github.com/google/proto-lens
-    tag: 13ce67409ad87e8c29eea58b31aa37f44e82457c
-    --sha256: sha256-8XPGLheOo5ZStL7YD5x29GechWFjubw+in5GsUrKWPc=
-    subdir:
-      discrimination-ieee754
-      proto-lens-arbitrary
-      proto-lens-benchmarks
-      proto-lens-discrimination
-      proto-lens-optparse
-      proto-lens-protobuf-types
-      proto-lens-protoc
-      proto-lens-runtime
-      proto-lens-setup
-      proto-lens-tests-dep
-      proto-lens-tests
-      proto-lens
+source-repository-package
+  type: git
+  location: https://github.com/f-f/kes-agent.git
+  tag: 32c1ed675d22a30735d9f22f7afa436a3ef3e64a
+  --sha256: sha256-o7hFX1JnraS6Xq0WoXQwd9Z8GsPPv0Ls2DWvZ08o0ZU=
+  subdir:
+    kes-agent
+    kes-agent-crypto
 
+source-repository-package
+  type: git
+  location: https://github.com/f-f/dmq-node.git
+  tag: b7d59834e52d46229bb3ff6e5595509eede730dd
+  --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
+  subdir:
+    dmq-node
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus.git
+  tag: b1db04cc425fab303ac3b79d7140dc2a17f29e6d
+  --sha256: sha256-XtYzjNVx4+IGWpgm+p/YTf56DrJtK0I98umZCTE3U80=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-tx
+    plutus-tx-plugin
+    plutus-metatheory
+
+source-repository-package
+  type: git
+  location: https://github.com/f-f/ekg-forward
+  tag: b24b3aba2806ce223c62f8ce3e267ec92dcc52e2
+  --sha256: sha256-s5Hxxm04HmFVmdBjAnFEsJEhTqr5Z/uiB4K1s2VaVwE=

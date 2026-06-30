@@ -7,6 +7,7 @@ let x = t in t
 t t
 fst t
 snd t
+()
 (t, t)
 t == t (~)
 t != t (~)
@@ -25,7 +26,7 @@ t && t
 t || t
 <int>ms
 <int>s
-<int>min
+<int>m
 <int>h
 epoch
 now
@@ -40,6 +41,7 @@ filter t t
 join t t
 map t t
 abs t
+round t
 increase t
 rate t
 avg_over_time t
@@ -47,6 +49,8 @@ sum_over_time t
 quantile_over_time t t
 unless t t
 quantile_by (s, ..., s) t t
+earliest x
+latest x
 x
 metrics
 

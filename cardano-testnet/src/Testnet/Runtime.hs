@@ -57,7 +57,7 @@ import           Cardano.Node.Testnet.Paths (defaultSocketName)
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run (ProcessError (..), initiateProcess)
 import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated,
-                   procKesAgent, procNode)
+                   procCustom, procKesAgent, procNode)
 import           Testnet.Types (TestnetKesAgent (..), TestnetNode (..),
                    TestnetRuntime (configurationFile), showIpv4Address, testnetSprockets)
 
@@ -121,11 +121,13 @@ startNode
   -- ^ Node port
   -> Int
   -- ^ Testnet magic
+  -> Maybe FilePath
+  -- ^ Optional custom node binary. 'Nothing' uses the default resolution.
   -> [String]
   -- ^ The command to execute to start the node.
   -- @--socket-path@, @--port@, and @--host-addr@ gets added automatically.
   -> ExceptT NodeStartFailure m TestnetNode
-startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -156,7 +158,10 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
                              , "--port", show port
                              , "--host-addr", showIpv4Address ipv4
                              ]
-    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ runRIO () $ procNode completeNodeCmd
+    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ runRIO () $
+      case mNodeBin of
+        Nothing -> procNode completeNodeCmd
+        Just bin -> procCustom bin completeNodeCmd
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
@@ -485,8 +490,11 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             Just (sprocket, _) -> H.sprocketSystemName sprocket
             Nothing            -> throwString "No testnet sprocket available"
 
+      fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
+
       void $ asyncRegister_ . runExceptT $
                   foldEpochState
+                    fs
                     (configurationFile testnetRuntime)
                     (Api.File socketPath)
                     Api.QuickValidation

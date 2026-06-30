@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Experimental (Some (..))
+import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -38,7 +38,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
-import           Testnet.EpochStateProcessing (waitForGovActionVotes)
+import           Testnet.EpochStateProcessing (unsafeEraFromSbe, waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -329,16 +329,12 @@ getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
 
 committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
 committeeIsPresent (AnyNewEpochState sbe newEpochState _, _, _) =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "Constitutional committee does not exist pre-Conway era")
-    (\_ -> do
-      let mCommittee = newEpochState
-                       ^. L.nesEsL
-                       . L.esLStateL
-                       . L.lsUTxOStateL
-                       . L.utxosGovStateL
-                       . L.cgsCommitteeL
-      members <- L.committeeMembers <$> strictMaybeToMaybe mCommittee
-      when (Map.null members) Nothing
-    )
-    sbe
+  obtainCommonConstraints (unsafeEraFromSbe sbe) $ do
+    let mCommittee = newEpochState
+                     ^. L.nesEsL
+                     . L.esLStateL
+                     . L.lsUTxOStateL
+                     . L.utxosGovStateL
+                     . L.cgsCommitteeL
+    members <- L.committeeMembers <$> strictMaybeToMaybe mCommittee
+    guard (not $ Map.null members)

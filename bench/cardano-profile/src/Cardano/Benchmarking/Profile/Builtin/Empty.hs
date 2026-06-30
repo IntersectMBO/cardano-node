@@ -34,7 +34,7 @@ base =
   -- Genesis:
   . V.datasetEmpty
 
--- TODO: "default*", "oldtracing" and "plutus*" below have `P.delegators 6`.
+-- TODO: "default*" and "plutus*" below have `P.delegators 6`.
 --       Remove them, make delegators zero by using `V.datasetEmpty` here.
 --       It was kept to make test pass because "prof0-defaults.jq" set it,
 --       `n_pools` used as "effective_delegators" when delegators zero/null.
@@ -46,7 +46,7 @@ baseNoDataset =
   . P.initCooldown 5
   . P.analysisStandard
 
--- TODO: Move to `base` when "default*" and "oldtracing" genesis are the same.
+-- TODO: Move to `base`?
 genesis :: Types.Profile -> Types.Profile
 genesis = V.genesisVariant300
 
@@ -118,11 +118,10 @@ profilesNoEraEmpty = map baseNoDataset
       fast2 = fast & V.hosts 2
   in [
   -- Local.
-    fast1 & P.name "fast-solo"       . V.valueLocal . P.traceForwardingOn  . P.newTracing
-  , fast2 & P.name "fast"            . V.valueLocal . P.traceForwardingOn  . P.newTracing
-  , fast2 & P.name "fast-oldtracing" . V.valueLocal . P.traceForwardingOn  . P.oldTracing
-  , fast2 & P.name "fast-notracer"   . V.valueLocal . P.traceForwardingOff . P.newTracing
-  , fast2 & P.name "fast-plutus"     . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.analysisSizeSmall
+    fast1 & P.name "fast-solo"       . V.valueLocal . P.traceForwardingOn
+  , fast2 & P.name "fast"            . V.valueLocal . P.traceForwardingOn
+  , fast2 & P.name "fast-notracer"   . V.valueLocal . P.traceForwardingOff
+  , fast2 & P.name "fast-plutus"     . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------
@@ -133,10 +132,10 @@ profilesNoEraEmpty = map baseNoDataset
         . P.uniCircle . V.hosts 2 . P.loopback
   in [
   -- Local
-    ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn  . P.newTracing
-  , ciTest & P.name "ci-test-rtview"   . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.tracerRtview
-  , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff . P.newTracing
-  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.analysisSizeSmall
+    ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
+  , ciTest & P.name "ci-test-rtview"   . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
+  , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
+  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------
@@ -148,7 +147,7 @@ profilesNoEraEmpty = map baseNoDataset
         . P.analysisSizeSmall
   in [
      -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
-    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.blocksize64k
+    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.blocksize64k
   ]
   ++
   ------------------------------------------------------------------------------
@@ -163,13 +162,12 @@ profilesNoEraEmpty = map baseNoDataset
       full  = trace & traceFullDuration
   in [
   -- "--shutdown-on-block-synced 15"
-    bench & P.name "trace-bench"            . V.valueLocal . P.traceForwardingOn  . P.newTracing 
-  , bench & P.name "trace-bench-rtview"     . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.tracerRtview
-  , bench & P.name "trace-bench-oldtracing" . V.valueLocal . P.traceForwardingOn  . P.oldTracing 
-  , bench & P.name "trace-bench-notracer"   . V.valueLocal . P.traceForwardingOff . P.newTracing 
+    bench & P.name "trace-bench"            . V.valueLocal . P.traceForwardingOn
+  , bench & P.name "trace-bench-rtview"     . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
+  , bench & P.name "trace-bench-notracer"   . V.valueLocal . P.traceForwardingOff
   -- "--shutdown-on-slot-synced 1200"
-  , full  & P.name "trace-full"             . V.valueLocal . P.traceForwardingOn  . P.newTracing
-  , full  & P.name "trace-full-rtview"      . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.tracerRtview
+  , full  & P.name "trace-full"             . V.valueLocal . P.traceForwardingOn
+  , full  & P.name "trace-full-rtview"      . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   ]
   ++
   ------------------------------------------------------------------------------
@@ -191,11 +189,10 @@ profilesNoEraEmpty = map baseNoDataset
       schnorr = V.plutusSaturation . V.plutusTypeSchnorr
   in [
   -- TODO: TX fee went from 1025000 to 1008000 ????
-    value  & P.name "default"             . V.valueCloud . P.traceForwardingOn  . P.newTracing . P.analysisUnitary
-  , value  & P.name "oldtracing"          . V.valueCloud . P.traceForwardingOn  . P.oldTracing . P.analysisUnitary
-  , plutus & P.name "plutus"              . loop         . P.traceForwardingOn  . P.newTracing . P.analysisSizeSmall
-  , plutus & P.name "plutus-secp-ecdsa"   . ecdsa        . P.traceForwardingOn  . P.newTracing . P.analysisSizeSmall
-  , plutus & P.name "plutus-secp-schnorr" . schnorr      . P.traceForwardingOn  . P.newTracing . P.analysisSizeSmall
+    value  & P.name "default"             . V.valueCloud . P.traceForwardingOn  . P.analysisUnitary
+  , plutus & P.name "plutus"              . loop         . P.traceForwardingOn  . P.analysisSizeSmall
+  , plutus & P.name "plutus-secp-ecdsa"   . ecdsa        . P.traceForwardingOn  . P.analysisSizeSmall
+  , plutus & P.name "plutus-secp-schnorr" . schnorr      . P.traceForwardingOn  . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------
@@ -205,5 +202,5 @@ profilesNoEraEmpty = map baseNoDataset
           P.empty & V.datasetEmpty . genesis . epochTransitionDuration
         . P.uniCircle . V.hosts 2 . P.loopback
   in [
-    ep & P.name "epoch-transition" . V.valueLocal . P.traceForwardingOn . P.newTracing
+    ep & P.name "epoch-transition" . V.valueLocal . P.traceForwardingOn
   ]

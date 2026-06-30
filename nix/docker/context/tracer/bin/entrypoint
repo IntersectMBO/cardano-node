@@ -3,6 +3,39 @@ set -euo pipefail
 
 [[ -n ${DEBUG:-} ]] && set -x
 
+# The image writes a resolved-config env snapshot and any merge-mode
+# artifacts under a private runtime directory in /tmp.
+
+# Catch the common operator mistake of running with a read-only filesystem
+# without mounting a writable /tmp.
+if ! [[ -w /tmp ]]; then
+  echo "ERROR: /tmp is not writable." >&2
+  echo "With a read-only filesystem, mount a tmpfs or emptyDir at /tmp." >&2
+  exit 1
+fi
+
+# Generated artifacts go under a private, user-owned 0700 directory at a
+# fixed, predictable per-role path, so operators and tooling can refer to the
+# effective config dependably. The "-tracer" suffix keeps it distinct from
+# the node image's dir when both share a pod's /tmp. The effective config
+# path is also recorded in the env snapshot below; `source /usr/local/bin/env`
+# exposes it as $CARDANO_CONFIG.
+#
+# This approach avoids a symlink/TOCTOU vector. Consequently a second tracer
+# container sharing one /tmp mount refuses to start with a clear error rather
+# than colliding; sharing a /tmp across same-role containers is unsupported.
+# CARDANO_RUNTIME_DIR is exported for the run-* scripts.
+export CARDANO_RUNTIME_DIR=/tmp/cardano-tracer
+if ! mkdir -m 700 "$CARDANO_RUNTIME_DIR" 2>/dev/null; then
+  if [[ -L $CARDANO_RUNTIME_DIR || ! -d $CARDANO_RUNTIME_DIR || ! -O $CARDANO_RUNTIME_DIR ]]; then
+    echo "ERROR: $CARDANO_RUNTIME_DIR exists and is not a private directory owned by this user." >&2
+    echo "Refusing to use it to avoid following an attacker-planted path." >&2
+    exit 1
+  fi
+  # Re-assert restrictive perms in case an earlier run left them looser.
+  chmod 700 "$CARDANO_RUNTIME_DIR"
+fi
+
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
 if [[ -n ${NETWORK:-} ]]; then
@@ -30,13 +63,19 @@ if [[ -n ${NETWORK:-} ]]; then
     # full replacement and null values persist.
     #
     # jq -S sorts output keys alphabetically for deterministic diffs.
+    #
+    # Merged files are written to /tmp so that the image can run as a
+    # non-root user ($CFG is image content and only writable by root)
+    # and under read-only root filesystems.
+    # The base tracer config has no relative file
+    # references, so no path rewriting is needed.
     if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
       jq -S \
         --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
         '. * $deepMerge' \
         < "$CFG/$NETWORK/tracer-config.json" \
-        > "$CFG/$NETWORK/tracer-config-merged.json"
-      export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config-merged.json"
+        > "$CARDANO_RUNTIME_DIR/tracer-config-merged.json"
+      export CARDANO_CONFIG="$CARDANO_RUNTIME_DIR/tracer-config-merged.json"
     else
       export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config.json"
     fi

@@ -17,11 +17,22 @@ module Testnet.Defaults
   , defaultYamlConfig
   , defaultConwayGenesis
   , defaultCommitteeKeyPair
+  , defaultCommitteeName
+  , defaultCommitteeKeysDir
   , defaultCommitteeVkeyFp
   , defaultCommitteeSkeyFp
-  , defaultDRepSkeyFp
   , defaultDRepKeyPair
+  , defaultDRepName
+  , defaultDRepKeysDir
+  , defaultDRepDir
+  , defaultDRepVkeyFp
+  , defaultDRepSkeyFp
   , defaultDelegatorStakeKeyPair
+  , defaultDelegatorName
+  , defaultDelegatorStakeKeysDir
+  , defaultDelegatorStakeDir
+  , defaultDelegatorStakeVKeyFp
+  , defaultDelegatorStakeSKeyFp
   , defaultEra
   , defaultNodeName
   , defaultNodeDataDir
@@ -29,6 +40,16 @@ module Testnet.Defaults
   , defaultSpoColdKeyPair
   , defaultSpoColdVKeyFp
   , defaultSpoColdSKeyFp
+  , defaultSpoVrfVKeyFp
+  , defaultSpoVrfSKeyFp
+  , defaultSpoStakingRewardVKeyFp
+  , defaultSpoStakingRewardSKeyFp
+  , defaultSpoKesVKeyFp
+  , defaultSpoKesSKeyFp
+  , defaultSpoOpcertCounterFp
+  , defaultSpoOpcertCertFp
+  , defaultSpoByronDelegationCertFp
+  , defaultSpoByronDelegateKeyFp
   , defaultSpoKeys
   , defaultSpoKeysDir
   , defaultSpoName
@@ -67,7 +88,6 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Tracing.Config
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -83,11 +103,8 @@ import           Control.Exception (Exception (..))
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
-import           Data.Bifunctor (bimap)
 import qualified Data.Default.Class as DefaultClass
-import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
 import           Data.Text (Text)
@@ -96,11 +113,8 @@ import           Data.Time (UTCTime)
 import           Data.Word (Word64)
 import           Lens.Micro
 import           Numeric.Natural
-import           System.FilePath ((</>))
-
 import           Test.Cardano.Ledger.Core.Rational
-import           Cardano.Node.Testnet.Paths (defaultNodeName, defaultNodeDataDir, defaultUtxoSKeyPath,
-                   defaultUtxoVKeyPath)
+import           Cardano.Node.Testnet.Paths
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -176,6 +190,7 @@ defaultConwayGenesis = do
       , cgCommittee = DefaultClass.def
       , cgDelegs = mempty
       , cgInitialDReps = mempty
+      , cgExtraConfig = SNothing
       }
 
 -- | The only era supported by cardano-testnet for the moment.
@@ -189,7 +204,6 @@ defaultEra = ShelleyBasedEraConway
 defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
-    <> tracers
     <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
@@ -263,45 +277,6 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
                 ]
                 )
-  -- | Various tracers we can turn on or off
-  tracers :: Aeson.KeyMap Aeson.Value
-  tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
-    [ (proxyName (Proxy @TraceBlockFetchClient), False)
-    , (proxyName (Proxy @TraceBlockFetchDecisions), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocol), False)
-    , (proxyName (Proxy @TraceBlockFetchProtocolSerialised), False)
-    , (proxyName (Proxy @TraceBlockFetchServer), False)
-    , (proxyName (Proxy @TraceBlockchainTime), True)
-    , (proxyName (Proxy @TraceChainDB), True)
-    , (proxyName (Proxy @TraceChainSyncClient), False)
-    , (proxyName (Proxy @TraceChainSyncBlockServer), False)
-    , (proxyName (Proxy @TraceChainSyncHeaderServer), False)
-    , (proxyName (Proxy @TraceChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceDnsResolver), True)
-    , (proxyName (Proxy @TraceDnsSubscription), True)
-    , (proxyName (Proxy @TraceErrorPolicy), True)
-    , (proxyName (Proxy @TraceLocalErrorPolicy), True)
-    , (proxyName (Proxy @TraceForge), True)
-    , (proxyName (Proxy @TraceHandshake), False)
-    , (proxyName (Proxy @TraceIpSubscription), True)
-    , (proxyName (Proxy @TraceLocalRootPeers), True)
-    , (proxyName (Proxy @TracePublicRootPeers), True)
-    , (proxyName (Proxy @TracePeerSelection), True)
-    , (proxyName (Proxy @TracePeerSelectionActions), True)
-    , (proxyName (Proxy @TraceConnectionManager), True)
-    , (proxyName (Proxy @TraceServer), True)
-    , (proxyName (Proxy @TraceLocalConnectionManager), False)
-    , (proxyName (Proxy @TraceLocalServer), False)
-    , (proxyName (Proxy @TraceLocalChainSyncProtocol), False)
-    , (proxyName (Proxy @TraceLocalHandshake), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionProtocol), False)
-    , (proxyName (Proxy @TraceLocalTxSubmissionServer), False)
-    , (proxyName (Proxy @TraceMempool), True)
-    , (proxyName (Proxy @TraceMux), False)
-    , (proxyName (Proxy @TraceTxInbound), False)
-    , (proxyName (Proxy @TraceTxOutbound), False)
-    , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
-    ]
 
   traceOptions = Aeson.Object mempty
   -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
@@ -340,20 +315,11 @@ defaultYamlConfig =
     , ("SocketPath", "db/node.socket")
     , ("PBftSignatureThreshold", Aeson.Number (fromFloatDigits (0.6 :: Double)))
 
-    -- Global logging severity filter. Messages must have at least this severity to pass.
-    , ("minSeverity", "Debug")
-
-    , ("EnableLogMetrics", Aeson.Bool False)
-    , ("TurnOnLogMetrics", Aeson.Bool False)
-
     -- The maximum number of used peers during bulk sync.
     , ("MaxConcurrencyBulkSync", Aeson.Number 1)
 
     -- The maximum number of used peers when fetching newly forged blocks.
     , ("MaxConcurrencyDeadline", Aeson.Number 2)
-
-    -- Turn logging on or off
-    , ("EnableLogging", Aeson.Bool True)
 
     -- Genesis filepaths
     , ("ByronGenesisFile", genesisPath ByronEra)
@@ -367,44 +333,12 @@ defaultYamlConfig =
 
     , ("PeerSharing", Aeson.Bool False)
 
-    -- Logging related
-    , ("setupScribes", setupScribes)
-    , ("rotation", rotationObject)
-    , ("defaultScribes", defaultScribes)
-    , ("setupBackends", Aeson.Array ["KatipBK"])
-    , ("defaultBackends", Aeson.Array ["KatipBK"])
-    , ("options", Aeson.object mempty)
+    -- New tracing system: empty map = use all defaults.
+    -- Mandatory: trace-dispatcher's FromJSON parses "TraceOptions" at the root.
+    , ("TraceOptions", Aeson.object mempty)
     ]
   where
     genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
-    defaultScribes :: Aeson.Value
-    defaultScribes =
-      Aeson.Array
-        [ Aeson.Array ["FileSK","logs/mainnet.log"]
-        , Aeson.Array ["StdoutSK","stdout"]
-        ]
-    rotationObject :: Aeson.Value
-    rotationObject =
-      Aeson.Object $
-        mconcat $ map (uncurry Aeson.singleton)
-          [ ("rpLogLimitBytes", Aeson.Number 5_000_000)
-          , ("rpKeepFilesNum", Aeson.Number 3)
-          , ("rpMaxAgeHours", Aeson.Number 24)
-          ]
-    setupScribes :: Aeson.Value
-    setupScribes =
-      Aeson.Array
-        [ Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "FileSK")
-            , ("scName", "logs/node.log")
-            , ("scFormat", "ScJson")
-            ]
-        , Aeson.Object $ mconcat $ map (uncurry Aeson.singleton)
-            [ ("scKind", "StdoutSK")
-            , ("scName", "stdout")
-            , ("scFormat", "ScJson")
-            ]
-        ]
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined
@@ -519,36 +453,13 @@ defaultMainnetTopology =
     peerSnapshotPath = Nothing
   }
 
-defaultGenesisFilepath :: CardanoEra a -> FilePath
-defaultGenesisFilepath era =
-  -- This path is actually generated by create-testnet-data. Don't change it.
-  eraToString era <> "-genesis.json"
-
-defaultCommitteeVkeyFp
-  :: Int -- ^ The Committee's index (starts at 1)
-  -> FilePath
-defaultCommitteeVkeyFp n = "committee-keys" </> "committee" <> show n <> ".vkey"
-
-defaultCommitteeSkeyFp
-  :: Int -- ^ The Committee's index (starts at 1)
-  -> FilePath
-defaultCommitteeSkeyFp n = "committee-keys" </> "committee" <> show n <> ".skey"
-
 -- | The relative path to DRep keys in directories created by cardano-testnet
-defaultDRepKeyPair
-  :: Int -- ^ The DRep's index (starts at 1)
-  -> KeyPair PaymentKey
+defaultDRepKeyPair :: Int -> KeyPair PaymentKey
 defaultDRepKeyPair n =
   KeyPair
-    { verificationKey = File $ "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-    , signingKey = File $ "drep-keys" </> ("drep" <> show n) </> "drep.skey"
+    { verificationKey = File $ defaultDRepVkeyFp n
+    , signingKey = File $ defaultDRepSkeyFp n
     }
-
--- | The relative path to DRep secret keys in directories created by cardano-testnet
-defaultDRepSkeyFp
-  :: Int -- ^ The DRep's index (starts at 1)
-  -> FilePath
-defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 
 defaultCommitteeKeyPair :: Int -> KeyPair PaymentKey
 defaultCommitteeKeyPair n =
@@ -557,30 +468,14 @@ defaultCommitteeKeyPair n =
     , signingKey = File $ defaultCommitteeSkeyFp n
     }
 
--- | The relative path to SPO cold verification key in directories created by cardano-testnet
-defaultSpoColdVKeyFp :: Int -> FilePath
-defaultSpoColdVKeyFp n = defaultSpoKeysDir n </> "cold.vkey"
-
--- | The relative path to SPO cold secret key in directories created by cardano-testnet
-defaultSpoColdSKeyFp :: Int -> FilePath
-defaultSpoColdSKeyFp n = defaultSpoKeysDir n </> "cold.skey"
-
--- | The name of a SPO, used in file system operations
-defaultSpoName :: Int -> String
-defaultSpoName n = "pool" <> show n
-
--- | The relative path where the SPO keys for the node are stored
-defaultSpoKeysDir :: Int -> String
-defaultSpoKeysDir n = "pools-keys" </> defaultSpoName n
-
 -- | The relative path to SPO keys in directories created by cardano-testnet
 defaultSpoColdKeyPair
   :: Int
   -> KeyPair StakePoolKey
 defaultSpoColdKeyPair n =
   KeyPair
-    { verificationKey = File $ defaultSpoKeysDir n </> "cold.vkey"
-    , signingKey = File $ defaultSpoKeysDir n </> "cold.skey"
+    { verificationKey = File $ defaultSpoColdVKeyFp n
+    , signingKey = File $ defaultSpoColdSKeyFp n
     }
 
 -- | The relative path to SPO key pairs in directories created by cardano-testnet
@@ -590,13 +485,13 @@ defaultSpoKeys n =
     { poolNodeKeysCold = defaultSpoColdKeyPair n
     , poolNodeKeysVrf =
       KeyPair
-        { verificationKey = File $ defaultSpoKeysDir n </> "vrf.vkey"
-        , signingKey = File $ defaultSpoKeysDir n </> "vrf.skey"
+        { verificationKey = File $ defaultSpoVrfVKeyFp n
+        , signingKey = File $ defaultSpoVrfSKeyFp n
         }
     , poolNodeKeysStaking =
       KeyPair
-        { verificationKey = File $ defaultSpoKeysDir n </> "staking-reward.vkey"
-        , signingKey = File $ defaultSpoKeysDir n </> "staking-reward.skey"
+        { verificationKey = File $ defaultSpoStakingRewardVKeyFp n
+        , signingKey = File $ defaultSpoStakingRewardSKeyFp n
         }
     }
 
@@ -604,8 +499,8 @@ defaultSpoKeys n =
 defaultDelegatorStakeKeyPair :: Int -> KeyPair StakeKey
 defaultDelegatorStakeKeyPair n =
   KeyPair
-    { verificationKey = File $ "stake-delegators" </> ("delegator" <> show n) </> "staking.vkey"
-    , signingKey = File $ "stake-delegators" </> ("delegator" <> show n) </> "staking.skey"
+    { verificationKey = File $ defaultDelegatorStakeVKeyFp n
+    , signingKey = File $ defaultDelegatorStakeSKeyFp n
     }
 
 -- | The relative path to UTXO keys
@@ -616,16 +511,13 @@ defaultUtxoKeys n =
     , signingKey = File $ defaultUtxoSKeyPath n
     }
 
-
 simpleScript :: Text -> Text
 simpleScript signerRequired =
   "{ \"scripts\": [ { \"keyHash\": \"" <> signerRequired <> "\", \"type\": \"sig\" } ], \"type\": \"all\" }"
 
-
 plutusV2Script :: Text
 plutusV2Script =
   "{ \"type\": \"PlutusScriptV2\", \"description\": \"\", \"cborHex\": \"5822582001000022325333573466e1ccde5251333792945200000100111200116375a005\" }"
-
 
 -- | Default plutus script that always succeeds
 plutusV3Script :: Text
@@ -636,7 +528,6 @@ plutusV3Script =
 plutusV3SupplementalDatumScript :: Text
 plutusV3SupplementalDatumScript =
   "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"590e72590e6f01000032323322332233223232323232323232323232323225335533535353232325335333573466e1d200000201301213232323232333222123330010040030023232325335333573466e1d200000201b01a1323232323232323232323232323232323333333333332333233233222222222222222212333333333333333300101101000f00e00d00c00b00a00900800700600500400300230013574202860026ae8404cc0948c8c8c94cd4ccd5cd19b87480000080c40c04cc8848cc00400c008c074d5d080098029aba135744002260589201035054310035573c0046aae74004dd5000998128009aba101123232325335333573466e1d200000203002f13232333322221233330010050040030023232325335333573466e1d2000002035034133221233001003002302e357420026605e4646464a66a666ae68cdc3a4000004072070264244600400660646ae8400454cd4ccd5cd19b87480080080e40e04c8ccc888488ccc00401401000cdd69aba1002375a6ae84004dd69aba1357440026ae880044c0d12401035054310035573c0046aae74004dd50009aba135744002260609201035054310035573c0046aae74004dd51aba1003300735742004646464a66a666ae68cdc3a400000406a068224440062a66a666ae68cdc3a400400406a068264244460020086eb8d5d08008a99a999ab9a3370e900200101a81a099091118010021aba1001130304901035054310035573c0046aae74004dd51aba10013302c75c6ae84d5d10009aba200135744002260569201035054310035573c0046aae74004dd50009bad3574201e60026ae84038c008c009d69981180a9aba100c33302702475a6ae8402cc8c8c94cd4ccd5cd19b87480000080b80b44cc8848cc00400c008c8c8c94cd4ccd5cd19b87480000080c40c04cc8848cc00400c008cc09dd69aba10013026357426ae880044c0b1241035054310035573c0046aae74004dd51aba10013232325335333573466e1d20000020310301332212330010030023302775a6ae84004c098d5d09aba20011302c491035054310035573c0046aae74004dd51aba13574400226052921035054310035573c0046aae74004dd51aba100a3302375c6ae84024ccc09c8c8c8c94cd4ccd5cd19b87480000080bc0b84c84888888c01401cdd71aba100115335333573466e1d200200202f02e13212222223002007301b357420022a66a666ae68cdc3a400800405e05c2642444444600600e60506ae8400454cd4ccd5cd19b87480180080bc0b84cc884888888cc01802001cdd69aba10013019357426ae8800454cd4ccd5cd19b87480200080bc0b84c84888888c00401cc068d5d08008a99a999ab9a3370e9005001017817099910911111198020040039bad3574200260306ae84d5d1000898152481035054310035573c0046aae74004dd500080f9aba10083300201f3574200e6eb8d5d080319981380b198138111191919299a999ab9a3370e9000001017817089110010a99a999ab9a3370e9001001017817089110008a99a999ab9a3370e900200101781708911001898152481035054310035573c0046aae74004dd50009aba1005330230143574200860026ae8400cc004d5d09aba2003302475a604aeb8d5d10009aba2001357440026ae88004d5d10009aba2001357440026ae88004d5d10009aba2001357440026ae88004d5d10009aba200113016491035054310035573c0046aae74004dd51aba10063574200a646464a66a666ae68cdc3a40000040360342642444444600a00e6eb8d5d08008a99a999ab9a3370e900100100d80d0999109111111980100400398039aba10013301500f357426ae8800454cd4ccd5cd19b874801000806c0684c84888888c00c01cc050d5d08008a99a999ab9a3370e900300100d80d099910911111198030040039bad35742002600a6ae84d5d10008a99a999ab9a3370e900400100d80d0990911111180080398031aba100115335333573466e1d200a00201b01a13322122222233004008007375a6ae84004c010d5d09aba2001130164901035054310035573c0046aae74004dd51aba13574400a4646464a66a666ae68cdc3a4000004036034264666444246660020080060046eb4d5d0801180a9aba10013232325335333573466e1d200000201f01e1323332221222222233300300a0090083301a017357420046ae84004cc069d71aba1357440026ae8800454cd4ccd5cd19b874800800807c0784cc8848888888cc01c024020cc064058d5d0800991919299a999ab9a3370e90000010110108999109198008018011bad357420026eb4d5d09aba20011301d491035054310035573c0046aae74004dd51aba1357440022a66a666ae68cdc3a400800403e03c266442444444466004012010666036030eb4d5d08009980cbae357426ae8800454cd4ccd5cd19b874801800807c0784c848888888c010020cc064058d5d08008a99a999ab9a3370e900400100f80f09919199991110911111119998008058050048041980d80c1aba10033301901a3574200466603a034eb4d5d08009a991919299a999ab9a3370e90000010120118998149bad357420026eb4d5d09aba20011301f4901035054310035573c0046aae74004dd51aba135744002446602a0040026ae88004d5d10008a99a999ab9a3370e900500100f80f0999109111111198028048041980c80b1aba10013232325335333573466e1d200000202202113301c75c6ae840044c075241035054310035573c0046aae74004dd51aba1357440022a66a666ae68cdc3a401800403e03c22444444400c26034921035054310035573c0046aae74004dd51aba1357440026ae880044c059241035054310035573c0046aae74004dd50009191919299a999ab9a3370e900000100d00c899910911111111111980280680618099aba10013301475a6ae84d5d10008a99a999ab9a3370e900100100d00c899910911111111111980100680618099aba10013301475a6ae84d5d10008a9919a999ab9a3370e900200180d80d0999109111111111119805006806180a1aba10023001357426ae8800854cd4ccd5cd19b874801800c06c0684c8ccc888488888888888ccc018038034030c054d5d080198011aba1001375a6ae84d5d10009aba200215335333573466e1d200800301b01a133221222222222223300700d00c3014357420046eb4d5d09aba200215335333573466e1d200a00301b01a132122222222222300100c3014357420042a66a666ae68cdc3a4018006036034266442444444444446600601a01860286ae84008dd69aba1357440042a66a666ae68cdc3a401c006036034266442444444444446601201a0186eb8d5d08011bae357426ae8800854cd4ccd5cd19b874804000c06c0684cc88488888888888cc020034030dd71aba1002375a6ae84d5d10010a99a999ab9a3370e900900180d80d0999109111111111119805806806180a1aba10023014357426ae8800854cd4ccd5cd19b874805000c06c0684c8488888888888c010030c050d5d08010980b2481035054310023232325335333573466e1d200000201e01d13212223003004375c6ae8400454c8cd4ccd5cd19b874800800c07c0784c84888c004010c004d5d08010a99a999ab9a3370e900200180f80f099910911198010028021bae3574200460026ae84d5d10010980d2481035054310023232325335333573466e1d200000202202113212223003004301b357420022a66a666ae68cdc3a4004004044042224440042a66a666ae68cdc3a4008004044042224440022603a921035054310035573c0046aae74004dd50009aab9e00235573a0026ea8004d55cf0011aab9d00137540024646464a66a666ae68cdc3a40000040320302642444600600860246ae8400454cd4ccd5cd19b87480080080640604c84888c008010c048d5d08008a99a999ab9a3370e900200100c80c099091118008021bae3574200226028921035054310035573c0046aae74004dd50009191919299a999ab9a3370e900000100c00b8999109198008018011bae357420026eb4d5d09aba200113013491035054310035573c0046aae74004dd50009aba20011300e491035054310035573c0046aae74004dd50009110019111111111111111180f0031080888078a4c26016921035054350030142225335333573466e1d20000010110101300c491035054330015335333573466e20005200001101013300333702900000119b81480000044c8cc8848cc00400c008cdc200180099b840020013300400200130132225335333573466e1d200000101000f10021330030013370c00400240024646464a66a666ae68cdc3a400000401e01c201c2a66a666ae68cdc3a400400401e01c201e260149201035054310035573c0046aae74004dd500091191919299a999ab9a3370e9000001007807089110010a99a999ab9a3370e90010010078070990911180180218029aba100115335333573466e1d200400200f00e112220011300a4901035054310035573c0046aae74004dd50009191919299a999ab9a3370e90000010068060999109198008018011bae357420026eb4d5d09aba200113008491035054310035573c0046aae74004dd5000919118011bac001300f2233335573e002401c466a01a60086ae84008c00cd5d10010041191919299a999ab9a3370e900000100580509909118010019bae357420022a66a666ae68cdc3a400400401601426424460020066eb8d5d0800898032481035054310035573c0046aae74004dd500091191919299a999ab9a3370e90010010058050a8070a99a999ab9a3370e90000010058050980798029aba1001130064901035054310035573c0046aae74004dd5000919319ab9c00100322322300237560026018446666aae7c004802c8c8cd402ccc03cc018d55ce80098029aab9e0013004357440066ae8400801448004c020894cd40045401c884d4008894cd4ccd5cd19b8f488120ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25000020080071300c001130060031220021220011220021221223300100400321223002003112200122123300100300223230010012300223300200200101\" }"
-
 
 plutusV2StakeScript :: Text
 plutusV2StakeScript =

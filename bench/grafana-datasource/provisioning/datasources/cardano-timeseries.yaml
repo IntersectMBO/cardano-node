@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Cardano Timeseries
+    uid: cardano-timeseries
+    type: iog-cardanotimeseries-datasource
+    access: proxy
+    # Grafana proxies requests from the container to this URL — use host.docker.internal
+    # to reach the cardano-tracer timeseries server running on the host machine.
+    url: http://host.docker.internal:3400
+    isDefault: false

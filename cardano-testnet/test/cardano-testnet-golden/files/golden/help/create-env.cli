@@ -1,4 +1,5 @@
-Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
+Usage: cardano-testnet create-env 
+  [--nodes SPEC[,SPEC...] | --num-pool-nodes COUNT]
   [--max-lovelace-supply WORD64]
   [--num-dreps NUMBER]
   [--testnet-magic INT]
@@ -11,6 +12,17 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   Create a sandbox for Cardano testnet
 
 Available options:
+  --nodes SPEC[,SPEC...]   Comma-separated node specifications. SPO nodes must
+                           come before relay nodes. Each spec is a role (spo or
+                           relay) optionally followed by :node-bin=<path>. If
+                           the path contains commas, colons, double quotes, or
+                           backslashes, wrap it in double quotes and escape any
+                           literal double quotes as \" and backslashes as \\
+                           within. To prevent bash from consuming the double
+                           quotes, enclose the whole argument in single quotes.
+                           Examples: --nodes
+                           spo,spo:node-bin=/path/to/bin,relay,relay | --nodes
+                           'spo:node-bin="/path,with:commas",relay'
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes.
   --max-lovelace-supply WORD64

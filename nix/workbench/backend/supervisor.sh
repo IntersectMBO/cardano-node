@@ -13,6 +13,8 @@ EOF
 backend_supervisor() {
 op=${1:?$(usage_supervisor)}; shift
 
+export PYTHONWARNINGS="ignore::UserWarning"
+
 case "$op" in
     name )
         echo 'supervisor';;
@@ -21,8 +23,7 @@ case "$op" in
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}
         test "$(sleep 0.5s
-                netstat -pltn 2>/dev/null |
-                grep ':9001 '             |
+                lsof -nP -iTCP:9001 -sTCP:LISTEN 2>/dev/null |
                 wc -l)" = "0" ||
             echo 'supervisord'
         # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
@@ -464,7 +465,7 @@ EOF
            local service_pid=$(supervisorctl pid $node)
            if   test $service_pid = '0'
            then continue
-           elif test -z "$(ps h --ppid $service_pid)" ## Any children?
+           elif test -z "$(pgrep -P $service_pid)" ## Any children?
            then local pid=$service_pid ## <-=^^^ none, in case we're running executables directly.
                 ## ..otherwise, it's a chain of children, e.g.: time -> cabal -> cardano-node
            else local pid=$(grep -e "[=-] $(printf %05d $service_pid) " -A5 "$pstree" |

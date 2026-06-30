@@ -10,7 +10,7 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Utils (createOrUpdateEmptyLog, getTimeStampFromLog,
                    isItLog)
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey, NodeName)
+import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey)
 import           Cardano.Tracer.Utils (showProblemIfAny, readRegistry)
 
 import           Control.Concurrent.Async (forConcurrently_)
@@ -18,16 +18,16 @@ import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (forM_, forever, unless, when)
 import           Control.Monad.Extra (whenJust, whenM)
 import           Data.Foldable (for_)
-import           Data.List (nub, sort)
+import           Data.List (find, nub, sort)
 import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
-import qualified Data.Text as Text
+-- import qualified Data.Text as Text
 import           Data.Time (diffUTCTime, getCurrentTime)
 import           Data.Word (Word32, Word64)
 import           System.Directory (doesDirectoryExist, makeAbsolute, removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
-import           System.FilePath (takeFileName, (</>))
+import           System.FilePath (takeFileName, takeDirectory, (</>))
 import           System.IO (Handle, hTell)
 import           System.Time.Extra (sleep)
 
@@ -88,16 +88,16 @@ checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRo
     -- There are no nodes' subdirs yet (or they were deleted), or they
     -- don't contain files with open handles so no rotation can be
     -- performed for now.
-    forConcurrently_ logsSubDirs \logSubDir -> do
+    forConcurrently_ logsSubDirs \logSubDir ->
+      let
+        fullDir = logRootAbs </> takeFileName logSubDir
+        -- The logging directory may be identical to the nodeName, but not necessarily.
+        -- We have to resolve the key via the actual directory name in the value.
+        matchingDirectory ((_, loggingParams'), (_, logFile)) =
+          takeDirectory logFile == fullDir && loggingParams == loggingParams'
+      in for_ @Maybe (find matchingDirectory $ Map.toList handles) $ \(key, (handle, _)) ->
+          checkLogs currentLogLock handle key registry rotParams fullDir
 
-      let nodeName :: NodeName
-          nodeName = Text.pack (takeFileName logSubDir)
-
-          key :: HandleRegistryKey
-          key = (nodeName, loggingParams)
-
-      for_ @Maybe (Map.lookup key handles) \(handle, _filePath) ->
-        checkLogs currentLogLock handle key registry rotParams (logRootAbs </> logSubDir)
 
 -- | We check the log files:
 --   1. If there are too big log files.

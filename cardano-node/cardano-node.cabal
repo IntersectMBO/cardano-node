@@ -1,7 +1,7 @@
 cabal-version: 3.8
 
 name:                   cardano-node
-version:                11.0.1.164
+version:                11.0.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -55,16 +55,14 @@ library
 
   if os(linux) && flag(systemd)
     cpp-options:        -DSYSTEMD
-    build-depends:      lobemo-scribe-systemd
-                      , systemd >= 2.3.0
+    build-depends:      systemd >= 2.3.0
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Node.Configuration.Logging
-                        Cardano.Node.Configuration.NodeAddress
+  exposed-modules:      Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
-                        Cardano.Node.Configuration.Leios
                         Cardano.Node.Configuration.LedgerDB
+                        Cardano.Node.Configuration.Leios
                         Cardano.Node.Configuration.Socket
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
@@ -89,7 +87,6 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
-                        Cardano.Node.Tracing.Compat
                         Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
@@ -115,21 +112,9 @@ library
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
+                        Cardano.Node.Tracing.Tracers.HasIssuer
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
-                        Cardano.Tracing.Config
-                        Cardano.Tracing.HasIssuer
-                        Cardano.Tracing.Metrics
-                        Cardano.Tracing.OrphanInstances.Byron
-                        Cardano.Tracing.OrphanInstances.Common
-                        Cardano.Tracing.OrphanInstances.Consensus
-                        Cardano.Tracing.OrphanInstances.HardFork
-                        Cardano.Tracing.OrphanInstances.Network
-                        Cardano.Tracing.OrphanInstances.Shelley
-                        Cardano.Tracing.Render
-                        Cardano.Tracing.Shutdown
-                        Cardano.Tracing.Startup
-                        Cardano.Tracing.Tracers
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
@@ -139,9 +124,9 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.0 || ^>= 11.1
+                      , cardano-api ^>= 11.3
                       , cardano-data
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
@@ -157,46 +142,39 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
-                      , cardano-rpc ^>= 10.2
+                      , cardano-rpc ^>= 11.0
                       , cborg ^>= 0.2.4
                       , containers
-                      , contra-tracer
+                      , contra-tracer >= 0.2.1
                       , data-default-class
                       , deepseq
                       , directory
                       , dns
-                      , ekg-wai
                       , ekg-core
                       , filepath
+                      , fs-api
                       , generic-data
                       , hashable
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8
-                      , iohk-monitoring ^>= 0.2
-                      , kes-agent ^>=1.2
+                      , kes-agent ^>=1.3
                       , microlens
                       , mmap
                       , network-mux
                       , iproute
-                      , lobemo-backend-aggregation
-                      , lobemo-backend-ekg ^>= 0.2
-                      , lobemo-backend-monitoring
-                      , lobemo-backend-trace-forwarder
-                      , mtl
                       , network
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lmdb, lsm, cardano, diffusion, protocol} ^>= 3.0.1
-                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, framework-tracing, protocols, tracing} ^>= 1.1
-                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances, tracing} ^>=1.0
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 3.0.1
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.1
+                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.0
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
                       , random
                       , resource-registry
                       , safe-exceptions
-                      , scientific
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
@@ -208,7 +186,6 @@ library
                       , trace-dispatcher ^>= 2.12.0
                       , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
-                      , tracer-transformers
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
@@ -251,22 +228,20 @@ test-suite cardano-node-test
                       , cardano-api
                       , cardano-rpc
                       , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
-                      , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
                       , contra-tracer
                       , directory
                       , filepath
+                      , fs-api
                       , hedgehog
                       , hedgehog-corpus
                       , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
+                      , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
-                      , strict-sop-core
                       , text
-                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml
@@ -277,6 +252,5 @@ test-suite cardano-node-test
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
                         Test.Cardano.Tracing.NewTracing.Consistency
-                        Test.Cardano.Tracing.OrphanInstances.HardFork
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"

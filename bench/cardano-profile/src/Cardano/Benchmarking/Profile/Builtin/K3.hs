@@ -32,7 +32,7 @@ profilesNoEraK3 =
         . V.datasetCurrent -- 10000000 UTxO (10000kU), 1300000 delegators (1300kD)
         . V.fundsDefault
         . P.shutdownOnOff . P.generatorEpochs 3 . P.initCooldown 5
-        . P.traceForwardingOn . P.newTracing
+        . P.traceForwardingOn
         . P.analysisStandard . P.analysisUnitary
   in [
     k3 & P.name "k3-3ep-5kTx-10000kU-1300kD-64kbs-fixed-loaded"        . V.valueBase . P.slotDuration 0.2 . P.tps 12

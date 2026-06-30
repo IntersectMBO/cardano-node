@@ -118,7 +118,7 @@ let
         done
 
         # Adjust genesis file, config refs
-        for i in config config-legacy db-sync-config; do
+        for i in config db-sync-config; do
           if [ -f "$out/config/$ENV/$i.json" ]; then
             sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
           fi
@@ -152,6 +152,15 @@ in
       # Similarly, make a root level dir for logs:
       mkdir -p logs
 
+      # Make the mount-point directories group-writable. Group is already
+      # 0 (the build env writes files as 0:0). When a fresh Docker volume
+      # is first mounted at one of these paths, the perms propagate from
+      # the image, so non-root containers (running as a UID in group 0 —
+      # the K8s default for runAsUser — or with explicit fsGroup) can
+      # write to a freshly-created volume without an init container or
+      # pre-chown.
+      chmod g+w data ipc logs
+
       # The "custom" operation mode of this image, when the NETWORK env is
       # unset and "run" is provided as an entrypoint arg, will use the
       # following default directories.  To reduce confusion caused by default
@@ -175,6 +184,12 @@ in
       ln -sv ${db-truncater}/bin/db-truncater usr/local/bin/db-truncater
       ln -sv ${snapshot-converter}/bin/snapshot-converter usr/local/bin/snapshot-converter
       ln -sv ${jq}/bin/jq usr/local/bin/jq
+
+      # Backwards-compatible alias for the resolved-config env snapshot
+      # written by run-node at the fixed per-role path /tmp/cardano-node/env,
+      # so `source /usr/local/bin/env` keeps working while the image stays
+      # compatible with a read-only root filesystem.
+      ln -sv /tmp/cardano-node/env usr/local/bin/env
 
       # Create iohk-nix network configs, organized by network directory.
       SRC="${genCfgs}"

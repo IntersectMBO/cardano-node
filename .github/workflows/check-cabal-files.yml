@@ -10,12 +10,14 @@ jobs:
 
     steps:
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
+      uses: input-output-hk/actions/haskell@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
       id: setup-haskell
       with:
         cabal-version: "3.10.2.0"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Cabal check
       run: ./scripts/ci/check-cabal-files.sh

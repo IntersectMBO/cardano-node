@@ -27,7 +27,6 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
-import           Cardano.Tracing.OrphanInstances.Network ()
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -37,6 +36,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
+import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson hiding (Result (..))
 import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
@@ -48,6 +48,7 @@ deriving instance FromJSON ChunkNo
 deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
+
 
 deriving instance Generic  TracePrometheusSimple
 deriving instance FromJSON TracePrometheusSimple

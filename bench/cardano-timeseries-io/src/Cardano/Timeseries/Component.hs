@@ -24,6 +24,7 @@ import qualified Cardano.Timeseries.API as API
 import           Cardano.Timeseries.Component.Trace
 import           Cardano.Timeseries.Component.Types
 import           Cardano.Timeseries.Domain.Instant
+import           Cardano.Timeseries.Domain.Types (SeriesIdentifier)
 import qualified Cardano.Timeseries.Interp.Config as Interp
 import           Cardano.Timeseries.Util (diag, getTimeMs)
 
@@ -38,7 +39,6 @@ import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import           Data.Foldable (Foldable (..))
 import           Data.Maybe (fromMaybe)
-import qualified Data.Set as Set
 import           Data.Text (Text)
 
 -- | Not exported. The user gets the default if `create`-d with a `Nothing`
@@ -49,8 +49,8 @@ defaultTimeseriesInterpConfig = Interp.Config
 -- | Not exported. The user gets the default if `create`-d with a `Nothing`
 defaultTimeseriesConfig :: TimeseriesConfig
 defaultTimeseriesConfig = TimeseriesConfig
-  (1 * 24 * 60 * 60 * 1000)      -- 1 day in ms
-  (Just (1 * 60 * 60))           -- 1 hour in s
+  (1 * 24 * 60 * 60 * 1000)      -- 1  day in ms
+  (Just (15 * 60 * 1000))        -- 15 min in ms
   defaultTimeseriesInterpConfig
 
 -- | The constructor and projections are not exported. Use the API methods below for working with timeseries.
@@ -109,13 +109,13 @@ readConfig handle = readTVarIO handle.config
 writeConfig :: TimeseriesHandle -> Maybe TimeseriesConfig -> IO ()
 writeConfig handle k = modifyConfig handle (const k)
 
--- | Insert a batch on metric data into the store at the given timestamp.
-insert :: TimeseriesHandle -> Text -> Text -> Timestamp -> [(MetricIdentifier, Double)] -> IO ()
-insert TimeseriesHandle{..} originKey originValue t batch = do
+-- | Insert a batch of metric data into the store at the given timestamp.
+insert :: TimeseriesHandle -> SeriesIdentifier -> Timestamp -> [(MetricIdentifier, Double)] -> IO ()
+insert TimeseriesHandle{..} series t batch = do
   atomically $ modifyTVar' store $ \st -> foldl' f st batch
-  traceWith tracer (TimeseriesTraceInsert originKey originValue t batch)
+  traceWith tracer (TimeseriesTraceInsert series t batch)
   where
-    f st (k, v) = API.insert st k (Instant (Set.singleton (originKey, originValue)) t v)
+    f st (k, v) = API.insert st k (Instant series t v)
 
 -- | Execute a query on the store at the given timestamp (ms).
 execute :: TimeseriesHandle -> Timestamp -> Text -> IO (Either ExecutionError Value)

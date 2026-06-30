@@ -42,8 +42,9 @@ import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Logging
+import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals, renderMissingRedeemers,
-                   renderScriptHash, renderScriptIntegrityHash)
+                   renderScriptHash, renderScriptIntegrityHash, renderTxId)
 import qualified Cardano.Protocol.Crypto as Ledger
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
@@ -53,22 +54,22 @@ import           Cardano.Protocol.TPraos.Rules.Overlay
 import           Cardano.Protocol.TPraos.Rules.Prtcl
                    (PrtclPredicateFailure (OverlayFailure, UpdnFailure),
                    PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
-import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
 import           Cardano.Slotting.Block (BlockNo (..))
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
+import qualified Ouroboros.Consensus.Shelley.Protocol.EnvelopeChecks as Praos
+                   (EnvelopeError (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
+
+import           Control.DeepSeq (NFData)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
@@ -80,7 +81,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NonEmptySet
 import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text.Encoding
 
 {- HLINT ignore "Use :" -}
 
@@ -90,13 +92,16 @@ import qualified Data.Text.Encoding as Text
 -- NOTE: this list is sorted in roughly topological order.
 
 instance
-  ( ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era)))
+  ( ConvertTxId (ShelleyBlock protocol era)
   , ShelleyBasedEra era
   ) => LogFormatting (GenTx (ShelleyBlock protocol era)) where
   forMachine dtal tx =
     mconcat $
-        ( "txid" .= txId tx )
+        ( "txid" .= (Text.take 8 . renderTxId $ txId tx) )
       : [ "tx"   .= condense tx | dtal == DDetailed ]
+
+kesPeriodValue :: KESPeriod -> Value
+kesPeriodValue (KESPeriod period) = toJSON period
 
 instance LogFormatting (Set (Credential Staking)) where
   forMachine _dtal creds =
@@ -217,8 +222,8 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , ToJSON (ApplyTxError era)
   ) => LogFormatting (ApplyTxError era) where
@@ -234,8 +239,8 @@ instance
   forMachine _dtal (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mconcat
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
-      , "keyStart" .= keyStartPeriod
-      , "wallClock" .= wallClockPeriod
+      , "keyStart" .= kesPeriodValue keyStartPeriod
+      , "wallClock" .= kesPeriodValue wallClockPeriod
       ]
   forMachine _dtal (TPraosCannotForgeWrongVRF genDlgVRFHash coreNodeVRFHash) =
     mconcat
@@ -246,9 +251,10 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "BBODY" era))
+  , NFData (PredicateFailure (Ledger.EraRule "BBODY" era))
   ) => LogFormatting (BlockTransitionError era) where
   forMachine dtal (BlockTransitionError fs) =
     mconcat [ "kind" .= String "BlockTransitionError"
@@ -317,8 +323,8 @@ instance LogFormatting PrtlSeqFailure where
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGERS" era))
   ) => LogFormatting (ShelleyBbodyPredFailure era) where
@@ -339,8 +345,8 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   ) => LogFormatting (ShelleyLedgersPredFailure era) where
   forMachine dtal (LedgerFailure f) = forMachine dtal f
@@ -357,8 +363,8 @@ instance LogFormatting Withdrawals where
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
-  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (UTXO era))
+  , LogFormatting (PredicateFailure (UTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "DELEGS" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
   ) => LogFormatting (ShelleyLedgerPredFailure era) where
@@ -427,7 +433,7 @@ formatAsHex (Just bs) = show bs
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (UTXO era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
   ) => LogFormatting (ShelleyUtxowPredFailure era) where
   forMachine _dtal (InvalidWitnessesUTXOW wits') =
@@ -762,10 +768,6 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
             , "vrfKeyHash" .= String (textShow vrfKeyHash)
             , "error" .= String "Pool with the same VRF Key Hash is already registered"
             ]
-
-
-instance LogFormatting TicknPredicateFailure where
-  forMachine _dtal x = case x of {} -- no constructors
 
 
 instance
@@ -1277,13 +1279,13 @@ instance
                 ]
       Praos.KESBeforeStartOCERT startKesPeriod currKesPeriod ->
         mconcat [ "kind" .= String "KESBeforeStartOCERT"
-                , "opCertStartingKesPeriod" .= startKesPeriod
-                , "currentKesPeriod" .= currKesPeriod
+                , "opCertStartingKesPeriod" .= kesPeriodValue startKesPeriod
+                , "currentKesPeriod" .= kesPeriodValue currKesPeriod
                 ]
       Praos.KESAfterEndOCERT currKesPeriod startKesPeriod maxKesKeyEvos ->
         mconcat [ "kind" .= String "KESAfterEndOCERT"
-                , "opCertStartingKesPeriod" .= startKesPeriod
-                , "currentKesPeriod" .= currKesPeriod
+                , "opCertStartingKesPeriod" .= kesPeriodValue startKesPeriod
+                , "currentKesPeriod" .= kesPeriodValue currKesPeriod
                 , "maxKesKeyEvolutions" .= maxKesKeyEvos
                 ]
       Praos.CounterTooSmallOCERT lastCounter currentCounter ->
@@ -1299,7 +1301,7 @@ instance
       Praos.InvalidSignatureOCERT counter oCertStartKesPeriod err ->
         mconcat [ "kind" .= String "InvalidSignatureOCERT"
                 , "counter" .= counter
-                , "opCertStartingKesPeriod" .= oCertStartKesPeriod
+                , "opCertStartingKesPeriod" .= kesPeriodValue oCertStartKesPeriod
                 , "error" .= err
                 ]
       Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos maxKesEvos err ->
@@ -1318,11 +1320,11 @@ instance
 instance LogFormatting (Praos.PraosCannotForge crypto) where
   forMachine _ (Praos.PraosCannotForgeKeyNotUsableYet currentKesPeriod startingKesPeriod) =
     mconcat [ "kind" .= String "PraosCannotForgeKeyNotUsableYet"
-            , "currentKesPeriod" .= currentKesPeriod
-            , "opCertStartingKesPeriod" .= startingKesPeriod
+            , "currentKesPeriod" .= kesPeriodValue currentKesPeriod
+            , "opCertStartingKesPeriod" .= kesPeriodValue startingKesPeriod
             ]
 
-instance LogFormatting Praos.PraosEnvelopeError where
+instance LogFormatting Praos.EnvelopeError where
   forMachine _ err' =
     case err' of
       Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
@@ -1582,7 +1584,7 @@ instance LogFormatting (Praos.PraosTiebreakerView crypto) where
               , "tieBreakVRF" .= renderVRF ptvTieBreakVRF
               ]
     where
-      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
+      renderVRF = Text.Encoding.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 --------------------------------------------------------------------------------
 -- Helper functions

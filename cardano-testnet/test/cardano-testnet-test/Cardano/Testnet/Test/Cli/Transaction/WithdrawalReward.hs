@@ -26,7 +26,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Defaults (plutusV3Script)
+import           Testnet.Defaults (defaultDelegatorStakeVKeyFp, plutusV3Script)
 import           Testnet.Process.Run (execCli, execCliAny, mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
@@ -80,7 +80,7 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
-  let delegatorStakeVKeyFp = tempAbsPath' </> "stake-delegators" </> "delegator1" </> "staking.vkey"
+  let delegatorStakeVKeyFp = tempAbsPath' </> defaultDelegatorStakeVKeyFp 1
 
   delegatorStakeAddress <- filter (/= '\n') <$>
     execCli

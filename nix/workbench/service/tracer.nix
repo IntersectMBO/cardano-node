@@ -39,6 +39,11 @@ let
             epHost = "127.0.0.1";
             epPort = 3300;
           };
+        } // optionalAttrs (profile.tracer.timeseries or false) {
+          timeseries     = {
+            epHost = "127.0.0.1";
+            epPort = 3400;
+          };
         } // optionalAttrs (profile.tracer.withresources or false) {
           resourceFreq = 1000;
         } // optionalAttrs useWorkbenchTracerService {

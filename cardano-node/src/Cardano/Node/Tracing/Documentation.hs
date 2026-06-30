@@ -20,9 +20,6 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
-import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
-import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)
@@ -33,6 +30,7 @@ import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicR
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -54,7 +52,6 @@ import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Cardano.Rpc.Server (TraceRpc)
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -92,6 +89,7 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters, TracePeerSelection)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
+import           Ouroboros.Network.PeerSelection.PublicRootPeers ()
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
@@ -114,7 +112,7 @@ import           Network.Mux.Tracing ()
 import qualified Network.Mux as Mux
 
 import           Control.Monad (forM_)
-import           Data.Aeson.Types (ToJSON)
+import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import qualified Data.Text.IO as T
@@ -174,6 +172,7 @@ parseTraceDocumentationCmd =
 
 instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
+
 
 runTraceDocumentationCmd
   :: TraceDocumentationCmd

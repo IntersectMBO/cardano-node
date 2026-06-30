@@ -1,0 +1,27 @@
+{
+  "name": "iog-cardanotimeseries-datasource",
+  "version": "1.0.0",
+  "description": "Grafana datasource plugin for the Cardano Timeseries HTTP server",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p dist && cp src/plugin.json dist/plugin.json && webpack --config webpack.config.js --mode production",
+    "dev": "mkdir -p dist && cp src/plugin.json dist/plugin.json && webpack --config webpack.config.js --mode development --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.4.0",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "dependencies": {
+    "@grafana/data": "^11.0.0",
+    "@grafana/runtime": "^11.0.0",
+    "@grafana/ui": "^11.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  }
+}

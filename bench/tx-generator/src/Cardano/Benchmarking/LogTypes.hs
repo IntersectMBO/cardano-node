@@ -29,11 +29,6 @@ import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
 import           Cardano.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Common ()
-import           Cardano.Tracing.OrphanInstances.Consensus ()
-import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 import           Cardano.TxGenerator.Types (TPSRate)

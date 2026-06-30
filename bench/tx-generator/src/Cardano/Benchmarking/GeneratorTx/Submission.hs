@@ -39,11 +39,6 @@ import qualified Streaming.Prelude as Streaming
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Clock
 
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Common ()
-import           Cardano.Tracing.OrphanInstances.Consensus ()
-import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (SingBlockingStyle (..))
 

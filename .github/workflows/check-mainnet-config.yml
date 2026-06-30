@@ -15,19 +15,20 @@ jobs:
     steps:
 
     - name: Install Nix
-      uses: cachix/install-nix-action@v27
+      uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       with:
         # Use last stable nixos channel and the same nix as in channel:
         nix_path: nixpkgs=channel:nixos-24.05
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
           experimental-features = nix-command flakes
           allow-import-from-derivation = true
-          substituters = https://cache.nixos.org https://cache.iog.io
-          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          extra-substituters = https://cache.iog.io/
+          extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Refresh cardano-node mainnet configuration
       run: |
@@ -42,7 +43,6 @@ jobs:
           'mainnet-byron-genesis.json'
           'mainnet-checkpoints.json'
           'mainnet-config.json'
-          'mainnet-config-legacy.json'
           'mainnet-peer-snapshot.json'
           'mainnet-shelley-genesis.json'
           'mainnet-topology.json'

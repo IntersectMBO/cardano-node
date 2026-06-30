@@ -16,6 +16,7 @@ module Testnet.Process.Cli.SPO
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Api.Experimental.Certificate (PoolId)
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -100,7 +101,9 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
     sAddr <- case deserialiseAddress AsStakeAddress $ Text.pack stakeAddr of
                Just sAddr -> return sAddr
                Nothing -> H.failWithCustom GHC.callStack Nothing $ "Invalid stake address: " <> stakeAddr
+    fs <- liftIO $ mkNodeConfigFs nodeConfigFile
     result <- runExceptT $ foldEpochState
+                            fs
                             nodeConfigFile
                             sPath
                             QuickValidation

@@ -1,7 +1,7 @@
 cabal-version:      3.4
 name:               cardano-timeseries-io
 description:        Cardano Timeseries Input/Output for realtime metric storage & query.
-version:            1.0.0
+version:            1.1.0
 category:           Cardano
                     Metrics
 copyright:          2026 Intersect.
@@ -53,6 +53,7 @@ library
       , base
       , containers
       , deepseq
+      , edit-distance
       , megaparsec
       , mtl
       , scientific
@@ -86,6 +87,7 @@ library
       , Cardano.Timeseries.Interp.Expr
       , Cardano.Timeseries.Interp.Types
       , Cardano.Timeseries.Interp.Value
+      , Cardano.Timeseries.JSON
 
       , Cardano.Timeseries.Store
       , Cardano.Timeseries.Store.Flat
@@ -144,6 +146,25 @@ executable cardano-timeseries-io
       , time
       , trace-resources
       , vector
+
+test-suite cardano-timeseries-test
+  import: common
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Cardano/Timeseries/Unit.hs
+  other-modules:
+      Cardano.Timeseries.Elab.Expr.Parser.Suite
+    , Cardano.Timeseries.Elab.Suite
+    , Cardano.Timeseries.Interp.Suite
+  build-depends:
+      base
+    , cardano-timeseries-io
+    , containers
+    , megaparsec
+    , mtl
+    , tasty
+    , tasty-hunit
+    , text
 
 benchmark cardano-timeseries-io-bench
     import: common

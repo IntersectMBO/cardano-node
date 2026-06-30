@@ -14,12 +14,14 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: 'Set up HLint'
-      uses: rwe/actions-hlint-setup@v1
+      uses: rwe/actions-hlint-setup@9f5da5e7cd43663fb7b2e2154a087c17f0471ed1 # v1
       with:
         version: 3.8
 
     - name: 'Run HLint'
-      uses: rwe/actions-hlint-run@v2
+      uses: rwe/actions-hlint-run@c178fa6263930e604e377a21ef54403306bdc1c7 # v2

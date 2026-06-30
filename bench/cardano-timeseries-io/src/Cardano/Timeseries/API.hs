@@ -45,6 +45,6 @@ execute store interpCfg now stringQuery = do
  surfaceQuery <- first (ParsingErrorWhileExecuting . Text.pack . errorBundlePretty) $
    parse (expr <* space <* eof) "input" stringQuery
  query <- first ElabErrorWhileExecuting $
-   evalState (runExceptT (elab surfaceQuery)) initialSt
+   evalState (runExceptT (elab surfaceQuery)) (initialSt (metrics store))
  first (InterpErrorWhileExecuting . (.message)) $
    evalState (runExceptT $ interp interpCfg store mempty query now) 0

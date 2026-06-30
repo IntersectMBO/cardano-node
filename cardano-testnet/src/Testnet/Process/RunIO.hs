@@ -12,6 +12,7 @@ module Testnet.Process.RunIO
   , procNode
   , procKesAgent
   , execKesAgentControl_
+  , procCustom
   , procFlex
   , liftIOAnnotated
   ) where
@@ -144,8 +145,7 @@ execFlexAny' execConfig pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   cp <- procFlex' execConfig pkgBin envBin arguments
   liftIOAnnotated $ IO.readCreateProcessWithExitCode cp ""
 
-
-
+-- | Like 'procFlex', but takes an explicit 'ExecConfig' instead of using 'defaultExecConfig'.
 procFlex'
   :: HasCallStack
   => MonadIO m
@@ -160,7 +160,20 @@ procFlex'
   -- ^ Captured stdout
 procFlex' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack $ do
   bin <- binFlex pkg binaryEnv
-  return (IO.proc bin arguments)
+  procCustom' execConfig bin arguments
+
+-- | Build a 'CreateProcess' from an already-resolved binary path, arguments, and 'ExecConfig'.
+procCustom'
+  :: (HasCallStack)
+  => MonadIO m
+  => ExecConfig
+  -> FilePath
+  -- ^ Path to the binary
+  -> [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+procCustom' execConfig bin arguments = GHC.withFrozenCallStack $
+  pure (IO.proc bin arguments)
     { IO.env = getLast $ execConfigEnv execConfig
     , IO.cwd = getLast $ execConfigCwd execConfig
     -- this allows sending signals to the created processes, without killing the test-suite process
@@ -310,6 +323,17 @@ procFlex
   -> RIO env CreateProcess
   -- ^ Captured stdout
 procFlex = procFlex' defaultExecConfig
+
+-- | Like 'procFlex', but takes an explicit binary path instead of resolving
+-- via package name and environment variable.
+procCustom
+  :: (HasCallStack)
+  => FilePath
+  -- ^ Path to the binary
+  -> [String]
+  -- ^ Arguments to the CLI command
+  -> RIO env CreateProcess
+procCustom = procCustom' defaultExecConfig
 
 -- This will also catch async exceptions as well.
 liftIOAnnotated :: (HasCallStack, MonadIO m) => IO a -> m a

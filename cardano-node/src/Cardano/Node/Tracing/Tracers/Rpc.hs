@@ -35,6 +35,10 @@ instance LogFormatting TraceRpc where
                   [ "queryName" .= String "ReadUtxos"
                   , spanToObject s
                   ]
+                TraceRpcQuerySearchUtxosSpan s ->
+                  [ "queryName" .= String "SearchUtxos"
+                  , spanToObject s
+                  ]
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
@@ -42,6 +46,8 @@ instance LogFormatting TraceRpc where
                 TraceRpcSubmitTxDecodingError _ -> []
                 TraceRpcSubmitTxValidationError _ -> []
                 TraceRpcSubmitSpan s -> [spanToObject s]
+                TraceRpcEvalTxDecodingError _ -> []
+                TraceRpcEvalTxSpan s -> [spanToObject s]
 
   forHuman = docToText . pretty
 
@@ -50,7 +56,9 @@ instance LogFormatting TraceRpc where
     -- query names here are taken from UTXORPC spec: https://utxorpc.org/query/intro/#operations
     TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" Nothing]
     TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
+    TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" Nothing]
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
+    TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
     _ -> []
 
 instance MetaTrace TraceRpc where
@@ -63,6 +71,7 @@ instance MetaTrace TraceRpc where
           : case queryTrace of
             TraceRpcQueryParamsSpan _ -> ["ReadParams", "Span"]
             TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
+            TraceRpcQuerySearchUtxosSpan _ -> ["SearchUtxos", "Span"]
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of
@@ -70,16 +79,21 @@ instance MetaTrace TraceRpc where
             TraceRpcSubmitTxDecodingError _ -> ["TxDecodingError"]
             TraceRpcSubmitTxValidationError _ -> ["TxValidationError"]
             TraceRpcSubmitSpan _ -> ["SubmitTx", "Span"]
+            TraceRpcEvalTxDecodingError _ -> ["EvalTxDecodingError"]
+            TraceRpcEvalTxSpan _ -> ["EvalTx", "Span"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
     ["Error"] -> Just Debug -- those are normal operation errors, like request errors, hide them by default
     ["QueryService", "ReadParams", "Span"] -> Just Debug
     ["QueryService", "ReadUtxos", "Span"] -> Just Debug
+    ["QueryService", "SearchUtxos", "Span"] -> Just Debug
     ["SubmitService", "SubmitTx", "Span"] -> Just Debug
+    ["SubmitService", "EvalTx", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
     ["SubmitService", "TxDecodingError"] -> Just Debug -- request error
     ["SubmitService", "TxValidationError"] -> Just Debug -- request error
+    ["SubmitService", "EvalTxDecodingError"] -> Just Debug -- request error
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -87,12 +101,15 @@ instance MetaTrace TraceRpc where
     ["Error"] -> Just "Normal operation errors such as request errors. Those are not harmful to the RPC server itself."
     ["QueryService", "ReadParams", "Span"] -> Just "Span for the ReadParams UTXORPC method."
     ["QueryService", "ReadUtxos", "Span"] -> Just "Span for the ReadUtxos UTXORPC method."
+    ["QueryService", "SearchUtxos", "Span"] -> Just "Span for the SearchUtxos UTXORPC method."
     ["SubmitService", "SubmitTx", "Span"] -> Just "Span for the SubmitTx UTXORPC method."
+    ["SubmitService", "EvalTx", "Span"] -> Just "Span for the EvalTx UTXORPC method."
     ["SubmitService", "N2cConnectionError"] ->
       Just
         "Node connection error. This should not happen, as this means that there is an issue in cardano-rpc configuration."
     ["SubmitService", "TxDecodingError"] -> Just "A regular request error, when submitted transaction decoding fails."
     ["SubmitService", "TxValidationError"] -> Just "A regular request error, when submitted transaction is invalid."
+    ["SubmitService", "EvalTxDecodingError"] -> Just "A regular request error, when evalTx transaction decoding fails."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -100,8 +117,12 @@ instance MetaTrace TraceRpc where
       [("rpc.request.QueryService.ReadParams", "Span for the ReadParams UTXORPC method.")]
     ["QueryService", "ReadUtxos", "Span"] ->
       [("rpc.request.QueryService.ReadUtxos", "Span for the ReadUtxos UTXORPC method.")]
+    ["QueryService", "SearchUtxos", "Span"] ->
+      [("rpc.request.QueryService.SearchUtxos", "Span for the SearchUtxos UTXORPC method.")]
     ["SubmitService", "SubmitTx", "Span"] ->
       [("rpc.request.SubmitService.SubmitTx", "Span for the SubmitTx UTXORPC method.")]
+    ["SubmitService", "EvalTx", "Span"] ->
+      [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
     _ -> []
 
   allNamespaces =
@@ -110,10 +131,13 @@ instance MetaTrace TraceRpc where
           , ["Error"]
           , ["QueryService", "ReadParams", "Span"]
           , ["QueryService", "ReadUtxos", "Span"]
+          , ["QueryService", "SearchUtxos", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
+          , ["SubmitService", "EvalTx", "Span"]
           , ["SubmitService", "N2cConnectionError"]
           , ["SubmitService", "TxDecodingError"]
           , ["SubmitService", "TxValidationError"]
+          , ["SubmitService", "EvalTxDecodingError"]
           ]
 
 -- helper functions

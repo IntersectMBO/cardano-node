@@ -79,6 +79,12 @@ with builtins; let
         epPort = cfg.rtviewPort;
       };
     }
+    // optionalAttrs cfg.timeseriesEnable {
+      hasTimeseries = {
+        epHost = cfg.timeseriesHost;
+        epPort = cfg.timeseriesPort;
+      };
+    }
     // cfg.extraConfig;
 
   prettyConfig =
@@ -492,16 +498,39 @@ in {
         description = ''
           Haskell profiling types which are available and will be applied to
           the cardano-tracer binary if declared.
+
+          Note: the default `profilingArgs` always include the lightweight
+          `--machine-readable -t...cardano-tracer.stats` RTS summary (written
+          at exit, useful in any build). The cost-centre/heap profiling flags
+          and the `-po` output stem are only added when this is not "none" or
+          `eventlog` is enabled.
+        '';
+      };
+
+      profilingOutputDir = mkOption {
+        type = nullOr str;
+        default = null;
+        description = ''
+          Optional directory prefix for GHC RTS profiling output files
+          (cardano-tracer.stats, cardano-tracer.prof, cardano-tracer.hp, etc.).
+          When null, files are written relative to the working directory
+          (the systemd unit's WorkingDirectory for NixOS deployments, which
+          is cfg.stateDir).
         '';
       };
 
       profilingArgs = mkOption {
         type = listOf str;
-        default =
-             [ "--machine-readable"
-               "-tcardano-node.stats"
-               "-pocardano-node"
-             ]
+        default = let
+          prefix = if cfg.profilingOutputDir == null then "" else "${cfg.profilingOutputDir}/";
+        in
+             # Always emit the lightweight machine-readable RTS/GC summary at
+             # exit. It works in any build, costs nothing, and is useful
+             # telemetry. The OCI images use the profilingOutputDir option to
+             # ensure it lands on a writable mount under a read-only-root OCI
+             # image.
+             [ "--machine-readable" "-t${prefix}cardano-tracer.stats" ]
+          ++ optionals (cfg.profiling != "none" || cfg.eventlog) [ "-po${prefix}cardano-tracer" ]
           ++ optional (cfg.eventlog) "-l"
           ++ (
                     if cfg.profiling == "time"           then ["-p"]
@@ -705,6 +734,31 @@ in {
         default = 3300;
         description = ''
           The port to listen on if RTView is enabled.
+        '';
+      };
+
+      timeseriesEnable = mkOption {
+        type = bool;
+        default = false;
+        description = ''
+          Whether to enable the timeseries HTTP server, which exposes
+          POST /timeseries/query for querying stored metric history.
+        '';
+      };
+
+      timeseriesHost = mkOption {
+        type = str;
+        default = "127.0.0.1";
+        description = ''
+          The host to bind if the timeseries server is enabled.
+        '';
+      };
+
+      timeseriesPort = mkOption {
+        type = port;
+        default = 12818;
+        description = ''
+          The port to listen on if the timeseries server is enabled.
         '';
       };
 

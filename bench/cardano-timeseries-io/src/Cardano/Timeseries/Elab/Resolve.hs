@@ -18,11 +18,13 @@ resolveTy defs (InstantVector typ) = InstantVector (resolveTy defs typ)
 resolveTy defs (RangeVector typ) = RangeVector (resolveTy defs typ)
 resolveTy defs (Fun typ typ') = Fun (resolveTy defs typ) (resolveTy defs typ')
 resolveTy defs (Pair typ typ') = Pair (resolveTy defs typ) (resolveTy defs typ')
+resolveTy _ Ty.Unit = Ty.Unit
 resolveTy _ Scalar = Scalar
 resolveTy _ Timestamp = Timestamp
 resolveTy _ Duration = Duration
 resolveTy _ Bool = Bool
 resolveTy _ Text = Text
+resolveTy defs (List typ) = List (resolveTy defs typ)
 
 -- | Computes the head-normal form of `Binding` w.r.t. hole resolution
 --   (i.e. unfolds holes recursively up to the head expression in type of the binding).
@@ -47,6 +49,10 @@ resolveExpr' defs (AddInstantVectorScalar a b) = AddInstantVectorScalar (resolve
 resolveExpr' defs (SubInstantVectorScalar a b) = SubInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (MulInstantVectorScalar a b) = MulInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (DivInstantVectorScalar a b) = DivInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
+resolveExpr' defs (AddRangeVectorScalar a b)   = AddRangeVectorScalar   (resolveExpr' defs a) (resolveExpr' defs b)
+resolveExpr' defs (SubRangeVectorScalar a b)   = SubRangeVectorScalar   (resolveExpr' defs a) (resolveExpr' defs b)
+resolveExpr' defs (MulRangeVectorScalar a b)   = MulRangeVectorScalar   (resolveExpr' defs a) (resolveExpr' defs b)
+resolveExpr' defs (DivRangeVectorScalar a b)   = DivRangeVectorScalar   (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (AddScalar a b) = AddScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (SubScalar a b) = SubScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (MulScalar a b) = MulScalar (resolveExpr' defs a) (resolveExpr' defs b)
@@ -63,6 +69,7 @@ resolveExpr' defs (LtInstantVectorScalar a b) = LtInstantVectorScalar (resolveEx
 resolveExpr' defs (LteInstantVectorScalar a b) = LteInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (GtInstantVectorScalar a b) = GtInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (GteInstantVectorScalar a b) = GteInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)
+resolveExpr' _ Expr.Unit = Expr.Unit
 resolveExpr' _ Expr.True = Expr.True
 resolveExpr' _ Expr.False = Expr.False
 resolveExpr' defs (Not t) = Not (resolveExpr' defs t)
@@ -113,6 +120,8 @@ resolveExpr' defs (Quantile a b) = Quantile (resolveExpr' defs a) (resolveExpr' 
 resolveExpr' defs (Range a b c d) =
   Range (resolveExpr' defs a) (resolveExpr' defs b) (resolveExpr' defs c) (resolveExpr' defs <$> d)
 resolveExpr' defs (QuantileBy a b c) = QuantileBy a (resolveExpr' defs b) (resolveExpr' defs c)
+resolveExpr' _ Expr.Nil           = Expr.Nil
+resolveExpr' defs (Expr.Cons a b) = Expr.Cons (resolveExpr' defs a) (resolveExpr' defs b)
 resolveExpr' defs (Expr.Hole idx) =
   case Map.lookup idx defs of
     Just (ExprHoleInst rhs _) -> resolveExpr' defs rhs

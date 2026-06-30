@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Experimental (Some (..))
+import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -29,6 +29,8 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Defaults
+import           Testnet.EpochStateProcessing (unsafeEraFromSbe)
+import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -58,10 +60,13 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNodes =
-            SpoNodeOptions [] :|
-          [ SpoNodeOptions []
-          , SpoNodeOptions []
-          ]
+            TestnetNodesWithOptions
+              { optSpoNodes = NodeWithOptions Nothing [] :|
+                [ NodeWithOptions Nothing []
+                , NodeWithOptions Nothing []
+                ]
+              , optRelayNodes = []
+              }
         , creationGenesisOptions = def { genesisEpochLength = 100 }
         }
 
@@ -178,11 +183,10 @@ getConstitutionProposal
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe L.GovActionId)
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
-  result <- H.evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  fs <- H.evalIO $ mkNodeConfigFs nodeConfigFile
+  result <- H.evalIO . runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState _) _slotNb _blockNb ->
-        caseShelleyToBabbageOrConwayEraOnwards
-          (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
-          (\cEra -> conwayEraOnwardsConstraints cEra $ do
+          obtainCommonConstraints (unsafeEraFromSbe actualEra) $ do
             let proposals = newEpochState
                       ^. L.nesEsL
                       . L.esLStateL
@@ -196,6 +200,5 @@ getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
                 pure ConditionMet
               _ ->
                 pure ConditionNotMet
-          ) actualEra
   (_, mGovAction) <- H.evalEither result
   return mGovAction

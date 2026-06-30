@@ -41,9 +41,9 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 11.0 || ^>= 11.1
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.0 || ^>= 11.1
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-api ^>= 11.3
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.1
+                      , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
@@ -57,13 +57,12 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.10
+                      , cardano-diffusion:ping ^>= 1.0
                       , cardano-prelude
                       , cardano-rpc
                       , contra-tracer
                       , containers
                       , data-default-class
-                      , cborg
                       , containers
                       , contra-tracer
                       , data-default-class
@@ -72,6 +71,7 @@ library
                       , exceptions
                       , extra
                       , filepath
+                      , fs-api ^>= 0.4
                       , hedgehog
                       , hedgehog-extras ^>= 0.10
                       , http-conduit
@@ -82,8 +82,8 @@ library
                       , mono-traversable
                       , mtl
                       , network
-                      , network-mux
-                      , optparse-applicative-fork
+                      , optparse-applicative
+                      , parsec
                       , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion} ^>= 1.0
                       , prettyprinter
@@ -135,7 +135,8 @@ library
                         Testnet.TestQueryCmds
                         Testnet.Types
 
-  other-modules:        Parsers.Cardano
+  exposed-modules:      Parsers.Cardano
+  other-modules:
                         Parsers.Help
                         Parsers.Version
                         Testnet.TestEnumGenerator
@@ -152,10 +153,10 @@ executable cardano-testnet
 
   main-is:              cardano-testnet.hs
 
-  build-depends:        cardano-crypto-class ^>=2.3
+  build-depends:        cardano-crypto-class ^>=2.5
                       , cardano-cli
                       , cardano-testnet
-                      , optparse-applicative-fork
+                      , optparse-applicative
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
@@ -236,10 +237,13 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.Rpc.Eval
                         Cardano.Testnet.Test.Rpc.Query
+                        Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.MainnetParams
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet
@@ -272,6 +276,7 @@ test-suite cardano-testnet-test
                       , directory
                       , exceptions
                       , filepath
+                      , grpc-spec
                       , hedgehog
                       , hedgehog-extras
                       , http-conduit
@@ -287,6 +292,7 @@ test-suite cardano-testnet-test
                       , regex-compat
                       , rio
                       , tasty ^>= 1.5
+                      , tasty-hedgehog
                       , text
                       , time
                       , transformers

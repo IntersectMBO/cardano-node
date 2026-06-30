@@ -29,8 +29,6 @@ import qualified Cardano.Node.Protocol.Dijkstra as Dijkstra
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
@@ -41,6 +39,10 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Prelude
 
 import           Data.Function ((&))
+import           System.FilePath (takeDirectory)
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
@@ -149,8 +151,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationCheckpointsReadError $
         readCheckpointsMap checkpointsConfiguration
 
+    -- Filesystem rooted at the Shelley genesis directory, used by the ledger to
+    -- read initial funds/staking injected from genesis (testnets only).
+    let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
+
     return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
+      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano shelleyGenesisFS $ Consensus.CardanoProtocolParams {
         Consensus.byronProtocolParams =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,

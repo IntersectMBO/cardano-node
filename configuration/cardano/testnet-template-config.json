@@ -13,9 +13,11 @@
   "LastKnownBlockVersion-Minor": 1,
   "LedgerDB": {
     "Backend": "V2InMemory",
-    "NumOfDiskSnapshots": 2,
     "QueryBatchSize": 100000,
-    "SnapshotInterval": 216
+    "Snapshots": {
+      "NumOfDiskSnapshots": 2,
+      "SnapshotInterval": 216
+    }
   },
   "MaxConcurrencyDeadline": 4,
   "MaxKnownMajorProtocolVersion": 2,
@@ -111,14 +113,5 @@
     "Startup.DiffusionInit": {
       "severity": "Info"
     }
-  },
-  "TurnOnLogMetrics": true,
-  "TurnOnLogging": true,
-  "UseTraceDispatcher": true,
-  "defaultBackends": [],
-  "defaultScribes": [],
-  "minSeverity": "Critical",
-  "options": {},
-  "setupBackends": [],
-  "setupScribes": []
+  }
 }

@@ -88,24 +88,26 @@ jobs:
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
+      uses: input-output-hk/actions/haskell@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
+      uses: input-output-hk/actions/base@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
       with:
         use-sodium-vrf: true # default is true
 
-    - name: Install gRPC dependencies
-      uses: intersectmbo/cardano-api/.github/actions/grpc-deps@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
+    - name: Install gRPC system dependencies
+      uses: input-output-hk/cardano-dev/actions/grpc-deps@64bbe67966d5ee404a795803a2b56718baebffb4 # grpc-deps-0.0.1.0
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Cache and install Cabal dependencies
-      uses: intersectmbo/cardano-api/.github/actions/cabal-cache@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
+      uses: input-output-hk/cardano-dev/actions/cabal-cache@e811e25d3927d62ba87f1762ea51c36e65f0b09a # cabal-cache-0.0.1.0
       with:
         cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
         cache-version: ${{ env.CABAL_CACHE_VERSION }}
@@ -132,7 +134,7 @@ jobs:
 
     - name: Upload workspaces on tests failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: failed-test-workspaces-${{ matrix.sys.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
@@ -161,7 +163,7 @@ jobs:
         fi
 
     - name: Save Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       if: ${{ always() }}
       continue-on-error: true
       with:
@@ -206,7 +208,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Create Release Tag
       id: create_release_tag
@@ -215,7 +219,7 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -225,12 +229,12 @@ jobs:
         prerelease: false
 
     - name: Download Artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         name: artifacts-ubuntu-latest
 
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
