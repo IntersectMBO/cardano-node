@@ -40,7 +40,10 @@
     };
 
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
+      # Pinned past the default 11.0.1 rev (ef52c36b) to 99ee6c1bf, the commit
+      # that adds the GHC builder's `enableIPE` arg (+ extraFlavourTransformers).
+      # Minimal 6-commit bump; lets the ghc967 IPE-boot-libs overlay below work.
+      url = "github:input-output-hk/haskell.nix/99ee6c1bf698157cc7730b0113eab54f6cc88fcf";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
@@ -52,7 +55,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # Pin nixpkgs to the rev haskellNix's nixpkgs-unstable resolved to BEFORE the
+    # haskellNix bump (was: `follows = "haskellNix/nixpkgs-unstable"`). The bump
+    # to 99ee6c1bf moved that pin Jun->Dec 2025; pinning here keeps cardano-node
+    # on its original nixpkgs so the bump contributes only the haskellNix changes
+    # (enableIPE etc.), not a 6-month nixpkgs jump. haskellNix's own
+    # `inputs.nixpkgs.follows = "nixpkgs"` then points it back here too.
+    nixpkgs.url = "github:NixOS/nixpkgs/e4b09e47ace7d87de083786b404bf232eb6c89d8";
 
     utils.url = "github:numtide/flake-utils";
   };
@@ -115,6 +124,19 @@
           final.lib.optionalAttrs final.stdenv.hostPlatform.isMusl {
             postInstall = builtins.replaceStrings ["rm $out/lib/liburing*.a"] [""] attrs.postInstall;
           });
+      })
+      # Build the GHC boot libraries (base, ghc-prim, ...) with IPE info-table
+      # maps too, so `+RTS -hi` resolves boot-package allocations to source --
+      # closing the one gap the `infoTableMapped`/`ghcDebug` haskell.nix overlay
+      # can't reach (it only reflags from-source packages, not the prebuilt boot
+      # libs). `enableIPE` appends Hadrian's `+ipe` flavour transformer; it needs
+      # the haskellNix pinned above (the default 11.0.1 rev lacks the arg).
+      (final: prev: {
+        haskell-nix = prev.haskell-nix // {
+          compiler = prev.haskell-nix.compiler // {
+            ghc967 = prev.haskell-nix.compiler.ghc967.override { enableIPE = true; };
+          };
+        };
       })
       (import ./nix/pkgs.nix)
       self.overlay
