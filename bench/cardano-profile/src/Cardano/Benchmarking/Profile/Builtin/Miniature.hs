@@ -113,10 +113,7 @@ profilesMiniature =
         . P.analysisSizeFull . P.analysisUnitary
   in [
     dense & P.name "6-dense"                . V.valueCloud . duration30  . P.traceForwardingOn
-  , dense & P.name "6-dense-rtsprof"        . V.valueCloud . duration30  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   , dense & P.name "6-dense-1h"             . V.valueCloud . duration60  . P.traceForwardingOn
-  , dense & P.name "6-dense-1h-rtsprof"     . V.valueCloud . duration60  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   , dense & P.name "6-dense-1h-timeseries"  . V.valueCloud . duration60  . P.traceForwardingOn . P.tracerTimeseries
   , dense & P.name "6-dense-4h"             . V.valueCloud . duration240 . P.traceForwardingOn
-  , dense & P.name "6-dense-4h-rtsprof"     . V.valueCloud . duration240 . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   ]

@@ -62,6 +62,15 @@ ci-targets:  $(CI_TARGETS)
 workbench-internals-walkthrough:
 	emn nix/workbench/doc.org
 
+# Alias for removed profiles: inject RTS -hT (space-heap) heap profile + -l (eventlog) as shell parameters on a NON-profiled build.
+# Neither -hT nor -l needs a profiled runtime, so delegate to the base target, not -prof (a -prof target hardcodes --arg profiledBuild true).
+6-dense-rtsprof:
+	WB_PROFILING="space-heap+eventlog" $(MAKE) 6-dense
+6-dense-1h-rtsprof:
+	WB_PROFILING="space-heap+eventlog" $(MAKE) 6-dense-1h
+6-dense-4h-rtsprof:
+	WB_PROFILING="space-heap+eventlog" $(MAKE) 6-dense-4h
+
 ##
 ## Base targets:
 ##

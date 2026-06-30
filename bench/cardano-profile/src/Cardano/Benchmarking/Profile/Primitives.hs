@@ -78,7 +78,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
   , rtsGcNonMoving, rtsGcAllocSize
-  , rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
+  , rtsThreads, rtsHeapLimit, rtsEventlogged
   , heapLimit
 
   -- Generator params.
@@ -662,10 +662,6 @@ rtsHeapLimit n = rtsAppend $ "-M" ++ show n ++ "m"
 
 rtsEventlogged :: Types.Profile -> Types.Profile
 rtsEventlogged = rtsAppend "-l"
-
--- turns on heap profiling via workbench profile, as this does not require a -profiled build
-rtsHeapProf :: Types.Profile -> Types.Profile
-rtsHeapProf = rtsAppend "-hT"
 
 heapLimit :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 heapLimit l = node
