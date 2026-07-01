@@ -76,6 +76,7 @@ profilesMiniature =
       ciBench10Plutus   = ciBench10 & V.genesisVariant300
 
       loop     = V.plutusSaturation           . V.plutusTypeLoop     . P.analysisSizeSmall
+      loopV3   = V.plutusSaturation           . V.plutusTypeLoopV3   . P.analysisSizeSmall
       loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024 . P.analysisSizeSmall
       ecdsa    = V.plutusDoublePlusSaturation . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = V.plutusDoublePlusSaturation . V.plutusTypeSchnorr  . P.analysisSizeModerate
@@ -89,6 +90,8 @@ profilesMiniature =
   , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff
   , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn
   , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn
+  , ciBench02PlutusV3 & P.name "ci-bench-v11-plutus"             . loop         . P.dreps  0 . P.traceForwardingOn  . P.v11Preview
+  , ciBench02PlutusV3 & P.name "ci-bench-v11-plutusv3"           . loopV3       . P.dreps  0 . P.traceForwardingOn  . P.v11Preview
   , ciBench02Plutus   & P.name "ci-bench-plutus24"               . loop2024     . P.dreps  0 . P.traceForwardingOn
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"      . ecdsa        . P.dreps  0 . P.traceForwardingOn
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"    . schnorr      . P.dreps  0 . P.traceForwardingOn
