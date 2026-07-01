@@ -116,14 +116,22 @@ let
     set -euo pipefail
     SOCK="''${GHC_DEBUG_SOCKET:-${ghcDebugSocket}}"
     OUT="''${1:-/data/ghc-debug-$(date -u +%Y%m%dT%H%M%SZ).snapshot}"
+    # THREADS tunes the parallel heap-traversal worker count (ghc-debug's
+    # GHC.Debug.ParTrace uses `threads = numCapabilities` natively in 0.8). Unset => the
+    # exe default of 64 (baked via -with-rtsopts=-N64), matching upstream's
+    # original behaviour. On a large heap that 64-way traversal can OOM the
+    # client; set e.g. THREADS=1 for serial/low-memory (slower, node paused
+    # longer) or THREADS=4 for a middle ground. Passed through as the RTS -N flag.
+    RTS=()
+    if [ -n "''${THREADS:-}" ]; then RTS=(+RTS "-N''${THREADS}" -RTS); fi
     if [ ! -S "$SOCK" ]; then
       echo "[take-snapshot] ghc-debug socket not found at: $SOCK" >&2
       echo "[take-snapshot] Is the node running, and built with the ghc-debug flag?" >&2
       exit 1
     fi
-    echo "[take-snapshot] socket=$SOCK out=$OUT"
+    echo "[take-snapshot] socket=$SOCK out=$OUT threads=''${THREADS:-64 (default)}"
     echo "[take-snapshot] NOTE: this pauses the node for the duration of the capture."
-    ${cardano-debug}/bin/cardano-debug snapshot "$OUT" "$SOCK"
+    ${cardano-debug}/bin/cardano-debug snapshot "$OUT" "$SOCK" "''${RTS[@]}"
     echo "[take-snapshot] wrote $OUT ($(du -h "$OUT" | cut -f1))."
     echo "[take-snapshot] Copy it off the container (docker cp / volume) and ship it back for offline analysis."
   '';

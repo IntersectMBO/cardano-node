@@ -191,6 +191,31 @@ let
             packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
               lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
           })
+          # NOTE: the 0.5-specific ghc-debug patches (ParTrace `threads = 64` ->
+          # numCapabilities, and the ghc-debug-stub handle_connection SocketError
+          # catch/resume) were removed when we moved to ghc-debug 0.8 via the
+          # source-repository-package in cabal.project: 0.8 already uses
+          # `threads = numCapabilities`, and its stub source has different line
+          # numbers so the .patch no longer applies. If 0.8 still aborts/freezes
+          # the node on an abnormal debugger disconnect, port that fix to 0.8's
+          # cbits/stub.cpp. The patch file is kept under nix/patches/ for reference.
+          ({ lib, ... }: {
+            # ghc-debug 0.8 (from the source-repository-package) config. These
+            # per-component ghcOptions REPLACE the project-wide default for these
+            # libs (which carries `program-options: -Werror` + the IPE flags):
+            #  * -Wwarn: 0.8's source has -Wduplicate-exports / -Wunused-imports
+            #    warnings that -Werror makes fatal; we don't fix upstream's warnings.
+            #    (cabal.project `package X ghc-options` does NOT reach the SRP build,
+            #    so this must be set here.)
+            #  * -g3 (client/common): DWARF so a segfault in the closure-decode path
+            #    (heap_view_closurePtrsAsWords / unpackClosure#) gives a gdb backtrace
+            #    with Haskell frames. Dropping the IPE default is fine -- the client
+            #    doesn't need IPE on itself.
+            packages.ghc-debug-client.components.library.ghcOptions = [ "-g3" "-Wwarn" ];
+            packages.ghc-debug-common.components.library.ghcOptions = [ "-g3" "-Wwarn" ];
+            packages.ghc-debug-stub.components.library.ghcOptions = [ "-Wwarn" ];
+            packages.ghc-debug-convention.components.library.ghcOptions = [ "-Wwarn" ];
+          })
           ({ lib, pkgs, ... }: {
             # Use the VRF fork of libsodium
             packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];

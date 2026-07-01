@@ -1,0 +1,48 @@
+Don't abort (or freeze) the debuggee when the debugger connection drops abnormally.
+
+ghc-debug-stub's handle_connection() reads requests with Socket::read(), which
+throws SocketError (errno-based) on a read *error* -- i.e. an abnormal client
+disconnect: the debugger crashed/OOM'd, or a forwarded (ssh/socat) socket
+dropped mid-snapshot. handle_connection only wraps handle_command() in
+`try { ... } catch (Parser::EndOfInput)`, and the top-of-loop sock.read() calls
+are outside any try, so a SocketError propagates out of handle_connection ->
+start_over_un -> no handler -> std::terminate -> abort. That takes the entire
+cardano-node down (observed: abort via Socket::read in the node's core dump).
+
+Worse, the snapshot path pauses the process (pause_mutator -> rts_pause, sets
+the file-scope `paused` flag). If the debugger dies *while paused*, no resume
+command ever arrives, so even catching the error leaves the node frozen
+(stop-the-world) forever (observed: container Up but node not logging). So the
+catch must also resume_mutator() when paused.
+
+A *clean* EOF returns 0 and is already handled; this only adds the missing
+error path: wrap the loop in `try { ... } catch (const SocketError&)`, resume
+the RTS if we were paused, then drop the connection. start_over_un's accept
+loop serves the next debugger and the node stays up and running.
+
+--- a/cbits/stub.cpp
++++ b/cbits/stub.cpp
+@@ -712,6 +712,10 @@
+ static void handle_connection(const unsigned int sock_fd) {
+     Socket sock(sock_fd);
+     char *buf = new char[MAX_CMD_SIZE];
++    // SocketError from the sock.read() calls below (abnormal client disconnect)
++    // would otherwise propagate uncaught -> std::terminate -> abort the node.
++    // Catch it below; if paused mid-snapshot, resume so the node isn't frozen.
++    try {
+     while (true) {
+         trace("handler is waiting for a request\n");
+         uint32_t cmdlen_n, cmdlen;
+@@ -747,6 +751,13 @@
+           delete[] large_buf;
+         }
+     }
++    } catch (const SocketError&) {
++        // Abnormal debugger disconnect (reset/broken pipe). Resume the RTS if
++        // the snapshot left us paused (else the node stays stop-the-world frozen
++        // forever), then drop the connection. start_over_un's accept loop serves
++        // the next debugger and the node stays up.
++        if (paused) resume_mutator();
++    }
+     delete[] buf;
+ }

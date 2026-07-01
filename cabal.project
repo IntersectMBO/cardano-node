@@ -61,11 +61,35 @@ packages:
   trace-resources
   trace-forward
   -- Headless ghc-debug snapshotter + offline analyzer, bundled into the
-  -- ghc-debug docker image (see nix/pkgs.nix dockerImageNodeDebug). Pulls
-  -- ghc-debug-client from the Hackage index (resolves to the 0.5.x family on
-  -- GHC 9.6.7 -- ghc-debug is pinned to the compiler's ghc-heap; the 0.5.x API
-  -- used here is identical).
+  -- ghc-debug docker image (see nix/pkgs.nix dockerImageNodeDebug). Depends on
+  -- ghc-debug-client, supplied by the source-repository-package below.
   cardano-debug
+
+-- ghc-debug 0.8.0.0 (gitlab master @ 2b8cf733). We pull it from git rather than
+-- Hackage because our pinned index-state predates 0.7/0.8, so the solver would
+-- otherwise resolve the 0.5.x family. 0.5's decoder is built on `ghc-heap`'s
+-- RTS closure introspection (unpackClosurePtr# / heap_view_closurePtrsAsWords),
+-- which SEGFAULTs decoding a full cardano-node ledger heap; 0.7+ dropped the
+-- ghc-heap dependency and rewrote the decoder, and 0.8's deps still fit GHC
+-- 9.6.7 (base >=4.16 && <4.23, no ghc-heap). This SRP overrides only these four
+-- packages and leaves the global index-state untouched.
+source-repository-package
+  type: git
+  location: https://gitlab.haskell.org/ghc/ghc-debug
+  tag: 2b8cf733f079af6e88eb4d9fa65b1215cc24ebc4
+  --sha256: sha256-I/E/WmTuAcQnpXgpv6dph0C4q4RZivbl+uv3oMCKjrY=
+  subdir: common client stub convention
+
+-- ghc-debug-client 0.8 bumped its bound to contra-tracer ^>=0.2, but cardano-node's
+-- ecosystem (ouroboros-consensus, ...) pins contra-tracer 0.1.0.2. ghc-debug-client
+-- only uses the stable core API (Control.Tracer: Tracer/traceWith/contramap/debugTracer),
+-- all present in 0.1.0.2, so relax its lower bound to let it build against the pinned
+-- version. (Only ghc-debug-client depends on contra-tracer among the SRP packages.)
+allow-older: ghc-debug-client:contra-tracer
+
+-- (ghc-debug 0.8's source trips -Werror; that's relaxed to -Wwarn for its libs
+-- in nix/haskell.nix, since cabal.project per-package ghc-options don't reach
+-- the source-repository-package build.)
 
 -- Needed when cross compiling
 extra-packages: alex, dmq-node >= 0.4.2.0

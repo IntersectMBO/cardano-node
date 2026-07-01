@@ -34,7 +34,7 @@ module Main (main) where
 import           GHC.Debug.Client
 import           GHC.Debug.Snapshot (makeSnapshot)
 import           GHC.Debug.Profile (censusClosureType, closureCensusBy, writeCensusByClosureType)
-import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainers)
+import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainersOfArrWords)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BB
@@ -112,10 +112,9 @@ retainMode snap maxPaths minBytes = do
     run e $ do
       _     <- precacheBlocks
       gcrts <- gcRoots
-      paths <- findRetainers (Just maxPaths) gcrts $ \_ c ->
-        pure $ case noSize c of
-          ArrWordsClosure{ bytes = b } -> b >= minBytes
-          _                            -> False
+      -- 0.8: findRetainers takes a ClosureFilter ADT; use the ready-made
+      -- ArrWords helper (size arg is the `Size` newtype).
+      paths <- findRetainersOfArrWords (Just maxPaths) gcrts (Size (fromIntegral minBytes))
       mapM addLocationToStack paths
   hPutStrLn stderr ("ghc-debug: " <> show (length stacks) <> " retainer chains")
   displayRetainerStack
