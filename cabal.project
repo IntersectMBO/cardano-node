@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-06-10T14:43:25Z
-  , cardano-haskell-packages 2026-06-10T14:16:00Z
+  , hackage.haskell.org 2026-06-29T22:49:53Z
+  , cardano-haskell-packages 2026-06-29T12:05:19Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -78,6 +78,8 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
+  -- TODO: waiting for upstream to remove the bound
+  , *:aeson
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -87,8 +89,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: bb64ad40f904040a9b4d99306cf13eef4650a6c9
-  --sha256: sha256-302P+qj+UkY/uSWHt8YMT4VzNhRS9tWMz0G6rjr4eVk=
+  tag: a775a6a9d581e2216ebc31f27572f4ae1c499e48
+  --sha256: sha256-U0UDIuhsDfJ4PDV1BqDTY7/2gWpf8c/Z2IVqUGMNhKQ=
   subdir:
     cardano-api
     cardano-rpc
@@ -96,16 +98,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 9678a844fd2b53bc3777906d61b53fe0ff93e8ed
-  --sha256: sha256-0Eo3txVuqkmvZdsyalKbS+bnmFzevG4O99CavSjo7SM=
+  tag: b698d1f0f5681da0ae43dc9db10f82b2de35c0c6
+  --sha256: sha256-f0Twa/vH7R98xN03XFPlfoIX3mZlkNTGJ+gHMjNaIkU=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 8dc1c431e06db2c8b5d44fb4b3cca6419197d763
-  --sha256: sha256-xKtgNFxjbJE6UWGvTioGX81NgvlKH3mHEaYMWDm8/UA=
+  tag: 245e63dcd335e3ca29823609e4aaa8f5f096a425
+  --sha256: sha256-chsapfNnY/V7y1snBzjP0LSVnYl/Axt6GjahTPNOKj0=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -141,16 +143,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: e6fad063078894cefece2a535a2e2b4d9a092e73
-  --sha256: sha256-SPtbQ1+zN4uYiVx3rej2kMasbpfhSAyjRD5bdrnK3Rs=
+  tag: cb5b3c1ab46b562810d058b51fbce0ee407ce3ae
+  --sha256: sha256-42StkJb5M3tEwNtJ9Y4CL7FCLnsz7AmNyYKMAF2amDY=
   subdir:
     .
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 8b4dcb898b64615f574a7fbdcf119f77c7fbc598
-  --sha256: sha256-t1tGV5uZwyKnSSCbaJJAteMYKnQYeO39hUUycMRuC2M=
+  tag: b47dbc2c29108e593cc47524cffb75008b88fe90
+  --sha256: sha256-7TwcI1/m6aEBmiGYPXKHbIWlxzRja4qFyqr+apcR9p4=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation
