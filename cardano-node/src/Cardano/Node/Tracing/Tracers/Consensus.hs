@@ -2339,6 +2339,8 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosVoted{weight}         -> "Leios voted, weight=" <> showT (fromRational @Double weight)
     TraceLeiosVoteAcquired{}        -> "Leios vote acquired"
     TraceLeiosCertified{rbHash}     -> "Leios cert assembled for RB " <> Text.pack (show rbHash)
+    TraceLeiosNotVoted{ebPoint, reason} ->
+      "Leios not voted for " <> Text.pack (show ebPoint) <> ": " <> Text.pack (show reason)
     TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
     TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
   asMetrics _ = []
@@ -2355,6 +2357,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosVoted{}             = Namespace [] ["Voted"]
   namespaceFor TraceLeiosVoteAcquired{}      = Namespace [] ["VoteAcquired"]
   namespaceFor TraceLeiosCertified{}         = Namespace [] ["Certified"]
+  namespaceFor TraceLeiosNotVoted{}          = Namespace [] ["NotVoted"]
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
 
@@ -2376,6 +2379,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["Voted"]
     , Namespace [] ["VoteAcquired"]
     , Namespace [] ["Certified"]
+    , Namespace [] ["NotVoted"]
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
     ]
