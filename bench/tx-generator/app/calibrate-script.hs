@@ -14,9 +14,6 @@ import           Cardano.Api
 
 import           Cardano.Benchmarking.Compiler (keyBenchmarkInputs)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-#ifdef WITH_LIBRARY
-import           Cardano.Benchmarking.PlutusScripts (listPlutusScripts)
-#endif
 import           Cardano.TxGenerator.Calibrate.Utils
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters ( ProtocolParameters (..), convertToLedgerProtocolParameters, 
@@ -45,8 +42,11 @@ import           System.Directory
 import           System.FilePath
 import           Text.Read (readMaybe)
 
+#ifdef WITH_LIBRARY
+import           Cardano.Benchmarking.PlutusScripts (listPlutusScripts)
+#else
 import           Paths_tx_generator hiding (version)
-
+#endif
 
 data CommandLine
     = CLIList
