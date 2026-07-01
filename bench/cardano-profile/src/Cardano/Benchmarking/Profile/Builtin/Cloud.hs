@@ -181,6 +181,7 @@ profilesCloud =
   -- Plutus (post-Voltaire profiles)
   , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
+  , loopV3Volt  & P.name "plutusv3-voltv11-nomadperf"                      . P.dreps  10000 . P.v11Preview
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . blockMem2x
   , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . ephemeral . P.lsmt

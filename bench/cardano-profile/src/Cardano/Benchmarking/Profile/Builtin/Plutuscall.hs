@@ -64,4 +64,6 @@ profilesPlutuscall =
   , loopVolt    & P.name "plutuscall-volt-loop"            . postPlomin
   , blstVolt    & P.name "plutuscall-volt-blst"            . postPlomin
   , ripemdVolt  & P.name "plutuscall-volt-ripemd"          . postPlomin
+
+  , ripemdVolt  & P.name "plutuscall-voltv11-ripemd"       . postPlomin . P.v11Preview
   ]
