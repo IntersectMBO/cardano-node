@@ -48,7 +48,7 @@ library
                       , http-media
                       , mtl
                       , network
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , ouroboros-consensus:cardano
                       , ouroboros-network:{protocols}
                       , prometheus >= 2.2.4
@@ -84,7 +84,7 @@ executable cardano-submit-api
   hs-source-dirs:       app
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-git-rev ^>=0.2.2

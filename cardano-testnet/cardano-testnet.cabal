@@ -82,7 +82,7 @@ library
                       , mono-traversable
                       , mtl
                       , network
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , parsec
                       , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion} ^>= 1.0
@@ -156,7 +156,7 @@ executable cardano-testnet
   build-depends:        cardano-crypto-class ^>=2.5
                       , cardano-cli
                       , cardano-testnet
-                      , optparse-applicative
+                      , optparse-applicative-fork
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
