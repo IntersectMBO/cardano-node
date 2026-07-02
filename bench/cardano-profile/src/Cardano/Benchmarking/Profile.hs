@@ -236,20 +236,21 @@ genesisParams epochParams g =
 --       (since IntersectMBO/cardano-ledger#5379 restricted to PlutusV1).
 --     * `conway.plutusV3CostModel` is array-only, exactly 251 entries
 --       (since IntersectMBO/cardano-ledger#5241 enforced the count there).
---   Any cost-parameter ADDITIONS subsequent hard forks made on mainnet (the 10
---   V2 entries added at Chang, the 46 V3 entries added at epoch 537) are
---   applied internally by the hard-fork combinator based on the protocol
---   version, not by extending those genesis fields.
+--   Any cost-parameter ADDITIONS made on mainnet after each language's
+--   introduction (V3 +46 at Plomin/epoch 537; then V1 +166, V2 +157 and V3 +53
+--   at van Rossem/PV11, epoch 638) arrive as on-chain updates to the
+--   `costModels` protocol parameter, not by extending those count-locked
+--   genesis fields.
 --   `alonzo.extraConfig.costModels` was added to bypass those structural locks
 --   for testnets and benchmarks (IntersectMBO/cardano-ledger#5342, landed in
 --   IntersectMBO/cardano-ledger#5379; surfaced for cardano-cli in
 --   IntersectMBO/cardano-cli#1352): it accepts V1/V2/V3 keys and skips the
---   exact-count check the top-level parsers enforce. Its object form is
---   still capped at each language's init names (extras are silently dropped
---   at parse time), so the ARRAY form is the only one that actually carries
---   entries past those counts, and that is what we emit there.
---   `alonzoInjectCostModels` applies the content as a per-language
---   REPLACEMENT at the Alonzo era transition.
+--   exact-count check the top-level parsers enforce. Its object form is still
+--   capped at each language's init names (extras are silently dropped at parse
+--   time), so the ARRAY form is the only one that actually carries entries past
+--   those counts, and that is what we emit there.
+--   `alonzoInjectCostModels` applies the content as a per-language REPLACEMENT
+--   at the Alonzo era transition.
 --
 --   Expects `genesisParams` (Step 2a) to have already populated the base
 --   "alonzo" and "conway" KeyMaps on the Genesis.
@@ -277,14 +278,15 @@ genesisCostModels costModel g =
       -- alonzo-genesis.json.
       --
       -- Updated: Vasil (epoch 366) tweaked 100 entries; Valentine (394) tweaked
-      -- 2; Chang (507) tweaked 85. V1 has never gained a parameter, total is
-      -- still 166.
+      -- 2; Chang (507) tweaked 85. V1 gained no parameters until van Rossem/PV11
+      -- (epoch 638), which ADDED 166 (current total 332).
       --
       -- Placement: We emit the first 166 canonical entries as the OBJECT at
-      -- `alonzo.costModels.PlutusV1` (mainnet shape). If the input ever carries
-      -- more than 166 entries (future proofing), the FULL set also goes as an
-      -- ARRAY to `alonzo.extraConfig.costModels.PlutusV1`; the lenient parser
-      -- defers array length validation to Plutus's mkEvaluationContext.
+      -- `alonzo.costModels.PlutusV1` (mainnet shape). When the input carries
+      -- more than 166 entries (as it does at van Rossem/PV11), the FULL set
+      -- also goes as an ARRAY to `alonzo.extraConfig.costModels.PlutusV1`; the
+      -- lenient parser defers array length validation to Plutus's
+      -- mkEvaluationContext.
       --
       -- Naming: If any of the extras have a name not in `plutusV1CostNames`,
       -- the list throws an error (on purpose), signalling that the workbench's
@@ -316,7 +318,9 @@ genesisCostModels costModel g =
       -- 175 named cost parameters.
       --
       -- Updated: Valentine (epoch 394) tweaked 7 entries; Chang (epoch 507)
-      -- ADDED 10 new and tweaked 90 (current total 185).
+      -- tweaked 90 entries but added none (V2 stayed 175). van Rossem/PV11
+      -- (epoch 638, gov action c82f3834...) ADDED 157 and re-priced some
+      -- existing (current total 332).
       --
       -- Placement: V2 has no top-level home (`alonzo.costModels` is V1-only),
       -- so its only path to runtime is `alonzo.extraConfig.costModels.PlutusV2`.
@@ -346,8 +350,9 @@ genesisCostModels costModel g =
       -- ARRAY of 251 cost parameters at `conway.plutusV3CostModel` in
       -- conway-genesis.json.
       --
-      -- Updated: at epoch 537 an on-chain parameter update ADDED 46 new entries
-      -- (current total 297).
+      -- Updated: at epoch 537 (Plomin) an on-chain parameter update ADDED 46
+      -- new entries (total 297); van Rossem/PV11 (epoch 638) ADDED 53 more
+      -- (current total 350).
       --
       -- Placement: We emit the canonical first 251 entries as the ARRAY at
       -- `conway.plutusV3CostModel` (mainnet shape). When the input carries
@@ -377,8 +382,8 @@ genesisCostModels costModel g =
                                     then Just (Aeson.toJSON full)
                                     else Nothing
                      in (Just topLevel, extra)
-      -- alonzo.extraConfig.costModels content: a PlutusV* sub-key is
-      -- included only when its version yielded a Just above.
+      -- alonzo.extraConfig.costModels content: a PlutusV* sub-key is included
+      -- only when its version yielded a Just above.
       extraEntries = catMaybes
         [ (,) "PlutusV1" <$> v1AtExtra
         , (,) "PlutusV2" <$> v2AtExtra
