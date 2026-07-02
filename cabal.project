@@ -83,3 +83,11 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: bac882c499a76869d6f3139829175356e9af7ce3
+  subdir: eras/alonzo/impl
+  --sha256: 11s15v9m0sr9gb6l5brg0gg4yw27fr2m7nn5ip2dk5hb5qbx5af7
+
