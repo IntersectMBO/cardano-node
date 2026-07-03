@@ -1,0 +1,31 @@
+{
+    "constructor": 0,
+    "fields": [
+        {
+            "int": 1000000
+        },
+        {
+            "list": [
+                {
+                    "int": 871345174532
+                },
+                {
+                    "int": 987654321
+                }
+            ]
+        },
+        {
+            "list": [
+                {
+                    "bytes": "ab5d1d67b495361c3297c721cf3c9dc510fc5055bdf92fefc1e67d91a00a765520150428eb4c2fb01902d41d5ca62d85"
+                },
+                {
+                    "bytes": "88c7e388ee58f1db9a24d7098b01d13634298bebf2d159254975bd450cb0d287fcc622eb71edde8b469a8513551baf1f"
+                },
+                {
+                    "bytes": "95e4262f370607b2765312297461a04a3fb1fbb83e998a8e7d0f237017df86c5fb01f85101177c3dd41586df05b038cb"
+                }
+            ]
+        }
+    ]
+}

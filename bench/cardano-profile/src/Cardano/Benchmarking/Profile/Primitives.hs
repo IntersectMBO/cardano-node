@@ -894,15 +894,19 @@ analysisFiltersAppend str = analysis
     else a {Types.filters = Types.filters a ++ [str]}
   )
 
+-- for 88k blocks: from 2.6k to 8.8k
 analysisSizeSmall :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeSmall = analysisFiltersAppend "size-small"
 
+-- for 88k blocks: from 7k to 9.8k
 analysisSizeModerate :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate = analysisFiltersAppend "size-moderate"
 
+-- for 88k blocks: from 6.7k to 9.2k
 analysisSizeModerate2 :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate2 = analysisFiltersAppend "size-moderate-2"
 
+-- for 88k blocks: larger than 79.2k
 analysisSizeFull :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeFull = analysisFiltersAppend "size-full"
 
