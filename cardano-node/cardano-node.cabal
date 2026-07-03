@@ -183,7 +183,7 @@ library
                       , time
                       , trace-dispatcher ^>= 2.12.0
                       , trace-forward ^>= 2.4.0
-                      , hermod-trace-resources ^>= 0.2.4
+                      , hermod-trace-resources 
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
