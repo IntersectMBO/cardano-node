@@ -20,7 +20,8 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , plutusSaturation, plutusDoubleSaturation, plutusDoublePlusSaturation
 
 , plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
-, plutusTypeBLST, plutusTypeRIPEMD
+, plutusTypeBLST, plutusTypeRIPEMD, plutusTypeRIPEMD_4tx, plutusTypeMultScalarMultG1
+, plutusTypeSchnorrV3
 ) where
 
 --------------------------------------------------------------------------------
@@ -250,3 +251,46 @@ plutusTypeRIPEMD =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2f")]
     ]
   . P.txFee 940000
+
+  -- the bytes content is arbitrary, but should be of the same size as RIPEMD-160 output, i.e. 160 bits
+plutusTypeRIPEMD_4tx :: Types.Profile -> Types.Profile
+plutusTypeRIPEMD_4tx =
+    P.plutusType "LimitTxPerBlock_4"   . P.plutusScript "Ripemd160"
+  . P.redeemerFields [
+      KeyMap.fromList [("int",   Aeson.Number 1000000.0)]
+    , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2f")]
+    ]
+  . P.txFee 915500
+
+-- there must always be 1 scalar value less than there are points.
+-- for the rationale about the redeemer structure, see note in
+-- the script's source: bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/MultiScalarMulG1.hs
+plutusTypeMultScalarMultG1 :: Types.Profile -> Types.Profile
+plutusTypeMultScalarMultG1 =
+    P.plutusType "LimitTxPerBlock_4"   . P.plutusScript "MultiScalarMulG1"
+  . P.redeemerFields [
+        KeyMap.fromList [("int",  Aeson.Number 1000000.0)]
+      , KeyMap.fromList [("list", Aeson.Array $ Vector.fromList [
+          Aeson.Object $ KeyMap.fromList [("int", Aeson.Number 871345174532.0)]
+        , Aeson.Object $ KeyMap.fromList [("int", Aeson.Number 987654321.0)]
+        ])
+      ]
+      , KeyMap.fromList [("list", Aeson.Array $ Vector.fromList [
+          Aeson.Object $ KeyMap.fromList [("bytes", Aeson.String "ab5d1d67b495361c3297c721cf3c9dc510fc5055bdf92fefc1e67d91a00a765520150428eb4c2fb01902d41d5ca62d85")]
+        , Aeson.Object $ KeyMap.fromList [("bytes", Aeson.String "88c7e388ee58f1db9a24d7098b01d13634298bebf2d159254975bd450cb0d287fcc622eb71edde8b469a8513551baf1f")]
+        , Aeson.Object $ KeyMap.fromList [("bytes", Aeson.String "95e4262f370607b2765312297461a04a3fb1fbb83e998a8e7d0f237017df86c5fb01f85101177c3dd41586df05b038cb")]
+        ])
+      ]
+    ]
+  . P.txFee 572000
+
+plutusTypeSchnorrV3 :: Types.Profile -> Types.Profile
+plutusTypeSchnorrV3 =
+    P.plutusType "LimitTxPerBlock_4"   . P.plutusScript "SchnorrSecp256k1LoopV3"
+  . P.redeemerFields [
+      KeyMap.fromList [("int",   Aeson.Number 1000000.0)]
+    , KeyMap.fromList [("bytes", Aeson.String "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b")]
+    , KeyMap.fromList [("bytes", Aeson.String "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030")]
+    , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b")]
+    ]
+  . P.txFee 586000
