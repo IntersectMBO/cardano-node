@@ -50,8 +50,6 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
-import           Cardano.Rpc.Server.Internal.Env (NodeKernelAccess)
-import           Cardano.Rpc.Server.NodeKernelAccess.Internal (mkNodeKernelAccess)
 import           Data.IORef
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
@@ -495,7 +493,8 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
-                writeIORef nodeKernelAccessRef . Just $ mkNodeKernelAccess blockType nodeKernel
+                mkNodeKernelAccess (contramap RpcUnsupportedBlockType (startupTracer tracers)) blockType nodeKernel
+                  >>= writeIORef nodeKernelAccessRef
           }
           StdRunNodeArgs
             { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
