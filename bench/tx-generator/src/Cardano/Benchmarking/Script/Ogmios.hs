@@ -225,19 +225,21 @@ parseOgmiosResponse bs =
   parseResponse = Aeson.withObject "OgmiosResponse" $ \obj -> do
     respId <- obj .:? "id"
     mResult <- obj .:? "result"
-    result <- case mResult of
-      Just resultVal -> do
-        txId <- Aeson.withObject "result" (\r -> do
-          txObj <- r .: "transaction"
-          Aeson.withObject "transaction" (.: "id") txObj
-          ) resultVal
-        return $ OgmiosSuccess txId
-      Nothing -> do
-        errVal <- obj .: "error"
-        Aeson.withObject "error" (\errObj -> do
-          code <- errObj .: "code"
-          msg  <- errObj .: "message"
-          dat  <- errObj .:? "data"
-          return $ OgmiosError code msg (fromMaybe Null dat)
-          ) errVal
+    result <- maybe (parseError obj) parseSuccess mResult
     return (respId, result)
+
+parseSuccess :: Value -> Aeson.Parser OgmiosResult
+parseSuccess = Aeson.withObject "result" $ \r -> do
+  txObj <- r .: "transaction"
+  txId <- Aeson.withObject "transaction" (.: "id") txObj
+  return $ OgmiosSuccess txId
+
+parseError :: Aeson.Object -> Aeson.Parser OgmiosResult
+parseError obj = do
+  errVal <- obj .: "error"
+  Aeson.withObject "error" (\errObj ->
+    OgmiosError
+      <$> errObj .: "code"
+      <*> errObj .: "message"
+      <*> (fromMaybe Null <$> errObj .:? "data")
+    ) errVal
