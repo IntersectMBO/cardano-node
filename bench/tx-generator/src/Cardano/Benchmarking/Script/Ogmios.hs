@@ -89,8 +89,9 @@ import           Text.Read (readMaybe)
 defaultOgmiosPort :: Int
 defaultOgmiosPort = 1337
 
--- | Per-request response timeout in microseconds. Generous, because the
--- node may hold a submission back while its mempool is saturated.
+-- | Per-request round-trip (send + response) timeout in microseconds.
+-- Generous, because the node may hold a submission back while its mempool
+-- is saturated.
 responseTimeout :: Int
 responseTimeout = 90_000_000
 
@@ -151,12 +152,15 @@ ogmiosSubmitOne
   => WS.Connection -> IORef Int -> Tx era -> IO (Either OgmiosRejection ())
 ogmiosSubmitOne conn reqIdRef tx = do
   reqId <- atomicModifyIORef' reqIdRef $ \n -> (n + 1, n)
-  WS.sendTextData conn $ Aeson.encode (mkSubmitRequest tx reqId)
-  mResp <- timeout responseTimeout $ WS.receiveData conn
+  -- the send can stall too (a wedged peer with full TCP buffers), so it
+  -- shares the round-trip deadline with the receive
+  mResp <- timeout responseTimeout $ do
+    WS.sendTextData conn $ Aeson.encode (mkSubmitRequest tx reqId)
+    WS.receiveData conn
   case mResp of
     Nothing -> throwIO $ OgmiosProtocolError $
-      "no response to request " ++ show reqId
-        ++ " within " ++ show (responseTimeout `div` 1_000_000) ++ "s"
+      "request " ++ show reqId ++ " did not complete within "
+        ++ show (responseTimeout `div` 1_000_000) ++ "s"
     Just resp -> case parseOgmiosResponse resp of
       Left parseErr -> throwIO $ OgmiosProtocolError $ "response parse error: " ++ parseErr
       Right (respId, result)
