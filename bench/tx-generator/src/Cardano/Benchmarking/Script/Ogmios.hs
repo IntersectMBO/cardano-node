@@ -79,7 +79,8 @@ import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Network.URI (parseURI, uriAuthority, uriPath, uriPort, uriRegName, uriScheme)
+import           Network.URI (URI, uriAuthority, uriPath, uriPort, uriRegName, uriScheme,
+                   uriToString)
 import qualified Network.WebSockets as WS
 import           Prettyprinter (Pretty (..), parens, (<+>))
 import           System.Timeout (timeout)
@@ -121,11 +122,11 @@ instance Exception OgmiosProtocolError
 -- surfaced as a 'Left' 'TxGenError'.
 withOgmiosTransport
   :: forall era a. IsShelleyBasedEra era
-  => String
+  => URI
   -> (SubmitTransport era OgmiosRejection -> IO (Either TxGenError a))
   -> IO (Either TxGenError a)
-withOgmiosTransport url use =
-  case parseOgmiosUrl url of
+withOgmiosTransport uri use =
+  case parseOgmiosUrl uri of
     Left err -> return $ Left $ TxGenError err
     Right (host, port, path) ->
       WS.runClient host port path runWithConn
@@ -175,9 +176,12 @@ ogmiosSubmitOne conn reqIdRef tx = do
   describe (OgmiosSuccess txId)  = "success, tx " ++ Text.unpack txId
   describe (OgmiosError _ msg _) = "error: " ++ Text.unpack msg
 
-parseOgmiosUrl :: String -> Either String (String, Int, String)
-parseOgmiosUrl urlStr = do
-  uri <- maybeToEither ("Invalid Ogmios URL: " ++ urlStr) $ parseURI urlStr
+-- | Extract WebSocket connection parameters @(host, port, path)@ from an
+-- endpoint URI (already well-formed by construction, see
+-- 'Cardano.TxGenerator.Setup.NixService.EndpointUri'), validating the
+-- Ogmios-specific parts.
+parseOgmiosUrl :: URI -> Either String (String, Int, String)
+parseOgmiosUrl uri = do
   -- WS.runClient speaks plaintext TCP only, so accepting wss:// (or any
   -- other scheme) here would silently drop the security the URL asks for.
   unless (uriScheme uri == "ws:") $
@@ -195,6 +199,7 @@ parseOgmiosUrl urlStr = do
         p  -> p
   return (uriRegName auth, port, path)
  where
+  urlStr = uriToString id uri ""
   parsePort p = case readMaybe p of
     Just n | n >= 1 && n <= 65_535 -> Right n
     _ -> Left $ "Invalid port in Ogmios URL: " ++ urlStr

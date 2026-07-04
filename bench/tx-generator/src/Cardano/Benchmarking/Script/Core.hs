@@ -246,7 +246,7 @@ submitInEra submitMode generator txParams era = do
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
-    SubmitToEndpoint endpointType uri -> case endpointType of
+    SubmitToEndpoint endpointType (EndpointUri uri) -> case endpointType of
       Ogmios -> Submission.runSubmitTransport
                   (Submission.onRejectionFor generator)
                   (OgmiosBackend.withOgmiosTransport uri)

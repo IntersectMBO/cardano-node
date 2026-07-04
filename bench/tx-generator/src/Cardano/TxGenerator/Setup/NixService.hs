@@ -13,6 +13,7 @@ module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
        , NodeDescription (..)
        , SubmissionEndpointType (..)
+       , EndpointUri (..)
        , defaultKeepaliveTimeout
        , getKeepaliveTimeout
        , getNodeAlias
@@ -39,8 +40,10 @@ import           Data.Foldable (find)
 import           Data.Function (on)
 import           Data.List.NonEmpty (NonEmpty (..))
 import           Data.Maybe (fromMaybe)
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as Clock (DiffTime, secondsToDiffTime)
 import           GHC.Generics (Generic)
+import           Network.URI (URI, parseURI, uriToString)
 
 
 data NixServiceOptions = NixServiceOptions {
@@ -62,7 +65,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeDescription
   , _nix_submissionEndpointType :: Maybe SubmissionEndpointType
-  , _nix_submissionEndpointURI  :: Maybe String
+  , _nix_submissionEndpointURI  :: Maybe EndpointUri
   } deriving (Show, Eq)
 
 deriving instance Generic NixServiceOptions
@@ -81,6 +84,21 @@ instance FromJSON SubmissionEndpointType where
 
 instance ToJSON SubmissionEndpointType where
   toJSON Ogmios = String "Ogmios"
+
+-- | A submission endpoint address, well-formed by construction: decoding
+-- only accepts absolute URIs (a scheme is required, e.g. @ws://host:1337@).
+-- Which schemes are meaningful is for each backend to decide.
+newtype EndpointUri = EndpointUri URI
+  deriving (Show, Eq)
+
+instance FromJSON EndpointUri where
+  parseJSON = withText "EndpointUri" $ \t -> case parseURI (Text.unpack t) of
+    Just uri -> pure $ EndpointUri uri
+    Nothing  -> fail $
+      "invalid endpoint URI (must be absolute, e.g. ws://host:1337): " ++ show t
+
+instance ToJSON EndpointUri where
+  toJSON (EndpointUri uri) = String $ Text.pack $ uriToString id uri ""
 
 -- only works on JSON Object types
 data NodeDescription =

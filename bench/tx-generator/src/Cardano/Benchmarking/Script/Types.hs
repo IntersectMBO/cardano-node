@@ -25,6 +25,7 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
+        , EndpointUri(..)
         , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
                 Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
@@ -45,7 +46,7 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
-import           Cardano.TxGenerator.Setup.NixService (NodeDescription,
+import           Cardano.TxGenerator.Setup.NixService (EndpointUri (..), NodeDescription,
                    SubmissionEndpointType (..))
 import           Cardano.TxGenerator.Types
 
@@ -187,7 +188,7 @@ data SubmitMode where
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
-  SubmitToEndpoint :: !SubmissionEndpointType -> !String -> SubmitMode
+  SubmitToEndpoint :: !SubmissionEndpointType -> !EndpointUri -> SubmitMode
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

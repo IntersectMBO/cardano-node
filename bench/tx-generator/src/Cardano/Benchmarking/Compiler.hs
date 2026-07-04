@@ -265,8 +265,9 @@ getSetupSubmitMode =
   maybe LocalSocket (uncurry SubmitToEndpoint) <$> resolveSubmissionEndpoint
 
 -- | Resolve the configured submission endpoint, requiring its type and URI to
--- be set together (or both omitted).
-resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointType, String))
+-- be set together (or both omitted). The URI itself is already parsed: decoding
+-- the config only accepts a well-formed absolute URI.
+resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointType, EndpointUri))
 resolveSubmissionEndpoint = do
   mType <- askNixOption _nix_submissionEndpointType
   mUri  <- askNixOption _nix_submissionEndpointURI
