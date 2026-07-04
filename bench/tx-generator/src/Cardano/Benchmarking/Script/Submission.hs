@@ -56,17 +56,21 @@ data OnRejection
 
 -- | Setup-phase generators (genesis import, splitting) emit chains of
 -- interdependent transactions: once one is rejected, everything after it is
--- doomed, so abort right away. The benchmarking phase's 'NtoM' stream consists
--- of mutually independent transactions, so submit it to the end and let the
--- final tally decide.
+-- doomed, so abort right away. Only a plain 'NtoM' stream (the benchmarking
+-- phase) is known to consist of mutually independent transactions, so it is
+-- submitted to the end and the final tally decides.
+--
+-- 'Sequence' may mix chained and independent sub-generators, so it aborts
+-- unconditionally. Either policy fails the run on any rejection (see
+-- 'runSubmitTransport'); the policy only decides whether to keep submitting
+-- after the first one, and aborting is always safe — merely conservative
+-- for an all-independent sequence.
 onRejectionFor :: Generator -> OnRejection
 onRejectionFor generator = case generator of
-  NtoM {}        -> ContinueOnRejection
-  Take _ g       -> onRejectionFor g
-  Cycle g        -> onRejectionFor g
-  Sequence gs
-    | any ((ContinueOnRejection ==) . onRejectionFor) gs -> ContinueOnRejection
-  _              -> AbortOnRejection
+  NtoM {}  -> ContinueOnRejection
+  Take _ g -> onRejectionFor g
+  Cycle g  -> onRejectionFor g
+  _        -> AbortOnRejection
 
 -- | Drive a transaction stream through a transport, returning a @(sent, failed)@
 -- tally. Rejections are traced (rendered via 'Pretty') and counted; how the loop
