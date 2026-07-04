@@ -220,9 +220,7 @@ data OgmiosResult
 -- mirrored request id alongside the result.
 parseOgmiosResponse :: LBS.ByteString -> Either String (Maybe Int, OgmiosResult)
 parseOgmiosResponse bs =
-  case Aeson.eitherDecode bs of
-    Left err -> Left err
-    Right val -> Aeson.parseEither parseResponse val
+  Aeson.eitherDecode bs >>= Aeson.parseEither parseResponse
  where
   parseResponse = Aeson.withObject "OgmiosResponse" $ \obj -> do
     respId <- obj .:? "id"
