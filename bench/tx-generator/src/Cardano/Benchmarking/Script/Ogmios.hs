@@ -100,7 +100,11 @@ responseTimeout = 90_000_000
 -- the 'SubmitTransport' and rendered for tracing via 'Pretty'. Deliberately
 -- not exported: the submission loop only needs to render it, so no other
 -- module should depend on its shape.
-data OgmiosRejection = OgmiosRejection !Int !Text !Value
+data OgmiosRejection = OgmiosRejection
+  !Int   -- ^ JSON-RPC 2.0 error code
+  !Text  -- ^ human-readable error message
+  !Value -- ^ structured details from the response's optional @data@ field;
+         --   'Null' when absent
 
 instance Pretty OgmiosRejection where
   pretty (OgmiosRejection code msg dat) =
@@ -216,9 +220,16 @@ mkSubmitRequest tx reqId = object
   , "id"      .= reqId
   ]
 
+-- | Outcome of a single @submitTransaction@ call, as decoded from the
+-- JSON-RPC response.
 data OgmiosResult
-  = OgmiosSuccess Text
-  | OgmiosError Int Text Value
+  = OgmiosSuccess
+      Text -- ^ id of the accepted transaction
+  | OgmiosError
+      Int   -- ^ JSON-RPC 2.0 error code
+      Text  -- ^ human-readable error message
+      Value -- ^ structured details from the optional @data@ field;
+            --   'Null' when absent
   deriving (Eq, Show)
 
 -- | Parse a JSON-RPC 2.0 response to @submitTransaction@, returning the

@@ -12,7 +12,7 @@
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
        , NodeDescription (..)
-       , SubmissionEndpointType (..)
+       , SubmissionEndpointProtocol (..)
        , EndpointUri (..)
        , defaultKeepaliveTimeout
        , getKeepaliveTimeout
@@ -64,25 +64,25 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_sigKey               :: SigningKeyFile In
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeDescription
-  , _nix_submissionEndpointType :: Maybe SubmissionEndpointType
+  , _nix_submissionEndpointProtocol :: Maybe SubmissionEndpointProtocol
   , _nix_submissionEndpointURI  :: Maybe EndpointUri
   } deriving (Show, Eq)
 
 deriving instance Generic NixServiceOptions
 
--- | Which kind of endpoint 'submissionEndpointURI' addresses. Currently only
--- Ogmios is supported; this is the extension point for further submission
--- backends.
-data SubmissionEndpointType
+-- | Which protocol to speak with the endpoint 'submissionEndpointURI'
+-- addresses. Currently only Ogmios is supported; this is the extension
+-- point for further submission backends.
+data SubmissionEndpointProtocol
   = Ogmios
   deriving (Show, Eq, Generic)
 
-instance FromJSON SubmissionEndpointType where
-  parseJSON = withText "SubmissionEndpointType" $ \t -> case t of
+instance FromJSON SubmissionEndpointProtocol where
+  parseJSON = withText "SubmissionEndpointProtocol" $ \t -> case t of
     "Ogmios" -> pure Ogmios
-    _        -> fail $ "unknown submissionEndpointType: " ++ show t
+    _        -> fail $ "unknown submissionEndpointProtocol: " ++ show t
 
-instance ToJSON SubmissionEndpointType where
+instance ToJSON SubmissionEndpointProtocol where
   toJSON Ogmios = String "Ogmios"
 
 -- | A submission endpoint address, well-formed by construction: decoding

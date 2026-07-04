@@ -267,15 +267,15 @@ getSetupSubmitMode =
 -- | Resolve the configured submission endpoint, requiring its type and URI to
 -- be set together (or both omitted). The URI itself is already parsed: decoding
 -- the config only accepts a well-formed absolute URI.
-resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointType, EndpointUri))
+resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointProtocol, EndpointUri))
 resolveSubmissionEndpoint = do
-  mType <- askNixOption _nix_submissionEndpointType
+  mType <- askNixOption _nix_submissionEndpointProtocol
   mUri  <- askNixOption _nix_submissionEndpointURI
   case (mType, mUri) of
     (Nothing, Nothing) -> pure Nothing
     (Just t,  Just u)  -> pure $ Just (t, u)
     _ -> throwCompileError $ SomeCompilerError
-      "submissionEndpointType and submissionEndpointURI must be set together \
+      "submissionEndpointProtocol and submissionEndpointURI must be set together \
       \(or both omitted)."
 
 delay :: Compiler ()

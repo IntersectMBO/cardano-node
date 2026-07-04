@@ -5,9 +5,9 @@
 * **New remote submission endpoint** — send transactions to a remote endpoint
   instead of the local socket / Node-to-Node protocols, behind a generic,
   backend-agnostic transport interface.
-  * Turn it on with the optional `submissionEndpointType` and
+  * Turn it on with the optional `submissionEndpointProtocol` and
     `submissionEndpointURI` keys, which must be set together, e.g.
-    `"submissionEndpointType": "Ogmios", "submissionEndpointURI": "ws://127.0.0.1:1337"`.
+    `"submissionEndpointProtocol": "Ogmios", "submissionEndpointURI": "ws://127.0.0.1:1337"`.
   * The only endpoint type currently supported is `Ogmios`: each transaction is
     sent over a WebSocket as a JSON-RPC 2.0 `submitTransaction` call.
   * It reroutes **every** phase, but only tx submission: genesis fund import, UTxO splitting, and benchmarking.

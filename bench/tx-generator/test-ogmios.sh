@@ -172,7 +172,7 @@ fi
 CONFIG_FILE="$WORKDIR/tx-generator-config.json"
 # debugMode is mandatory alongside a submission endpoint: it is a functional
 # transport without pacing or metrics, and the config compiler rejects it for
-# benchmark (non-debug) runs. submissionEndpointType and submissionEndpointURI
+# benchmark (non-debug) runs. submissionEndpointProtocol and submissionEndpointURI
 # must be set together.
 cat > "$CONFIG_FILE" << EOF
 {
@@ -189,7 +189,7 @@ cat > "$CONFIG_FILE" << EOF
   "debugMode": true,
   "plutus": null,
   "sigKey": "$SIG_KEY",
-  "submissionEndpointType": "Ogmios",
+  "submissionEndpointProtocol": "Ogmios",
   "submissionEndpointURI": "ws://127.0.0.1:$OGMIOS_PORT"
 }
 EOF

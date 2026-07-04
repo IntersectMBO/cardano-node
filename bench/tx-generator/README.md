@@ -58,8 +58,8 @@ cabal run tx-generator -- json_highlevel config.json \
 | `targetNodes`         | List of nodes to submit transactions to (Node-to-Node protocol) | Yes      |
 | `nodeConfigFile`      | Path to node configuration file                                 | Yes      |
 | `sigKey`              | Path to signing key with sufficient funds (genesis key)         | Yes      |
-| `submissionEndpointType` | Optional submission endpoint kind (`Ogmios`); set together with `submissionEndpointURI` | No       |
-| `submissionEndpointURI`  | Optional submission endpoint URI (e.g. `ws://host:port`); set together with `submissionEndpointType` | No       |
+| `submissionEndpointProtocol` | Optional submission endpoint kind (`Ogmios`); set together with `submissionEndpointURI` | No       |
+| `submissionEndpointURI`  | Optional submission endpoint URI (e.g. `ws://host:port`); set together with `submissionEndpointProtocol` | No       |
 
 ### Transaction Settings
 
@@ -115,7 +115,7 @@ The high-level JSON configuration is automatically compiled into a multi-phase s
 
 ### Submitting through a remote endpoint
 
-Setting a submission endpoint (`submissionEndpointType` together with `submissionEndpointURI`) reroutes the submission of **every** phase — genesis fund import, UTxO splitting, and the final phase — through that endpoint instead of the local socket / Node-to-Node protocols.
+Setting a submission endpoint (`submissionEndpointProtocol` together with `submissionEndpointURI`) reroutes the submission of **every** phase — genesis fund import, UTxO splitting, and the final phase — through that endpoint instead of the local socket / Node-to-Node protocols.
 
 This is a **functional submission transport, not a benchmarking one**:
 
@@ -131,7 +131,7 @@ Note that the **local node socket and config file are still required**: protocol
 The only endpoint type currently supported is `Ogmios`. Set:
 
 ```json
-"submissionEndpointType": "Ogmios",
+"submissionEndpointProtocol": "Ogmios",
 "submissionEndpointURI": "ws://127.0.0.1:1337"
 ```
 
