@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,6 +7,7 @@
 
 module Main (main) where
 
+import Control.Applicative (optional)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async qualified as Async
 import Control.Concurrent.STM (TMVar, TQueue, TVar)
@@ -18,7 +18,8 @@ import Data.IORef qualified as IORef
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
-import System.Environment (getArgs)
+import Numeric.Natural (Natural)
+import Options.Applicative qualified as Opt
 import System.Exit (die)
 import System.IO
   ( BufferMode (LineBuffering)
@@ -70,10 +71,6 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Client
   , LocalTxSubmissionClient (LocalTxSubmissionClient)
   )
 
-import Cardano.Benchmarking.TxFirehose.Config
-  ( Config (..)
-  , loadConfig
-  )
 import Cardano.Benchmarking.TxFirehose.Tx (Fund (Fund, fundTxIn, fundValue))
 import Cardano.Benchmarking.TxFirehose.Tx qualified as Tx
 
@@ -91,6 +88,56 @@ data Pending = Pending
     !TxInMode
     !(TMVar (SubmitResult TxValidationErrorInCardanoMode))
 
+-- | Command-line options. Set the optional 'optStakingKey' to spend from a
+-- base address (payment + stake); omit for an enterprise address.
+data Options = Options
+  { optSocketPath           :: !FilePath
+  , optNetworkMagic         :: !Natural
+  , optSigningKey           :: !FilePath
+  , optStakingKey           :: !(Maybe FilePath)
+  , optTps                  :: !Double
+  , optInputsPerTx          :: !Natural
+  , optOutputsPerTx         :: !Natural
+  , optFee                  :: !Integer
+  , optMaxConsecutiveErrors :: !Int
+  }
+
+optionsParser :: Opt.Parser Options
+optionsParser = Options
+  <$> Opt.strOption
+        ( Opt.long "socket-path" <> Opt.metavar "SOCKET_PATH"
+       <> Opt.help "Path to the node socket (node-to-client)" )
+  <*> Opt.option Opt.auto
+        ( Opt.long "testnet-magic" <> Opt.metavar "NATURAL"
+       <> Opt.help "Specify a testnet magic id (e.g. 164 for leios proto-devnet)" )
+  <*> Opt.strOption
+        ( Opt.long "signing-key-file" <> Opt.metavar "FILEPATH"
+       <> Opt.help "Payment signing key (.skey; GenesisUTxOKey also accepted)" )
+  <*> optional (Opt.strOption
+        ( Opt.long "staking-key-file" <> Opt.metavar "FILEPATH"
+       <> Opt.help "Stake signing key (.skey). If set, derive a base address; else enterprise." ))
+  <*> Opt.option Opt.auto
+        ( Opt.long "tps" <> Opt.metavar "NATURAL"
+       <> Opt.help "Target submissions per second (rate ceiling)" )
+  <*> Opt.option Opt.auto
+        ( Opt.long "inputs-per-tx" <> Opt.metavar "NATURAL" <> Opt.value 1 <> Opt.showDefault
+       <> Opt.help "Number of inputs per generated tx" )
+  <*> Opt.option Opt.auto
+        ( Opt.long "outputs-per-tx" <> Opt.metavar "NATURAL" <> Opt.value 1 <> Opt.showDefault
+       <> Opt.help "Number of outputs per generated tx" )
+  <*> Opt.option Opt.auto
+        ( Opt.long "fee" <> Opt.metavar "LOVELACE" <> Opt.value 200_000 <> Opt.showDefault
+       <> Opt.help "Fixed fee per tx (lovelace)" )
+  <*> Opt.option Opt.auto
+        ( Opt.long "max-consecutive-errors" <> Opt.metavar "NATURAL" <> Opt.value 50 <> Opt.showDefault
+       <> Opt.help "Exit after this many consecutive rejects (for supervisor restart)" )
+
+parseOptions :: IO Options
+parseOptions = Opt.execParser $ Opt.info (optionsParser Opt.<**> Opt.helper)
+  ( Opt.fullDesc
+ <> Opt.progDesc "Push-based single-node tx load generator over node-to-client."
+ <> Opt.header "tx-firehose - hose transactions at one Cardano node" )
+
 main :: IO ()
 main = do
   -- Force stderr to UTF-8 + line buffering so log messages don't get
@@ -100,22 +147,24 @@ main = do
   hSetEncoding stderr utf8
   hSetBuffering stderr LineBuffering
 
-  cfgPath <- getArgs >>= \case
-    [p] -> pure p
-    _ -> die "usage: tx-firehose <config.json>"
-  cfg <- loadConfig cfgPath
+  opts <- parseOptions
+  when (optTps opts <= 0) $ die "--tps must be > 0"
+  when (optInputsPerTx opts == 0) $ die "--inputs-per-tx must be >= 1"
+  when (optOutputsPerTx opts == 0) $ die "--outputs-per-tx must be >= 1"
+  when (optMaxConsecutiveErrors opts <= 0) $
+    die "--max-consecutive-errors must be >= 1"
 
-  signingKey <- loadSigningKey (cfgSigningKeyFile cfg)
-  mStakeVk <- traverse loadStakingKey (cfgStakingKeyFile cfg)
+  signingKey <- loadSigningKey (optSigningKey opts)
+  mStakeVk <- traverse loadStakingKey (optStakingKey opts)
 
-  let networkId = Testnet (NetworkMagic (fromIntegral (cfgNetworkMagic cfg)))
+  let networkId = Testnet (NetworkMagic (fromIntegral (optNetworkMagic opts)))
       addrInEra = deriveAddress networkId signingKey mStakeVk
       addrAny   = case addrInEra of
         Api.AddressInEra _ addr -> Api.toAddressAny addr
       connInfo  = LocalNodeConnectInfo
         { Api.localConsensusModeParams = CardanoModeParams byronEpochSlots
         , Api.localNodeNetworkId       = networkId
-        , Api.localNodeSocketPath      = File (cfgSocketPath cfg)
+        , Api.localNodeSocketPath      = File (optSocketPath opts)
         }
 
   ensureDijkstra connInfo
@@ -136,7 +185,7 @@ main = do
   -- propagates while the submit loop runs in the foreground.
   Async.withAsync (runSubmissionClient connInfo pendingQueue) $ \clientA -> do
     Async.link clientA
-    submitLoop cfg addrInEra signingKey fundsVar pendingQueue
+    submitLoop opts addrInEra signingKey fundsVar pendingQueue
 
 --------------------------------------------------------------------------------
 -- Signing key & address
@@ -273,16 +322,16 @@ submitViaQueue q tx = do
 -- track consecutive rejects and die once they cross the configured
 -- threshold. The supervisor restarts us and we requery from a clean slate.
 submitLoop
-  :: Config
+  :: Options
   -> AddressInEra Api.DijkstraEra
   -> SigningKey Api.PaymentKey
   -> TVar (Map Api.TxIn Integer)
   -> TQueue Pending
   -> IO ()
-submitLoop cfg addr sk fundsVar pendingQueue = do
-  let period = round (1_000_000 / cfgTps cfg) :: Int
-      n      = fromIntegral (cfgInputsPerTx cfg) :: Int
-      maxErrs = cfgMaxConsecutiveErrors cfg
+submitLoop opts addr sk fundsVar pendingQueue = do
+  let period = round (1_000_000 / optTps opts) :: Int
+      n      = fromIntegral (optInputsPerTx opts) :: Int
+      maxErrs = optMaxConsecutiveErrors opts
   consecutive <- IORef.newIORef (0 :: Int)
   let bumpError reason = do
         c <- IORef.atomicModifyIORef' consecutive (\c -> (c + 1, c + 1))
@@ -301,8 +350,8 @@ submitLoop cfg addr sk fundsVar pendingQueue = do
       pure taken
     let inFunds =
           [ Fund { fundTxIn = tin, fundValue = v } | (tin, v) <- inputs ]
-    case Tx.buildTx addr sk inFunds (cfgOutputsPerTx cfg)
-                      (L.Coin (cfgFee cfg)) of
+    case Tx.buildTx addr sk inFunds (optOutputsPerTx opts)
+                      (L.Coin (optFee opts)) of
       Left err -> do
         hPutStrLn stderr $ "tx-firehose: buildTx failed: " ++ err
         returnFunds fundsVar inputs

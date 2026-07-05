@@ -31,10 +31,8 @@ common project-config
 library
   import:           project-config
   hs-source-dirs:   src
-  exposed-modules:  Cardano.Benchmarking.TxFirehose.Config
-                    Cardano.Benchmarking.TxFirehose.Tx
+  exposed-modules:  Cardano.Benchmarking.TxFirehose.Tx
   build-depends:    base                 >= 4.14 && < 5
-                  , aeson
                   , cardano-api
                   , cardano-ledger-core
 
@@ -50,6 +48,7 @@ executable tx-firehose
                   , cardano-api
                   , cardano-ledger-core
                   , containers
+                  , optparse-applicative
                   , ouroboros-network:protocols
                   , stm
                   , transformers
