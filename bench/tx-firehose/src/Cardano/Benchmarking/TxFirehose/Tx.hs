@@ -49,10 +49,10 @@ buildTx destAddr signingKey inFunds numOutputs fee
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
   | changeTotal <= 0 = Left $
-      "buildTx: insufficient funds — total inputs (" ++ show totalIn
+      "buildTx: insufficient funds - total inputs (" ++ show totalIn
       ++ " lovelace) do not cover fee (" ++ show feeLovelace ++ ")"
   | minOutputLovelace <= 0 = Left $
-      "buildTx: output value too low — " ++ show numOutputs
+      "buildTx: output value too low - " ++ show numOutputs
       ++ " outputs from " ++ show changeTotal
       ++ " lovelace yields " ++ show minOutputLovelace ++ " per output"
   | otherwise = case Exp.makeUnsignedTx Exp.DijkstraEra bodyContent of

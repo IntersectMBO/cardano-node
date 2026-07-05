@@ -19,7 +19,14 @@ import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import System.Environment (getArgs)
 import System.Exit (die)
-import System.IO (hPutStrLn, stderr)
+import System.IO
+  ( BufferMode (LineBuffering)
+  , hPutStrLn
+  , hSetBuffering
+  , hSetEncoding
+  , stderr
+  , utf8
+  )
 
 import Cardano.Api
   ( AddressAny
@@ -71,7 +78,7 @@ import Cardano.Benchmarking.TxFirehose.Tx qualified as Tx
 
 --------------------------------------------------------------------------------
 
--- | Byron epoch length passed in ConsensusModeParams — only used to decode
+-- | Byron epoch length passed in ConsensusModeParams -- only used to decode
 -- Byron EBBs, which we never do. Matches every historical Cardano network
 -- and is what cardano-cli hardcodes.
 byronEpochSlots :: Api.EpochSlots
@@ -85,6 +92,13 @@ data Pending = Pending
 
 main :: IO ()
 main = do
+  -- Force stderr to UTF-8 + line buffering so log messages don't get
+  -- garbled or merged when the process runs under `LANG=C` (the default
+  -- inside process-compose / nix sandbox), and each hPutStrLn appears
+  -- on its own line.
+  hSetEncoding stderr utf8
+  hSetBuffering stderr LineBuffering
+
   cfgPath <- getArgs >>= \case
     [p] -> pure p
     _ -> die "usage: tx-firehose <config.json>"
@@ -107,7 +121,7 @@ main = do
   hPutStrLn stderr $ "tx-firehose: querying UTxO for " ++ show addrAny
   initialFunds <- queryFunds connInfo addrAny
   when (Map.null initialFunds) $
-    die "tx-firehose: no UTxO found at derived address — fund it first"
+    die "tx-firehose: no UTxO found at derived address - fund it first"
   hPutStrLn stderr $ "tx-firehose: seeded with "
                   ++ show (Map.size initialFunds) ++ " UTxO(s), total "
                   ++ show (sum (Map.elems initialFunds)) ++ " lovelace"
@@ -246,7 +260,7 @@ reconcileLoop cfg connInfo addrAny fundsVar = forever $ do
   threadDelay (round (cfgReconcileEvery cfg * 1_000_000))
   fresh <- queryFunds connInfo addrAny
   STM.atomically $ STM.writeTVar fundsVar fresh
-  hPutStrLn stderr $ "tx-firehose: reconciled — "
+  hPutStrLn stderr $ "tx-firehose: reconciled - "
                   ++ show (Map.size fresh) ++ " UTxO(s), total "
                   ++ show (sum (Map.elems fresh)) ++ " lovelace"
 
