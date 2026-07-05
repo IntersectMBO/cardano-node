@@ -14,6 +14,7 @@ import Control.Concurrent.STM (TMVar, TQueue, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (forever, when)
 import Control.Monad.Trans.Except (runExceptT)
+import Data.IORef qualified as IORef
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
@@ -130,19 +131,12 @@ main = do
   fundsVar     <- STM.newTVarIO initialFunds
   pendingQueue <- STM.newTQueueIO
 
-  let clientThread = runSubmissionClient connInfo pendingQueue
-      submitter    = submitLoop cfg addrInEra signingKey fundsVar pendingQueue
-      reconciler
-        | cfgReconcileEvery cfg <= 0 = forever (threadDelay maxBound)
-        | otherwise = reconcileLoop cfg connInfo addrAny fundsVar
-
   -- The submission client owns the wire; if it dies (socket closed, node
   -- restarted, protocol error) we want to die with it. Link so the exception
-  -- propagates. race_ ties the submitter and reconciler together so the
-  -- first to fail brings the other down.
-  Async.withAsync clientThread $ \clientA -> do
+  -- propagates while the submit loop runs in the foreground.
+  Async.withAsync (runSubmissionClient connInfo pendingQueue) $ \clientA -> do
     Async.link clientA
-    Async.race_ submitter reconciler
+    submitLoop cfg addrInEra signingKey fundsVar pendingQueue
 
 --------------------------------------------------------------------------------
 -- Signing key & address
@@ -267,29 +261,17 @@ submitViaQueue q tx = do
   STM.atomically $ STM.takeTMVar reply
 
 --------------------------------------------------------------------------------
--- Reconcile loop
---------------------------------------------------------------------------------
-
--- | Periodically replace the local fund set with a fresh UTxO query.
--- Mempool-only outputs are temporarily lost and reappear on the next
--- reconcile once they're on chain. Keeps drift bounded.
-reconcileLoop
-  :: Config -> LocalNodeConnectInfo -> AddressAny
-  -> TVar (Map Api.TxIn Integer) -> IO ()
-reconcileLoop cfg connInfo addrAny fundsVar = forever $ do
-  threadDelay (round (cfgReconcileEvery cfg * 1_000_000))
-  fresh <- queryFunds connInfo addrAny
-  STM.atomically $ STM.writeTVar fundsVar fresh
-  hPutStrLn stderr $ "tx-firehose: reconciled - "
-                  ++ show (Map.size fresh) ++ " UTxO(s), total "
-                  ++ show (sum (Map.elems fresh)) ++ " lovelace"
-
---------------------------------------------------------------------------------
 -- Submit loop
 --------------------------------------------------------------------------------
 
 -- | Rate-limited loop: take @inputsPerTx@ funds, build a tx, submit via the
 -- persistent queue, dispatch on the reply.
+--
+-- We deliberately do NOT try to reconcile the local fund set with the ledger
+-- while running: the local set is populated optimistically from every
+-- SubmitSuccess and will diverge under normal chain progress. Instead we
+-- track consecutive rejects and die once they cross the configured
+-- threshold. The supervisor restarts us and we requery from a clean slate.
 submitLoop
   :: Config
   -> AddressInEra Api.DijkstraEra
@@ -300,6 +282,15 @@ submitLoop
 submitLoop cfg addr sk fundsVar pendingQueue = do
   let period = round (1_000_000 / cfgTps cfg) :: Int
       n      = fromIntegral (cfgInputsPerTx cfg) :: Int
+      maxErrs = cfgMaxConsecutiveErrors cfg
+  consecutive <- IORef.newIORef (0 :: Int)
+  let bumpError reason = do
+        c <- IORef.atomicModifyIORef' consecutive (\c -> (c + 1, c + 1))
+        when (c >= maxErrs) $
+          die $ "tx-firehose: " ++ show maxErrs
+             ++ " consecutive rejects, exiting for restart (last: "
+             ++ reason ++ ")"
+      resetError = IORef.writeIORef consecutive 0
   forever $ do
     inputs <- STM.atomically $ do
       m <- STM.readTVar fundsVar
@@ -315,6 +306,7 @@ submitLoop cfg addr sk fundsVar pendingQueue = do
       Left err -> do
         hPutStrLn stderr $ "tx-firehose: buildTx failed: " ++ err
         returnFunds fundsVar inputs
+        bumpError ("buildTx: " ++ err)
         threadDelay period
       Right (signedTx, outFunds) -> do
         let txId = Api.getTxId (Api.getTxBody signedTx)
@@ -325,10 +317,12 @@ submitLoop cfg addr sk fundsVar pendingQueue = do
             hPutStrLn stderr $ "tx-firehose: submitted " ++ show txId
             STM.atomically $ STM.modifyTVar' fundsVar $ \m ->
               foldr (\f -> Map.insert (fundTxIn f) (fundValue f)) m outFunds
+            resetError
           SubmitFail reason -> do
             hPutStrLn stderr $ "tx-firehose: rejected " ++ show txId
                             ++ ": " ++ show reason
             returnFunds fundsVar inputs
+            bumpError (show reason)
         threadDelay period
 
 returnFunds :: TVar (Map Api.TxIn Integer) -> [(Api.TxIn, Integer)] -> IO ()

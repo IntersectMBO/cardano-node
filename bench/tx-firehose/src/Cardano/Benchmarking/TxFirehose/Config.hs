@@ -27,9 +27,11 @@ data Config = Config
   , cfgInputsPerTx       :: !Natural
   , cfgOutputsPerTx      :: !Natural
   , cfgFee               :: !Integer
-  , cfgReconcileEvery    :: !Double
-    -- ^ Requery UTxO by address every N seconds. 0 disables periodic
-    -- reconciliation (still requeries at startup and on sync errors).
+  , cfgMaxConsecutiveErrors :: !Int
+    -- ^ Exit the process after this many consecutive rejects. The idea:
+    -- keep tx-firehose stateless and dumb; when the local fund set drifts
+    -- from the ledger badly enough to lose N in a row, let the supervisor
+    -- restart us and we'll requery UTxO fresh.
   }
   deriving Show
 
@@ -40,20 +42,20 @@ instance Aeson.FromJSON Config where
     signingKeyFile <- o .:  "signingKeyFile"
     stakingKeyFile <- o .:? "stakingKeyFile"
     tps            <- o .:  "tps"
-    inputsPerTx    <- o .:? "inputsPerTx"    Aeson..!= 1
-    outputsPerTx   <- o .:? "outputsPerTx"   Aeson..!= 1
-    fee            <- o .:? "fee"            Aeson..!= 200_000
-    reconcileEvery <- o .:? "reconcileEvery" Aeson..!= 60
+    inputsPerTx    <- o .:? "inputsPerTx"      Aeson..!= 1
+    outputsPerTx   <- o .:? "outputsPerTx"     Aeson..!= 1
+    fee            <- o .:? "fee"              Aeson..!= 200_000
+    maxErrs        <- o .:? "maxConsecutiveErrors" Aeson..!= 50
     pure Config
-      { cfgSocketPath      = socketPath
-      , cfgNetworkMagic    = networkMagic
-      , cfgSigningKeyFile  = signingKeyFile
-      , cfgStakingKeyFile  = stakingKeyFile
-      , cfgTps             = tps
-      , cfgInputsPerTx     = inputsPerTx
-      , cfgOutputsPerTx    = outputsPerTx
-      , cfgFee             = fee
-      , cfgReconcileEvery  = reconcileEvery
+      { cfgSocketPath           = socketPath
+      , cfgNetworkMagic         = networkMagic
+      , cfgSigningKeyFile       = signingKeyFile
+      , cfgStakingKeyFile       = stakingKeyFile
+      , cfgTps                  = tps
+      , cfgInputsPerTx          = inputsPerTx
+      , cfgOutputsPerTx         = outputsPerTx
+      , cfgFee                  = fee
+      , cfgMaxConsecutiveErrors = maxErrs
       }
 
 loadConfig :: FilePath -> IO Config
@@ -65,5 +67,7 @@ loadConfig path = do
       when (cfgTps cfg <= 0) $ die "tps must be > 0"
       when (cfgInputsPerTx cfg == 0) $ die "inputsPerTx must be >= 1"
       when (cfgOutputsPerTx cfg == 0) $ die "outputsPerTx must be >= 1"
+      when (cfgMaxConsecutiveErrors cfg <= 0) $
+        die "maxConsecutiveErrors must be >= 1"
       when (cfgFee cfg < 0) $ die "fee must be >= 0"
       pure cfg
