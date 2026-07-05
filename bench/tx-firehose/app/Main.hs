@@ -25,7 +25,7 @@ import Cardano.Api
   ( AddressAny
   , AddressInEra
   , AnyCardanoEra (..)
-  , CardanoEra (ConwayEra)
+  , CardanoEra (DijkstraEra)
   , ConsensusModeParams (CardanoModeParams)
   , File (File)
   , FromSomeType (FromSomeType)
@@ -102,7 +102,7 @@ main = do
         , Api.localNodeSocketPath      = File (cfgSocketPath cfg)
         }
 
-  ensureConway connInfo
+  ensureDijkstra connInfo
 
   hPutStrLn stderr $ "tx-firehose: querying UTxO for " ++ show addrAny
   initialFunds <- queryFunds connInfo addrAny
@@ -148,9 +148,9 @@ loadSigningKey path = do
       ]
 
 deriveAddress
-  :: NetworkId -> SigningKey Api.PaymentKey -> AddressInEra Api.ConwayEra
+  :: NetworkId -> SigningKey Api.PaymentKey -> AddressInEra Api.DijkstraEra
 deriveAddress networkId sk =
-  Api.shelleyAddressInEra (Api.shelleyBasedEra @Api.ConwayEra) $
+  Api.shelleyAddressInEra (Api.shelleyBasedEra @Api.DijkstraEra) $
     Api.makeShelleyAddress networkId
       (PaymentCredentialByKey
         (Api.verificationKeyHash (Api.getVerificationKey sk)))
@@ -160,15 +160,15 @@ deriveAddress networkId sk =
 -- Era sanity check
 --------------------------------------------------------------------------------
 
-ensureConway :: LocalNodeConnectInfo -> IO ()
-ensureConway connInfo = do
+ensureDijkstra :: LocalNodeConnectInfo -> IO ()
+ensureDijkstra connInfo = do
   res <- runExceptT $ Api.queryNodeLocalState connInfo VolatileTip QueryCurrentEra
   case res of
     Left af -> die $ "tx-firehose: failed to acquire tip: " ++ show af
-    Right (AnyCardanoEra ConwayEra) -> pure ()
+    Right (AnyCardanoEra DijkstraEra) -> pure ()
     Right (AnyCardanoEra other) ->
       die $ "tx-firehose: node is in era " ++ show other
-         ++ ", but this tool only builds Conway-era transactions"
+         ++ ", but this tool only builds Dijkstra-era transactions"
 
 --------------------------------------------------------------------------------
 -- UTxO query (ephemeral connection)
@@ -179,7 +179,7 @@ queryFunds
 queryFunds connInfo addrAny = do
   let q = QueryInEra
             (QueryInShelleyBasedEra
-               (Api.shelleyBasedEra @Api.ConwayEra)
+               (Api.shelleyBasedEra @Api.DijkstraEra)
                (QueryUTxO (QueryUTxOByAddress (Set.singleton addrAny))))
   res <- runExceptT $ Api.queryNodeLocalState connInfo VolatileTip q
   case res of
@@ -188,7 +188,7 @@ queryFunds connInfo addrAny = do
       die $ "tx-firehose: era mismatch on UTxO query: " ++ show mismatch
     Right (Right (UTxO m)) -> pure (Map.map toLovelace m)
   where
-    toLovelace :: Api.TxOut Api.CtxUTxO Api.ConwayEra -> Integer
+    toLovelace :: Api.TxOut Api.CtxUTxO Api.DijkstraEra -> Integer
     toLovelace (Api.TxOut _ v _ _) =
       let L.Coin c = Api.txOutValueToLovelace v in c
 
@@ -258,7 +258,7 @@ reconcileLoop cfg connInfo addrAny fundsVar = forever $ do
 -- persistent queue, dispatch on the reply.
 submitLoop
   :: Config
-  -> AddressInEra Api.ConwayEra
+  -> AddressInEra Api.DijkstraEra
   -> SigningKey Api.PaymentKey
   -> TVar (Map Api.TxIn Integer)
   -> TQueue Pending
@@ -284,7 +284,7 @@ submitLoop cfg addr sk fundsVar pendingQueue = do
         threadDelay period
       Right (signedTx, outFunds) -> do
         let txId = Api.getTxId (Api.getTxBody signedTx)
-            txInMode = TxInMode (Api.shelleyBasedEra @Api.ConwayEra) signedTx
+            txInMode = TxInMode (Api.shelleyBasedEra @Api.DijkstraEra) signedTx
         result <- submitViaQueue pendingQueue txInMode
         case result of
           SubmitSuccess -> do

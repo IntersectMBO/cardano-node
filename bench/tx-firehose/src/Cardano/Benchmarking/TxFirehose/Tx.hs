@@ -21,14 +21,14 @@ data Fund = Fund
   }
   deriving (Eq, Ord, Show)
 
--- | Build and sign a Conway-era transaction spending the given funds and
+-- | Build and sign a Dijkstra-era transaction spending the given funds and
 -- producing @numOutputs@ new UTxOs at @destAddr@. Returns the signed
 -- transaction and the resulting output funds (indexed 0..numOutputs-1).
 --
 -- No Plutus, no metadata, explicit fee. Change is split evenly across
 -- outputs with any remainder folded into the first output.
 buildTx
-  :: Api.AddressInEra Api.ConwayEra
+  :: Api.AddressInEra Api.DijkstraEra
   -- ^ Destination address (also the change address).
   -> Api.SigningKey Api.PaymentKey
   -- ^ Key witnessing both inputs and (implicitly) future spends of outputs.
@@ -37,7 +37,7 @@ buildTx
   -- ^ Number of outputs.
   -> L.Coin
   -- ^ Fee.
-  -> Either String (Api.Tx Api.ConwayEra, [Fund])
+  -> Either String (Api.Tx Api.DijkstraEra, [Fund])
 buildTx destAddr signingKey inFunds numOutputs fee
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
@@ -63,7 +63,7 @@ buildTx destAddr signingKey inFunds numOutputs fee
               ]
         in Right (signedTx, outFunds)
   where
-    sbe = Api.shelleyBasedEra @Api.ConwayEra
+    sbe = Api.shelleyBasedEra @Api.DijkstraEra
 
     totalIn = sum (map fundValue inFunds)
     feeLovelace = let L.Coin c = fee in c
@@ -96,6 +96,6 @@ buildTx destAddr signingKey inFunds numOutputs fee
       & Api.setTxFee (Api.TxFeeExplicit sbe (Api.Coin feeLovelace))
       & Api.setTxValidityLowerBound Api.TxValidityNoLowerBound
       & Api.setTxValidityUpperBound
-          (Api.defaultTxValidityUpperBound Api.ShelleyBasedEraConway)
+          (Api.defaultTxValidityUpperBound Api.ShelleyBasedEraDijkstra)
       & Api.setTxMetadata Api.TxMetadataNone
       & Api.setTxProtocolParams (Api.BuildTxWith Nothing)
