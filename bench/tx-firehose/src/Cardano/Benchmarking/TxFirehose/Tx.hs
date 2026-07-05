@@ -2,6 +2,18 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
+-- | Dijkstra-era transaction builder.
+--
+-- Uses the experimental 'Cardano.Api.Experimental' API because the stable
+-- 'Api.createTransactionBody' path is not yet Dijkstra-complete
+-- (@caseShelleyToBabbageOrConwayEraOnwards@ errors out on the Dijkstra
+-- witness-extraction branch inside 'collectTxBodyScriptWitnessRequirements').
+--
+-- 'Exp.makeUnsignedTx' bypasses that path entirely: it constructs the ledger
+-- transaction directly from the experimental 'TxBodyContent (LedgerEra era)'.
+-- We wrap the resulting 'Exp.SignedTx' back into an old-style 'Api.Tx' via the
+-- 'Api.ShelleyTx' constructor so the caller can hand it to 'TxInMode' / the
+-- LocalTxSubmission client without further changes.
 module Cardano.Benchmarking.TxFirehose.Tx
   ( Fund (..)
   , buildTx
@@ -12,31 +24,25 @@ import Numeric.Natural (Natural)
 
 import Cardano.Api qualified as Api
 
+import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Tx qualified as Exp
+
 import Cardano.Ledger.Coin qualified as L
 
--- | A spendable UTxO under our signing key: reference + value.
+-- | A spendable UTxO under our signing key.
 data Fund = Fund
   { fundTxIn  :: !Api.TxIn
   , fundValue :: !Integer
   }
   deriving (Eq, Ord, Show)
 
--- | Build and sign a Dijkstra-era transaction spending the given funds and
--- producing @numOutputs@ new UTxOs at @destAddr@. Returns the signed
--- transaction and the resulting output funds (indexed 0..numOutputs-1).
---
--- No Plutus, no metadata, explicit fee. Change is split evenly across
--- outputs with any remainder folded into the first output.
+-- | Build and sign a Dijkstra-era transaction.
 buildTx
   :: Api.AddressInEra Api.DijkstraEra
-  -- ^ Destination address (also the change address).
   -> Api.SigningKey Api.PaymentKey
-  -- ^ Key witnessing both inputs and (implicitly) future spends of outputs.
   -> [Fund]
   -> Natural
-  -- ^ Number of outputs.
   -> L.Coin
-  -- ^ Fee.
   -> Either String (Api.Tx Api.DijkstraEra, [Fund])
 buildTx destAddr signingKey inFunds numOutputs fee
   | null inFunds = Left "buildTx: no input funds"
@@ -49,12 +55,14 @@ buildTx destAddr signingKey inFunds numOutputs fee
       "buildTx: output value too low — " ++ show numOutputs
       ++ " outputs from " ++ show changeTotal
       ++ " lovelace yields " ++ show minOutputLovelace ++ " per output"
-  | otherwise = case Api.createTransactionBody sbe txBodyContent of
+  | otherwise = case Exp.makeUnsignedTx Exp.DijkstraEra bodyContent of
       Left err -> Left $ "buildTx: " ++ show err
-      Right txBody ->
-        let signedTx = Api.signShelleyTransaction sbe txBody
-                         [Api.WitnessPaymentKey signingKey]
-            txId = Api.getTxId txBody
+      Right unsigned ->
+        let keyWit = Exp.makeKeyWitness Exp.DijkstraEra unsigned
+                       (Api.WitnessPaymentKey signingKey)
+            Exp.SignedTx ledgerTx = Exp.signTx Exp.DijkstraEra [] [keyWit] unsigned
+            signedTx = Api.ShelleyTx sbe ledgerTx
+            txId = Api.getTxId (Api.getTxBody signedTx)
             outFunds =
               [ Fund { fundTxIn = Api.TxIn txId (Api.TxIx ix)
                      , fundValue = amt
@@ -75,27 +83,18 @@ buildTx destAddr signingKey inFunds numOutputs fee
           remainder = changeTotal `mod` n
       in (base + remainder) : replicate (fromIntegral numOutputs - 1) base
 
-    txIns =
-      [ ( fundTxIn f
-        , Api.BuildTxWith
-            (Api.KeyWitness Api.KeyWitnessForSpending)
-        )
-      | f <- inFunds
-      ]
+    mkOut :: Integer -> Exp.TxOut (Exp.LedgerEra Api.DijkstraEra)
+    mkOut lovelace =
+      let apiOut = Api.TxOut
+            destAddr
+            (Api.lovelaceToTxOutValue sbe (Api.Coin lovelace))
+            Api.TxOutDatumNone
+            Api.ReferenceScriptNone
+      in Exp.TxOut (Api.toShelleyTxOutAny sbe apiOut)
 
-    mkTxOut lovelace = Api.TxOut
-      destAddr
-      (Api.lovelaceToTxOutValue sbe (Api.Coin lovelace))
-      Api.TxOutDatumNone
-      Api.ReferenceScriptNone
-
-    txBodyContent = Api.defaultTxBodyContent sbe
-      & Api.setTxIns txIns
-      & Api.setTxInsCollateral Api.TxInsCollateralNone
-      & Api.setTxOuts (map mkTxOut outAmounts)
-      & Api.setTxFee (Api.TxFeeExplicit sbe (Api.Coin feeLovelace))
-      & Api.setTxValidityLowerBound Api.TxValidityNoLowerBound
-      & Api.setTxValidityUpperBound
-          (Api.defaultTxValidityUpperBound Api.ShelleyBasedEraDijkstra)
-      & Api.setTxMetadata Api.TxMetadataNone
-      & Api.setTxProtocolParams (Api.BuildTxWith Nothing)
+    bodyContent =
+      Exp.defaultTxBodyContent
+        & Exp.setTxIns
+            [ (fundTxIn f, Exp.AnyKeyWitnessPlaceholder) | f <- inFunds ]
+        & Exp.setTxOuts (map mkOut outAmounts)
+        & Exp.setTxFee fee
