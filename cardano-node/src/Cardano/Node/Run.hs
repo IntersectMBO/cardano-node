@@ -155,7 +155,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath (takeDirectory, (</>))
+import           System.FilePath (isAbsolute, takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -360,10 +360,14 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
 
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosDbPath ->
+    LeiosDbSQLite leiosDbPath -> do
+      let resolvedPath
+            | isAbsolute leiosDbPath = leiosDbPath
+            | otherwise = nonImmutableDbPath dbPath </> leiosDbPath
+      createDirectoryIfMissing True (takeDirectory resolvedPath)
       newLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
-        leiosDbPath
+        resolvedPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
