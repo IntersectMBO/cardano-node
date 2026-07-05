@@ -1,0 +1,56 @@
+cabal-version:      3.0
+
+name:               tx-firehose
+version:            0.1.0.0
+synopsis:           Push-based, single-node Cardano transaction load generator
+description:
+  A minimal load generator that drives a single cardano-node via the
+  node-to-client protocol. Discovers its own UTxO by address query,
+  submits transactions with LocalTxSubmission, and reacts to accept/reject
+  responses. Contrast with tx-centrifuge, which reacts to N2N pulls.
+
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             IOHK
+maintainer:         operations@iohk.io
+copyright:          2026 Intersect
+category:           Cardano, Test
+build-type:         Simple
+
+common project-config
+  default-language: Haskell2010
+  ghc-options:      -Wall
+                    -Wcompat
+                    -Wredundant-constraints
+                    -Wincomplete-uni-patterns
+                    -Wincomplete-record-updates
+                    -Wpartial-fields
+                    -Wunused-packages
+
+library
+  import:           project-config
+  hs-source-dirs:   src
+  exposed-modules:  Cardano.Benchmarking.TxFirehose.Config
+                    Cardano.Benchmarking.TxFirehose.Tx
+  build-depends:    base                 >= 4.14 && < 5
+                  , aeson
+                  , cardano-api
+                  , cardano-ledger-core
+
+executable tx-firehose
+  import:           project-config
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  ghc-options:      -threaded
+                    -rtsopts
+                    "-with-rtsopts=-N -T"
+  build-depends:    base                 >= 4.14 && < 5
+                  , async
+                  , cardano-api
+                  , cardano-ledger-core
+                  , containers
+                  , ouroboros-network:protocols
+                  , stm
+                  , transformers
+                  , tx-firehose
