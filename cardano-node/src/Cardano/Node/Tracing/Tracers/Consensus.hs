@@ -27,8 +27,6 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
 import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
@@ -67,11 +65,11 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
-import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
@@ -86,6 +84,10 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+
+import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
+                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+
 enclosingValue :: ToJSON a => Enclosing' a -> Value
 enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]
 enclosingValue (FallingEdgeWith a) = object [ "edge" .= toJSON a ]
@@ -1041,7 +1043,6 @@ instance ( HasHeader blk
 instance MetaTrace SanityCheckIssue where
 
   namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
-  namespaceFor _ = Namespace [] ["SanityCheckIssue"]
 
   severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
   severityFor _ _ = Nothing
@@ -1056,12 +1057,9 @@ instance LogFormatting SanityCheckIssue where
     mconcat [ "kind" .= String "InconsistentSecurityParam"
             , "error" .= String (Text.pack $ show e)
             ]
-  forMachine _ _ =
-    mconcat [ "kind" .= String "SnapshotIssue"
-            ]
+
   forHuman (InconsistentSecurityParam e) =
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
-  forHuman _ = "SnapshotIssue"
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer

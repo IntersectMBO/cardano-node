@@ -58,7 +58,6 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Data.Aeson (Object, ToJSON, Value (Object, String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -1700,7 +1699,7 @@ instance MetaTrace (PerasCertDB.TraceEvent blk) where
 
   documentFor _ = Nothing
 
-instance (StandardHash blk, ConvertRawHash blk) => LogFormatting (PerasCertDB.TraceEvent blk) where
+instance ConvertRawHash blk => LogFormatting (PerasCertDB.TraceEvent blk) where
   forHuman PerasCertDB.OpenedPerasCertDB =
     "Opened Peras certificate DB"
   forHuman PerasCertDB.ClosedPerasCertDB =
@@ -2111,11 +2110,14 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
 --------------------------------------------------------------------------------
 
 instance LogFormatting LedgerDB.FlavorImplSpecificTrace where
+  forMachine _dtal (LedgerDB.FlavorImplSpecificTraceV1 _ev) = mempty
   forMachine dtal (LedgerDB.FlavorImplSpecificTraceV2 ev) = forMachine dtal ev
 
+  forHuman (LedgerDB.FlavorImplSpecificTraceV1 _ev) = ""
   forHuman (LedgerDB.FlavorImplSpecificTraceV2 ev) = forHuman ev
 
 instance MetaTrace LedgerDB.FlavorImplSpecificTrace where
+  namespaceFor (LedgerDB.FlavorImplSpecificTraceV1 _ev) = Namespace [] []
   namespaceFor (LedgerDB.FlavorImplSpecificTraceV2 ev) =
     nsPrependInner "V2" (namespaceFor ev)
 
