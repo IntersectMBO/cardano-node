@@ -2,6 +2,8 @@
 
 ## Next version
 
+* Resolve relative `LeiosDbConfig` SQLite paths against `--database-path`, so the default `leios.db` is placed alongside `immutable/` and `volatile/`.
+
 * Added txsSyncDurationTotal counter for tracking the total time spent syncing the mempool.
 
 * Added EKG metrics for soft and hard timeouts and included defensive mempool
