@@ -105,9 +105,10 @@ main = do
   cfg <- loadConfig cfgPath
 
   signingKey <- loadSigningKey (cfgSigningKeyFile cfg)
+  mStakeVk <- traverse loadStakingKey (cfgStakingKeyFile cfg)
 
   let networkId = Testnet (NetworkMagic (fromIntegral (cfgNetworkMagic cfg)))
-      addrInEra = deriveAddress networkId signingKey
+      addrInEra = deriveAddress networkId signingKey mStakeVk
       addrAny   = case addrInEra of
         Api.AddressInEra _ addr -> Api.toAddressAny addr
       connInfo  = LocalNodeConnectInfo
@@ -161,14 +162,33 @@ loadSigningKey path = do
       , FromSomeType (Api.AsSigningKey Api.AsPaymentKey) id
       ]
 
+-- | Load a stake signing key (from a .skey text envelope) and derive its
+-- verification key. Only the vkey hash is needed to build a base address —
+-- the stake key does not have to sign anything (payment credential does).
+loadStakingKey :: FilePath -> IO (Api.VerificationKey Api.StakeKey)
+loadStakingKey path = do
+  result <- Api.readFileTextEnvelope (File path)
+  case result of
+    Left err -> die $ "tx-firehose: cannot read stake key "
+                    ++ show path ++ ": " ++ show err
+    Right (sk :: SigningKey Api.StakeKey) -> pure (Api.getVerificationKey sk)
+
 deriveAddress
-  :: NetworkId -> SigningKey Api.PaymentKey -> AddressInEra Api.DijkstraEra
-deriveAddress networkId sk =
+  :: NetworkId
+  -> SigningKey Api.PaymentKey
+  -> Maybe (Api.VerificationKey Api.StakeKey)
+  -> AddressInEra Api.DijkstraEra
+deriveAddress networkId sk mStakeVk =
   Api.shelleyAddressInEra (Api.shelleyBasedEra @Api.DijkstraEra) $
     Api.makeShelleyAddress networkId
       (PaymentCredentialByKey
         (Api.verificationKeyHash (Api.getVerificationKey sk)))
-      NoStakeAddress
+      stakeRef
+  where
+    stakeRef = case mStakeVk of
+      Nothing -> NoStakeAddress
+      Just vk -> Api.StakeAddressByValue
+                   (Api.StakeCredentialByKey (Api.verificationKeyHash vk))
 
 --------------------------------------------------------------------------------
 -- Era sanity check
