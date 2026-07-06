@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -14,16 +15,22 @@ import Control.Concurrent.STM (TMVar, TQueue, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (forever, when)
 import Control.Monad.Trans.Except (runExceptT)
+import Data.Aeson (Value, (.=))
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.IORef qualified as IORef
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import Numeric.Natural (Natural)
 import Options.Applicative qualified as Opt
 import System.Exit (die)
 import System.IO
   ( BufferMode (LineBuffering)
-  , hPutStrLn
   , hSetBuffering
   , hSetEncoding
   , stderr
@@ -87,6 +94,24 @@ byronEpochSlots = Api.EpochSlots 21600
 data Pending = Pending
     !TxInMode
     !(TMVar (SubmitResult TxValidationErrorInCardanoMode))
+
+-- | Emit one line of structured JSON on stderr, in the shape the
+-- proto-devnet Alloy log pipeline expects
+-- (@{at, sev, host, thread, ns, data}@ — the cardano-node trace
+-- schema). Rate / event counts in Grafana can then be derived by
+-- filtering on the @ns@ label.
+trace :: Text -> Text -> Value -> IO ()
+trace ns sev dat = do
+  now <- getCurrentTime
+  let payload = Aeson.object
+        [ "at"     .= T.pack (iso8601Show now)
+        , "sev"    .= sev
+        , "host"   .= ("tx-firehose" :: Text)
+        , "thread" .= ("main" :: Text)
+        , "ns"     .= ns
+        , "data"   .= dat
+        ]
+  BSL.hPutStrLn stderr (Aeson.encode payload)
 
 -- | Command-line options. Set the optional 'optStakingKey' to spend from a
 -- base address (payment + stake); omit for an enterprise address.
@@ -169,13 +194,15 @@ main = do
 
   ensureDijkstra connInfo
 
-  hPutStrLn stderr $ "tx-firehose: querying UTxO for " ++ show addrAny
+  trace "TxFirehose.Startup.Query" "Info" $
+    Aeson.object ["address" .= T.pack (show addrAny)]
   initialFunds <- queryFunds connInfo addrAny
   when (Map.null initialFunds) $
     die "tx-firehose: no UTxO found at derived address - fund it first"
-  hPutStrLn stderr $ "tx-firehose: seeded with "
-                  ++ show (Map.size initialFunds) ++ " UTxO(s), total "
-                  ++ show (sum (Map.elems initialFunds)) ++ " lovelace"
+  trace "TxFirehose.Startup.Seeded" "Info" $ Aeson.object
+    [ "utxos"        .= Map.size initialFunds
+    , "totalLovelace" .= sum (Map.elems initialFunds)
+    ]
 
   fundsVar     <- STM.newTVarIO initialFunds
   pendingQueue <- STM.newTQueueIO
@@ -335,7 +362,11 @@ submitLoop opts addr sk fundsVar pendingQueue = do
   consecutive <- IORef.newIORef (0 :: Int)
   let bumpError reason = do
         c <- IORef.atomicModifyIORef' consecutive (\c -> (c + 1, c + 1))
-        when (c >= maxErrs) $
+        when (c >= maxErrs) $ do
+          trace "TxFirehose.Exit.MaxErrors" "Error" $ Aeson.object
+            [ "threshold"  .= maxErrs
+            , "lastReason" .= T.pack reason
+            ]
           die $ "tx-firehose: " ++ show maxErrs
              ++ " consecutive rejects, exiting for restart (last: "
              ++ reason ++ ")"
@@ -353,7 +384,8 @@ submitLoop opts addr sk fundsVar pendingQueue = do
     case Tx.buildTx addr sk inFunds (optOutputsPerTx opts)
                       (L.Coin (optFee opts)) of
       Left err -> do
-        hPutStrLn stderr $ "tx-firehose: buildTx failed: " ++ err
+        trace "TxFirehose.Build.Fail" "Error" $
+          Aeson.object ["error" .= T.pack err]
         returnFunds fundsVar inputs
         bumpError ("buildTx: " ++ err)
         threadDelay period
@@ -363,13 +395,16 @@ submitLoop opts addr sk fundsVar pendingQueue = do
         result <- submitViaQueue pendingQueue txInMode
         case result of
           SubmitSuccess -> do
-            hPutStrLn stderr $ "tx-firehose: submitted " ++ show txId
+            trace "TxFirehose.Submit.Success" "Info" $
+              Aeson.object ["tx" .= T.pack (show txId)]
             STM.atomically $ STM.modifyTVar' fundsVar $ \m ->
               foldr (\f -> Map.insert (fundTxIn f) (fundValue f)) m outFunds
             resetError
           SubmitFail reason -> do
-            hPutStrLn stderr $ "tx-firehose: rejected " ++ show txId
-                            ++ ": " ++ show reason
+            trace "TxFirehose.Submit.Reject" "Warning" $ Aeson.object
+              [ "tx"     .= T.pack (show txId)
+              , "reason" .= T.pack (show reason)
+              ]
             returnFunds fundsVar inputs
             bumpError (show reason)
         threadDelay period
