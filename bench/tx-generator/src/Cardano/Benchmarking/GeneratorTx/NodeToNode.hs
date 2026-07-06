@@ -179,7 +179,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     => NodeToNodeVersion
     -> remotePeer
     -> Channel IO ByteString
-    -> IO ((), Maybe (Mux.Reception ByteString))
+    -> IO ((), Maybe ByteString)
   kaClient _version them channel = do
     keepAliveRng <- newStdGen
     peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
