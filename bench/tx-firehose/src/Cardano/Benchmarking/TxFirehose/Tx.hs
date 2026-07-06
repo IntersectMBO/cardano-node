@@ -1,22 +1,16 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
--- | Dijkstra-era transaction builder.
+-- | Era-generic transaction builder for tx-firehose.
 --
--- Uses the experimental 'Cardano.Api.Experimental' API because the stable
--- 'Api.createTransactionBody' path is not yet Dijkstra-complete
--- (@caseShelleyToBabbageOrConwayEraOnwards@ errors out on the Dijkstra
--- witness-extraction branch inside 'collectTxBodyScriptWitnessRequirements').
---
--- 'Exp.makeUnsignedTx' bypasses that path entirely: it constructs the ledger
--- transaction directly from the experimental 'TxBodyContent (LedgerEra era)'.
--- We wrap the resulting 'Exp.SignedTx' back into an old-style 'Api.Tx' via the
--- 'Api.ShelleyTx' constructor so the caller can hand it to 'TxInMode' / the
--- LocalTxSubmission client without further changes.
---
--- TxId and wire size come straight from cardano-ledger-api on the raw ledger
--- Tx we already have in hand — no need to round-trip through the deprecated
--- 'Api.getTxBody'.
+-- The transaction is assembled with the ledger 'EraTx' \/ 'EraTxBody' \/
+-- 'EraTxOut' type classes so the same code covers every Shelley-based era
+-- (Shelley .. Dijkstra). Signing goes through cardano-api's
+-- 'makeShelleyKeyWitness'' - that path is era-generic and, unlike
+-- 'createTransactionBody', does not trip over the Dijkstra witness
+-- extraction case-analysis.
 module Cardano.Benchmarking.TxFirehose.Tx
   ( Fund (..)
   , BuiltTx (..)
@@ -24,45 +18,59 @@ module Cardano.Benchmarking.TxFirehose.Tx
   ) where
 
 import Data.Function ((&))
-import Lens.Micro ((^.))
+import Data.Sequence.Strict qualified as StrictSeq
+import Data.Set qualified as Set
 import Data.Word (Word32)
+import Lens.Micro ((%~), (.~), (^.))
 import Numeric.Natural (Natural)
 
 import Cardano.Api qualified as Api
 
-import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Experimental.Tx qualified as Exp
+import Cardano.Ledger.Api
+  ( addrTxWitsL
+  , feeTxBodyL
+  , inputsTxBodyL
+  , mkBasicTx
+  , mkBasicTxBody
+  , outputsTxBodyL
+  , sizeTxF
+  , txIdTx
+  , witsTxL
+  )
+import Cardano.Ledger.Api.Tx.In (TxId, TxIn, mkTxInPartial)
+import Cardano.Ledger.Coin (Coin (Coin))
 
-import Cardano.Ledger.Api (sizeTxF, txIdTx)
-import Cardano.Ledger.Api.Tx.In (TxId)
-import Cardano.Ledger.Coin qualified as L
-
--- | A spendable UTxO under our signing key.
+-- | A spendable UTxO we own: ledger-level 'TxIn' + its lovelace value.
+-- Keeping the internal fund set ledger-typed lets the tx builder stay
+-- pure ledger; api conversion only happens at query \/ submit boundaries.
 data Fund = Fund
-  { fundTxIn  :: !Api.TxIn
+  { fundTxIn  :: !TxIn
   , fundValue :: !Integer
   }
   deriving (Eq, Ord, Show)
 
--- | A built and signed transaction, together with the ledger-native
--- txId and wire size (bytes). Callers wanting to submit it hand
--- 'btxSigned' to 'TxInMode'; observability uses 'btxId' / 'btxSize'.
-data BuiltTx = BuiltTx
-  { btxSigned  :: !(Api.Tx Api.DijkstraEra)
+-- | A built and signed transaction, together with observability
+-- metadata we want to trace on submit.
+data BuiltTx era = BuiltTx
+  { btxSigned  :: !(Api.Tx era)
   , btxId      :: !TxId
   , btxSize    :: !Word32
   , btxOutputs :: ![Fund]
   }
 
--- | Build and sign a Dijkstra-era transaction.
+-- | Build and sign an era-generic 1..n-input, m-output transaction that
+-- sends the change back to @destAddr@ under @signingKey@.
 buildTx
-  :: Api.AddressInEra Api.DijkstraEra
+  :: forall era
+   . Api.ShelleyBasedEraConstraints era
+  => Api.ShelleyBasedEra era
+  -> Api.AddressInEra era
   -> Api.SigningKey Api.PaymentKey
   -> [Fund]
   -> Natural
-  -> L.Coin
-  -> Either String BuiltTx
-buildTx destAddr signingKey inFunds numOutputs fee
+  -> Coin
+  -> Either String (BuiltTx era)
+buildTx sbe destAddr signingKey inFunds numOutputs fee
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
@@ -73,32 +81,42 @@ buildTx destAddr signingKey inFunds numOutputs fee
       "buildTx: output value too low - " ++ show numOutputs
       ++ " outputs from " ++ show changeTotal
       ++ " lovelace yields " ++ show minOutputLovelace ++ " per output"
-  | otherwise = case Exp.makeUnsignedTx Exp.DijkstraEra bodyContent of
-      Left err -> Left $ "buildTx: " ++ show err
-      Right unsigned ->
-        let keyWit = Exp.makeKeyWitness Exp.DijkstraEra unsigned
-                       (Api.WitnessPaymentKey signingKey)
-            Exp.SignedTx ledgerTx = Exp.signTx Exp.DijkstraEra [] [keyWit] unsigned
-            signedTx = Api.ShelleyTx sbe ledgerTx
-            ledgerTxId = txIdTx ledgerTx
-            apiTxId    = Api.fromShelleyTxId ledgerTxId
-            outFunds =
-              [ Fund { fundTxIn = Api.TxIn apiTxId (Api.TxIx ix)
-                     , fundValue = amt
-                     }
-              | (ix, amt) <- zip [0..] outAmounts
-              ]
-        in Right BuiltTx
-             { btxSigned  = signedTx
-             , btxId      = ledgerTxId
-             , btxSize    = ledgerTx ^. sizeTxF
-             , btxOutputs = outFunds
-             }
+  | otherwise = Right built
   where
-    sbe = Api.shelleyBasedEra @Api.DijkstraEra
+    -- Body: pure ledger, era-generic via EraTxBody.
+    body =
+      mkBasicTxBody
+        & inputsTxBodyL  .~ Set.fromList (map fundTxIn inFunds)
+        & outputsTxBodyL %~ (<> StrictSeq.fromList (map mkOut outAmounts))
+        & feeTxBodyL     .~ fee
 
+    -- Signing via cardano-api - era-generic and Dijkstra-safe.
+    witVKey = case Api.makeShelleyKeyWitness' sbe body
+                     (Api.WitnessPaymentKey signingKey) of
+      Api.ShelleyKeyWitness _ w -> w
+      _ -> error "buildTx: unexpected non-Shelley witness"
+
+    ledgerTx =
+      mkBasicTx body
+        & witsTxL . addrTxWitsL .~ Set.singleton witVKey
+
+    ledgerTxId = txIdTx ledgerTx
+
+    outFunds =
+      [ Fund { fundTxIn = mkTxInPartial ledgerTxId ix, fundValue = amt }
+      | (ix, amt) <- zip [0..] outAmounts
+      ]
+
+    built = BuiltTx
+      { btxSigned  = Api.ShelleyTx sbe ledgerTx
+      , btxId      = ledgerTxId
+      , btxSize    = ledgerTx ^. sizeTxF
+      , btxOutputs = outFunds
+      }
+
+    -- Money math.
     totalIn = sum (map fundValue inFunds)
-    feeLovelace = let L.Coin c = fee in c
+    feeLovelace = let Coin c = fee in c
     changeTotal = totalIn - feeLovelace
     n = fromIntegral numOutputs :: Integer
     minOutputLovelace = changeTotal `div` n
@@ -107,18 +125,10 @@ buildTx destAddr signingKey inFunds numOutputs fee
           remainder = changeTotal `mod` n
       in (base + remainder) : replicate (fromIntegral numOutputs - 1) base
 
-    mkOut :: Integer -> Exp.TxOut (Exp.LedgerEra Api.DijkstraEra)
     mkOut lovelace =
       let apiOut = Api.TxOut
             destAddr
-            (Api.lovelaceToTxOutValue sbe (Api.Coin lovelace))
+            (Api.lovelaceToTxOutValue sbe (Coin lovelace))
             Api.TxOutDatumNone
             Api.ReferenceScriptNone
-      in Exp.TxOut (Api.toShelleyTxOutAny sbe apiOut)
-
-    bodyContent =
-      Exp.defaultTxBodyContent
-        & Exp.setTxIns
-            [ (fundTxIn f, Exp.AnyKeyWitnessPlaceholder) | f <- inFunds ]
-        & Exp.setTxOuts (map mkOut outAmounts)
-        & Exp.setTxFee fee
+      in Api.toShelleyTxOutAny sbe apiOut

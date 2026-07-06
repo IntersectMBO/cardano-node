@@ -36,6 +36,8 @@ library
                   , cardano-api
                   , cardano-ledger-api
                   , cardano-ledger-core
+                  , cardano-strict-containers
+                  , containers
                   , microlens
 
 executable tx-firehose
@@ -47,14 +49,13 @@ executable tx-firehose
                     "-with-rtsopts=-N -T"
   build-depends:    base                 >= 4.14 && < 5
                   , aeson
-                  , async
                   , bytestring
                   , cardano-api
+                  , cardano-ledger-api
                   , cardano-ledger-core
                   , containers
                   , optparse-applicative
                   , ouroboros-network:protocols
-                  , stm
                   , text
                   , time
                   , transformers
