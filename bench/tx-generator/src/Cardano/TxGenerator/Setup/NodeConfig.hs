@@ -11,20 +11,18 @@ module Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 
 import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)
+import           Cardano.Node.Configuration.Adapter (nodeConfigurationFromFile)
 import           Cardano.Node.Configuration.POM
-import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile, KESSource (..),
-                   NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
-                   ProtocolFilepaths (..))
+import           Cardano.Node.Types (GenesisFile, NodeProtocolConfiguration (..),
+                   NodeShelleyProtocolConfiguration (..))
 import           Cardano.TxGenerator.Types
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 
 import           Control.Applicative (Const (Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
-import           Data.Monoid
 
 
 -- | extract genesis from a Cardano protocol
@@ -53,29 +51,11 @@ mkConsensusProtocol nodeConfig =
         <$> runExceptT (mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig conwayConfig dijkstraConfig hardforkConfig checkpointsConfig Nothing)
 
 -- | Creates a NodeConfiguration from a config file;
---   the result is devoid of any keys/credentials
+--   the result is devoid of any keys/credentials.
+--
+-- The configuration is parsed and resolved through the @cardano-config@ package
+-- (via "Cardano.Node.Configuration.Adapter"), applying no CLI overrides, so the
+-- credential and socket paths are left unset.
 mkNodeConfig :: FilePath -> IO (Either TxGenError NodeConfiguration)
-mkNodeConfig configFp_
-  = do
-    configYamlPc <- parseNodeConfigurationFP . Just $ configFp
-    return
-        $ first (TxGenError . ("mkNodeConfig: " ++))
-        $! makeNodeConfiguration (configYamlPc <> filesPc)
-  where
-    configFp = ConfigYamlFilePath configFp_
-
-    filesPc :: PartialNodeConfiguration
-    filesPc = defaultPartialNodeConfiguration
-               { pncProtocolFiles = Last . Just $
-                 ProtocolFilepaths
-                 { byronCertFile = Just ""
-                 , byronKeyFile = Just ""
-                 , shelleyKESSource = Just (KESKeyFilePath "")
-                 , shelleyVRFFile = Just ""
-                 , shelleyCertFile = Just ""
-                 , shelleyBulkCredsFile = Just ""
-                 }
-               , pncValidateDB = Last $ Just False
-               , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing
-               , pncConfigFile = Last $ Just configFp
-               }
+mkNodeConfig configFp =
+    first (TxGenError . ("mkNodeConfig: " ++)) <$> nodeConfigurationFromFile configFp

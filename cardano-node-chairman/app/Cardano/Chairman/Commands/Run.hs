@@ -13,8 +13,8 @@ import qualified Cardano.Api as Api
 
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Ledger.BaseTypes (unNonZero)
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
-                   parseNodeConfigurationFP)
+import           Cardano.Node.Configuration.Adapter (nodeConfigurationFromFile)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
@@ -25,7 +25,6 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
 import           Control.Tracer (Tracer, mkTracer, stdoutTracer, traceWith)
-import           Data.Monoid (Last (..))
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
 import qualified Options.Applicative as Opt
@@ -98,13 +97,13 @@ run RunOpts
     , caConfigYaml
     } = do
 
-  configYamlPc <- liftIO . parseNodeConfigurationFP $ Just caConfigYaml
+  nodeConfig <- liftIO (nodeConfigurationFromFile (unConfigPath caConfigYaml))
+            >>= either
+                  (\err -> error $ "Error in creating the NodeConfiguration from "
+                                <> unConfigPath caConfigYaml <> ": " <> err)
+                  return
 
-  ptclConfig <- case getProtocolConfiguration configYamlPc of
-                  Nothing ->
-                    error $ "Node protocol configuration was not specified "<>
-                            "in Config yaml filepath: " <> unConfigPath caConfigYaml
-                  Just ptclConfig -> return ptclConfig
+  let ptclConfig = ncProtocolConfig nodeConfig
 
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol ptclConfig Nothing
 
@@ -134,16 +133,10 @@ run RunOpts
   return ()
  where
   getConsensusMode :: SecurityParam -> NodeProtocolConfiguration -> ConsensusModeParams
-  getConsensusMode (SecurityParam k) ncProtocolConfig =
-    case ncProtocolConfig of
+  getConsensusMode (SecurityParam k) ncProtocolConfig' =
+    case ncProtocolConfig' of
       NodeProtocolConfigurationCardano{} ->
         CardanoModeParams $ EpochSlots $ unNonZero k
-
-  getProtocolConfiguration
-    :: PartialNodeConfiguration
-    -> Maybe NodeProtocolConfiguration
-  getProtocolConfiguration PartialNodeConfiguration{pncProtocolConfig} =
-    getLast pncProtocolConfig
 
 timed :: Tracer IO a -> Tracer IO a
 timed tr = mkTracer $ \a -> do

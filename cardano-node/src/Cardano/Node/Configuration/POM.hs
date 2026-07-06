@@ -20,15 +20,12 @@ module Cardano.Node.Configuration.POM
   , defaultPartialNodeConfiguration
   , lastOption
   , makeNodeConfiguration
-  , parseNodeConfigurationFP
   , pncProtocol
   , ncProtocol
   , getForkPolicy
   )
 where
 
-import           Cardano.Crypto (RequiresNetworkMagic (..))
-import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
 import           Cardano.Logging.Types
 import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
@@ -40,16 +37,12 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
                    makeRpcConfig)
-import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
-                   SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
-                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
-import           Ouroboros.Consensus.Util.Args (OverrideOrDefault (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs)
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
@@ -59,19 +52,15 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionIn
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
-import           Control.Monad (unless, void, when)
+import           Control.Monad (unless)
 import           Data.Aeson
-import qualified Data.Aeson.Types as Aeson
 import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Time.Clock (DiffTime, secondsToDiffTime)
-import           Data.Yaml (decodeFileThrow)
+import           Data.Time.Clock (DiffTime)
 import           GHC.Generics (Generic)
 import           Options.Applicative
-import           System.FilePath (takeDirectory, (</>))
 import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
@@ -310,400 +299,8 @@ data PartialNodeConfiguration
        , pncRpcConfig :: !PartialRpcConfig
        } deriving (Eq, Generic, Show)
 
-instance AdjustFilePaths PartialNodeConfiguration where
-  adjustFilePaths f x =
-    x { pncProtocolConfig = adjustFilePaths f (pncProtocolConfig x)
-      , pncSocketConfig   = adjustFilePaths f (pncSocketConfig x)
-      }
-
 instance Semigroup PartialNodeConfiguration where
   (<>) = gmappend
-
-instance FromJSON PartialNodeConfiguration where
-  parseJSON =
-    withObject "PartialNodeConfiguration" $ \v -> do
-      pncStartAsNonProducingNode <- Last <$> v .:? "StartAsNonProducingNode"
-
-      -- Node parameters, not protocol-specific
-      pncSocketPath <- Last <$> v .:? "SocketPath"
-      pncDatabaseFile <- Last <$> v .:? "DatabasePath"
-      pncDiffusionMode
-        <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
-      pncExperimentalProtocolsEnabled <- fmap Last $ do
-        mValue <- v .:? "ExperimentalProtocolsEnabled"
-
-        mOldValue <- v .:? "TestEnableDevelopmentNetworkProtocols"
-
-        when (isJust mOldValue) $ do
-          when (mOldValue /= mValue) $
-            fail "TestEnableDevelopmentNetworkProtocols has been renamed to ExperimentalProtocolsEnabled in the configuration file"
-
-        pure mValue
-
-      -- Blockfetch parameters
-      pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
-      pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
-
-      -- Protocol parameters
-      protocol <-  v .:? "Protocol" .!= CardanoProtocol
-      pncProtocolConfig <-
-        case protocol of
-          CardanoProtocol -> do
-            hfp <- parseHardForkProtocol v
-            fmap (Last . Just) $
-              NodeProtocolConfigurationCardano
-                <$> parseByronProtocol v
-                <*> parseShelleyProtocol v
-                <*> parseAlonzoProtocol v
-                <*> parseConwayProtocol v
-                <*> (if npcExperimentalHardForksEnabled hfp then Just <$> parseDijkstraProtocol v else pure Nothing)
-                <*> pure hfp
-                <*> parseCheckpoints v
-      pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
-
-      -- LedgerDB configuration
-      pncLedgerDbConfig  <- Last <$> parseLedgerDbConfig v
-
-      -- Network timeouts
-      pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
-      pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
-      pncEgressPollInterval    <- Last <$> v .:? "EgressPollInterval"
-
-
-      -- AcceptedConnectionsLimit
-      pncAcceptedConnectionsLimit
-        <- Last <$> v .:? "AcceptedConnectionsLimit"
-
-      -- P2P Governor parameters, with conservative defaults.
-      pncDeadlineTargetOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
-      pncDeadlineTargetOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
-      pncDeadlineTargetOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
-      pncDeadlineTargetOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
-      pncDeadlineTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
-      pncDeadlineTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
-      pncDeadlineTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
-      pncSyncTargetOfRootPeers        <- Last <$> v .:? "SyncTargetNumberOfRootPeers"
-      pncSyncTargetOfKnownPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownPeers"
-      pncSyncTargetOfEstablishedPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedPeers"
-      pncSyncTargetOfActivePeers      <- Last <$> v .:? "SyncTargetNumberOfActivePeers"
-      pncSyncTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownBigLedgerPeers"
-      pncSyncTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedBigLedgerPeers"
-      pncSyncTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "SyncTargetNumberOfActiveBigLedgerPeers"
-      -- Minimum number of active big ledger peers we must be connected to
-      -- in Genesis mode
-      pncMinBigLedgerPeersForTrustedState <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
-
-      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
-
-      pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
-
-      pncMempoolTimeoutSoft <- Last <$> v .:? "MempoolTimeoutSoft"
-      pncMempoolTimeoutHard <- Last <$> v .:? "MempoolTimeoutHard"
-      pncMempoolTimeoutCapacity <- Last <$> v .:? "MempoolTimeoutCapacity"
-
-      -- Peer Sharing
-      pncPeerSharing <- Last <$> v .:? "PeerSharing"
-
-      -- pncConsensusMode determines whether Genesis is enabled in the first place.
-      pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
-
-      pncResponderCoreAffinityPolicy <-
-            (\a b -> Last a <> Last b)
-        <$> v .:? "ResponderCoreAffinityPolicy"
-        <*> v .:? "ForkPolicy" -- deprecated
-
-      pncRpcConfig <-
-        RpcConfig
-          <$> (Last <$> v .:? "EnableRpc")
-          <*> (Last <$> v .:? "RpcSocketPath")
-          <*> pure mempty
-
-      txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
-      let parseInitDelay =
-            maybe (pncTxSubmissionInitDelay defaultPartialNodeConfiguration) (fmap TxSubmissionInitDelay)
-              <$> v .:? "TxSubmissionInitDelay"
-      pncTxSubmissionInitDelay <- parseInitDelay
-      pure PartialNodeConfiguration {
-             pncProtocolConfig
-           , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
-           , pncDiffusionMode
-           , pncExperimentalProtocolsEnabled
-           , pncMaxConcurrencyBulkSync
-           , pncMaxConcurrencyDeadline
-           , pncTraceForwardSocket = mempty
-           , pncConfigFile = mempty
-           , pncTopologyFile = mempty
-           , pncDatabaseFile
-           , pncProtocolFiles = mempty
-           , pncValidateDB = mempty
-           , pncShutdownConfig = mempty
-           , pncStartAsNonProducingNode
-           , pncMaybeMempoolCapacityOverride
-           , pncLedgerDbConfig
-           , pncProtocolIdleTimeout
-           , pncTimeWaitTimeout
-           , pncChainSyncIdleTimeout
-           , pncMempoolTimeoutSoft
-           , pncMempoolTimeoutHard
-           , pncMempoolTimeoutCapacity
-           , pncEgressPollInterval
-           , pncAcceptedConnectionsLimit
-           , pncDeadlineTargetOfRootPeers
-           , pncDeadlineTargetOfKnownPeers
-           , pncDeadlineTargetOfEstablishedPeers
-           , pncDeadlineTargetOfActivePeers
-           , pncDeadlineTargetOfKnownBigLedgerPeers
-           , pncDeadlineTargetOfEstablishedBigLedgerPeers
-           , pncDeadlineTargetOfActiveBigLedgerPeers
-           , pncSyncTargetOfRootPeers
-           , pncSyncTargetOfKnownPeers
-           , pncSyncTargetOfEstablishedPeers
-           , pncSyncTargetOfActivePeers
-           , pncSyncTargetOfKnownBigLedgerPeers
-           , pncSyncTargetOfEstablishedBigLedgerPeers
-           , pncSyncTargetOfActiveBigLedgerPeers
-           , pncMinBigLedgerPeersForTrustedState
-           , pncConsensusMode
-           , pncPeerSharing
-           , pncGenesisConfigFlags
-           , pncResponderCoreAffinityPolicy
-           , pncRpcConfig
-           , pncTxSubmissionLogicVersion = txSubmissionLogicVersion
-           , pncTxSubmissionInitDelay
-           }
-    where
-      parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
-        where
-          parseNoOverride = fmap (MempoolCapacityBytesOverride . ByteSize32) <$> v .:? "MempoolCapacityBytesOverride"
-          parseOverride = do
-            maybeString :: Maybe String <- v .:? "MempoolCapacityBytesOverride"
-            case maybeString of
-              Just "NoOverride" -> return (Just NoMempoolCapacityBytesOverride)
-              Just invalid ->  fmap Just . Aeson.parseFail $ mconcat
-                [ "Invalid value for 'MempoolCapacityBytesOverride'.  "
-                , "Expecting byte count or NoOverride.  Value was: "
-                , show invalid
-                ]
-              Nothing -> return Nothing
-
-      parseLedgerDbConfig v = do
-        let snapInterval x = do
-              si <- x .:? "SnapshotInterval"
-              when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
-              pure $ Override <$> (si >>= nonZero)
-            snapNum x      = fmap (Override . NumOfDiskSnapshots) <$> x .:? "NumOfDiskSnapshots"
-
-        mTopLevelSnapInterval <- snapInterval v
-        mTopLevelSnapNum <- snapNum v
-
-        let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
-                       ["SnapshotInterval", "NumOfDiskSnapshots"]
-            deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
-
-        mLedgerDB <- v .:? "LedgerDB"
-        case mLedgerDB of
-           Nothing -> do
-             let si = fromMaybe UseDefault mTopLevelSnapInterval
-                 sn = fromMaybe UseDefault mTopLevelSnapNum
-                 sf = SnapshotFrequencyArgs {
-                     sfaInterval = si
-                   , sfaOffset = UseDefault
-                   , sfaRateLimit = UseDefault
-                   , sfaDelaySnapshotRange = UseDefault
-                   }
-                 spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) sn
-             return $ Just $ LedgerDbConfiguration spArgs DefaultQueryBatchSize V2InMemory deprecatedOpts
-
-           Just ledgerDB -> flip (withObject "LedgerDB") ledgerDB $ \o -> do
-             -- Parse snapshot options from an object, honouring any top-level
-             -- (deprecated) SnapshotInterval / NumOfDiskSnapshots overrides.
-             let parseSnapshotOpts s = do
-                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= UseDefault
-                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= UseDefault
-                   sOffset    <- (fmap Override <$> s .:? "SlotOffset") .!= UseDefault
-                   sRateLimit <- (fmap (Override . secondsToDiffTime) <$> s .:? "RateLimit") .!= UseDefault
-                   sMinDelay  <- s .:? "MinDelay"
-                   sMaxDelay  <- s .:? "MaxDelay"
-                   sDelayRange <-
-                         case (sMinDelay, sMaxDelay) of
-                           (Just minDelay, Just maxDelay) ->
-                             if minDelay <= maxDelay then
-                               pure (Override (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay)))
-                             else fail $ "Invalid ledger snapshot delay range, MinDelay > MaxDelay: "
-                                       <> show minDelay <> " > " <> show maxDelay
-                           _ -> pure UseDefault
-                   let sf = SnapshotFrequencyArgs {
-                           sfaInterval = sInterval
-                         , sfaOffset = sOffset
-                         , sfaRateLimit = sRateLimit
-                         , sfaDelaySnapshotRange = sDelayRange
-                         }
-                   pure $ SnapshotPolicyArgs (SnapshotFrequency sf) sNum
-
-             qsize    <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
-             backend  <- o .:? "Backend" .!= "V2InMemory"
-             selector <- case backend of
-               "V2InMemory" -> return V2InMemory
-               "V2LSM" -> do
-                 lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
-                 pure $ V2LSM lsmPath
-               _ -> fail $ "Malformed LedgerDB Backend: " <> backend
-
-             -- A named policy (e.g. `Snapshots: Mithril`) selects a whole predefined
-             -- set of args; an object is parsed field-by-field; absence falls back to
-             -- the legacy top-level options for backward compatibility.
-             mSnapshotsVal <- o .:? "Snapshots"
-             spArgs <- case mSnapshotsVal of
-               Just (String name) -> case name of
-                 "Mithril" -> pure mithrilSnapshotPolicyArgs
-                 _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
-                          <> ". Expected \"Mithril\" or an object with snapshot options."
-               Just sv -> withObject "Snapshots" parseSnapshotOpts sv
-               Nothing -> parseSnapshotOpts o
-
-             pure $ Just $ LedgerDbConfiguration spArgs qsize selector deprecatedOpts
-
-      parseByronProtocol v = do
-        primary   <- v .:? "ByronGenesisFile"
-        secondary <- v .:? "GenesisFile"
-        npcByronGenesisFile <-
-          case (primary, secondary) of
-            (Just g, Nothing)  -> return g
-            (Nothing, Just g)  -> return g
-            (Nothing, Nothing) -> fail $ "Missing required field, either "
-                                      ++ "ByronGenesisFile or GenesisFile"
-            (Just _, Just _)   -> fail $ "Specify either ByronGenesisFile"
-                                      ++ "or GenesisFile, but not both"
-        npcByronGenesisFileHash <- v .:? "ByronGenesisHash"
-
-        npcByronReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
-                                         .!= RequiresNoMagic
-        npcByronPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-        protVerMajor                <- v .: "LastKnownBlockVersion-Major"
-        protVerMinor                <- v .: "LastKnownBlockVersion-Minor"
-        protVerAlt                  <- v .: "LastKnownBlockVersion-Alt" .!= 0
-
-        pure NodeByronProtocolConfiguration {
-               npcByronGenesisFile
-             , npcByronGenesisFileHash
-             , npcByronReqNetworkMagic
-             , npcByronPbftSignatureThresh
-             , npcByronSupportedProtocolVersionMajor = protVerMajor
-             , npcByronSupportedProtocolVersionMinor = protVerMinor
-             , npcByronSupportedProtocolVersionAlt   = protVerAlt
-             }
-
-      parseShelleyProtocol v = do
-        primary   <- v .:? "ShelleyGenesisFile"
-        secondary <- v .:? "GenesisFile"
-        npcShelleyGenesisFile <-
-          case (primary, secondary) of
-            (Just g, Nothing)  -> return g
-            (Nothing, Just g)  -> return g
-            (Nothing, Nothing) -> fail $ "Missing required field, either "
-                                      ++ "ShelleyGenesisFile or GenesisFile"
-            (Just _, Just _)   -> fail $ "Specify either ShelleyGenesisFile"
-                                      ++ "or GenesisFile, but not both"
-        npcShelleyGenesisFileHash <- v .:? "ShelleyGenesisHash"
-
-        pure NodeShelleyProtocolConfiguration {
-               npcShelleyGenesisFile
-             , npcShelleyGenesisFileHash
-             }
-
-      parseAlonzoProtocol v = do
-        npcAlonzoGenesisFile     <- v .:  "AlonzoGenesisFile"
-        npcAlonzoGenesisFileHash <- v .:? "AlonzoGenesisHash"
-        pure NodeAlonzoProtocolConfiguration {
-               npcAlonzoGenesisFile
-             , npcAlonzoGenesisFileHash
-             }
-
-      parseConwayProtocol v = do
-        npcConwayGenesisFile     <- v .:  "ConwayGenesisFile"
-        npcConwayGenesisFileHash <- v .:? "ConwayGenesisHash"
-        pure NodeConwayProtocolConfiguration {
-               npcConwayGenesisFile
-             , npcConwayGenesisFileHash
-             }
-
-      parseDijkstraProtocol v = do
-        npcDijkstraGenesisFile     <- v .:  "DijkstraGenesisFile"
-        npcDijkstraGenesisFileHash <- v .:? "DijkstraGenesisHash"
-        pure NodeDijkstraProtocolConfiguration {
-               npcDijkstraGenesisFile
-             , npcDijkstraGenesisFileHash
-             }
-
-      parseHardForkProtocol v = do
-
-        npcExperimentalHardForksEnabled <- do
-          mValue <- v .:? "ExperimentalHardForksEnabled"
-
-          mOldValue <- v .:? "TestEnableDevelopmentHardForkEras"
-
-          when (isJust mOldValue) $ do
-            when (mOldValue /= mValue) $
-              fail "TestEnableDevelopmentHardForkEras has been renamed to ExperimentalHardForksEnabled in the configuration file"
-
-          pure (fromMaybe False mValue)
-
-        npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
-        npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
-
-        npcTestAllegraHardForkAtEpoch   <- v .:? "TestAllegraHardForkAtEpoch"
-        npcTestAllegraHardForkAtVersion <- v .:? "TestAllegraHardForkAtVersion"
-
-        npcTestMaryHardForkAtEpoch   <- v .:? "TestMaryHardForkAtEpoch"
-        npcTestMaryHardForkAtVersion <- v .:? "TestMaryHardForkAtVersion"
-
-        npcTestAlonzoHardForkAtEpoch   <- v .:? "TestAlonzoHardForkAtEpoch"
-        npcTestAlonzoHardForkAtVersion <- v .:? "TestAlonzoHardForkAtVersion"
-
-        npcTestBabbageHardForkAtEpoch   <- v .:? "TestBabbageHardForkAtEpoch"
-        npcTestBabbageHardForkAtVersion <- v .:? "TestBabbageHardForkAtVersion"
-
-        npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
-        npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
-
-        (npcTestDijkstraHardForkAtEpoch, npcTestDijkstraHardForkAtVersion) <- if npcExperimentalHardForksEnabled
-           then (,) <$>  v .:? "TestDijkstraHardForkAtEpoch" <*> v .:? "TestDijkstraHardForkAtVersion"
-           else pure (Nothing, Nothing)
-
-        pure NodeHardForkProtocolConfiguration
-          { npcExperimentalHardForksEnabled
-
-          , npcTestShelleyHardForkAtEpoch
-          , npcTestShelleyHardForkAtVersion
-
-          , npcTestAllegraHardForkAtEpoch
-          , npcTestAllegraHardForkAtVersion
-
-          , npcTestMaryHardForkAtEpoch
-          , npcTestMaryHardForkAtVersion
-
-          , npcTestAlonzoHardForkAtEpoch
-          , npcTestAlonzoHardForkAtVersion
-
-          , npcTestBabbageHardForkAtEpoch
-          , npcTestBabbageHardForkAtVersion
-
-          , npcTestConwayHardForkAtEpoch
-          , npcTestConwayHardForkAtVersion
-
-          , npcTestDijkstraHardForkAtEpoch
-          , npcTestDijkstraHardForkAtVersion
-          }
-
-      parseCheckpoints v = do
-        npcCheckpointsFile     <- v .:? "CheckpointsFile"
-        npcCheckpointsFileHash <- v .:? "CheckpointsFileHash"
-        pure NodeCheckpointsConfiguration
-          { npcCheckpointsFile
-          , npcCheckpointsFileHash
-          }
 
 -- | Default configuration is mainnet
 defaultPartialNodeConfiguration :: PartialNodeConfiguration
@@ -993,10 +590,3 @@ pncProtocol pnc =
   case pncProtocolConfig pnc of
     Last Nothing -> Left "Node protocol configuration not found"
     Last (Just NodeProtocolConfigurationCardano{}) -> Right CardanoProtocol
-
-parseNodeConfigurationFP :: Maybe ConfigYamlFilePath -> IO PartialNodeConfiguration
-parseNodeConfigurationFP Nothing = parseNodeConfigurationFP . getLast $ pncConfigFile defaultPartialNodeConfiguration
-parseNodeConfigurationFP (Just (ConfigYamlFilePath fp)) = do
-    nc <- decodeFileThrow fp
-    -- Make all the files be relative to the location of the config file.
-    pure $ adjustFilePaths (takeDirectory fp </>) nc

@@ -28,13 +28,15 @@ import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
+import qualified Cardano.Configuration as CC
+import qualified Cardano.Configuration.CliArgs as CCCli
 import qualified Cardano.Crypto.Init as Crypto
+import           Cardano.Node.Configuration.Adapter (nodeConfigurationFromCli)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), TimeoutOverride (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration,
-                   parseNodeConfigurationFP, getForkPolicy)
+                   TimeoutOverride (..),
+                   getForkPolicy)
 import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    SocketOrSocketInfo, SocketOrSocketInfo' (..), gatherConfiguredSockets,
                    getSocketOrSocketInfoAddr)
@@ -142,7 +144,6 @@ import           Data.IP (toSockAddr)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import           Data.SOP.Dict
@@ -154,7 +155,6 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -172,9 +172,9 @@ import           GHC.Stack
 {- HLINT ignore "Use fewer imports" -}
 
 runNode
-  :: PartialNodeConfiguration
+  :: CC.CliArgs
   -> IO ()
-runNode cmdPc = do
+runNode cli = do
   installSigTermHandler
 
   Crypto.cryptoInit
@@ -182,7 +182,7 @@ runNode cmdPc = do
   nc@NodeConfiguration
     { ncProtocolConfig
     , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
-    } <- buildNodeConfiguration cmdPc
+    } <- buildNodeConfiguration cli
 
   let earlyTracer = stdoutTracer
   traceWith earlyTracer $ "Node configuration: " <> show nc
@@ -198,21 +198,21 @@ runNode cmdPc = do
        -- don't need these.
        (Just ncProtocolFiles)
 
-  handleNodeWithTracers cmdPc nc consensusProtocol
+  handleNodeWithTracers cli nc consensusProtocol
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
--- | Read node configuration from a file specified in 'PartialNodeConfiguration'
+-- | Build the resolved 'NodeConfiguration' from the CLI arguments, using the
+-- @cardano-config@ package to parse the configuration file(s) and combine them
+-- with the CLI, then the node's own 'makeNodeConfiguration' to apply defaults
+-- and validation. See 'Cardano.Node.Configuration.Adapter'.
 buildNodeConfiguration :: HasCallStack
-                       => PartialNodeConfiguration -- ^ defaults
+                       => CC.CliArgs
                        -> IO NodeConfiguration
-buildNodeConfiguration partialConf = do
-  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
-  either
-    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
-    pure
-    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
+buildNodeConfiguration cli =
+  nodeConfigurationFromCli cli >>=
+    either (\err -> error $ "Error in creating the NodeConfiguration: " <> err) pure
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -233,19 +233,17 @@ installSigTermHandler = do
   return ()
 
 handleNodeWithTracers
-  :: PartialNodeConfiguration
+  :: CC.CliArgs
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
+handleNodeWithTracers cli nc p@(SomeConsensusProtocol blockType runP) = do
   (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
-  let fp = maybe  "No file path found!"
-                  unConfigPath
-                  (getLast (pncConfigFile cmdPc))
+  let fp = CCCli.configFilePath cli
   blockForging <- mkBlockForging nullTracer
   tracers <-
     initTraceDispatcher
@@ -265,7 +263,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType runP tracers nc networkMagic
+  handleSimpleNode blockType runP tracers nc cli networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -305,13 +303,16 @@ handleSimpleNode
   -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
+  -> CC.CliArgs
+  -- ^ The original CLI arguments, retained so the SIGHUP handler can re-read and
+  -- re-resolve the configuration (e.g. to reload the RPC configuration).
   -> NetworkMagic
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
+handleSimpleNode blockType runP tracers nc cli networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -440,7 +441,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
-            updateRpcConfiguration (startupTracer tracers) (ncConfigFile nc) rpcConfigVar
+            updateRpcConfiguration (startupTracer tracers) cli rpcConfigVar
             traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
           )
           Nothing
@@ -485,7 +486,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
-                                     blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                     blockType nc cli networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
@@ -576,6 +577,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
+                     -> CC.CliArgs
                      -> NetworkMagic
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                      -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
@@ -587,9 +589,9 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer kesAgentTracer blockType nc cli networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
@@ -606,7 +608,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic node
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
-      updateRpcConfiguration startupTracer (ncConfigFile nc) rpcConfigVar
+      updateRpcConfiguration startupTracer cli rpcConfigVar
     )
     Nothing
 #endif
@@ -784,22 +786,26 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
       atomically . modifyTVar rpcConfigVar $ \config -> config{isEnabled = Identity False}
 
 #ifdef UNIX
--- | Reload RPC configuration from the configuration file
-updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer tracing the configuration reload
-                       -> ConfigYamlFilePath -- ^ node configuration file, to reload configuration from
+-- | Reload RPC configuration from the configuration file.
+--
+-- We re-read and re-resolve the whole configuration through @cardano-config@
+-- (reusing 'buildNodeConfiguration'), then keep only the resulting RPC
+-- configuration. The CLI arguments are re-applied, so a @--grpc-*@ flag given at
+-- startup keeps taking precedence over the configuration file on reload.
+updateRpcConfiguration :: HasCallStack
+                       => Tracer IO (StartupTrace blk) -- ^ tracer tracing the configuration reload
+                       -> CC.CliArgs -- ^ CLI arguments, to re-read and re-resolve the configuration
                        -> StrictTVar IO RpcConfig -- ^ TVar storing RPC configuration
                        -> IO ()
-updateRpcConfiguration tracer configFilePath rpcConfigVar = do
-  result <- fmap (join . first Exception.displayException)
+updateRpcConfiguration tracer cli rpcConfigVar = do
+  result <- fmap (first Exception.displayException)
               . try @Exception.SomeException
-              . fmap makeNodeConfiguration
-              . parseNodeConfigurationFP
-              $ Just configFilePath
+              $ ncRpcConfig <$> buildNodeConfiguration cli
   case result of
     Left err ->
       -- reload failure, we don't do anything this time
       traceWith tracer (RpcConfigUpdateError $ pack err)
-    Right NodeConfiguration{ncRpcConfig=newConfig} ->
+    Right newConfig ->
       join . atomically $ do
         oldConfig <- readTVar rpcConfigVar
         if oldConfig /= newConfig

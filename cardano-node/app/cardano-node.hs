@@ -4,23 +4,20 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+import qualified Cardano.Configuration as CC
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..))
 import           Cardano.Node.Handlers.TopLevel
-import           Cardano.Node.Parsers (nodeCLIParser)
 import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
-import           Data.Monoid (Last (getLast))
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Version (showVersion)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           System.IO (hPutStrLn, stderr)
 
 import           Paths_cardano_node (version)
 
@@ -32,28 +29,16 @@ main = do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> do
-        warnIfSet args pncMaybeMempoolCapacityOverride "mempool-capacity-override" "MempoolCapacityBytesOverride"
-        runNode args
+      RunCmd args -> runNode args
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
     where
       p = Opt.prefs Opt.showHelpOnEmpty
 
-      warnIfSet :: PartialNodeConfiguration -> (PartialNodeConfiguration -> Last a) -> String -> String -> IO ()
-      warnIfSet args f name key =
-          maybe
-            (pure ())
-            (\_ -> hPutStrLn stderr $ "WARNING: Option --" ++ name ++ " was set via CLI flags.\
-            \ This CLI flag will be removed in upcoming node releases.\
-            \ Please, set this configuration option in the configuration file instead with key " ++ key ++ ".")
-        $ getLast
-        $ f args
-
       opts :: Opt.ParserInfo Command
       opts =
-        Opt.info (fmap RunCmd nodeCLIParser
+        Opt.info (fmap RunCmd nodeRunParser
                   <|> fmap TraceDocumentation parseTraceDocumentationCmd
                   <|> parseVersionCmd
                   <**> helper)
@@ -62,8 +47,11 @@ main = do
             Opt.progDesc "Start node of the Cardano blockchain."
           )
 
+-- | The node's CLI, parsed by @cardano-config@, under the @run@ subcommand.
+nodeRunParser :: Parser CC.CliArgs
+nodeRunParser = Opt.subparser $ command' "run" "Run the node." CC.parseCliArgs
 
-data Command = RunCmd PartialNodeConfiguration
+data Command = RunCmd CC.CliArgs
              | TraceDocumentation TraceDocumentationCmd
              | VersionCmd
 
