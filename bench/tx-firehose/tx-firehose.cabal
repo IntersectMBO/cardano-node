@@ -34,7 +34,9 @@ library
   exposed-modules:  Cardano.Benchmarking.TxFirehose.Tx
   build-depends:    base                 >= 4.14 && < 5
                   , cardano-api
+                  , cardano-ledger-api
                   , cardano-ledger-core
+                  , microlens
 
 executable tx-firehose
   import:           project-config

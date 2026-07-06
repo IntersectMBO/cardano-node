@@ -1,10 +1,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Main (main) where
 
@@ -17,7 +17,6 @@ import Control.Monad (forever, when)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (Value, (.=))
 import Data.Aeson qualified as Aeson
-import Data.ByteString qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.IORef qualified as IORef
 import Data.Map.Strict (Map)
@@ -79,7 +78,10 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Client
   , LocalTxSubmissionClient (LocalTxSubmissionClient)
   )
 
-import Cardano.Benchmarking.TxFirehose.Tx (Fund (Fund, fundTxIn, fundValue))
+import Cardano.Benchmarking.TxFirehose.Tx
+  ( BuiltTx (BuiltTx, btxId, btxOutputs, btxSigned, btxSize)
+  , Fund (Fund, fundTxIn, fundValue)
+  )
 import Cardano.Benchmarking.TxFirehose.Tx qualified as Tx
 
 --------------------------------------------------------------------------------
@@ -390,26 +392,22 @@ submitLoop opts addr sk fundsVar pendingQueue = do
         returnFunds fundsVar inputs
         bumpError ("buildTx: " ++ err)
         threadDelay period
-      Right (signedTx, outFunds) -> do
-        let txId    = Api.serialiseToRawBytesHexText
-                        (Api.getTxId (Api.getTxBody signedTx))
-            txBytes = Api.serialiseToCBOR signedTx
-            txSize  = BS.length txBytes
-            txInMode = TxInMode (Api.shelleyBasedEra @Api.DijkstraEra) signedTx
+      Right BuiltTx { btxSigned, btxId, btxSize, btxOutputs } -> do
+        let txInMode = TxInMode (Api.shelleyBasedEra @Api.DijkstraEra) btxSigned
         result <- submitViaQueue pendingQueue txInMode
         case result of
           SubmitSuccess -> do
             trace "TxFirehose.Submit.Success" "Info" $ Aeson.object
-              [ "txId" .= txId
-              , "size" .= txSize
+              [ "txId" .= btxId
+              , "size" .= btxSize
               ]
             STM.atomically $ STM.modifyTVar' fundsVar $ \m ->
-              foldr (\f -> Map.insert (fundTxIn f) (fundValue f)) m outFunds
+              foldr (\f -> Map.insert (fundTxIn f) (fundValue f)) m btxOutputs
             resetError
           SubmitFail reason -> do
             trace "TxFirehose.Submit.Reject" "Warning" $ Aeson.object
-              [ "txId"   .= txId
-              , "size"   .= txSize
+              [ "txId"   .= btxId
+              , "size"   .= btxSize
               , "reason" .= T.pack (show reason)
               ]
             returnFunds fundsVar inputs

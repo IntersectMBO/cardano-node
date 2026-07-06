@@ -1,6 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Dijkstra-era transaction builder.
 --
@@ -14,12 +13,19 @@
 -- We wrap the resulting 'Exp.SignedTx' back into an old-style 'Api.Tx' via the
 -- 'Api.ShelleyTx' constructor so the caller can hand it to 'TxInMode' / the
 -- LocalTxSubmission client without further changes.
+--
+-- TxId and wire size come straight from cardano-ledger-api on the raw ledger
+-- Tx we already have in hand — no need to round-trip through the deprecated
+-- 'Api.getTxBody'.
 module Cardano.Benchmarking.TxFirehose.Tx
   ( Fund (..)
+  , BuiltTx (..)
   , buildTx
   ) where
 
 import Data.Function ((&))
+import Lens.Micro ((^.))
+import Data.Word (Word32)
 import Numeric.Natural (Natural)
 
 import Cardano.Api qualified as Api
@@ -27,6 +33,8 @@ import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Tx qualified as Exp
 
+import Cardano.Ledger.Api (sizeTxF, txIdTx)
+import Cardano.Ledger.Api.Tx.In (TxId)
 import Cardano.Ledger.Coin qualified as L
 
 -- | A spendable UTxO under our signing key.
@@ -36,6 +44,16 @@ data Fund = Fund
   }
   deriving (Eq, Ord, Show)
 
+-- | A built and signed transaction, together with the ledger-native
+-- txId and wire size (bytes). Callers wanting to submit it hand
+-- 'btxSigned' to 'TxInMode'; observability uses 'btxId' / 'btxSize'.
+data BuiltTx = BuiltTx
+  { btxSigned  :: !(Api.Tx Api.DijkstraEra)
+  , btxId      :: !TxId
+  , btxSize    :: !Word32
+  , btxOutputs :: ![Fund]
+  }
+
 -- | Build and sign a Dijkstra-era transaction.
 buildTx
   :: Api.AddressInEra Api.DijkstraEra
@@ -43,7 +61,7 @@ buildTx
   -> [Fund]
   -> Natural
   -> L.Coin
-  -> Either String (Api.Tx Api.DijkstraEra, [Fund])
+  -> Either String BuiltTx
 buildTx destAddr signingKey inFunds numOutputs fee
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
@@ -62,14 +80,20 @@ buildTx destAddr signingKey inFunds numOutputs fee
                        (Api.WitnessPaymentKey signingKey)
             Exp.SignedTx ledgerTx = Exp.signTx Exp.DijkstraEra [] [keyWit] unsigned
             signedTx = Api.ShelleyTx sbe ledgerTx
-            txId = Api.getTxId (Api.getTxBody signedTx)
+            ledgerTxId = txIdTx ledgerTx
+            apiTxId    = Api.fromShelleyTxId ledgerTxId
             outFunds =
-              [ Fund { fundTxIn = Api.TxIn txId (Api.TxIx ix)
+              [ Fund { fundTxIn = Api.TxIn apiTxId (Api.TxIx ix)
                      , fundValue = amt
                      }
               | (ix, amt) <- zip [0..] outAmounts
               ]
-        in Right (signedTx, outFunds)
+        in Right BuiltTx
+             { btxSigned  = signedTx
+             , btxId      = ledgerTxId
+             , btxSize    = ledgerTx ^. sizeTxF
+             , btxOutputs = outFunds
+             }
   where
     sbe = Api.shelleyBasedEra @Api.DijkstraEra
 
