@@ -17,6 +17,7 @@ import Control.Monad (forever, when)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (Value, (.=))
 import Data.Aeson qualified as Aeson
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.IORef qualified as IORef
 import Data.Map.Strict (Map)
@@ -390,19 +391,25 @@ submitLoop opts addr sk fundsVar pendingQueue = do
         bumpError ("buildTx: " ++ err)
         threadDelay period
       Right (signedTx, outFunds) -> do
-        let txId = Api.getTxId (Api.getTxBody signedTx)
+        let txId    = Api.serialiseToRawBytesHexText
+                        (Api.getTxId (Api.getTxBody signedTx))
+            txBytes = Api.serialiseToCBOR signedTx
+            txSize  = BS.length txBytes
             txInMode = TxInMode (Api.shelleyBasedEra @Api.DijkstraEra) signedTx
         result <- submitViaQueue pendingQueue txInMode
         case result of
           SubmitSuccess -> do
-            trace "TxFirehose.Submit.Success" "Info" $
-              Aeson.object ["tx" .= T.pack (show txId)]
+            trace "TxFirehose.Submit.Success" "Info" $ Aeson.object
+              [ "txId" .= txId
+              , "size" .= txSize
+              ]
             STM.atomically $ STM.modifyTVar' fundsVar $ \m ->
               foldr (\f -> Map.insert (fundTxIn f) (fundValue f)) m outFunds
             resetError
           SubmitFail reason -> do
             trace "TxFirehose.Submit.Reject" "Warning" $ Aeson.object
-              [ "tx"     .= T.pack (show txId)
+              [ "txId"   .= txId
+              , "size"   .= txSize
               , "reason" .= T.pack (show reason)
               ]
             returnFunds fundsVar inputs
