@@ -493,7 +493,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
-                mkNodeKernelAccess (contramap RpcUnsupportedBlockType (startupTracer tracers)) blockType nodeKernel
+                mkNodeKernelAccess (contramap RpcUnsupportedBlockType (startupTracer tracers)) blockType (pInfoConfig pInfo) nodeKernel
                   >>= writeIORef nodeKernelAccessRef
           }
           StdRunNodeArgs

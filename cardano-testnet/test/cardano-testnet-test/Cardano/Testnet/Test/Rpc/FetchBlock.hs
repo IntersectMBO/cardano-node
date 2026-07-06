@@ -19,14 +19,18 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad ((<=<))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import           Data.Word (Word64)
 import           Lens.Micro
 
 import           Testnet.Process.Run
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
+import           Testnet.Types (nodeConnectionInfo)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -45,7 +49,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
         creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
         runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
 
-    _tr@TestnetRuntime
+    tr@TestnetRuntime
         { testnetMagic
         , testnetNodes = node0@TestnetNode{nodeSprocket} : _
         } <-
@@ -87,15 +91,15 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     -- height is the block number from ChainDB
     block ^. U5c.cardano . U5c.header . U5c.height H.=== blockNo
 
-    -- TODO: verify timestamp once FetchBlock populates it from EraHistory (node kernel snapshot migration)
-    -- connectionInfo <- nodeConnectionInfo tr 0
-    -- (systemStart, eraHistory) <-
-    --     (H.leftFail <=< H.leftFailM) . H.evalIO $
-    --       executeLocalStateQueryExpr connectionInfo VolatileTip $ do
-    --         ss <- querySystemStart
-    --         eh <- queryEraHistory
-    --         pure $ (,) <$> ss <*> eh
-    -- expectedTimestampMs :: Word64 <- H.leftFail $ do
-    --     utcTime <- slotToUTCTime systemStart eraHistory (SlotNo slot)
-    --     pure . round $ utcTimeToPOSIXSeconds utcTime * 1000
-    -- H.assertWithinTolerance (block ^. U5c.cardano . U5c.timestamp) expectedTimestampMs 1000
+    -- Verify timestamp matches the slot time derived from EraHistory
+    connectionInfo <- nodeConnectionInfo tr 0
+    (systemStart, eraHistory) <-
+        (H.leftFail <=< H.leftFailM) . H.evalIO $
+          executeLocalStateQueryExpr connectionInfo VolatileTip $ do
+            ss <- querySystemStart
+            eh <- queryEraHistory
+            pure $ (,) <$> ss <*> eh
+    expectedTimestampMs :: Word64 <- H.leftFail $ do
+        utcTime <- slotToUTCTime systemStart eraHistory (SlotNo slot)
+        pure . round $ utcTimeToPOSIXSeconds utcTime * 1000
+    H.assertWithinTolerance (block ^. U5c.cardano . U5c.timestamp) expectedTimestampMs 1000
