@@ -1,10 +1,10 @@
 * Key entry/intermediate points
 *** =Makefile= /convenience/
-    - all workbench shell targets [[file:~/cardano-node/Makefile::$(eval $(call define_profile_targets,$(SHELL_PROFILES)))]]
-      - define_profile_targets [[file:~/cardano-node/lib.mk::define define_profile_targets]]
-        - proftgt [[file:~/cardano-node/lib.mk::$(1): shell]]
-          - shell [[file:~/cardano-node/Makefile::shell: ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN]]
-            - =Makefile= -> Nix =workbench-shell= [[file:~/cardano-node/Makefile::nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}]]
+    - workbench shell targets live in [[file:lib.mk::## Workbench shell targets.]]
+      - pulled in by the top-level [[file:~/cardano-node/Makefile::include nix/workbench/lib.mk]]
+      - per-profile variant targets are static pattern rules [[file:lib.mk::## ---- variant stanzas]]
+        - generic entry: the =shell= target [[file:lib.mk::shell: ## Workbench dev shell]]
+          - =lib.mk= -> Nix =workbench-shell= via =WB_ENTER= [[file:lib.mk::WB_ENTER = nix-shell -A 'workbench-shell']]
 *** =start-cluster= /shell script available inside workbench shell/
     - workbench-interactive-start [[file:backend/runner.nix::workbench-interactive-start = pkgs.writeScriptBin "start-cluster" '']]
 *** =workbench-shell= /Nix attribute implementing the workbench shell/
