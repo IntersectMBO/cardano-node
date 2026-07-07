@@ -50,8 +50,6 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (myThreadId, threadDelay)
-import           Control.Monad (forM, forM_, guard, unless, when)
-import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Exception (IOException)
 import           Control.Monad (forM, forM_, guard, unless, when)
 import           Control.Monad.Catch
