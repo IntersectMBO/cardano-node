@@ -149,11 +149,13 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
     -- Test 2: exact address + payment credential predicate
     -------------------------------------------
     H.note_ "Test 2: Verify exact address + payment credential predicate matches same UTxOs"
-    let paymentCredBytes :: ByteString
-        paymentCredBytes = case address1 of
-          AddressInEra ShelleyAddressInEra{} (ShelleyAddress _ payCred _) ->
-            serialisePaymentCredential $ fromShelleyPaymentCredential payCred
-          _ -> error "Expected a Shelley address"
+    paymentCredBytes :: ByteString <- case address1 of
+      AddressInEra ShelleyAddressInEra{} (ShelleyAddress _ payCred _) ->
+        pure $ serialisePaymentCredential $ fromShelleyPaymentCredential payCred
+      _ -> do
+        H.note_ "Expected a Shelley address"
+        H.failure
+    let
         paymentPredicate :: Proto UtxoRpc.UtxoPredicate
         paymentPredicate =
           def

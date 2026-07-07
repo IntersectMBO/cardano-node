@@ -6,7 +6,7 @@
 module Cardano.Benchmarking.Profile.Builtin.Miniature (
   base
 , benchDuration
-, profilesNoEraMiniature
+, profilesMiniature
 ) where
 
 --------------------------------------------------------------------------------
@@ -55,8 +55,8 @@ duration240 =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraMiniature :: [Types.Profile]
-profilesNoEraMiniature =
+profilesMiniature :: [Types.Profile]
+profilesMiniature =
   ------------------------------------------------------------------------------
   -- ci-bench: 2|10 nodes, FixedLoaded and "--shutdown-on-block-synced 15"
   ------------------------------------------------------------------------------
@@ -86,7 +86,6 @@ profilesNoEraMiniature =
     ciBench02Value    & P.name "ci-bench"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn
   , ciBench02Value    & P.name "ci-bench-lmdb"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.lmdb . P.ssdDirectory "/tmp"
   , ciBench02Value    & P.name "ci-bench-lsmt"                   . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.lsmt . P.ssdDirectory "/tmp"
-  , ciBench02Value    & P.name "ci-bench-rtview"                 . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.tracerRtview
   , ciBench02Value    & P.name "ci-bench-notracer"               . V.valueLocal . P.dreps  0 . P.traceForwardingOff
   , ciBench02Value    & P.name "ci-bench-drep"                   . V.valueLocal . P.dreps 10 . P.traceForwardingOn
   , ciBench02Plutus   & P.name "ci-bench-plutus"                 . loop         . P.dreps  0 . P.traceForwardingOn
@@ -118,7 +117,7 @@ profilesNoEraMiniature =
   , dense & P.name "6-dense-rtsprof"        . V.valueCloud . duration30  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   , dense & P.name "6-dense-1h"             . V.valueCloud . duration60  . P.traceForwardingOn
   , dense & P.name "6-dense-1h-rtsprof"     . V.valueCloud . duration60  . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
-  , dense & P.name "6-dense-1h-timeseries"  . V.valueCloud . duration60  . P.traceForwardingOn . P.tracerRtview . P.tracerTimeseries
+  , dense & P.name "6-dense-1h-timeseries"  . V.valueCloud . duration60  . P.traceForwardingOn . P.tracerTimeseries
   , dense & P.name "6-dense-4h"             . V.valueCloud . duration240 . P.traceForwardingOn
   , dense & P.name "6-dense-4h-rtsprof"     . V.valueCloud . duration240 . P.traceForwardingOn . P.rtsHeapProf  . P.rtsEventlogged
   ]

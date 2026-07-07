@@ -2,7 +2,7 @@
 ## proftgt :: target -> profile -> fullnixmode -> devmode -> autostart -> autostay -> profiled -> backend -> IO ()
 define proftgt
 $(1): shell
-$(1): PROFILE = $(2)-${ERA}
+$(1): PROFILE = $(2)
 $(1): BACKEND = $(8)
 ifeq ($(strip $(3)),true)
 $(1): ARGS += --arg 'useCabalRun' false

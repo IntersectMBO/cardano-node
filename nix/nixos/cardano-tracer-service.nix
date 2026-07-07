@@ -73,12 +73,6 @@ with builtins; let
         epPort = cfg.prometheusPort;
       };
     }
-    // optionalAttrs cfg.rtviewEnable {
-      hasRTView = {
-        epHost = cfg.rtviewHost;
-        epPort = cfg.rtviewPort;
-      };
-    }
     // optionalAttrs cfg.timeseriesEnable {
       hasTimeseries = {
         epHost = cfg.timeseriesHost;
@@ -707,36 +701,6 @@ in {
         '';
       };
 
-      rtviewEnable = mkOption {
-        type = bool;
-        default = false;
-        description = ''
-          Whether to enable an RTView client.
-
-          As of node release 9.1 this option has no effect unless node was
-          built with `-f +rtview`.
-
-          Ref:
-          https://github.com/IntersectMBO/cardano-node/pull/5846
-        '';
-      };
-
-      rtviewHost = mkOption {
-        type = str;
-        default = "127.0.0.1";
-        description = ''
-          The host to bind if RTView is enabled.
-        '';
-      };
-
-      rtviewPort = mkOption {
-        type = port;
-        default = 3300;
-        description = ''
-          The port to listen on if RTView is enabled.
-        '';
-      };
-
       timeseriesEnable = mkOption {
         type = bool;
         default = false;
@@ -797,8 +761,6 @@ in {
         default = "${cfg.stateDirBase}cardano-tracer";
         description = ''
           The directory to store any cardano-tracer process related data.
-
-          RTView if enabled will save its state in this directory.
 
           For non-systemd use cases, this can be set to null or any other
           string path.

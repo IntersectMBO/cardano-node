@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Legacy.Dense (
-  profilesNoEraDense
+  profilesDense
 ) where
 
 --------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraDense :: [Types.Profile]
-profilesNoEraDense =
+profilesDense :: [Types.Profile]
+profilesDense =
   let ciTestDense =
           P.empty & E.base
         -- Biggest difference is using `P.pools` instead of `P.hosts`.

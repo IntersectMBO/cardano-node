@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (
-  profilesNoEraTracerOnly
+  profilesTracerOnly
 ) where
 
 --------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraTracerOnly :: [Types.Profile]
-profilesNoEraTracerOnly =
+profilesTracerOnly :: [Types.Profile]
+profilesTracerOnly =
   let tracerOnly =
           P.empty & B.base
         . P.tracerOnly

@@ -1,8 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-- Create a delta timeline with each parameters and cost changes that happened
-    in an epoch using "epoch_param" and "cost_model" db-sync tables.
---}
+{- Per-epoch delta of protocol parameters and cost models, built from the raw
+   `epoch_param` and `cost_model` tables of a mainnet db-sync database.
+
+   Result is written to stdout. A snapshot of a previous run is kept at
+   `data/db-sync/timeline-2025-03-01.json` (and similar dated files) for
+   reference. The runtime timeline at `data/genesis/epoch-timeline.json` is
+   hand-curated and is not touched by this tool.
+-}
 --------------------------------------------------------------------------------
 
 module Main where

@@ -14,13 +14,16 @@
   - `GET /timeseries/node/{id}/info` — node info (name, protocol, version,
     commit, start time, system start time) plus `uptimeSeconds`.
   - `GET /timeseries/node/{id}/startup` — node startup info.
-  - `GET /timeseries/node/{id}/state` — sync progress (RTView build only).
+  - `GET /timeseries/node/{id}/state` — sync progress.
 * Metric names stored in the timeseries are sanitised: `.`, `-`, and spaces
   are replaced with `_`; all other non-alphanumeric, non-underscore characters
   are stripped. This aligns stored names with Prometheus label conventions.
 * JSON wire format of query responses aligned with Prometheus conventions
   (see `cardano-timeseries-io` 1.1.0 changelog for details).
 * Sanitize `nodeName` string when used as a target directory for log output.
+* Remove RTView: the experimental opt-in browser dashboard (`flag rtview`) has been
+  removed entirely. The `hasRTView` field is removed from `TracerConfig`. Dependencies that were RTView-only
+  are no longer required.
 
 ## 0.4.0 (April 2026)
 * RTView: Remove monitoring based on the `NodePeers` datapoint, which has been removed

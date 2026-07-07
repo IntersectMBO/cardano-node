@@ -25,6 +25,7 @@ in with final;
   workbench-runner =
     { profiling          ? {}
     , profileName        ? customConfig.localCluster.profileName
+    , eraName            ? customConfig.localCluster.eraName
     , backendName        ? customConfig.localCluster.backendName
     , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
@@ -34,11 +35,12 @@ in with final;
     , cardano-node-rev   ? null
     }:
     workbench.runner
-      { inherit profiling;
-        # To construct profile attrset with its `materialise-profile` function.
+      { # To construct the profile attrset with its `materialise-profile` function.
         inherit profileName;
+        # Era used at runner level (tag name, hardfork params, not in profile).
+        inherit eraName;
         # To construct backend attrset with its `materialise-profile` function.
-        inherit backendName stateDir basePort useCabalRun;
+        inherit backendName stateDir basePort useCabalRun profiling;
         # Parameters for the workbench shell `start-cluster` command.
         inherit batchName workbenchStartArgs cardano-node-rev;
       }
@@ -178,11 +180,16 @@ in with final;
   # Useful to mix workbench and cardano-node commits, mostly because of scripts.
   profile-data-nomadperf = listToAttrs (
     map
-    (cloudName:
-      # Only Conway era cloud profiles are flake outputs.
-      let profileName = "${cloudName}-coay";
+    (profileName:
+      # Era is a workbench-level parameter (not anymore part of profile name).
+      # These flake outputs pin Conway as the era so consumers can refer to
+      # `profile-data-nomadperf.<profile>-coay`. `eraName` is the full ledger
+      # era name used internally; `eraShort` is the 4-letter code embedded in
+      # the public attribute name (matches the run tag).
+      let eraName  = "conway";
+          eraShort = "coay";
       in {
-        name = profileName;
+        name = "${profileName}-${eraShort}";
         value =
           let
               # Default values only ("run/current", 30000, profiling "none").
@@ -196,7 +203,7 @@ in with final;
                 }
               ;
               profileBundle = profile.profileBundle
-                { inherit backend; }
+                { inherit backend eraName; }
               ;
               materialisedProfile = profile.materialise-profile
                 { inherit profileBundle; }
@@ -204,7 +211,7 @@ in with final;
               backendDataDir = backend.materialise-profile
                 {inherit profileBundle;}
               ;
-          in pkgs.runCommand "workbench-data-${profileName}" {}
+          in pkgs.runCommand "workbench-data-${profileName}-${eraName}" {}
             ''
             mkdir "$out"
             ln -s "${materialisedProfile}" "$out"/profileData
@@ -215,8 +222,8 @@ in with final;
     )
     # Fetch all "*-nomadperf" profiles.
     (fromJSON (readFile
-      (pkgs.runCommand "cardano-profile-names-cloud-noera" {} ''
-        ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud-noera > $out
+      (pkgs.runCommand "cardano-profile-names-cloud" {} ''
+        ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud > $out
       ''
       )
     ))

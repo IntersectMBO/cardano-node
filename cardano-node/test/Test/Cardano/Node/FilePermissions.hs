@@ -47,7 +47,6 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (Group (..), failWith)
-#endif
 
 
 {- HLINT ignore "Use fewer imports" -}

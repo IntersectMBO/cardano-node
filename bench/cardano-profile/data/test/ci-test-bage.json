@@ -17,28 +17,10 @@
     "minimum_chain_density": 0.025,
     "silence_since_last_block_s": 120,
     "start_log_spread_s": 120,
-    "tx_loss_ratio": 0.020,
+    "tx_loss_ratio": 0.02,
     "type": "standard"
   },
   "cli_args": {
-    "createStakedArgs": [
-      "--testnet-magic",
-      42,
-      "--supply",
-      "10000000000000",
-      "--gen-utxo-keys",
-      1,
-      "--gen-genesis-keys",
-      0,
-      "--supply-delegated",
-      "2000000000000000",
-      "--gen-pools",
-      2,
-      "--gen-stake-delegs",
-      2,
-      "--num-stuffed-utxo",
-      "000000"
-    ],
     "createTestnetDataArgs": [
       "--testnet-magic",
       42,
@@ -119,7 +101,7 @@
     "tx_fee": 1000000
   },
   "genesis": {
-    "active_slots_coeff": 0.050,
+    "active_slots_coeff": 0.05,
     "alonzo": {
       "collateralPercentage": 150,
       "costModels": {
@@ -314,6 +296,7 @@
       },
       "maxValueSize": 5000
     },
+    "byron": {},
     "conway": null,
     "delegator_coin": 0,
     "delegators": 0,
@@ -329,7 +312,7 @@
     "pparamsEpoch": 300,
     "pparamsOverlays": [],
     "shelley": {
-      "activeSlotsCoeff": 0.050,
+      "activeSlotsCoeff": 0.05,
       "epochLength": 600,
       "protocolParams": {
         "a0": 0.3,
@@ -352,7 +335,7 @@
           "major": 6,
           "minor": 0
         },
-        "rho": 0.0030,
+        "rho": 0.003,
         "tau": 0.2
       },
       "securityParam": 3,
@@ -382,7 +365,6 @@
   "scenario": "fixed-loaded",
   "tracer": {
     "ekg": false,
-    "rtview": false,
     "withresources": false,
     "timeseries": false
   },

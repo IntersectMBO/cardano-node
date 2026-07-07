@@ -9,6 +9,8 @@ module Test.Cardano.Node.POM
   ) where
 
 
+import           Cardano.Api (File (..))
+
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
@@ -19,7 +21,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import           Cardano.Rpc.Server.Config (makeRpcConfig)
+import           Cardano.Rpc.Server.Config (RpcConfigF (..), makeRpcConfig)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
@@ -32,12 +34,14 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 import           Data.Aeson (eitherDecode)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Functor.Identity (Identity (..))
 import           Data.Monoid (Last (..))
 import           Data.String
 import           Data.Text (Text)
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
+import qualified Hedgehog.Extras as H
 import           Hedgehog.Internal.Property (evalEither, failWith)
 
 
@@ -48,7 +52,7 @@ import           Hedgehog.Internal.Property (evalEither, failWith)
 
 prop_sanityCheck_POM :: Property
 prop_sanityCheck_POM =
-   withTests 1 . Hedgehog.property $ do
+   H.propertyOnce $ do
     let combinedPartials = defaultPartialNodeConfiguration
                              <> testPartialYamlConfig
                              <> testPartialCliConfig
@@ -342,6 +346,57 @@ dummyRequiredValues = mconcat
   , ", \"LastKnownBlockVersion-Minor\": 0"
   , ", \"LastKnownBlockVersion-Alt\": 0"
   ]
+
+-- A socket config with a node socket path, needed for RPC-enabled tests
+-- because makeRpcConfig validates that a node socket exists when RPC is enabled.
+testSocketConfigWithPath :: Last SocketConfig
+testSocketConfigWithPath =
+  Last . Just $ SocketConfig mempty mempty mempty (Last . Just $ File "node.socket")
+
+-- | CLI --grpc-enable + YAML silent -> RPC stays enabled.
+-- Documents the config precedence that issue #6589 depends on: CLI flags
+-- must survive a YAML-only re-read.
+prop_rpcReload_cliEnabledYamlSilent :: Property
+prop_rpcReload_cliEnabledYamlSilent =
+  H.propertyOnce $ do
+    let cliConfig = testPartialCliConfig
+          { pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty
+          , pncSocketConfig = testSocketConfigWithPath
+          }
+        merged = defaultPartialNodeConfiguration <> testPartialYamlConfig <> cliConfig
+    NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
+    isEnabled === Identity True
+
+-- | CLI silent + YAML EnableRpc -> RPC enabled.
+prop_rpcReload_cliSilentYamlEnabled :: Property
+prop_rpcReload_cliSilentYamlEnabled =
+  H.propertyOnce $ do
+    let yamlConfig = testPartialYamlConfig{pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty}
+        cliConfig = testPartialCliConfig{pncSocketConfig = testSocketConfigWithPath}
+        merged = defaultPartialNodeConfiguration <> yamlConfig <> cliConfig
+    NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
+    isEnabled === Identity True
+
+-- | Both CLI and YAML silent -> RPC disabled (default).
+prop_rpcReload_bothSilent :: Property
+prop_rpcReload_bothSilent =
+  H.propertyOnce $ do
+    let merged = defaultPartialNodeConfiguration <> testPartialYamlConfig <> testPartialCliConfig
+    NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
+    isEnabled === Identity False
+
+-- | CLI --grpc-enable wins over YAML EnableRpc: false.
+prop_rpcReload_cliOverridesYaml :: Property
+prop_rpcReload_cliOverridesYaml =
+  H.propertyOnce $ do
+    let yamlConfig = testPartialYamlConfig{pncRpcConfig = RpcConfig (Last (Just False)) mempty mempty}
+        cliConfig = testPartialCliConfig
+          { pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty
+          , pncSocketConfig = testSocketConfigWithPath
+          }
+        merged = defaultPartialNodeConfiguration <> yamlConfig <> cliConfig
+    NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
+    isEnabled === Identity True
 
 -- -----------------------------------------------------------------------------
 

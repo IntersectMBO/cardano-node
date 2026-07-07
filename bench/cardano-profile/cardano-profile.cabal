@@ -13,7 +13,7 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-data-files:             data/all-profiles-coay.json
+data-files:             data/all-profiles.json
                         data/db-sync/epoch_param.json
                         data/db-sync/cost_model.json
                         data/genesis/epoch-timeline.json

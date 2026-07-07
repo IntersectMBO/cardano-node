@@ -265,7 +265,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType runP tracers nc networkMagic
+  handleSimpleNode blockType runP tracers nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -305,13 +305,16 @@ handleSimpleNode
   -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
+  -> PartialNodeConfiguration
+  -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
+  -- overrides are preserved when re-reading the YAML file.
   -> NetworkMagic
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
+handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -440,7 +443,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
-            updateRpcConfiguration (startupTracer tracers) (ncConfigFile nc) rpcConfigVar
+            updateRpcConfiguration (startupTracer tracers) cmdPc rpcConfigVar
             traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
           )
           Nothing
@@ -485,7 +488,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
-                                     blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                     blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
@@ -576,6 +579,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
+                     -> PartialNodeConfiguration -- ^ original CLI configuration
                      -> NetworkMagic
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                      -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
@@ -587,9 +591,9 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer kesAgentTracer blockType nc cmdPc networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
@@ -606,7 +610,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic node
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
-      updateRpcConfiguration startupTracer (ncConfigFile nc) rpcConfigVar
+      updateRpcConfiguration startupTracer cmdPc rpcConfigVar
     )
     Nothing
 #endif
@@ -784,21 +788,18 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
       atomically . modifyTVar rpcConfigVar $ \config -> config{isEnabled = Identity False}
 
 #ifdef UNIX
--- | Reload RPC configuration from the configuration file
-updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer tracing the configuration reload
-                       -> ConfigYamlFilePath -- ^ node configuration file, to reload configuration from
+-- | Reload RPC configuration by re-reading the YAML config file and merging
+-- with CLI overrides, exactly like startup does via 'buildNodeConfiguration'.
+updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer for configuration reload events
+                       -> PartialNodeConfiguration -- ^ original CLI configuration, merged with re-read YAML on reload
                        -> StrictTVar IO RpcConfig -- ^ TVar storing RPC configuration
                        -> IO ()
-updateRpcConfiguration tracer configFilePath rpcConfigVar = do
-  result <- fmap (join . first Exception.displayException)
-              . try @Exception.SomeException
-              . fmap makeNodeConfiguration
-              . parseNodeConfigurationFP
-              $ Just configFilePath
+updateRpcConfiguration tracer cmdPc rpcConfigVar = do
+  result <- try @Exception.SomeException $ buildNodeConfiguration cmdPc
   case result of
     Left err ->
       -- reload failure, we don't do anything this time
-      traceWith tracer (RpcConfigUpdateError $ pack err)
+      traceWith tracer (RpcConfigUpdateError $ pack (Exception.displayException err))
     Right NodeConfiguration{ncRpcConfig=newConfig} ->
       join . atomically $ do
         oldConfig <- readTVar rpcConfigVar

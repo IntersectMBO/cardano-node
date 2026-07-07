@@ -161,10 +161,11 @@ in lib.fix (self: {
   # The general idea is:
   # 1. profileName -> profile
   # 2. backendName -> stateDir -> basePort -> useCabalRun -> profiling -> backend
-  # 3. profile -> backend -> batchName -> runner
+  # 3. profile -> eraName -> backend -> batchName -> runner
   runner =
     { profiling
     , profileName
+    , eraName
     , backendName
     , stateDir
     , basePort
@@ -174,7 +175,7 @@ in lib.fix (self: {
     , cardano-node-rev
     }:
     let
-        # Only a name needed to create a profile attrset.
+        # Only a name needed to create a profile attrset (no era or backend).
         profile = self.profile profileName;
         backend = self.backend
                     { inherit backendName stateDir basePort;
@@ -194,6 +195,7 @@ in lib.fix (self: {
           inherit haskellProject;
           inherit workbench;
           inherit profile backend;
+          inherit eraName;
           inherit batchName workbenchStartArgs;
           inherit cardano-node-rev;
       }

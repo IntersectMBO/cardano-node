@@ -41,45 +41,45 @@ local op=${1:-$(usage_backend)} # No need to shift -- backends will use the op.
 
 case "${op}" in
     # Prepare functions
-    setenv-defaults )            backend_$WB_BACKEND "$@";;
-    allocate-run )               backend_$WB_BACKEND "$@";;
-    describe-run )               backend_$WB_BACKEND "$@";;
+    setenv-defaults )            backend_$WB_BACKEND_NAME "$@";;
+    allocate-run )               backend_$WB_BACKEND_NAME "$@";;
+    describe-run )               backend_$WB_BACKEND_NAME "$@";;
     # Start functions
-    is-running )                 backend_$WB_BACKEND "$@";;
-    start-cluster )              backend_$WB_BACKEND "$@";;
-    deploy-genesis )             backend_$WB_BACKEND "$@";;
+    is-running )                 backend_$WB_BACKEND_NAME "$@";;
+    start-cluster )              backend_$WB_BACKEND_NAME "$@";;
+    deploy-genesis )             backend_$WB_BACKEND_NAME "$@";;
     # Sceneario functions
-    start-tracers )              backend_$WB_BACKEND "$@";;
-    start-nodes )                backend_$WB_BACKEND "$@";;
-    start-generator )            backend_$WB_BACKEND "$@";;
-    start-workload-by-name )     backend_$WB_BACKEND "$@";;
-    start-healthchecks )         backend_$WB_BACKEND "$@";;
+    start-tracers )              backend_$WB_BACKEND_NAME "$@";;
+    start-nodes )                backend_$WB_BACKEND_NAME "$@";;
+    start-generator )            backend_$WB_BACKEND_NAME "$@";;
+    start-workload-by-name )     backend_$WB_BACKEND_NAME "$@";;
+    start-healthchecks )         backend_$WB_BACKEND_NAME "$@";;
     # Fine grained
-    start-node )                 backend_$WB_BACKEND "$@";;
-    stop-node )                  backend_$WB_BACKEND "$@";;
-    wait-node )                  backend_$WB_BACKEND "$@";;
-    wait-node-stopped )          backend_$WB_BACKEND "$@";;
-    get-node-socket-path )       backend_$WB_BACKEND "$@";;
-    wait-pools-stopped )         backend_$WB_BACKEND "$@";;
-    wait-workloads-stopped )     backend_$WB_BACKEND "$@";;
+    start-node )                 backend_$WB_BACKEND_NAME "$@";;
+    stop-node )                  backend_$WB_BACKEND_NAME "$@";;
+    wait-node )                  backend_$WB_BACKEND_NAME "$@";;
+    wait-node-stopped )          backend_$WB_BACKEND_NAME "$@";;
+    get-node-socket-path )       backend_$WB_BACKEND_NAME "$@";;
+    wait-pools-stopped )         backend_$WB_BACKEND_NAME "$@";;
+    wait-workloads-stopped )     backend_$WB_BACKEND_NAME "$@";;
     # Stop functions
-    stop-all )                   backend_$WB_BACKEND "$@";;
-    fetch-logs )                 backend_$WB_BACKEND "$@";;
-    stop-cluster )               backend_$WB_BACKEND "$@";;
-    cleanup-cluster )            backend_$WB_BACKEND "$@";;
+    stop-all )                   backend_$WB_BACKEND_NAME "$@";;
+    fetch-logs )                 backend_$WB_BACKEND_NAME "$@";;
+    stop-cluster )               backend_$WB_BACKEND_NAME "$@";;
+    cleanup-cluster )            backend_$WB_BACKEND_NAME "$@";;
 
     ## Handle non-generic calls:
-    passthrough | pass )         shift; backend_$WB_BACKEND "$@";;
+    passthrough | pass )         shift; backend_$WB_BACKEND_NAME "$@";;
 
     validate )
         local usage="USAGE: wb run $op"
 
         ## Check the backend echoes own name:
-        local actual_name=$(backend_$WB_BACKEND name)
-        if test "$actual_name" != "$WB_BACKEND"
-        then fatal "Workbench is broken:  'workbench_$WB_BACKEND name' returned:  '$actual_name'"; fi
+        local actual_name=$(backend_$WB_BACKEND_NAME name)
+        if test "$actual_name" != "$WB_BACKEND_NAME"
+        then fatal "Workbench is broken:  'workbench_$WB_BACKEND_NAME name' returned:  '$actual_name'"; fi
 
-        # backend_$WB_BACKEND validate
+        # backend_$WB_BACKEND_NAME validate
         true;;
 
     assert-stopped )

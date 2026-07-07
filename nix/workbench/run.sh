@@ -26,16 +26,21 @@ usage_run() {
 
     $(helpcmd describe RUN)
 
-    $(helpcmd fix-legacy-run-structure RUN)
-     $(blk flrs fix-legacy)      Update legacy (cardano-ops) meta.json to mostly match
-                            the workbench
+    $(helpcmd fix-cardano-ops-run-structure RUN)
+     $(blk fcors fix-cardano-ops)  Back-fill .meta.manifest / .meta.timing from
+                            cardano-ops-style legacy meta.json.
+                            (Also reachable as: fix-legacy-run-structure / fix-legacy / flrs.)
 
-    $(helpcmd allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..])
-                          Allocate a cluster run with the specified:
-                            - batch key (no semantics attached)
-                            - profile name
-                          A unique name would be allocated for this run,
-                            and a run alias $(green current) will be created for it.
+    $(helpcmd allocate --batch-name NAME --profile-data DIR --era-name ERA --backend-name BACKEND --manifest JSON [--genesis-cache-entry DIR] [-- BACKEND-ARGS..])
+                          Allocate a cluster run.  All inputs are named flags:
+                            --batch-name      batch key (no semantics attached)
+                            --profile-data    directory containing profile.json / node-specs.json
+                            --era-name        one of: byron shelley allegra mary alonzo babbage conway dijkstra
+                            --backend-name    e.g. supervisor, nomad
+                            --manifest        JSON manifest produced by 'manifest collect-from-checkout'
+                            --genesis-cache-entry  optional pre-supplied cache entry
+                          A unique tag is derived for this run and the
+                            $(green current) alias is set to point at it.
 
     $(helpcmd fetch-run RUN)        Fetch a remote run
      $(blk fr fetch)
@@ -258,14 +263,19 @@ EOF
         backend describe-run "$dir"
         ;;
 
-    fix-legacy-run-structure | fix-legacy | flrs )
+    ## Back-fill `.meta.manifest` / `.meta.timing` for genuine cardano-ops
+    ## legacy meta.json (which carries `.meta.pins` / `.meta.timestamp` etc.
+    ## instead). Dispatched by `check` when those fields are absent.
+    fix-cardano-ops-run-structure | fix-cardano-ops | fcors \
+        | fix-legacy-run-structure | fix-legacy | flrs )
         local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
         local dir=$(run compute-path "$run")
 
-        if test ! -f "$dir"/genesis-shelley.json
+        if test ! -f "$dir"/genesis/genesis.shelley.json -a -f "$dir"/genesis.json
         then msg "fixing up genesis naming in:  $dir"
-             mv "$dir"/genesis.json "$dir"/genesis-shelley.json; fi
+             mkdir -p "$dir"/genesis
+             mv "$dir"/genesis.json "$dir"/genesis/genesis.shelley.json; fi
 
         if test -z "$(ls -d "$dir"/node-* 2>/dev/null)"
         then msg "fixing up a legacy cardano-ops run in:  $dir"
@@ -281,15 +291,27 @@ EOF
                      mv "$logdir" "$dir"/$logs_less; done; fi
         else msg "fixing up a cardano-ops run in:  $dir"; fi
 
-        progress "run | fix-legacy-run-structure" "adding manifest"
-        jq_fmutate "$dir"/meta.json '
-           .meta.manifest = $manifest
-           ' --argjson manifest "$(legacy_run_manifest $dir)"
+        ## Back-fill manifest only when the run lacks one (i.e. truly legacy
+        ## cardano-ops runs). Workbench runs already populate .meta.manifest in
+        ## `allocate`, so running the legacy helper on them fails because the
+        ## helper reads .meta.pins / .meta.node_commit_spec which exist only in
+        ## cardano-ops meta.json.
+        if test "$(jq -r '.meta.manifest // empty' "$dir"/meta.json)" = ""
+        then progress "run | fix-cardano-ops-run-structure" "adding manifest"
+             jq_fmutate "$dir"/meta.json '
+                .meta.manifest = $manifest
+                ' --argjson manifest "$(legacy_run_manifest $dir)"
+        else progress "run | fix-cardano-ops-run-structure" "manifest present, skipping back-fill"; fi
 
-        progress "run | fix-legacy-run-structure" "adding timing"
-        jq_fmutate "$dir"/meta.json '
-           .meta.timing = $timing
-           ' --argjson timing "$(legacy_run_timing $dir)"
+        ## Same guard for timing: workbench runs already have .meta.timing.
+        ## The legacy helper reads .meta.timestamp which exists only in
+        ## cardano-ops meta.json.
+        if test "$(jq -r '.meta.timing // empty' "$dir"/meta.json)" = ""
+        then progress "run | fix-cardano-ops-run-structure" "adding timing"
+             jq_fmutate "$dir"/meta.json '
+                .meta.timing = $timing
+                ' --argjson timing "$(legacy_run_timing $dir)"
+        else progress "run | fix-cardano-ops-run-structure" "timing present, skipping back-fill"; fi
 
         jq ' .meta.profile_content
            | .analysis.filters += ["model"]
@@ -323,8 +345,15 @@ EOF
              then return 1
              else fatal "run $run (at $dir) missing a file:  meta.json"; fi; fi
 
-        test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
-            run fix-legacy-run-structure "$run";;
+        ## Same file-based dispatch extended to accept the genesis sub-dir
+        ## layout in addition to the legacy top-level name. profile.json + a
+        ## shelley genesis (under either layout) is what distinguishes a
+        ## workbench run from a cardano-ops legacy run.
+        ## Era doesn't need migration: locli reads it via a 3-path decoder (see
+        ## `allocate` below).
+        test -f "$dir"/profile.json \
+           -a \( -f "$dir"/genesis-shelley.json -o -f "$dir"/genesis/genesis.shelley.json \) \
+           || run fix-cardano-ops-run-structure "$run";;
 
     get-path | get )
         local usage="USAGE: wb run $op [--query] RUN"
@@ -406,29 +435,69 @@ EOF
         jq '.' "$(run current-path)"/profile.json;;
 
     allocate )
-        local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
-        local batch=${1:?$usage}; shift
-        local profile_name=${1:?$usage}; shift
-        local backend_name=${1:?$usage}; shift
-
-        local profile_data= genesis_cache_entry= manifest=
+        local usage="USAGE: wb run $op --batch-name NAME --profile-data DIR --era-name ERA --backend-name BACKEND --manifest JSON [--genesis-cache-entry DIR] [-- BACKEND-ARGS..]"
+        ## All inputs are named flags. No positionals — that's the whole point.
+        ## An unquoted/empty upstream variable cannot shift a later flag onto an
+        ## earlier slot when there are no slots; missing-required is caught by
+        ## the validation block below with a clear error.
+        ## Flag names mirror `wb start`'s vocabulary (`--batch-name`,
+        ## `--era-name`, `--backend-name`, `--profile-data`, …) so the same word
+        ## means the same thing at both layers.
+        local batch_name= era_name= backend_name=
+        local profile_data= manifest= genesis_cache_entry=
         while test $# -gt 0
         do case "$1" in
-               --manifest )            manifest=$2; shift;;
-               --profile-data )        profile_data=$2; shift;;
+               --batch-name )          batch_name=$2;          shift;;
+               --era-name )            era_name=$2;            shift;;
+               --backend-name )        backend_name=$2;        shift;;
+               --profile-data )        profile_data=$2;        shift;;
+               --manifest )            manifest=$2;            shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
                -- ) shift; break;;
-               --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
-               * ) break;; esac; shift; done
+               --* ) fatal "run | allocate: unknown flag '$1'";;
+               * )   fatal "run | allocate: unexpected positional '$1' (allocate takes only named flags; see $usage)";;
+           esac; shift; done
         local backend_args=("$@")
+
+        ## Required-input validation (all in one place, no scattered checks).
+        test -n "$batch_name"   || fatal "run | allocate: --batch-name is required"
+        test -n "$era_name"     || fatal "run | allocate: --era-name is required"
+        test -n "$backend_name" || fatal "run | allocate: --backend-name is required"
+        test -n "$profile_data" || fatal "run | allocate: --profile-data is required"
+        test -n "$manifest"     || fatal "run | allocate: --manifest is required"
+        test -d "$profile_data" \
+            || fatal "run | allocate: --profile-data directory does not exist: $profile_data"
+        test -f "$profile_data/profile.json" \
+            || fatal "run | allocate: missing $profile_data/profile.json"
+
+        ## Single source of truth: the profile name comes from the JSON the
+        ## caller pointed us at, not from a separate argument that could drift.
+        local profile_name
+        profile_name=$(jq '.name' -r "$profile_data/profile.json")
+        test -n "$profile_name" -a "$profile_name" != "null" \
+            || fatal "run | allocate: could not read .name from $profile_data/profile.json"
+
+        ## Validate era_name once and pre-compute the 4-letter form for the
+        ## tag. Reused later instead of a second case-statement at tag time.
+        local era_short
+        case "$era_name" in
+            byron)    era_short=byron;;
+            shelley)  era_short=shey;;
+            allegra)  era_short=alra;;
+            mary)     era_short=mary;;
+            alonzo)   era_short=alzo;;
+            babbage)  era_short=bage;;
+            conway)   era_short=coay;;
+            dijkstra) era_short=dira;;
+            *) fatal "run | allocate: unknown --era-name '$era_name' (expected one of: byron shelley allegra mary alonzo babbage conway dijkstra)";;
+        esac
 
         ## 1. genesis cache entry:
         progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
                  genesis prepare-cache-entry \
-                  "$profile_data"/profile.json \
-                  "$profile_data"/node-specs.json)
+                  "$profile_data"/profile.json)
         fi
 
         ## 2. decide the tag:
@@ -437,12 +506,18 @@ EOF
         ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node".commit | .[:5]' -r <<<$manifest)
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
-        if [[ "$batch" == "undefined" ]]
-        then batch=$(get_most_significant_git_tag)
+        if [[ "$batch_name" == "undefined" ]]
+        then batch_name=$(get_most_significant_git_tag)
         fi
-        local batch_inf=$(echo -n ${batch} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z^0-9]//g')
+        local batch_inf=$(echo -n ${batch_name} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z^0-9]//g')
         local prof_suf=$(test -v "WB_PROFILEDBUILD" && test -n "$WB_PROFILEDBUILD" -a "$WB_PROFILEDBUILD" = 'yes' && echo '-prof')
-        local run="${date_pref}-${hash}-${batch_inf::12}-${profile_name}-${backend_name::3}${prof_suf}"
+        ## $era_short was pre-computed from $era_name during input validation above.
+        local run="${date_pref}-${hash}-${batch_inf::12}-${profile_name}-${era_short}-${backend_name::3}${prof_suf}"
+        ## The tag must match `^[a-zA-Z0-9-]{1,128}$` or it can't be used as a
+        ## Nomad Namespace or Job name. Validate now, not after directory
+        ## creation, so a malformed tag fails loudly with the offending value.
+        [[ "$run" =~ ^[a-zA-Z0-9-]{1,128}$ ]] \
+            || fatal "run | allocate: constructed tag does not match ^[a-zA-Z0-9-]{1,128}\$: '$run'"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
@@ -457,22 +532,17 @@ EOF
             fatal "profile | allocate failed to create writable run directory:  $dir"
 
         ## 4. populate the directory with files shared by all backends:
-        progress "run | profile" "$(if test -n "$profile_data"; then echo "pre-supplied ($profile_name):  $profile_data"; else echo "computed:  $profile_name"; fi)"
-        if test -n "$profile_data"
-        then
-            test "$(jq -r .name $profile_data/profile.json)" = "$profile_name" ||
-                fatal "profile | allocate incoherence:  --profile-data $profile_data/profile.json mismatches '$profile_name'"
-            ln -s "$profile_data"                 "$dir"/profile
-            if test -n "${WB_PROFILE_OVERLAY:-}"
-            ## Allow 'wb' pick up the profile overlay in 'profiles.jq':
-            then wb profile
-            else jq . "$profile_data"/profile.json
-            fi > "$dir"/profile.json
-            progress "profile | overlay" "$(white $(jq .overlay "$dir"/profile.json))"
-            cp    "$profile_data"/node-specs.json "$dir"/node-specs.json
-        else
-            fail "Mode no longer supported:  operation without profile/ directory."
-        fi
+        ## $profile_data and $profile_name were validated/derived above —
+        ## no need to re-check the name matches what we just read from .name.
+        progress "run | profile" "pre-supplied ($profile_name):  $profile_data"
+        ln -s "$profile_data"                 "$dir"/profile
+        if test -n "${WB_PROFILE_OVERLAY:-}"
+        ## Allow 'wb' pick up the profile overlay in 'profiles.jq':
+        then wb profile
+        else jq . "$profile_data"/profile.json
+        fi > "$dir"/profile.json
+        progress "profile | overlay" "$(white $(jq .overlay "$dir"/profile.json))"
+        cp    "$profile_data"/node-specs.json "$dir"/node-specs.json
 
         local ghc_version=$(get_node_ghc_version)
 
@@ -502,9 +572,21 @@ EOF
         local timing=$(profile allocate-time "$dir"/profile.json)
         profile describe-timing "$timing"
 
+        ## Locli reads the era from meta.json via a 3-path decoder
+        ## (`bench/locli/src/Cardano/Analysis/API/Context.hs:235-240`):
+        ##   1. .meta.era                            (Alternative: eraDirect)
+        ##   2. .meta.profile_content.era            (eraProfile)
+        ##   3. .meta.profile_content.generator.era  (eraGenerator)
+        ## We populate path #1 here for new workbench-root runs.
+        ## Older workbench-master runs already carry path #2 in the
+        ## profile_content snapshot (back when cardano-profile wrote `era` into
+        ## every profile JSON). Legacy cardano-ops runs that went through
+        ## `compat-meta-fixups` carry path #3.
+        ## So no historical run needs a meta.json migration for era.
         local args=(
             --arg       run              "$run"
-            --arg       batch            "$batch"
+            --arg       batch_name       "$batch_name"
+            --arg       era              "$era_name"
             --arg       profile_name     "$profile_name"
             --arg       ghc_version      "$ghc_version"
             --argjson   timing           "$timing"
@@ -514,7 +596,8 @@ EOF
         jq_fmutate "$dir"/meta.json '. *
            { meta:
              { tag:              $run
-             , batch:            $batch
+             , batch:            $batch_name
+             , era:              $era
              , profile:          $profile_name
              , node_ghc_version: $ghc_version
              , timing:           $timing
@@ -530,13 +613,10 @@ EOF
         then fail "internal error:  no genesis cache entry"
         else genesis derive-from-cache      \
                      "$dir"/profile.json    \
-                     "$timing"              \
                      "$genesis_cache_entry" \
-                     "$dir"/genesis
+                     "$dir"/genesis         \
+                     "$timing"
         fi
-        ## Record geneses
-        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
-        cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
         ## Add global_basedir Voltaire Plutus guardrails script
         cp "$global_basedir"/genesis/guardrails-script.plutus "$dir"/genesis/
@@ -650,7 +730,9 @@ EOF
         local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
         local dir=$global_rundir/$run
-        local genesis="$dir"/genesis-shelley.json
+        ## Fall back to the old genesis name.
+        local genesis="$dir"/genesis/genesis.shelley.json
+        test -f "$genesis" || genesis="$dir"/genesis-shelley.json
         local geneses_orig_dir=$global_rundir/.geneses.orig
         local genesis_orig="$geneses_orig_dir"/$run.orig.json
 
@@ -660,16 +742,17 @@ EOF
 
         mkdir -p "$geneses_orig_dir" "$dir"/genesis/
 
-        local size=$(ls -s "$genesis" | cut -d' ' -f1)
-        if test "$size" -gt 1000
-        then progress "run" "genesis size: ${size}k, trimming.."
-             mv    "$genesis" "$genesis_orig"
-             ln -s "$(realpath $genesis_orig)" "$genesis".orig
-             jq > "$genesis" '
-               .initialFunds = {}
-             | .staking      = {}
-             ' "$genesis_orig"; fi
-        cp -f "$dir"/genesis-shelley.json "$dir"/genesis/genesis-shelley.json;;
+        if test -f "$genesis"
+        then local size=$(ls -s "$genesis" | cut -d' ' -f1)
+             if test "$size" -gt 1000
+             then progress "run" "genesis size: ${size}k, trimming.."
+                  mv    "$genesis" "$genesis_orig"
+                  ln -s "$(realpath $genesis_orig)" "$genesis".orig
+                  jq > "$genesis" '
+                    .initialFunds = {}
+                  | .staking      = {}
+                  ' "$genesis_orig"; fi; fi
+        ;;
 
     package | pack )
         local usage="USAGE: wb run $op RUN"
@@ -685,14 +768,16 @@ EOF
         local run=${1:?$usage}
         local dir=$(run get "$run")
 
+        ## Era is not back-filled here: `allocate` already writes the
+        ## canonical `.meta.era` top-level field for every workbench run,
+        ## and locli's decoder reaches the historical era via
+        ## `.meta.profile_content.era` (the profile JSON snapshot) on
+        ## older runs without intervention.
         jq_fmutate "$dir"/meta.json '
            def compat_fixups:
              { genesis:
                { dense_pool_density: .composition.dense_pool_density
                , n_pools:            .composition.n_pools
-               }
-             , generator:
-               { era:                .era
                }
              };
            . * { meta:
@@ -807,7 +892,12 @@ run_remote_get() {
     mkdir -p "$dir"
     jq . <<<$meta > $dir/meta.json
 
+    ## Genesis paths are listed under both layouts: the normalized one used by
+    ## current workbench runs and the old one (genesis-shelley.json).
+    ## The remote tar uses `--ignore-failed-read`, so listing both is safe.
     local common_run_files=(
+        genesis/genesis.alonzo.json
+        genesis/genesis.shelley.json
         genesis.alonzo.json
         genesis-shelley.json
         profile.json
@@ -991,7 +1081,7 @@ run_ls_sets_cmd() {
 get_node_ghc_version(){
     local node_executable
 
-    if [[ $WB_BACKEND == nomad* ]]
+    if [[ $WB_BACKEND_NAME == nomad* ]]
     then
        node_executable=$(jq --raw-output '.containerPkgs."cardano-node"."nix-store-path"' $WB_BACKEND_DATA/container-specs.json)
        node_executable="$node_executable/bin/cardano-node"

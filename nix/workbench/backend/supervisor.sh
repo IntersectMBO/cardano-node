@@ -39,7 +39,6 @@ case "$op" in
 
         setenvjq    'port_shift_ekg'        100
         setenvjq    'port_shift_prometheus' 200
-        setenvjq    'port_shift_rtview'     300
         setenvjqstr 'supervisor_conf'      "$backend_dir"/supervisor.conf
         ;;
 
@@ -124,11 +123,9 @@ case "$op" in
             local basePort=$(                   envjq 'basePortTracer')
             local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
             local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
-            local port_rtview=$((    basePort+$(envjq 'port_shift_rtview')))
             cat <<EOF
   - EKG URL (node-0):                                  http://localhost:$port_ekg/node-0
   - Prometheus URL (node-0):                           http://localhost:$port_prometheus/node-0
-  - RTView URL (depending on cardano-tracer build):    http://localhost:$port_rtview
 EOF
 
         else cat <<EOF

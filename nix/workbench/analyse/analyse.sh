@@ -94,8 +94,8 @@ local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
 
-if test -v "WB_BACKEND"
-then backend=$WB_BACKEND
+if test -v "WB_BACKEND_NAME"
+then backend=$WB_BACKEND_NAME
 else backend=
 fi
 
@@ -392,12 +392,18 @@ case "$op" in
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=( $* )
+        ## Locate the Shelley genesis: prefer the normalized layout
+        ## (`genesis/genesis.shelley.json`) and fall back to the old layout
+        ## (`genesis-shelley.json`) so analysis on the old branch runs without
+        ## needing on-disk file moves.
+        local shelley_genesis="$dir/genesis/genesis.shelley.json"
+        test -f "$shelley_genesis" || shelley_genesis="$dir/genesis-shelley.json"
         if [[ $storage -eq 1 ]]
         then v1=("${v0[@]/#logs/            'unlog-db' --run-logs \"$adir\"/log-manifest-db.json }")
         else v1=("${v0[@]/#logs/            'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
         fi
-        v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
-        v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
+        v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$shelley_genesis\" }")
+        v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$shelley_genesis\" }")
         v4=("${v3[@]/#read-chain/           'read-chain'         --chain \"$adir\"/chain.json}")
         v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'         --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json }")
@@ -486,6 +492,10 @@ case "$op" in
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=("$@")
+        ## Same tolerance for the Shelley genesis path as the single-call
+        ## command above: prefer the new layout, fall back to the old naming.
+        local shelley_genesis="$dir/genesis/genesis.shelley.json"
+        test -f "$shelley_genesis" || shelley_genesis="$dir/genesis-shelley.json"
         v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]}    })
         v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}     })
         v3=(${v2[@]/#read-summaries/    'read-summaries'    ${summaries[*]} })
@@ -506,7 +516,7 @@ case "$op" in
         vi=(${vh[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
         vj=(${vi[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
         vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --org-report $adir/'summary.org' })
-        vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $dir/genesis-shelley.json })
+        vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $shelley_genesis })
         local ops_final=(${vl[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"

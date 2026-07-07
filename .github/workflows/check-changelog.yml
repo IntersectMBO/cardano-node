@@ -42,7 +42,7 @@ jobs:
             extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
             extra-substituters = https://cache.iog.io/
 
-      - uses: rrbutani/use-nix-shell-action@v1
+      - uses: rrbutani/use-nix-shell-action@f97339023a09121113e5a58ad88fe0e9fde3406b # v1
         if: steps.filter.outputs.cardano == 'true'
         with:
           flakes: nixpkgs#scriv

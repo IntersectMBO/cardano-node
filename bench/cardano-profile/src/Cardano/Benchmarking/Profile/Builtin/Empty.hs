@@ -13,7 +13,7 @@ module Cardano.Benchmarking.Profile.Builtin.Empty (
 , traceBenchDuration, traceFullDuration
 , defaultDuration
 , epochTransitionDuration
-, profilesNoEraEmpty
+, profilesEmpty
 ) where
 
 --------------------------------------------------------------------------------
@@ -105,8 +105,8 @@ epochTransitionDuration =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraEmpty :: [Types.Profile]
-profilesNoEraEmpty = map baseNoDataset
+profilesEmpty :: [Types.Profile]
+profilesEmpty = map baseNoDataset
   $
   ------------------------------------------------------------------------------
   -- fast: FixedLoaded and "--shutdown-on-block-synced 1" with 1 or 2 nodes.
@@ -133,7 +133,6 @@ profilesNoEraEmpty = map baseNoDataset
   in [
   -- Local
     ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
-  , ciTest & P.name "ci-test-rtview"   . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
   , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
   ]
@@ -163,11 +162,9 @@ profilesNoEraEmpty = map baseNoDataset
   in [
   -- "--shutdown-on-block-synced 15"
     bench & P.name "trace-bench"            . V.valueLocal . P.traceForwardingOn
-  , bench & P.name "trace-bench-rtview"     . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   , bench & P.name "trace-bench-notracer"   . V.valueLocal . P.traceForwardingOff
   -- "--shutdown-on-slot-synced 1200"
   , full  & P.name "trace-full"             . V.valueLocal . P.traceForwardingOn
-  , full  & P.name "trace-full-rtview"      . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   ]
   ++
   ------------------------------------------------------------------------------

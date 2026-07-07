@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Use uncurry" -}
 {-# LANGUAGE GADTs #-}

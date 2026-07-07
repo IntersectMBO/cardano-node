@@ -21,9 +21,7 @@ jobs:
         uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
         with:
           extra_nix_config: |
-            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
-            extra-substituters = https://cache.iog.io/
-      # Make the Nix environment available to next steps
+            accept-flake-config = true
       - uses: rrbutani/use-nix-shell-action@f97339023a09121113e5a58ad88fe0e9fde3406b # v1
         with:
           flakes: nixpkgs#shellcheck

@@ -10,7 +10,7 @@ module Cardano.Benchmarking.Profile.Builtin.Cloud (
   base
 , composeFiftytwo
 , valueDuration, plutusDuration
-, profilesNoEraCloud
+, profilesCloud
 , nomadPerf -- Cluster needed to define the "latency-*" profile.
 ) where
 
@@ -114,8 +114,8 @@ plutusRipemdBase =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraCloud :: [Types.Profile]
-profilesNoEraCloud =
+profilesCloud :: [Types.Profile]
+profilesCloud =
   ----------------------
   -- Release benchmarks.
   ----------------------

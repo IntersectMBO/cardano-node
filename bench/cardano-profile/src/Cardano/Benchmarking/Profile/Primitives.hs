@@ -91,7 +91,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , workloadAppend
 
   -- Tracer's params.
-  , tracerRtview, tracerWithresources, tracerTimeseries
+  , tracerWithresources, tracerTimeseries
 
   -- Cluster params.
   , clusterMinimunStorage, ssdDirectory, clusterKeepRunningOn
@@ -148,13 +148,14 @@ empty = Types.Profile {
     , Types.n_dense_pools = 0
     , Types.n_pool_hosts = 0
   }
-  , Types.era = Types.Conway
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 0
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = mempty
     , Types.alonzo = mempty
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 0
     , Types.epoch_length = 0
     , Types.active_slots_coeff = 0
@@ -200,8 +201,7 @@ empty = Types.Profile {
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
-      Types.rtview = False
-    , Types.ekg = False
+      Types.ekg = False
     , Types.withresources = False
     , Types.timeseries = False
   }
@@ -241,8 +241,7 @@ empty = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 0
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = []
-    , Types.createTestnetDataArgs = []
+      Types.createTestnetDataArgs = []
     , Types.pools = []
   }
   , Types.preset = mempty
@@ -782,9 +781,6 @@ workloadAppend w p = p {Types.workloads = Types.workloads p ++ [w]}
 
 tracer :: (Types.Tracer -> Types.Tracer) -> Types.Profile -> Types.Profile
 tracer f p = p {Types.tracer = f (Types.tracer p)}
-
-tracerRtview :: Types.Profile -> Types.Profile
-tracerRtview = tracer (\t -> t {Types.rtview = True})
 
 tracerWithresources :: Types.Profile -> Types.Profile
 tracerWithresources = tracer (\t -> t {Types.withresources = True})

@@ -7,19 +7,12 @@ import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
-#if RTVIEW
-import           Cardano.Tracer.Handlers.RTView.Run
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 
 import           Control.Concurrent.Extra (newLock)
-#if RTVIEW
-import           Control.Concurrent.STM.TVar (newTVarIO)
-#endif
 import           Control.DeepSeq
 import qualified Data.List.NonEmpty as NE
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -43,24 +36,12 @@ main = do
   connectedNodes <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
-#if RTVIEW
-  savedTO         <- initSavedTraceObjects
-
-  chainHistory     <- initBlockchainHistory
-  resourcesHistory <- initResourcesHistory
-  txHistory        <- initTransactionsHistory
-#endif
 
   protocolsBrake <- initProtocolsBrake
   dpRequestors   <- initDataPointRequestors
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
-#if RTVIEW
-  eventsQueues   <- initEventsQueues mempty Nothing connectedNodesNames dpRequestors currentDPLock
-
-  rtViewPageOpened <- newTVarIO False
-#endif
 
   tracer <- mkTraceBundle $ SeverityF $ Just Warning
 
@@ -82,18 +63,6 @@ main = do
         , teTimeseriesHandle      = Nothing
         }
 
-      tracerEnvRTView :: TracerEnvRTView
-      tracerEnvRTView = TracerEnvRTView
-#if RTVIEW
-        { teSavedTO           = savedTO
-        , teBlockchainHistory = chainHistory
-        , teResourcesHistory  = resourcesHistory
-        , teTxHistory         = txHistory
-        , teEventsQueues      = eventsQueues
-        , teRTViewPageOpened  = rtViewPageOpened
-        }
-#endif
-
   removePathForcibly root
 
   let -- Handles cleanup between runs, closes handles before
@@ -111,7 +80,7 @@ main = do
         benchmark :: TracerEnv -> IO ()
         benchmark trEnv = do
           beforeProgramStops do
-            traceObjectsHandler trEnv tracerEnvRTView nId traceObjects
+            traceObjectsHandler trEnv nId traceObjects
 
         in
         perRunEnvWithCleanup @TracerEnv initialise cleanup benchmark
@@ -148,7 +117,6 @@ main = do
     , ekgRequestFreq   = Nothing
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
-    , hasRTView        = Nothing
     , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams root FileMode format]
