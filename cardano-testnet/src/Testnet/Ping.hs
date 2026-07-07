@@ -38,7 +38,7 @@ pingNode :: MonadIO m
          -> m (Either CNP.PingClientException ()) -- ^ 'Right ()' means success
 pingNode networkMagic sprocket =
   liftIOAnnotated $
-    CNP.pingClient nullTracer nullTracer (pingOpts networkMagic) (sprocketToAddrInfo sprocket)
+    CNP.pingClient nullTracer nullTracer nullTracer nullTracer (pingOpts networkMagic) (sprocketToAddrInfo sprocket)
   where
     pingOpts magic = CNP.PingOpts
       { CNP.pingOptsCount     = 1

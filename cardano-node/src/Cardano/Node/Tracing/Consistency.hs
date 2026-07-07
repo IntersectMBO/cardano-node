@@ -14,6 +14,7 @@ module Cardano.Node.Tracing.Consistency
 
 
 import           Cardano.Logging
+import           Cardano.Logging.DocuGenerator (dtWarnings)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
@@ -111,7 +112,7 @@ checkNodeTraceConfiguration ::
   -> IO NSWarnings
 checkNodeTraceConfiguration configFileName = do
   w1 <- checkTraceConfiguration
-          configFileName
+          (FromFile configFileName)
           defaultCardanoConfig
           getAllNamespaces
   (dt,_) <- docTracersFirstPhase Nothing

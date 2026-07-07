@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-06-29T22:49:53Z
-  , cardano-haskell-packages 2026-06-29T12:05:19Z
+  , cardano-haskell-packages 2026-07-02T10:10:00Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -69,6 +69,9 @@ package snap-server
 package bitvec
   flags: -simd
 
+package cardano-diffusion
+  flags: +optparse-applicative-fork
+
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
@@ -78,8 +81,6 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
-  -- TODO: waiting for upstream to remove the bound
-  , *:aeson
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -89,8 +90,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: a775a6a9d581e2216ebc31f27572f4ae1c499e48
-  --sha256: sha256-U0UDIuhsDfJ4PDV1BqDTY7/2gWpf8c/Z2IVqUGMNhKQ=
+  tag: 482c821260776590a24ec1a0c90c555becdc93c9
+  --sha256: sha256-rue+RXlNAHpnupVafgE4mTIbgoxixe39rp0jnsvLJqM=
   subdir:
     cardano-api
     cardano-rpc
@@ -98,8 +99,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: b698d1f0f5681da0ae43dc9db10f82b2de35c0c6
-  --sha256: sha256-f0Twa/vH7R98xN03XFPlfoIX3mZlkNTGJ+gHMjNaIkU=
+  tag: cfeadc5a03473ddfec809abe49ddfe287c186648
+  --sha256: sha256-gyRNbDmSYaSjBu6fsLDlkzhXWaWqXPVpyOrIiCrBqz0=
   subdir:
     cardano-cli
 
@@ -143,16 +144,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: cb5b3c1ab46b562810d058b51fbce0ee407ce3ae
-  --sha256: sha256-42StkJb5M3tEwNtJ9Y4CL7FCLnsz7AmNyYKMAF2amDY=
+  tag: e37ba209ffdbdcb3cc8e7a9cb0fb6d6fa7cce8a3
+  --sha256: sha256-srdli4YUIo3HtdWwpk2Tq5okk4GQ5Fpn/ipFO8eykVU=
   subdir:
     .
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: b47dbc2c29108e593cc47524cffb75008b88fe90
-  --sha256: sha256-7TwcI1/m6aEBmiGYPXKHbIWlxzRja4qFyqr+apcR9p4=
+  tag: 0a614a36c8969e53fd6a1c3890b36da5aff3b0a2
+  --sha256: sha256-p32/Y6jXwiSwa0yVspdx246KHaCBmqe2zB+UpxudeJc=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation
@@ -162,8 +163,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/f-f/dmq-node.git
-  tag: b7d59834e52d46229bb3ff6e5595509eede730dd
-  --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
+  tag: 6c0b5f5752c8e0700cd642a7d45475c1c3da8e05
+  --sha256: sha256-lOsYFjr8DpBVVCQzMqsUAezNvXm69S6LK9lBqsv6Cxw=
   subdir:
     dmq-node
 

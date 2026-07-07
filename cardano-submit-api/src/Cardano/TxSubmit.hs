@@ -9,6 +9,7 @@ module Cardano.TxSubmit
   ) where
 
 import           Cardano.Logging (BackendConfig (..), ConfigOption (ConfBackend, ConfSeverity),
+                   ConfigSource (FromFile),
                    FormatLogging (HumanFormatColoured), SeverityF (SeverityF), SeverityS (Info),
                    Trace, TraceConfig, configureTracers, ekgTracer, emptyConfigReflection,
                    emptyTraceConfig, mkCardanoTracer, readConfigurationWithDefault, standardTracer,
@@ -37,7 +38,7 @@ defaultTraceConfig =
 
 runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do
-    tracingConfig <- readConfigurationWithDefault (unConfigFile tspConfigFile) defaultTraceConfig
+    tracingConfig <- readConfigurationWithDefault (FromFile (unConfigFile tspConfigFile)) defaultTraceConfig
     (trce, registrySample) <- mkTraceDispatcher tracingConfig
     Async.withAsync
       (runTxSubmitServer trce tspWebserverConfig tspProtocol tspNetworkId tspSocketPath)

@@ -105,10 +105,9 @@ instance Aeson.FromJSON WrapCheckpointsMap where
         -> Aeson.Parser (HeaderHash (CardanoBlock StandardCrypto))
       parseCardanoHash = Aeson.withText "CheckpointHash" $ \t ->
           case B16.decode $ Text.encodeUtf8 t of
-            Right h -> do
-              when (BS.length h /= fromIntegral (hashSize p)) $
-                fail $ "Invalid hash size for " <> Text.unpack t
-              pure $ fromRawHash p h
+            Right h ->
+              maybe (fail $ "Invalid hash size for " <> Text.unpack t) pure $
+                fromRawHash p h
             Left e  ->
               fail $ "Invalid base16 for " <> Text.unpack t <> ": " <> e
         where

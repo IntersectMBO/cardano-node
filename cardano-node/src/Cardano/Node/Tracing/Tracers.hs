@@ -60,7 +60,6 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
-import           "contra-tracer" Control.Tracer (mkTracer)
 import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))

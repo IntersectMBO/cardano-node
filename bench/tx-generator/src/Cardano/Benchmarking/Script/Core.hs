@@ -57,7 +57,6 @@ import           Prelude
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.Trans.RWS.Strict (ask)
-import           "contra-tracer" Control.Tracer (mkTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)

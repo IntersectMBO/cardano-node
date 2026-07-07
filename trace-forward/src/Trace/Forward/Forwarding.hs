@@ -210,7 +210,7 @@ launchForwarders iomgr forwarding
              dpStore)
           (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
-          maxReconnectDelay
+          (fromIntegral maxReconnectDelay)
 
 launchForwardersViaLocalSocket
   :: IOManager
