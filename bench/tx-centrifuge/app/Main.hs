@@ -890,9 +890,9 @@ loadConfig = do
   hPutStrLn stderr $ "Loading node config from: " ++ nodeConfigPath
   nodeConfig <- mkNodeConfig nodeConfigPath >>= either die pure
   protocol   <- mkConsensusProtocol nodeConfig >>= either die pure
-  let codecConfig  = protocolToCodecConfig protocol
-      networkId    = protocolToNetworkId protocol
-      networkMagic = protocolToNetworkMagic protocol
+  codecConfig  <- protocolToCodecConfig protocol
+  networkId    <- protocolToNetworkId protocol
+  networkMagic <- protocolToNetworkMagic protocol
 
   -- Load operator-supplied recycle signing key.
   hPutStrLn stderr $ "Loading signing key from: " ++ signingKeyPath
@@ -951,24 +951,26 @@ mkConsensusProtocol nodeConfig =
             byronCfg shelleyCfg alonzoCfg conwayCfg
             dijkstraCfg hardforkCfg checkpointsCfg Nothing)
 
-protocolToCodecConfig :: SomeConsensusProtocol -> CodecConfig Block.CardanoBlock
+protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig Block.CardanoBlock)
 protocolToCodecConfig (SomeConsensusProtocol Api.CardanoBlockType info) =
-    configCodec $ pInfoConfig $ fst $ Api.protocolInfo @IO info
+    configCodec . pInfoConfig . fst <$> Api.protocolInfo @IO info
 protocolToCodecConfig _ =
   error "protocolToCodecConfig: non-Cardano protocol"
 
 -- | Derive NetworkId from the consensus config. Mainnet uses a
 -- well-known magic number; everything else is a testnet.
-protocolToNetworkId :: SomeConsensusProtocol -> Api.NetworkId
-protocolToNetworkId proto = case protocolToNetworkMagic proto of
-  Api.NetworkMagic 764824073 -> Api.Mainnet
-  nm                         -> Api.Testnet nm
+protocolToNetworkId :: SomeConsensusProtocol -> IO Api.NetworkId
+protocolToNetworkId proto = do
+  networkMagic <- protocolToNetworkMagic proto
+  pure $ case networkMagic of
+    Api.NetworkMagic 764824073 -> Api.Mainnet
+    nm                         -> Api.Testnet nm
 
-protocolToNetworkMagic :: SomeConsensusProtocol -> Api.NetworkMagic
+protocolToNetworkMagic :: SomeConsensusProtocol -> IO Api.NetworkMagic
 protocolToNetworkMagic
   (SomeConsensusProtocol Api.CardanoBlockType info) =
-    getNetworkMagic $ configBlock $ pInfoConfig $
-      fst $ Api.protocolInfo @IO info
+    getNetworkMagic . configBlock . pInfoConfig . fst
+      <$> Api.protocolInfo @IO info
 protocolToNetworkMagic _ =
   error "protocolToNetworkMagic: non-Cardano protocol"
 
