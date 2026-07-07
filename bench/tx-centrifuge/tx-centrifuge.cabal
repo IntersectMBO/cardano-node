@@ -30,11 +30,15 @@ data-files:       data/config-shared-10.json
 common project-config
   default-language:   Haskell2010
 
+-- -Wno-deprecations: cardano-api deprecates the classic tx-building API in
+-- favour of Cardano.Api.Experimental; we still use the classic API
+-- (getTxBody, createTransactionBody, ...).
 common ghc-warnings
   ghc-options:        -Wall
                       -Wcompat
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
+                      -Wno-deprecations
                       -Wno-prepositive-qualified-module
                       -Wno-unticked-promoted-constructors
                       -Wpartial-fields

@@ -42,7 +42,7 @@ import Data.Map.Strict qualified as Map
 -------------------
 -- contra-tracer --
 -------------------
-import "contra-tracer" Control.Tracer (Tracer (..), traceWith)
+import "contra-tracer" Control.Tracer (Tracer (..), emit, nullTracer, traceWith)
 ------------------
 -- pull-fiction --
 ------------------
@@ -116,10 +116,10 @@ data Tracers = Tracers
 -- | All-silent tracers.
 nullTracers :: Tracers
 nullTracers = Tracers
-  { trBuilder       = Tracer (\_ -> pure ())
-  , trTxSubmission  = Tracer (\_ -> pure ())
-  , trTxSubmission2 = Tracer (\_ -> pure ())
-  , trKeepAlive     = Tracer (\_ -> pure ())
+  { trBuilder       = nullTracer
+  , trTxSubmission  = nullTracer
+  , trTxSubmission2 = nullTracer
+  , trKeepAlive     = nullTracer
   }
 
 --------------------------------------------------------------------------------
@@ -166,13 +166,13 @@ setupTracers configFile = do
     configReflection trConfig [keepAliveTr]
   pure Tracers
     { trBuilder =
-        Tracer $ Logging.traceWith builderTr
+        Tracer $ emit $ Logging.traceWith builderTr
     , trTxSubmission =
-        Tracer $ Logging.traceWith txSubTraceTr
+        Tracer $ emit $ Logging.traceWith txSubTraceTr
     , trTxSubmission2 =
-        Tracer $ Logging.traceWith txSub2Trace
+        Tracer $ emit $ Logging.traceWith txSub2Trace
     , trKeepAlive =
-        Tracer $ Logging.traceWith keepAliveTr
+        Tracer $ emit $ Logging.traceWith keepAliveTr
     }
 
 -- | Default config: stdout machine format, severity Debug for all namespaces.

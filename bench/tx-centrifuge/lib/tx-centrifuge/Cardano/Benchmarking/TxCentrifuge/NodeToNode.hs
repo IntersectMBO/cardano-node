@@ -82,6 +82,7 @@ import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Network.Magic qualified as Magic
 import Ouroboros.Network.PeerSelection.PeerSharing qualified as PeerSharing
 import Ouroboros.Network.PeerSelection.PeerSharing.Codec qualified as PSCodec
+import Ouroboros.Network.PerasSupport qualified as PerasSupport
 ---------------------------------
 -- ouroboros-network:framework --
 ---------------------------------
@@ -343,6 +344,9 @@ connect
                 , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
                 , NtN.peerSharing = PeerSharing.PeerSharingDisabled
                 , NtN.query = False
+                -- We never run the Peras cert/vote diffusion mini-protocols;
+                -- advertising unsupported keeps the peer from expecting them.
+                , NtN.perasSupport = PerasSupport.PerasUnsupported
                 }
             )
             $ \_n2nData -> bundleToApp
