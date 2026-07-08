@@ -898,8 +898,6 @@ run_remote_get() {
     local common_run_files=(
         genesis/genesis.alonzo.json
         genesis/genesis.shelley.json
-        genesis.alonzo.json
-        genesis-shelley.json
         profile.json
         generator/protocol-parameters-queried.json
         generator/plutus-budget-summary.json
