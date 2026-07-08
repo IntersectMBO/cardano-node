@@ -47,8 +47,6 @@ import "contra-tracer" Control.Tracer (Tracer (..), traceWith)
 ---------------------------------
 import Ouroboros.Consensus.Cardano qualified as Consensus (CardanoBlock)
 import Ouroboros.Consensus.Shelley.Eras qualified as Eras
--- Orphan instances needed for LedgerSupportsProtocol (ShelleyBlock ...)
-import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 ---------------------------------------------
 -- ouroboros-consensus:ouroboros-consensus --
 ---------------------------------------------
@@ -57,6 +55,13 @@ import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Mempool
 -- ouroboros-network:framework --
 ---------------------------------
 import Ouroboros.Network.Driver.Simple qualified as Simple
+-----------------------------------------
+-- ouroboros-network:framework-tracing --
+-----------------------------------------
+-- For the MetaTrace and LogFormatting instances of:
+-- - Simple.TraceSendRecv
+-- - Stateful.TraceSendRecv
+import Ouroboros.Network.Tracing ()
 ---------------------------------
 -- ouroboros-network:protocols --
 ---------------------------------
