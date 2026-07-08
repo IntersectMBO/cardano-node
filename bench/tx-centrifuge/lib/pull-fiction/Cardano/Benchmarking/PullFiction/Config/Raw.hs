@@ -105,6 +105,8 @@ data Config = Config
   , maybeTopLevelMaxBatchSize :: !(Maybe Natural)
     -- | Optional top-level @\"on_exhaustion\"@.
   , maybeTopLevelOnExhaustion :: !(Maybe OnExhaustion)
+    -- | Optional top-level @\"startup_delay_seconds\"@.
+  , maybeStartupDelaySeconds :: !(Maybe Natural)
     -- | Optional generator workloads keyed by name.
     -- Because Aeson decodes JSON objects into a 'Map', duplicate workload names
     -- are silently discarded (last value wins).
@@ -124,6 +126,7 @@ instance Aeson.FromJSON Config where
                 "rate_limit"
       <*> o .:? "max_batch_size"
       <*> o .:? "on_exhaustion"
+      <*> o .:? "startup_delay_seconds"
       <*> o .:? "workloads"
 
 --------------------------------------------------------------------------------

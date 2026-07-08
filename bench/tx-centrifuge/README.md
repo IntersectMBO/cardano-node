@@ -202,6 +202,21 @@ Workload and target names must be non-empty and must not contain `.` or start wi
   - `block`: The worker thread waits until the builder produces a new payload.
   - `error`: The generator fails immediately if the builder cannot keep up with the requested TPS.
 
+### Startup Delay (`startup_delay_seconds`)
+An optional **top-level** field that delays the start of transmission. Waits this many seconds before the workers open their connections to the targets but after the builders are spawned and filling the payload queues.
+
+- **Value**: a non-negative integer number of **seconds**.
+- **Default**: `0` (also the effect when the field is absent or `null`). Workers connect as soon as they are spawned (no delay, no log line).
+- **Scope**: top level only. It applies to the whole run and does **not** cascade to workloads or targets.
+
+```json
+{
+  "rate_limit": { "type": "token_bucket", "params": { "tps": 100000 } },
+  "startup_delay_seconds": 300,
+  "workloads": { "...": {} }
+}
+```
+
 ## Cardano Implementation (`tx-centrifuge`)
 
 ### Value Builder Parameters

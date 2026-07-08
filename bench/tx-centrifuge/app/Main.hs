@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 --------------------------------------------------------------------------------
 
@@ -13,6 +14,7 @@ module Main (main) where
 ----------
 -- base --
 ----------
+import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
 import Control.Monad (when)
 import Data.Bifunctor (first)
@@ -271,6 +273,16 @@ main = do
           case result of
             Left err -> die $ Runtime.targetName target ++ ": " ++ err
             Right () -> pure ()
+    -- Startup delay.
+    -- Sleeps after the builders are already spawned and running so they keep
+    -- filling the payload queues for the whole delay, while the workers below
+    -- open their connections only after it elapses.
+    let startupDelaySeconds = Validated.startupDelaySeconds validated
+    when (startupDelaySeconds > 0) $ do
+      hPutStrLn stderr $ "Startup delay: waiting " ++ show startupDelaySeconds
+        ++ " second(s) (builders pre-filling queues)..."
+      threadDelay (fromIntegral startupDelaySeconds * 1_000_000)
+      hPutStrLn stderr "Startup delay complete, connecting to targets."
     -- For each 'Workload'.
     workers <- concat <$> mapM
       (\workload -> runWorkload workload targetWorker)
