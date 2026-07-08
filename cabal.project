@@ -87,8 +87,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 63d4d4e3c7ffb1911a63a65e7a84dc5132f82137
-  --sha256: sha256-sTsafdrdo/WQ9a+nL/ed2kc5zKhTYW9HaJO7g260fBk=
+  tag: 0c11599a3f61dfeaaa56a64aa3c78d9c813eba88
+  --sha256: sha256-CGrUHnr8lftCVxV+QUZP+uQXKo9+gKL+7yZxdV7Dees=
 
 -- Points to ouroboros-ledger/leios-prototype
 source-repository-package
