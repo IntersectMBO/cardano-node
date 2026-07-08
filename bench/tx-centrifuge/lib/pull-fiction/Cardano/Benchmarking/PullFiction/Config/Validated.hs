@@ -35,7 +35,7 @@ module Cardano.Benchmarking.PullFiction.Config.Validated
   (
     -- * Config.
     Config
-  , initialInputs, observers, workloads
+  , initialInputs, observers, workloads, startupDelaySeconds
 
     -- * Workload.
   , Workload
@@ -96,6 +96,11 @@ defaultMaxBatchSize = 0
 defaultOnExhaustion :: Raw.OnExhaustion
 defaultOnExhaustion = Raw.Block
 
+-- | Default startup delay in seconds when not specified in JSON.
+-- 0 means no delay: workers connect to targets as soon as they are spawned.
+defaultStartupDelaySeconds :: Natural
+defaultStartupDelaySeconds = 0
+
 --------------------------------------------------------------------------------
 
 -- | Top-level configuration.
@@ -110,6 +115,9 @@ data Config input = Config
   , observers     :: !(Map String Raw.Observer)
     -- | Workloads keyed by name. Iteration order is alphabetical (Map order).
   , workloads     :: !(Map String Workload)
+    -- | Resolved startup delay in seconds with 0 meaning no delay.
+    -- Consumed by the caller (see @Main.hs@).
+  , startupDelaySeconds :: !Natural
   }
   deriving (Show, Eq)
 
@@ -261,11 +269,16 @@ validate raw inputs = do
       ++ show unusedObservers
       ++ ".\nHint: \"recycle\" must be a sibling of \"type\" and"
       ++ " \"params\" in the builder object, not nested inside \"params\"."
+  -- Startup delay (top-level scalar, no cascade). Default 0 (no delay).
+  let startupDelay = fromMaybe
+                       defaultStartupDelaySeconds
+                       (Raw.maybeStartupDelaySeconds raw)
   -- Final validated config.
   pure Config
-    { initialInputs = inputs
-    , observers     = resolvedObservers
-    , workloads     = workloadsMap
+    { initialInputs       = inputs
+    , observers           = resolvedObservers
+    , workloads           = workloadsMap
+    , startupDelaySeconds = startupDelay
     }
 
 --------------------------------------------------------------------------------
