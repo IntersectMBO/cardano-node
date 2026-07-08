@@ -129,7 +129,9 @@ library tx-centrifuge-lib
                     , network
                     , network-mux
                     , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
-                    , ouroboros-network:{ouroboros-network, api, framework, protocols}
+                    -- TODO: Modules from lib "framework-tracing" will be in lib "tracing" on the next release of ouroboros-network.
+                    --       See commit 12896145d1626ce98e7c85623316e5e3e05e8dc1 of ouroboros-network.
+                    , ouroboros-network:{ouroboros-network, api, framework, framework-tracing, protocols}
                     , random
                     , serialise
                     -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
