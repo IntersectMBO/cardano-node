@@ -48,7 +48,6 @@ packages:
   bench/tx-generator
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
-  trace-resources
   trace-forward
 
 -- Needed when cross compiling
