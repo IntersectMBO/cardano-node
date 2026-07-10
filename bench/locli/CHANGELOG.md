@@ -1,5 +1,10 @@
 # Revision history for locli
 
+## 2.4 -- Jul 2026
+
+* Create Plutus workload calibration CSV as part of run comparison, and include as addendum in `typst` report.
+* Drop `locli-quick` dependency on `cardano-api`.
+
 ## 2.3 -- Jan 2026
 
 * Added support for `typst` reports to the `compare` CLI command: They're now automatically created alongside Org mode reports. Includes `*.ede` templates to generate them; `typst >= 0.14` required for their compilation to PDF.

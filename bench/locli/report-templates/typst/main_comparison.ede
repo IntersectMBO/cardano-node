@@ -123,8 +123,29 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 + ...
 
+#pagebreak()
+
+
+{% if scalingCSV %}
+{% let runCount = runs | length %}
+= Addendum: Plutus Workload Calibration
+#pad(top: 2em)[]
+
+#let scalings = csv("{{scalingCSV}}")
+
+#align(center)[
+#table(
+  columns: {{ runCount + 1 }},
+
+  [], {% for run in runs %}[`{{run.value.meta.ident}}`],{% endfor %}
+  ..scalings.flatten(),
+)
+]
 
 #pagebreak()
+{% endlet %}
+{% endif %}
+
 
 = Appendix A: charts
 
