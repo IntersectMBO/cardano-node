@@ -49,8 +49,10 @@ mkSimpleExpModIntegerPolicyBench ctx =
   red_m :: Integer
   (red_n, red_a, red_m) = PlutusV3.unsafeFromBuiltinData redeemer
 
-  -- e₀ = m - 2, a realistic, non-arbitrary exponent size (a's modular inverse
-  -- exponent by Fermat's little theorem, since m = 2^61 - 1 is prime).
+  -- e₀ = m - 2: a realistic, non-arbitrary exponent size, tracking `m`'s
+  -- own bit-length (not tied to `m` being prime -- there's no correctness
+  -- check against an expected result here, just a representative-sized
+  -- exponent to feed `expModInteger`).
   --
   -- `e` only ever increments by 1 per iteration (never doubles), so its
   -- bit-length -- and thus `expModInteger`'s per-call cost -- stays essentially
