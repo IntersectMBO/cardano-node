@@ -48,7 +48,7 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node >= 0.4.2.0
+extra-packages: alex
 
 program-options
   ghc-options: -Werror
@@ -87,8 +87,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 8257193d23f740be4890a3f2abdf1d1637540bf8
-  --sha256: sha256-W3nUoaVycq22tQap8747RWilFzZkJ/dfgKhXEiB2JD0=
+  tag: e013c2003613af1bf675350572fa0b6752ae56ea
+  --sha256: sha256-/oCh0+NNMtXnM+9BUkyquC/PsLMxV40Zoh++OE9fmek=
 
 -- Points to ouroboros-ledger/leios-prototype
 source-repository-package
@@ -154,13 +154,13 @@ source-repository-package
     kes-agent
     kes-agent-crypto
 
-source-repository-package
-  type: git
-  location: https://github.com/f-f/dmq-node.git
-  tag: b7d59834e52d46229bb3ff6e5595509eede730dd
-  --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
-  subdir:
-    dmq-node
+-- source-repository-package
+--   type: git
+--   location: https://github.com/f-f/dmq-node.git
+--   tag: b7d59834e52d46229bb3ff6e5595509eede730dd
+--   --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
+--   subdir:
+--     dmq-node
 
 source-repository-package
   type: git
