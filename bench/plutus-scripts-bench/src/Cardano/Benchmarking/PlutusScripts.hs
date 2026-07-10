@@ -26,6 +26,7 @@ import qualified Cardano.Benchmarking.PlutusScripts.CustomCall as CustomCall
 import qualified Cardano.Benchmarking.PlutusScripts.CustomCallV3 as CustomCallV3
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3 as ECDSAV3
+import qualified Cardano.Benchmarking.PlutusScripts.ExpModInteger as ExpModInteger
 import qualified Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd as HashG2Add
 import qualified Cardano.Benchmarking.PlutusScripts.Loop2024 as Loop2024
 import qualified Cardano.Benchmarking.PlutusScripts.LoopV3 as LoopV3
@@ -43,6 +44,7 @@ getAllScripts =
   , CustomCallV3.script
   , ECDSA.script
   , ECDSAV3.script
+  , ExpModInteger.script
   , HashG2Add.script
   , Loop2024.script
   , LoopV3.script

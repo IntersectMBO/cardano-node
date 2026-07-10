@@ -72,6 +72,7 @@ library
     Cardano.Benchmarking.PlutusScripts.CustomCallV3
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3
+    Cardano.Benchmarking.PlutusScripts.ExpModInteger
     Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd
     Cardano.Benchmarking.PlutusScripts.Loop2024
     Cardano.Benchmarking.PlutusScripts.LoopV3

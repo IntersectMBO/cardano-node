@@ -50,6 +50,7 @@ profilesPlutuscall =
       schnorrV3       = plutusCall & V.plutusTypeSchnorrV3        . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
       mscalmul        = plutusCall & V.plutusTypeMultScalarMultG1 . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
       ripemdVolt4tx   = plutusCall & V.plutusTypeRIPEMD_4tx       . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
+      expmod          = plutusCall & V.plutusTypeExpMod           . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
 
       loopVolt        = plutusCall & V.plutusTypeLoop       . V.plutusDoublePlusSaturation . P.analysisSizeSmall
       blstVolt        = plutusCall & V.plutusTypeBLST       . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
@@ -72,4 +73,5 @@ profilesPlutuscall =
   , ripemdVolt4tx  & P.name "plutuscall-voltv11-ripemd"    . postPlomin . P.v11Preview
   , schnorrV3      & P.name "plutuscall-voltv11-schnorrv3" . postPlomin . P.v11Preview
   , mscalmul       & P.name "plutuscall-voltv11-mscalmul"  . postPlomin . P.v11Preview
+  , expmod         & P.name "plutuscall-voltv11-expmod"    . postPlomin . P.v11Preview
   ]
