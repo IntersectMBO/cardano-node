@@ -92,9 +92,18 @@ plutusDuration =
 
 --------------------------------------------------------------------------------
 
+-- Context: 
+-- * 0.85 TPS should suffice to provide 4txns per 88k block to the cluster
+-- * 2 TPS should suffice to provide 8txns per 88k block to the cluster
+-- Hence, this value depends on how the Plutus script workload has been calibrated.
+
 -- Replaces "nomad_perf_plutus_base".
 plutusLoopBase :: Types.Profile -> Types.Profile
 plutusLoopBase =
+    P.tps 0.85
+
+plutusExpModBase :: Types.Profile -> Types.Profile
+plutusExpModBase =
     P.tps 0.85
 
 -- Replaces "nomad_perf_plutussecp_base".
@@ -140,6 +149,8 @@ profilesCloud =
       schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
       blst     = plutusVolt & plutusBlstBase   . V.plutusTypeBLST     . P.analysisSizeModerate2
       ripemd   = plutusVolt & plutusRipemdBase . V.plutusTypeRIPEMD   . P.analysisSizeSmall
+      expmod   = plutusVolt & plutusExpModBase . V.plutusTypeExpMod   . P.analysisSizeSmall
+
       -- PParams overlays and calibration for 4 tx per block memory full.
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
@@ -197,6 +208,7 @@ profilesCloud =
   , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000
   , ripemd    & P.name "plutusv3-ripemd-stepx15-nomadperf"                 . P.dreps  10000 . P.budgetBlockStepsOneAndAHalf
   , ripemd    & P.name "plutusv3-ripemd-stepx2-nomadperf"                  . P.dreps  10000 . P.budgetBlockStepsDouble
+  , expmod    & P.name "plutusv3-expmod-nomadperf"                         . P.dreps  10000 . P.v11Preview
   ]
   ----------
   -- Voting.

@@ -22,6 +22,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
 , plutusTypeBLST, plutusTypeRIPEMD, plutusTypeRIPEMD_4tx, plutusTypeMultScalarMultG1
 , plutusTypeSchnorrV3
+, plutusTypeExpMod
 ) where
 
 --------------------------------------------------------------------------------
@@ -294,3 +295,23 @@ plutusTypeSchnorrV3 =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b")]
     ]
   . P.txFee 586000
+
+-- redeemer is a flat `(n, a, m)`: `n` (the loop counter) must stay the first
+-- numeric value in the encoding, cf. bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/ExpModInteger.hs
+-- `n`'s placeholder here must NOT be 1000000: the mandatory `scriptDataModifyNumber
+-- (const 1_000_000)` reset step (Cardano.TxGenerator.PlutusContext) detects "already
+-- found a number to change" by comparing before/after values, so if this placeholder
+-- already equals 1000000 the reset is a false-negative no-op and falls through to
+-- corrupt `a` instead. Keep it at 0.
+-- txFee is rounded up from the unscaled "txperblock_4" baseline fee (1262499)
+-- reported by `calibrate-script run ExpModInteger txperblock_4`,
+-- cf. bench/tx-generator/summaries_ExpModInteger.json
+plutusTypeExpMod :: Types.Profile -> Types.Profile
+plutusTypeExpMod =
+    P.plutusType "LimitTxPerBlock_4"   . P.plutusScript "ExpModInteger"
+  . P.redeemerFields [
+      KeyMap.fromList [("int", Aeson.Number 0.0)]
+    , KeyMap.fromList [("int", Aeson.Number 3.0)]
+    , KeyMap.fromList [("int", Aeson.Number 2305843009213693951.0)]
+    ]
+  . P.txFee 1275000
