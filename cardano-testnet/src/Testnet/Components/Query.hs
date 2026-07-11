@@ -71,6 +71,7 @@ import qualified Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.Trans.Maybe (MaybeT (..), mapMaybeT, runMaybeT)
 import           Control.Monad.Trans.Resource
+import           Data.Either (fromRight)
 import           Data.List (sortOn)
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
@@ -267,7 +268,7 @@ readShelleyGenesis (File configPath) = liftIO $ do
     case Aeson.parseMaybe (Aeson.withObject "NodeConfig" (Aeson..: "ShelleyGenesisFile")) =<< mConfig of
       Nothing -> pure Nothing
       Just genesisPath -> Aeson.decodeFileStrict' $ takeDirectory configPath </> genesisPath
-  pure $ either (const Nothing) id result
+  pure $ fromRight Nothing result
 
 -- | Failure message explaining why a chain that stopped extending will never recover.
 -- See https://github.com/IntersectMBO/cardano-node/issues/5762

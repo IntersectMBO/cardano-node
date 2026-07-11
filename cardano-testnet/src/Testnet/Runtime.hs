@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -51,6 +52,7 @@ import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (waitForProcess)
+import           System.Timeout (timeout)
 
 import           Testnet.Filepath
 import           Cardano.Node.Testnet.Paths (defaultSocketName)
@@ -570,5 +572,10 @@ asyncRegister_ act = GHC.withFrozenCallStack $ do
         )
         cleanUp
   where
+    -- 'H.cancel' waits for the cancelled thread to finish. Resource release actions
+    -- run with asynchronous exceptions masked, so if the thread does not act on the
+    -- cancellation (e.g. it is blocked in a foreign call), an unbounded wait here
+    -- would wedge the test run with no output and no way to interrupt it. Rather
+    -- leak the thread than block forever.
     cleanUp :: H.Async a -> IO ()
-    cleanUp = H.cancel
+    cleanUp a = void . timeout 15_000_000 $ H.cancel a
