@@ -1,7 +1,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Handlers.TopLevel
-  ( toplevelExceptionHandler
+  ( SigTermException (..)
+  , SigTermPhase (..)
+  , throwSigTerm
+  , toplevelExceptionHandler
   ) where
 
 -- The code in this module derives from multiple authors over many years.
@@ -50,11 +53,35 @@ import qualified Ouroboros.Network.Diffusion.Types as Network
 
 import           Prelude
 
+import           Control.Concurrent (ThreadId)
 import           Control.Exception
 import           Control.Monad.Class.MonadAsync (ExceptionInLinkedThread (..))
 import           System.Environment
 import           System.Exit
 import           System.IO
+
+-- | Internal async exception used to route SIGTERM through the top-level
+-- handler without letting ordinary exception handlers catch it.
+data SigTermException = SigTermException
+  deriving Show
+
+instance Exception SigTermException where
+  toException = asyncExceptionToException
+  fromException = asyncExceptionFromException
+
+-- | Selects the exception used to terminate the node. Startup needs an async
+-- exception so configuration parsers cannot catch it. The diffusion layer
+-- recognises 'ExitCode' as an expected shutdown once startup is complete.
+data SigTermPhase
+  = SigTermDuringStartup
+  | SigTermDuringRuntime
+
+-- | Throw the SIGTERM exception appropriate for the current node phase.
+throwSigTerm :: SigTermPhase -> ThreadId -> IO ()
+throwSigTerm phase threadId =
+  case phase of
+    SigTermDuringStartup -> throwTo threadId SigTermException
+    SigTermDuringRuntime -> throwTo threadId ExitSuccess
 
 -- | An exception handler to use for a program top level, as an alternative to
 -- the default top level handler provided by GHC.
@@ -84,10 +111,14 @@ toplevelExceptionHandler prog = do
     rethrowAsyncExceptions :: SomeAsyncException -> IO a
     rethrowAsyncExceptions full@(SomeAsyncException e) =
       case fromException (toException e) of
-        Just (ExceptionInLinkedThread _ eInner)
-          | Just ExitSuccess <- fromException eInner
+        Just SigTermException
           -> throwIO ExitSuccess
-        _ -> throwIO full
+        Nothing ->
+          case fromException (toException e) of
+            Just (ExceptionInLinkedThread _ eInner)
+              | Just ExitSuccess <- fromException eInner
+              -> throwIO ExitSuccess
+            _ -> throwIO full
 
     -- We don't want to print ExitCode, and it should be handled by the default
     -- top handler because that sets the actual OS process exit code.

@@ -41,6 +41,7 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), throwSigTerm)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
@@ -58,7 +59,7 @@ import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
+import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Logging.Types (LogFormatting)
 import           Cardano.Logging.Utils (showT)
@@ -175,7 +176,7 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-  installSigTermHandler
+  installSigTermHandler SigTermDuringStartup
 
   Crypto.cryptoInit
 
@@ -216,8 +217,8 @@ buildNodeConfiguration partialConf = do
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
-installSigTermHandler :: IO ()
-installSigTermHandler = do
+installSigTermHandler :: SigTermPhase -> IO ()
+installSigTermHandler phase = do
 #ifdef UNIX
   -- Similar implementation to the RTS's handling of SIGINT (see GHC's
   -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
@@ -226,7 +227,8 @@ installSigTermHandler = do
     Signals.sigTERM
     (Signals.CatchOnce $ do
       runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId -> Exception.throwTo runThreadId ExitSuccess
+      forM_ runThreadIdMay $ \runThreadId ->
+        throwSigTerm phase runThreadId
     )
     Nothing
 #endif
@@ -449,6 +451,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    installSigTermHandler SigTermDuringRuntime
     void $
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
