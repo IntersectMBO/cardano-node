@@ -75,6 +75,7 @@ import qualified System.Process as Process
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query (chainForecastHorizon)
 import qualified Testnet.Defaults as Defaults
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
                    defaultPortFile, defaultUtxoAddrPath)
@@ -383,8 +384,13 @@ cardanoTestnet
   -- Interrupt cardano nodes when the main process is interrupted
   liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
 
-  -- Make sure that all nodes are healthy by waiting for a chain extension
-  mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
+  -- Make sure that all nodes are healthy by waiting for a chain extension.
+  -- The deadline covers the worst case in which the chain can still start: genesis start
+  -- time lies at most 'startTimeOffsetSeconds' in the future, and the first block must
+  -- appear within the forecast horizon after it (see 'chainForecastHorizon'), plus margin.
+  let startupHorizon = chainForecastHorizon shelleyGenesis
+      startupBlockTimeout = startTimeOffsetSeconds + ceiling startupHorizon + 15
+  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile)) testnetNodes'
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -428,11 +434,12 @@ cardanoTestnet
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
                       => MonadCatch m
-                      => Int -- ^ timeout in seconds
+                      => DTC.NominalDiffTime -- ^ the chain's forecast horizon, for diagnostics
+                      -> Int -- ^ timeout in seconds
                       -> NodeConfigFile 'In
                       -> TestnetNode
                       -> m ()
-    waitForBlockThrow timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
+    waitForBlockThrow horizon timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
       result <- timeout (timeoutSeconds * 1_000_000) $
         runExceptT . foldEpochState
           nodeConfigFile
@@ -453,7 +460,12 @@ cardanoTestnet
         Just (Left err) ->
           throwString $ "foldBlocks on " <> nodeName <> " encountered an error while waiting for new blocks: " <> show (prettyError err)
         _ ->
-          throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s"
+          throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s. "
+            <> "The testnet probably missed its startup window and can never produce a block: nodes can only forge "
+            <> "while the wall-clock slot is at most 3 * securityParam / activeSlotsCoeff slots past the "
+            <> "chain tip (" <> show horizon <> " of wall clock for this testnet), and the genesis start "
+            <> "time is set only " <> show startTimeOffsetSeconds <> "s after the testnet files are "
+            <> "created."
 
 
 idToRemoteAddressP2P :: ()
