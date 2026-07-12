@@ -113,6 +113,7 @@ tests = do
         [ignoreOnWindows "actual datum for transaction datum hashes in ref inputs" Cardano.Testnet.Test.Api.TxReferenceInputDatum.hprop_tx_refin_datum]
         , T.testGroup "CLI"
           [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+          , ignoreOnWindows "Shutdown On Sigterm During Config" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigtermDuringConfig
           -- ShutdownOnSigint fails on Mac with
           -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint

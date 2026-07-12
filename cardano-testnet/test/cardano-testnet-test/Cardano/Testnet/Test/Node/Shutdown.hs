@@ -7,6 +7,7 @@
 module Cardano.Testnet.Test.Node.Shutdown
   ( hprop_shutdown
   , hprop_shutdownOnSlotSynced
+  , hprop_shutdownOnSigtermDuringConfig
   , hprop_shutdownOnSigint
   ) where
 
@@ -41,7 +42,7 @@ import qualified Testnet.Components.Configuration as Testnet
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
 import           Testnet.Process.RunIO (liftIOAnnotated)
-import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace, integrationWorkspace)
 import           Testnet.Start.Byron
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
@@ -249,6 +250,57 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   H.assertWithinTolerance slotTip maxSlot epsilon
 
 -- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Shutdown On Sigterm During Config/"'@
+hprop_shutdownOnSigtermDuringConfig :: Property
+hprop_shutdownOnSigtermDuringConfig = integrationWorkspace "shutdown-on-sigterm-during-config" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+  conf <- mkConf tempAbsBasePath'
+  let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
+      tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
+      logDir' = makeLogDir $ tempAbsPath conf
+      configFile = tempAbsPath' </> "configuration.yaml"
+      nodeStdoutFile = logDir' </> "node.stdout.log"
+      nodeStderrFile = logDir' </> "node.stderr.log"
+
+  H.createDirectoryIfMissing_ logDir'
+  -- Keep configuration parsing active long enough to deliver SIGTERM in that phase.
+  H.evalIO . LBS.writeFile configFile $ LBS.replicate (256 * 1024 * 1024) ' '
+
+  hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
+
+  res <- procNode
+           [ "run"
+           , "--config", configFile
+           , "--topology", tempAbsPath' </> "topology.json"
+           , "--database-path", tempAbsPath' </> "db"
+           , "--socket-path", tempAbsPath' </> "node.socket"
+           ]
+  let process = res { IO.std_out = IO.UseHandle hNodeStdout
+                    , IO.std_err = IO.UseHandle hNodeStderr
+                    , IO.cwd = Just tempBaseAbsPath'
+                    }
+
+  eProcess <- runExceptT $ initiateProcess process
+  case eProcess of
+    Left e -> H.failMessage GHC.callStack $ mconcat ["Failed to initiate node process: ", show e]
+    Right (_mStdin, _mStdout, _mStderr, pHandle, _) -> do
+      H.threadDelay 10000
+
+      mExitCodeRunning <- H.evalIO $ IO.getProcessExitCode pHandle
+      mExitCodeRunning === Nothing
+
+      H.evalIO $ IO.terminateProcess pHandle
+      exitCode <- H.waitSecondsForProcess 5 pHandle
+
+      H.evalIO $ IO.hClose hNodeStdout
+      H.evalIO $ IO.hClose hNodeStderr
+      stderr <- H.readFile nodeStderrFile
+
+      exitCode === Right ExitSuccess
+      forM_ ["OtherParseException", "Generic parse exception"] $ \unexpectedLog ->
+        H.assertWith stderr $ not . L.isInfixOf unexpectedLog
+
+-- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
@@ -306,4 +358,3 @@ findLastSlot = go (False, Nothing)
     parseSlot obj = do
       body <- obj .: "data"
       body .: "slot" :: Parser Int
-
