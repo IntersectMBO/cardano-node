@@ -18,6 +18,7 @@ module Testnet.Process.Run
   , execKESAgentControl
   , execKESAgentControl_
   , cleanupProcessBounded
+  , hardKillProcess
   , initiateProcess
   , procCli
   , procNode
@@ -298,12 +299,8 @@ cleanupProcessBounded (mStdin, mStdout, mStderr, hProcess) = do
     void (try (hClose h) :: IO (Either IOException ()))
   terminated <- waitBounded terminateGracePeriodSeconds
   unless terminated $ do
-#ifdef UNIX
-    -- The process did not act on SIGTERM in time; SIGKILL cannot be ignored.
-    IO.getPid hProcess >>= mapM_ (signalProcess sigKILL)
-#endif
-    -- On Windows 'IO.terminateProcess' is already a hard TerminateProcess() call,
-    -- so there is nothing to escalate to; just wait out the same grace period.
+    -- The process did not act on SIGTERM in time; escalate to an unignorable kill.
+    hardKillProcess hProcess
     void $ waitBounded terminateGracePeriodSeconds
   where
     terminateGracePeriodSeconds :: Int
@@ -321,6 +318,17 @@ cleanupProcessBounded (mStdin, mStdout, mStderr, hProcess) = do
               IO.getProcessExitCode hProcess >>= \case
                 Just _ -> pure True
                 Nothing -> threadDelay 100000 >> go (n - 1)
+
+-- | Send an unignorable kill to the process: @SIGKILL@ on unix, which cannot be
+-- ignored or blocked, even by a stopped process. On Windows 'IO.terminateProcess'
+-- is already a hard TerminateProcess() call that cannot be refused, so it is used
+-- directly.
+hardKillProcess :: ProcessHandle -> IO ()
+#ifdef UNIX
+hardKillProcess hProcess = IO.getPid hProcess >>= mapM_ (signalProcess sigKILL)
+#else
+hardKillProcess = IO.terminateProcess
+#endif
 
 -- We can throw an IOException from createProcess or an ResourceCleanupException from the ResourceT monad
 resourceAndIOExceptionHandlers :: Applicative m => [Handler m ProcessError]

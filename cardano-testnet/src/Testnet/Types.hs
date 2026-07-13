@@ -23,6 +23,7 @@ module Testnet.Types
   , nodeSocketPath
   , nodeRpcSocketPath
   , nodeConnectionInfo
+  , testnetNodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -176,11 +177,17 @@ nodeConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} index =
     Nothing -> do
       H.note_ $ "There is no node in the testnet with index: " <> show index <> ". Number of nodes: " <> show (length testnetNodes)
       H.failure
-    Just node ->
-        pure LocalNodeConnectInfo
-              { localNodeSocketPath= nodeSocketPath node
-              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
-              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+    Just node -> pure $ testnetNodeConnectionInfo testnetMagic node
+
+-- | Connection data for the given node of a testnet with the given magic
+testnetNodeConnectionInfo :: Int -- ^ testnet magic
+                          -> TestnetNode
+                          -> LocalNodeConnectInfo
+testnetNodeConnectionInfo testnetMagic node =
+  LocalNodeConnectInfo
+    { localNodeSocketPath= nodeSocketPath node
+    , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+    , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
 
 
 data SpoNodeKeys = SpoNodeKeys

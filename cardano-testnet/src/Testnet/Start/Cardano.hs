@@ -47,7 +47,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 
 import           Prelude hiding (lines)
 
-import           Control.Concurrent (threadDelay)
+import           Control.Concurrent (myThreadId, threadDelay)
 import           Control.Monad (forM, forM_, guard, unless, when)
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Exception (IOException)
@@ -74,8 +74,8 @@ import qualified System.Directory as IO
 import qualified System.Process as Process
 import           System.FilePath ((</>))
 
+import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog)
 import           Testnet.Components.Configuration
-import           Testnet.Components.Query (chainForecastHorizon)
 import qualified Testnet.Defaults as Defaults
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
                    defaultPortFile, defaultUtxoAddrPath)
@@ -249,6 +249,7 @@ cardanoTestnet
     { runtimeEnableNewEpochStateLogging=enableNewEpochStateLogging
     , runtimeEnableRpc=cardanoEnableRpc
     , runtimeKESSource=cardanoKESSource
+    , runtimeEnableChainStallWatchdog=enableChainStallWatchdog
     }
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
@@ -400,6 +401,19 @@ cardanoTestnet
         , wallets
         , delegators = []
         }
+
+  -- The chain can also stall irrecoverably later, at any point of the test, if an
+  -- overloaded machine starves the nodes of CPU for longer than the forecast horizon.
+  -- So watch the chain in the background and fail the test with a diagnosis
+  -- as soon as a stall is provable.
+  when enableChainStallWatchdog $ do
+    testThread <- liftIOAnnotated myThreadId
+    watchedNode <- case uncons testnetNodes' of
+      Just (node, _) -> pure node
+      Nothing -> throwString "cardanoTestnet: no testnet node to watch for chain stalls"
+    void . asyncRegister_ $
+      chainStallWatchdog shelleyGenesis (testnetNodeConnectionInfo testnetMagic watchedNode)
+        (nodeProcessHandle <$> testnetNodes') testThread
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 

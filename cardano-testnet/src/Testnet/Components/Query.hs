@@ -23,7 +23,6 @@ module Testnet.Components.Query
   , getTreasuryValue
 
   , TestnetWaitPeriod (..)
-  , chainForecastHorizon
   , waitForEpochs
   , waitUntilEpoch
   , waitForBlocks
@@ -54,24 +53,19 @@ import qualified Cardano.Api.UTxO as Utxo
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as SQ
-import qualified Cardano.Ledger.BaseTypes as SL
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
-import qualified Cardano.Ledger.Shelley.Genesis as SL
 import qualified Cardano.Ledger.Shelley.LedgerState as L
-import qualified Cardano.Ledger.Shelley.StabilityWindow as SL
 import qualified Cardano.Ledger.State as L
 
 import           Prelude
 
 import           Control.Applicative ((<|>))
-import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.STM (STM, TVar, modifyTVar', newTVarIO, readTVar, writeTVar)
 import qualified Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.Trans.Maybe (MaybeT (..), mapMaybeT, runMaybeT)
 import           Control.Monad.Trans.Resource
-import           Data.Either (fromRight)
 import           Data.List (sortOn)
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
@@ -79,17 +73,12 @@ import           Data.Maybe
 import           Data.Ord (Down (..))
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Time.Clock as DTC
 import           Data.Type.Equality
 import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
-import           System.FilePath (takeDirectory, (</>))
-import           System.IO.Error (tryIOError)
 
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Assert
@@ -101,7 +90,6 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
 
-import           UnliftIO.Async (race)
 import           UnliftIO.STM (atomically, readTVarIO, registerDelay)
 
 -- | Block and wait for the desired epoch.
@@ -114,31 +102,16 @@ waitUntilEpoch
   -> EpochNo -- ^ Desired epoch
   -> m EpochNo -- ^ The epoch number reached
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
-  mHorizon <- fmap chainForecastHorizon <$> readShelleyGenesis nodeConfigFile
-  let stallTimeout = maybe fallbackChainStallTimeout chainStallTimeoutFromHorizon mHorizon
-  lastProgress <- H.evalIO $ do
-    now <- DTC.getCurrentTime
-    newIORef (now, Nothing)
-  result <- H.evalIO $
-    race (chainStallWatchdog stallTimeout lastProgress) $
-      runExceptT $
-        foldEpochState nodeConfigFile socketPath QuickValidation desiredEpoch () $
-          \_ slotNo blockNo -> do
-            liftIO $ do
-              now <- DTC.getCurrentTime
-              writeIORef lastProgress (now, Just (slotNo, blockNo))
-            pure ConditionNotMet
+  result <- H.evalIO . runExceptT $
+    foldEpochState
+      nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
-    Left lastPoint -> do
-      H.note_ $ chainStallFailureMessage stallTimeout mHorizon
-        ("waiting for " <> show desiredEpoch) lastPoint
-      H.failure
-    Right (Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo))) ->
+    Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
-    Right (Left err) -> do
+    Left err -> do
       H.note_ $ "waitUntilEpoch: could not reach termination epoch, " <> docToString (prettyError err)
       H.failure
-    Right (Right res) -> do
+    Right res -> do
       H.note_ $ "waitUntilEpoch: could not reach termination epoch - no error returned "
         <> "- invalid foldEpochState behaviour, result: " <> show res
       H.failure
@@ -212,105 +185,12 @@ retryUntilRightM esv timeout act = withFrozenCallStack $ do
           cv <- getCurrentValue
           if cv > deadline
             then pure l
-            else
-              awaitStateUpdateTimeout esv (epochStallTimeout esv) versionBeforeAct >>= \case
-                Just _ -> go deadline
-                Nothing -> do
-                  -- No chain-state update for the whole fallback window: the chain has
-                  -- stopped extending and can never recover. Fail instead of looping forever.
-                  lastState <- readTVarIO $ epochStateView esv
-                  let lastPoint = either (const Nothing) (\(_, s, b) -> Just (s, b)) lastState
-                  H.note_ $ chainStallFailureMessage (epochStallTimeout esv) (epochStallHorizon esv)
-                    ("waiting for " <> show timeout) lastPoint
-                  H.failure
+            else awaitStateUpdateTimeout esv 300 versionBeforeAct *> go deadline
 
     (getCurrentValue, timeoutW64) = case timeout of
       WaitForEpochs (EpochInterval n) -> (unEpochNo <$> getCurrentEpochNo esv, fromIntegral n)
       WaitForSlots n                  -> (unSlotNo <$> getSlotNumber esv, n)
       WaitForBlocks n                 -> (unBlockNo <$> getBlockNumber esv, n)
-
--- | How long a testnet chain may go without any new block before we conclude it is
--- permanently stalled, when the genesis backing the testnet cannot be read to compute
--- 'chainStallTimeoutFromHorizon'. Deliberately conservative: an order of magnitude
--- above the forecast horizon of the default genesis options.
-fallbackChainStallTimeout :: DTC.NominalDiffTime
-fallbackChainStallTimeout = 300
-
--- | The ledger view forecast horizon of the chain described by the given genesis:
--- @3 * securityParam / activeSlotsCoeff@ slots (the stability window), converted to
--- wall-clock time. Nodes can only forge while the wall-clock slot is at most this far
--- past the chain tip, so a chain that has not forged for longer than this can never
--- produce a block again: every node fails its leadership checks with
--- @Forge.Loop.NoLedgerView@. See https://github.com/IntersectMBO/cardano-node/issues/5762
-chainForecastHorizon :: ShelleyGenesis -> DTC.NominalDiffTime
-chainForecastHorizon sg =
-  fromIntegral horizonSlots * SL.fromNominalDiffTimeMicro (sgSlotLength sg)
-  where
-    horizonSlots =
-      SL.computeStabilityWindow
-        (SL.unNonZero $ sgSecurityParam sg)
-        (SL.mkActiveSlotCoeff $ sgActiveSlotsCoeff sg)
-
--- | Stall detection threshold for a chain with the given forecast horizon: twice the
--- horizon (a chain quiet for longer than the horizon is already irrecoverable; the
--- factor and the 60s floor absorb block-interval variance and detection latency).
-chainStallTimeoutFromHorizon :: DTC.NominalDiffTime -> DTC.NominalDiffTime
-chainStallTimeoutFromHorizon horizon = max 60 (2 * horizon)
-
--- | Best-effort read of the Shelley genesis backing a node configuration: looks up the
--- @ShelleyGenesisFile@ key in the (JSON) node configuration, resolves it relative to the
--- configuration file's directory, and decodes the genesis. Returns 'Nothing' whenever
--- anything cannot be read, so callers can fall back to conservative defaults.
-readShelleyGenesis :: MonadIO m => NodeConfigFile In -> m (Maybe ShelleyGenesis)
-readShelleyGenesis (File configPath) = liftIO $ do
-  result <- tryIOError $ do
-    mConfig <- Aeson.decodeFileStrict' configPath
-    case Aeson.parseMaybe (Aeson.withObject "NodeConfig" (Aeson..: "ShelleyGenesisFile")) =<< mConfig of
-      Nothing -> pure Nothing
-      Just genesisPath -> Aeson.decodeFileStrict' $ takeDirectory configPath </> genesisPath
-  pure $ fromRight Nothing result
-
--- | Failure message explaining why a chain that stopped extending will never recover.
--- See https://github.com/IntersectMBO/cardano-node/issues/5762
-chainStallFailureMessage
-  :: DTC.NominalDiffTime -- ^ the stall-detection timeout that expired
-  -> Maybe DTC.NominalDiffTime -- ^ the chain's forecast horizon, when known
-  -> String -- ^ what we were waiting for
-  -> Maybe (SlotNo, BlockNo) -- ^ last observed chain state, if any
-  -> String
-chainStallFailureMessage stallTimeout mHorizon while lastPoint =
-  unlines
-    [ "The testnet chain made no progress for " <> show stallTimeout <> " while " <> while <> "."
-    , case lastPoint of
-        Just (SlotNo slotNo, BlockNo blockNo) ->
-          "Last observed chain state: slot " <> show slotNo <> ", block " <> show blockNo <> "."
-        Nothing -> "No chain state update was observed at all."
-    , "The network is almost certainly stalled forever: nodes can only forge when the wall-clock"
-    , "slot is at most 3 * securityParam / activeSlotsCoeff slots past the chain tip - the ledger"
-    , "view forecast horizon, which is " <> horizonStr <> " of wall clock for this testnet."
-    , "Once no block was forged for longer than that - e.g. because node startup took too long or"
-    , "the machine was too overloaded to produce a block in time - every node fails its leadership"
-    , "checks and the chain can never extend again, so we fail fast instead of"
-    , "hanging."
-    ]
-  where
-    horizonStr = maybe "30s with the default genesis options" show mHorizon
-
--- | Completes when the point tracked by the given 'IORef' has not moved for the given
--- stall timeout, returning the last observed point.
-chainStallWatchdog
-  :: DTC.NominalDiffTime -- ^ stall timeout
-  -> IORef (DTC.UTCTime, Maybe (SlotNo, BlockNo))
-  -> IO (Maybe (SlotNo, BlockNo))
-chainStallWatchdog stallTimeout lastProgress = go
-  where
-    go = do
-      threadDelay 5_000_000
-      (lastUpdate, lastPoint) <- readIORef lastProgress
-      now <- DTC.getCurrentTime
-      if now `DTC.diffUTCTime` lastUpdate >= stallTimeout
-        then pure lastPoint
-        else go
 
 -- | Retries the action until it returns 'Just' or the timeout is reached
 retryUntilJustM
@@ -367,14 +247,6 @@ data EpochStateView = EpochStateView
   , epochStateVersion :: !(TVar Word64)
   -- ^ Monotonically increasing counter, bumped on every state write.
   -- Used by 'awaitStateUpdateTimeout' to block until the next update.
-  , epochStallTimeout :: !DTC.NominalDiffTime
-  -- ^ How long the chain may go without any new block before it is considered
-  -- irrecoverably stalled. Derived from the genesis backing the testnet in
-  -- 'getEpochStateView' (see 'chainStallTimeoutFromHorizon'), or
-  -- 'fallbackChainStallTimeout' when the genesis could not be read.
-  , epochStallHorizon :: !(Maybe DTC.NominalDiffTime)
-  -- ^ The ledger view forecast horizon of the chain ('chainForecastHorizon'),
-  -- when the genesis backing the testnet could be read. Used for diagnostics.
   }
 
 -- | Write a new value to the epoch state and bump the version counter atomically.
@@ -514,12 +386,7 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
-  mHorizon <- fmap chainForecastHorizon <$> readShelleyGenesis nodeConfigFile
-  esv <- H.evalIO $ EpochStateView
-    <$> newTVarIO (Left EpochStateNotInitialised)
-    <*> newTVarIO 0
-    <*> pure (maybe fallbackChainStallTimeout chainStallTimeoutFromHorizon mHorizon)
-    <*> pure mHorizon
+  esv <- H.evalIO $ EpochStateView <$> newTVarIO (Left EpochStateNotInitialised) <*> newTVarIO 0
   _ <- asyncRegister_ $ do
     result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) ()
       $ \epochState slotNumber blockNumber -> do
