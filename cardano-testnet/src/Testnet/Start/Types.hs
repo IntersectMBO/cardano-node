@@ -203,7 +203,7 @@ data TestnetRuntimeOptions = TestnetRuntimeOptions
   , runtimeEnableRpc :: RpcSupport -- ^ Whether to enable gRPC endpoints in all testnet nodes
   , runtimeKESSource :: PraosCredentialsSource
   , runtimeEnableChainStallWatchdog :: Bool
-    -- ^ Whether to run a background watchdog that fails the test with a diagnosis as
+    -- ^ Whether to run a background watchdog that kills the testnet with a diagnosis as
     -- soon as the chain has provably stopped producing blocks forever (see
     -- "Testnet.ChainWatchdog"). On by default; disable it only for tests that
     -- legitimately halt all block production.
