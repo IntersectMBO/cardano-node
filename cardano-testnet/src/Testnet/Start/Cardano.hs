@@ -80,11 +80,11 @@ import qualified Testnet.Defaults as Defaults
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
                    defaultPortFile, defaultUtxoAddrPath)
 import           Testnet.Filepath
-import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
 import           Testnet.Property.Assert (assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
+import           Testnet.Signal (interruptNodesOnSigINT)
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
 

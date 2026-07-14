@@ -1,10 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 module Testnet.Process.Run
   ( bashPath
@@ -18,7 +13,6 @@ module Testnet.Process.Run
   , execKESAgentControl
   , execKESAgentControl_
   , cleanupProcessBounded
-  , hardKillProcess
   , initiateProcess
   , procCli
   , procNode
@@ -54,11 +48,8 @@ import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
 import           System.Process
 
-#ifdef UNIX
-import           System.Posix.Signals (sigKILL, signalProcess)
-#endif
-
 import           Testnet.Process.RunIO (liftIOAnnotated)
+import           Testnet.Signal (hardKillProcess)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
@@ -318,17 +309,6 @@ cleanupProcessBounded (mStdin, mStdout, mStderr, hProcess) = do
               IO.getProcessExitCode hProcess >>= \case
                 Just _ -> pure True
                 Nothing -> threadDelay 100000 >> go (n - 1)
-
--- | Send an unignorable kill to the process: @SIGKILL@ on unix, which cannot be
--- ignored or blocked, even by a stopped process. On Windows 'IO.terminateProcess'
--- is already a hard TerminateProcess() call that cannot be refused, so it is used
--- directly.
-hardKillProcess :: ProcessHandle -> IO ()
-#ifdef UNIX
-hardKillProcess hProcess = IO.getPid hProcess >>= mapM_ (signalProcess sigKILL)
-#else
-hardKillProcess = IO.terminateProcess
-#endif
 
 -- We can throw an IOException from createProcess or an ResourceCleanupException from the ResourceT monad
 resourceAndIOExceptionHandlers :: Applicative m => [Handler m ProcessError]

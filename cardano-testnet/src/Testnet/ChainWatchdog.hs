@@ -33,7 +33,7 @@ import           System.IO (hFlush, hPutStrLn, stderr)
 import           System.Process (ProcessHandle)
 import           System.Timeout (timeout)
 
-import           Testnet.Process.Run (hardKillProcess)
+import           Testnet.Signal (hardKillProcess)
 
 -- | Thrown to the test thread when the chain has irrecoverably stalled. Registered
 -- as an asynchronous exception (like the exceptions of 'Control.Exception.AsyncException')
