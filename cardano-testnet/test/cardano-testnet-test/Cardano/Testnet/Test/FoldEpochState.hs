@@ -16,7 +16,6 @@ import           Data.Default.Class
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
-import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 
 import           Hedgehog ((===))
@@ -51,8 +50,7 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
           else pure ConditionNotMet
 
   (_, nums) <- H.leftFailM $ H.evalIO $ do
-    fs <- mkNodeConfigFs configurationFile
     runExceptT $
-      Api.foldEpochState fs configurationFile (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
+      Api.foldEpochState configurationFile (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
 
   length nums === 10

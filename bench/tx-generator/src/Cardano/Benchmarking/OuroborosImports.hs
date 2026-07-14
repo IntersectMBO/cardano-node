@@ -39,7 +39,7 @@ import           Prelude
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
 toProtocolInfo :: SomeConsensusProtocol -> IO (ProtocolInfo CardanoBlock)
-toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst <$> protocolInfo @IO info
+toProtocolInfo (SomeConsensusProtocol CardanoBlockType fs info) = fst <$> protocolInfo @IO fs info
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> IO (TopLevelConfig CardanoBlock)

@@ -26,7 +26,6 @@ module Cardano.Node.Protocol.Shelley
 
 import           Cardano.Api hiding (FileError)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Experimental.Certificate (OperationalCertificate (..), getHotKey)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
@@ -90,8 +89,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     -- read initial funds/staking injected from genesis (testnets only).
     let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
 
-    return $ SomeConsensusProtocol Api.ShelleyBlockType $ Api.ProtocolInfoArgsShelley
-      shelleyGenesisFS
+    return $ SomeConsensusProtocol Api.ShelleyBlockType shelleyGenesisFS $ Api.ProtocolInfoArgsShelley
       genesis
       Consensus.ProtocolParamsShelleyBased {
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,

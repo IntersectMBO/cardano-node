@@ -38,6 +38,9 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 ------------------------------------------------------------------------------
 -- Byron protocol
@@ -70,7 +73,7 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
-    return $ SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
+    return $ SomeConsensusProtocol ByronBlockType (SomeHasFS $ ioHasFS $ MountPoint ".") $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
         byronGenesis = genesisConfig,
         byronPbftSignatureThreshold =
           PBftSignatureThreshold <$> npcByronPbftSignatureThresh,

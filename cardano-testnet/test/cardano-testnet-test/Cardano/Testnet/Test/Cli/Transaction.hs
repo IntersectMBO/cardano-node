@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.Cli.Transaction
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Ledger.Core as LC
 
 import           Cardano.CLI.Type.Common
 import           Cardano.Crypto.Hash.Class (hashToStringAsHex)
@@ -132,4 +133,4 @@ txOutValue (TxOut _ v _ _) = v
 
 extractTxFee :: ShelleyBasedEra era -> Tx era -> L.Coin
 extractTxFee _ (ShelleyTx sbe ledgerTx) =
-  shelleyBasedEraConstraints sbe $ ledgerTx ^. (L.bodyTxL . L.feeTxBodyL)
+  shelleyBasedEraConstraints sbe $ ledgerTx ^. (L.bodyTxL . LC.feeTxBodyL)

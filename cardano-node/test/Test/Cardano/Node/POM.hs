@@ -24,8 +24,7 @@ import           Cardano.Rpc.Server.Config (makeRpcConfig)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs,
-                   mithrilSnapshotPolicyArgs)
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs)
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
@@ -322,19 +321,6 @@ prop_legacySnapshotFormat_POM =
     newConfig    :: PartialNodeConfiguration <- evalEither $ eitherDecode newJson
     pncLedgerDbConfig legacyConfig === pncLedgerDbConfig newConfig
 
--- | Test that the named \"Mithril\" snapshot policy selects
--- 'mithrilSnapshotPolicyArgs' as a whole.
-prop_mithrilSnapshotPolicy_POM :: Property
-prop_mithrilSnapshotPolicy_POM =
-  withTests 1 . Hedgehog.property $ do
-    let json = "{ " <> dummyRequiredValues <> ", "
-          <> "\"LedgerDB\": {"
-          <> "  \"Backend\": \"V2InMemory\","
-          <> "  \"Snapshots\": \"Mithril\""
-          <> "} }"
-    config :: PartialNodeConfiguration <- evalEither $ eitherDecode json
-    getLast (pncLedgerDbConfig config) ===
-      Just (LedgerDbConfiguration mithrilSnapshotPolicyArgs DefaultQueryBatchSize V2InMemory noDeprecatedOptions)
 
 dummyRequiredValues :: LBS.ByteString
 dummyRequiredValues = mconcat

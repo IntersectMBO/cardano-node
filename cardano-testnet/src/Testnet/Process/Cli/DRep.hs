@@ -17,7 +17,7 @@ module Testnet.Process.Cli.DRep
   , makeActivityChangeProposal
   ) where
 
-import           Cardano.Api hiding (TxBody, txId)
+import           Cardano.Api hiding (Certificate, TxBody, txId)
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
 

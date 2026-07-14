@@ -124,7 +124,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.3
+                      , cardano-api ^>= 11.0
                       , cardano-data
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
@@ -142,7 +142,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
-                      , cardano-rpc ^>= 11.0
+                      , cardano-rpc ^>= 10.2
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer >= 0.2.1
@@ -233,7 +233,6 @@ test-suite cardano-node-test
                       , contra-tracer
                       , directory
                       , filepath
-                      , fs-api
                       , hedgehog
                       , hedgehog-corpus
                       , hedgehog-extras ^>= 0.10

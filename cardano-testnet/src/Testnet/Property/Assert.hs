@@ -16,7 +16,6 @@ module Testnet.Property.Assert
 
 
 import           Cardano.Api hiding (Value)
-import           Cardano.Api.Experimental.Certificate (PoolId)
 
 import           Prelude hiding (lines)
 

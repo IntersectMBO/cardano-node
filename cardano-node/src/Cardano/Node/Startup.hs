@@ -209,9 +209,9 @@ prepareNodeInfo
   -> TraceConfig
   -> UTCTime
   -> IO NodeInfo
-prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
+prepareNodeInfo nc (SomeConsensusProtocol whichP fs pForInfo) tc nodeStartTime = do
   nodeName <- prepareNodeName
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
+  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO fs pForInfo
   let getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
       systemStartTime :: UTCTime
       systemStartTime =

@@ -65,9 +65,9 @@ getStartupInfo
   -> SomeConsensusProtocol
   -> FilePath
   -> IO [StartupTrace blk]
-getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
+getStartupInfo nc (SomeConsensusProtocol whichP fs pForInfo) fp = do
   nodeStartTime <- getCurrentTime
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
+  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO fs pForInfo
   let basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version

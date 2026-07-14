@@ -23,7 +23,6 @@ import           Lens.Micro ((^.))
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
-import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
@@ -60,9 +59,8 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
     pure (execConfig, socketPathAbs)
 
   (_condition, treasuryValues) <- H.leftFailM . H.evalIO $ do
-    fs <- mkNodeConfigFs configurationFile
     runExceptT $
-      Api.foldEpochState fs configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
+      Api.foldEpochState configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
   H.note_ $ "treasury for last 5 epochs: " <> show treasuryValues
 
   let treasuriesSortedByEpoch =
