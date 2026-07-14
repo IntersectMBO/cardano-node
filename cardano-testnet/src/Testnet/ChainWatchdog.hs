@@ -24,10 +24,11 @@ import qualified Cardano.Ledger.Shelley.StabilityWindow as SL
 import           Prelude
 
 import           Control.Concurrent (ThreadId, threadDelay, throwTo)
-import           Control.Exception (Exception (..), SomeAsyncException, SomeException,
-                   asyncExceptionFromException, asyncExceptionToException, throwIO, try)
+import           Control.Exception (Exception (..), asyncExceptionFromException,
+                   asyncExceptionToException)
+import           Control.Exception.Safe (SomeException, try)
 import           Control.Monad (void, when)
-import           Data.Maybe (isJust, isNothing)
+import           Data.Maybe (isNothing)
 import qualified Data.Time.Clock as DTC
 import           System.IO (hFlush, hPutStrLn, stderr)
 import           System.Process (ProcessHandle)
@@ -117,8 +118,9 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
     -- can accept the connection and then never answer, which would block the
     -- polling forever.
     --
-    -- Asynchronous exceptions are re-thrown: they are not query failures but
-    -- this thread being told to stop (cancellation from the test teardown).
+    -- Asynchronous exceptions are re-thrown ('Control.Exception.Safe.try' does
+    -- not catch them): they are not query failures but this thread being told
+    -- to stop (cancellation from the test teardown).
     queryTip :: IO (Maybe (SlotNo, BlockNo))
     queryTip =
       (try (timeout queryTimeoutMicros (getLocalChainTip connectInfo))
@@ -126,9 +128,7 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
         Right (Just (ChainTip slotNo _ blockNo)) -> pure $ Just (slotNo, blockNo)
         Right (Just ChainTipAtGenesis) -> pure Nothing
         Right Nothing -> pure Nothing
-        Left e
-          | isJust (fromException e :: Maybe SomeAsyncException) -> throwIO e
-          | otherwise -> pure Nothing
+        Left _ -> pure Nothing
 
     reportStall lastPoint = do
       let msg = chainStallFailureMessage stallTimeout horizon lastPoint
