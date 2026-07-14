@@ -388,9 +388,11 @@ cardanoTestnet
   -- Make sure that all nodes are healthy by waiting for a chain extension.
   -- The deadline covers the worst case in which the chain can still start: genesis start
   -- time lies at most 'startTimeOffsetSeconds' in the future, and the first block must
-  -- appear within the forecast horizon after it (see 'chainForecastHorizon'), plus margin.
+  -- appear within the forecast horizon after it (see 'chainForecastHorizon'), plus
+  -- 'startupDetectionMarginSeconds'.
   let startupHorizon = chainForecastHorizon shelleyGenesis
-      startupBlockTimeout = startTimeOffsetSeconds + ceiling startupHorizon + 15
+      startupBlockTimeout =
+        startTimeOffsetSeconds + ceiling startupHorizon + startupDetectionMarginSeconds
   mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile)) testnetNodes'
 
   let runtime = TestnetRuntime
@@ -481,6 +483,14 @@ cardanoTestnet
             <> "time is set only " <> show startTimeOffsetSeconds <> "s after the testnet files are "
             <> "created."
 
+-- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
+-- plus the forecast horizon) when waiting for testnet startup: covers node process
+-- startup (spawning, parsing the configuration and genesis files, creating the
+-- socket) and the latency of observing the block once it is forged. Without a
+-- margin, a node forging its first block near the end of the window would be
+-- declared dead.
+startupDetectionMarginSeconds :: Int
+startupDetectionMarginSeconds = 15
 
 idToRemoteAddressP2P :: ()
   => MonadIO m
