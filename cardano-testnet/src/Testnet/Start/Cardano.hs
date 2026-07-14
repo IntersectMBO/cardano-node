@@ -476,12 +476,14 @@ cardanoTestnet
         Just (Left err) ->
           throwString $ "foldBlocks on " <> nodeName <> " encountered an error while waiting for new blocks: " <> show (prettyError err)
         _ ->
-          throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s. "
-            <> "The testnet probably missed its startup window and can never produce a block: nodes can only forge "
-            <> "while the wall-clock slot is at most 3 * securityParam / activeSlotsCoeff slots past the "
-            <> "chain tip (" <> show horizon <> " of wall clock for this testnet), and the genesis start "
-            <> "time is set only " <> show startTimeOffsetSeconds <> "s after the testnet files are "
-            <> "created."
+          throwString $ mconcat
+            [ nodeName, " was unable to produce any blocks for ", show timeoutSeconds, "s. "
+            , "The testnet probably missed its startup window and can never produce a block: nodes can only forge "
+            , "while the wall-clock slot is at most 3 * securityParam / activeSlotsCoeff slots past the "
+            , "chain tip (", show horizon, " of wall clock for this testnet), and the genesis start "
+            , "time is set only ", show startTimeOffsetSeconds, "s after the testnet files are "
+            , "created."
+            ]
 
 -- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
 -- plus the forecast horizon) when waiting for testnet startup: covers node process

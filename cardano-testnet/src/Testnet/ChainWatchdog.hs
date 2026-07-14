@@ -137,11 +137,12 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
       hFlush stderr
       delivered <- timeout deliveryGraceMicros $ throwTo testThread exc
       when (isNothing delivered) $ do
-        hPutStrLn stderr $
-          "chainStallWatchdog: could not deliver the failure to the test thread within "
-            <> show (deliveryGraceMicros `div` 1_000_000) <> "s (it is likely stuck in a foreign "
-            <> "call or under uninterruptibleMask, where asynchronous exceptions cannot be "
-            <> "received); killing the testnet nodes so that whatever it is blocked on fails instead."
+        hPutStrLn stderr $ mconcat
+          [ "chainStallWatchdog: could not deliver the failure to the test thread within "
+          , show (deliveryGraceMicros `div` 1_000_000), "s (it is likely stuck in a foreign "
+          , "call or under uninterruptibleMask, where asynchronous exceptions cannot be "
+          , "received); killing the testnet nodes so that whatever it is blocked on fails instead."
+          ]
         hFlush stderr
         mapM_ hardKillProcess nodeHandles
         -- with the nodes dead the test thread should unblock shortly; try once more to
