@@ -12,6 +12,7 @@ module Testnet.ChainWatchdog
   , chainForecastHorizon
   , chainStallTimeoutFromHorizon
   , chainStallWatchdog
+  , stderrTracer
   ) where
 
 import           Cardano.Api (BlockNo (..), ChainTip (..), LocalNodeConnectInfo,
@@ -28,6 +29,7 @@ import           Control.Exception (Exception (..), asyncExceptionFromException,
                    asyncExceptionToException)
 import           Control.Exception.Safe (SomeException, try)
 import           Control.Monad (void, when)
+import           Control.Tracer (Tracer (..), traceWith)
 import           Data.Maybe (isNothing)
 import qualified Data.Time.Clock as DTC
 import           System.IO (hFlush, hPutStrLn, stderr)
@@ -72,9 +74,9 @@ chainStallTimeoutFromHorizon horizon = max 60 (2 * horizon)
 -- for 'chainStallTimeoutFromHorizon' of the genesis, fail the given test thread with
 -- a 'ChainStallException' explaining the mechanism.
 --
--- The full diagnosis is printed to stderr first: stderr bypasses tasty's buffered
--- reporting, so the explanation is visible even if the test never manages to report
--- a result. 'throwTo' blocks until the exception is delivered; if the test thread
+-- The full diagnosis is emitted through the given tracer first, so the explanation
+-- can outlive the test thread (see 'stderrTracer' for the standard sink and why).
+-- 'throwTo' blocks until the exception is delivered; if the test thread
 -- cannot receive it (it is stuck in a foreign call or under
 -- 'Control.Exception.uninterruptibleMask'), the watchdog escalates after a grace
 -- period by hard-killing the node processes, so that whatever the test is blocked
@@ -83,12 +85,13 @@ chainStallTimeoutFromHorizon horizon = max 60 (2 * horizon)
 -- Run it in a background thread (e.g. with 'Testnet.Runtime.asyncRegister_'); it is
 -- stopped by cancellation like any other background resource.
 chainStallWatchdog
-  :: ShelleyGenesis -- ^ the genesis backing the testnet, for the stall threshold
+  :: Tracer IO String -- ^ sink for the diagnosis and escalation notices
+  -> ShelleyGenesis -- ^ the genesis backing the testnet, for the stall threshold
   -> LocalNodeConnectInfo -- ^ connection to the node whose chain tip is polled
   -> [ProcessHandle] -- ^ the testnet node processes, for the kill escalation
   -> ThreadId -- ^ the test thread to fail when the chain stalls
   -> IO ()
-chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
+chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
     start <- DTC.getCurrentTime
     go start Nothing
   where
@@ -138,17 +141,15 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
     reportStall lastTip = do
       let msg = chainStallFailureMessage stallTimeout horizon lastTip
           exc = ChainStallException msg
-      hPutStrLn stderr msg
-      hFlush stderr
+      traceWith tracer msg
       delivered <- timeout deliveryGraceMicros $ throwTo testThread exc
       when (isNothing delivered) $ do
-        hPutStrLn stderr $ mconcat
+        traceWith tracer $ mconcat
           [ "chainStallWatchdog: could not deliver the failure to the test thread within "
           , show (deliveryGraceMicros `div` 1_000_000), "s (it is likely stuck in a foreign "
           , "call or under uninterruptibleMask, where asynchronous exceptions cannot be "
           , "received); killing the testnet nodes so that whatever it is blocked on fails instead."
           ]
-        hFlush stderr
         mapM_ hardKillProcess nodeHandles
         -- with the nodes dead the test thread should unblock shortly; try once more to
         -- attach the real explanation to the test failure
@@ -158,6 +159,12 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
     pollIntervalMicros = 5_000_000
     queryTimeoutMicros = 5_000_000
     deliveryGraceMicros = 15_000_000
+
+-- | The standard sink for the watchdog's output: write each message to stderr and
+-- flush. stderr bypasses tasty's buffered reporting, so the diagnosis is visible
+-- even if the test never manages to report a result.
+stderrTracer :: Tracer IO String
+stderrTracer = Tracer $ \msg -> hPutStrLn stderr msg >> hFlush stderr
 
 -- | Failure message explaining why a chain that stopped extending will never recover.
 -- See https://github.com/IntersectMBO/cardano-node/issues/5762

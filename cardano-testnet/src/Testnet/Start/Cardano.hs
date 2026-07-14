@@ -74,7 +74,7 @@ import qualified System.Directory as IO
 import qualified System.Process as Process
 import           System.FilePath ((</>))
 
-import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog)
+import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog, stderrTracer)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
@@ -414,7 +414,8 @@ cardanoTestnet
       Just (node, _) -> pure node
       Nothing -> throwString "cardanoTestnet: no testnet node to watch for chain stalls"
     void . asyncRegister_ $
-      chainStallWatchdog shelleyGenesis (testnetNodeConnectionInfo testnetMagic watchedNode)
+      chainStallWatchdog stderrTracer shelleyGenesis
+        (testnetNodeConnectionInfo testnetMagic watchedNode)
         (nodeProcessHandle <$> testnetNodes') testThread
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
