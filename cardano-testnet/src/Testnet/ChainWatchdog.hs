@@ -95,18 +95,23 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
     horizon = chainForecastHorizon shelleyGenesis
     stallTimeout = chainStallTimeoutFromHorizon horizon
 
-    go lastAdvance lastPoint = do
+    go lastAdvance lastTip = do
       threadDelay pollIntervalMicros
-      mPoint <- queryTip
+      mTip <- queryTip
       now <- DTC.getCurrentTime
-      case mPoint of
-        Just point | Just point /= lastPoint ->
-          -- the tip moved: restart the stall clock
-          go now (Just point)
+      case mTip of
+        Just tip@(_, blockNo) | (snd <$> lastTip) /= Just blockNo ->
+          -- Restart the stall clock only when the chain height changes: a reorg
+          -- can change the tip's slot and hash without the chain growing, so
+          -- those fields prove nothing about progress. Any height change counts
+          -- (not just an increase): a node replaying its chain after a restart
+          -- is activity rather than proof of death, and a truly dead chain
+          -- freezes the height anyway.
+          go now (Just tip)
         _ | now `DTC.diffUTCTime` lastAdvance >= stallTimeout ->
-              reportStall lastPoint
+              reportStall lastTip
           | otherwise ->
-              go lastAdvance lastPoint
+              go lastAdvance lastTip
 
     -- One observation of the chain tip. 'Nothing' means nothing usable: the
     -- query failed, timed out, or the tip is still at genesis.
@@ -130,8 +135,8 @@ chainStallWatchdog shelleyGenesis connectInfo nodeHandles testThread = do
         Right Nothing -> pure Nothing
         Left _ -> pure Nothing
 
-    reportStall lastPoint = do
-      let msg = chainStallFailureMessage stallTimeout horizon lastPoint
+    reportStall lastTip = do
+      let msg = chainStallFailureMessage stallTimeout horizon lastTip
           exc = ChainStallException msg
       hPutStrLn stderr msg
       hFlush stderr
