@@ -30,6 +30,17 @@ constraints:
 package acts
   flags: -finitary
 
+-- Enable the cardano-node `ghc-debug` flag at PLAN time so ghc-debug-stub is
+-- resolved into the install plan and wired as a dependency of the cardano-node
+-- exe. Setting it only via a haskell.nix module flag is too late: the plan
+-- (and its --exact-configuration --dependency list) is computed from this file
+-- with the flag at its default, so the stub would be missing at configure.
+-- The stub is always linked in builds off this branch, but `main` only starts
+-- the ghc-debug socket server when GHC_DEBUG_SOCKET is set, so a node with no
+-- socket configured behaves exactly like an uninstrumented one.
+package cardano-node
+  flags: +ghc-debug
+
 packages:
   cardano-node
   cardano-node-capi
@@ -46,6 +57,10 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-resources
   trace-forward
+  -- Headless ghc-debug snapshotter + offline analyzer, paired with the
+  -- instrumented `cardano-node-debug` build. Depends on ghc-debug-client,
+  -- supplied by the source-repository-package at the bottom of this file.
+  cardano-debug
 
 -- Needed when cross compiling
 extra-packages: alex
@@ -179,3 +194,29 @@ source-repository-package
   location: https://github.com/f-f/ekg-forward
   tag: b24b3aba2806ce223c62f8ce3e267ec92dcc52e2
   --sha256: sha256-s5Hxxm04HmFVmdBjAnFEsJEhTqr5Z/uiB4K1s2VaVwE=
+
+-- ghc-debug 0.8.0.0 (gitlab master @ 2b8cf733). We pull it from git rather than
+-- Hackage to pin the exact revision validated against full cardano-node ledger
+-- heaps. 0.5's decoder is built on `ghc-heap`'s RTS closure introspection
+-- (unpackClosurePtr# / heap_view_closurePtrsAsWords), which SEGFAULTs decoding
+-- a full cardano-node ledger heap; 0.7+ dropped the ghc-heap dependency and
+-- rewrote the decoder, and 0.8's deps still fit GHC 9.6.7 (base >=4.16 &&
+-- <4.23, no ghc-heap). This SRP overrides only these four packages and leaves
+-- the global index-state untouched.
+source-repository-package
+  type: git
+  location: https://gitlab.haskell.org/ghc/ghc-debug
+  tag: 2b8cf733f079af6e88eb4d9fa65b1215cc24ebc4
+  --sha256: sha256-I/E/WmTuAcQnpXgpv6dph0C4q4RZivbl+uv3oMCKjrY=
+  subdir: common client stub convention
+
+-- ghc-debug-client 0.8 bumped its bound to contra-tracer ^>=0.2, but cardano-node's
+-- ecosystem (ouroboros-consensus, ...) pins contra-tracer 0.1.0.2. ghc-debug-client
+-- only uses the stable core API (Control.Tracer: Tracer/traceWith/contramap/debugTracer),
+-- all present in 0.1.0.2, so relax its lower bound to let it build against the pinned
+-- version. (Only ghc-debug-client depends on contra-tracer among the SRP packages.)
+allow-older: ghc-debug-client:contra-tracer
+
+-- (ghc-debug 0.8's source trips -Werror; that's relaxed to -Wwarn for its libs
+-- in nix/haskell.nix, since cabal.project per-package ghc-options don't reach
+-- the source-repository-package build.)

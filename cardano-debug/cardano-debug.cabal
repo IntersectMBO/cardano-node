@@ -1,0 +1,35 @@
+cabal-version: 3.0
+name:          cardano-debug
+version:       0.1.0.0
+synopsis:      Headless ghc-debug heap snapshotter + offline analyzer for cardano-node debug builds
+description:   A tiny ghc-debug tool for cardano-node debug builds. The
+               @snapshot@ subcommand connects to a running,
+               ghc-debug-instrumented process over its GHC_DEBUG_SOCKET unix
+               socket, pauses it, writes a self-contained heap snapshot to a
+               file, and exits. The remaining subcommands (@census@, @retain@,
+               @threads@) analyse such a snapshot offline (no live process)
+               with GHC.Debug.Snapshot.snapshotRun.
+license:       Apache-2.0
+author:        IOG
+maintainer:    operations@iohk.io
+build-type:    Simple
+
+executable cardano-debug
+  hs-source-dirs:     app
+  main-is:            Main.hs
+  default-language:   Haskell2010
+  -- Default to 64 capabilities so ghc-debug's parallel heap traversal
+  -- (GHC.Debug.ParTrace uses `threads = numCapabilities` natively in 0.8)
+  -- spawns 64 workers by default -- matching upstream 0.5.0.0's original
+  -- hardcoded `threads = 64`. Override at runtime with `+RTS -N<n> -RTS`
+  -- to trade traversal speed against client memory;
+  -- e.g. `-N1` for serial/low-memory on a large heap.
+  -- -g3: DWARF debug info so a segfault in the ghc-debug decode path
+  -- (heap_view_closurePtrsAsWords / unpackClosure#) gives a usable gdb
+  -- backtrace with Haskell-level frames. Debug aid; bloats the binary.
+  ghc-options:        -threaded -rtsopts -Wall -with-rtsopts=-N64 -g3
+  build-depends:      base
+                    , ghc-debug-client
+                    , containers
+                    , bytestring
+                    , text
