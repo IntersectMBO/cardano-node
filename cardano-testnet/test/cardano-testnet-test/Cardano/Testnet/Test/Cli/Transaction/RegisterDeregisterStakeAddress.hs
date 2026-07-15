@@ -17,6 +17,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.Text as Text
@@ -64,7 +65,7 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

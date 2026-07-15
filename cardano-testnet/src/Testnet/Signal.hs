@@ -21,9 +21,11 @@ import           System.Process (ProcessHandle, getPid, interruptProcessGroupOf)
 import           System.Process (ProcessHandle, terminateProcess)
 #endif
 
+import           Data.List.NonEmpty (NonEmpty)
+
 import           Testnet.Types
 
-interruptNodesOnSigINT :: [TestnetNode] -> IO ()
+interruptNodesOnSigINT :: NonEmpty TestnetNode -> IO ()
 #ifdef UNIX
 interruptNodesOnSigINT testnetNodes =
   -- Interrupt cardano nodes when the main process is interrupted

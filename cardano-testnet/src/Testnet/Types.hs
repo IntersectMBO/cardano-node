@@ -62,6 +62,8 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as A
 import           Data.List (intercalate)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           GHC.Exts (IsString (..))
@@ -120,19 +122,19 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
   , testnetMagic :: !Int -- TODO change to Word32
-  , testnetNodes :: ![TestnetNode]
+  , testnetNodes :: !(NonEmpty TestnetNode)
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
   }
 
-testnetSprockets :: TestnetRuntime -> [Sprocket]
+testnetSprockets :: TestnetRuntime -> NonEmpty Sprocket
 testnetSprockets = fmap nodeSprocket . testnetNodes
 
 spoNodes :: TestnetRuntime -> [TestnetNode]
-spoNodes = filter isTestnetNodeSpo . testnetNodes
+spoNodes = filter isTestnetNodeSpo . NEL.toList . testnetNodes
 
 relayNodes :: TestnetRuntime -> [TestnetNode]
-relayNodes = filter (not . isTestnetNodeSpo) . testnetNodes
+relayNodes = filter (not . isTestnetNodeSpo) . NEL.toList . testnetNodes
 
 data TestnetNode = TestnetNode
   { nodeName :: !String

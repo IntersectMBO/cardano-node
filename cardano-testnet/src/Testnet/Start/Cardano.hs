@@ -61,7 +61,7 @@ import           Data.Default.Class ()
 import           Data.Either
 import           Data.Maybe (mapMaybe)
 import           Data.Functor
-import           Data.List (sort, stripPrefix, uncons)
+import           Data.List (sort, stripPrefix)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
@@ -378,9 +378,14 @@ cardanoTestnet
         <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
-  let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
+  let (failedNodes, startedNodes) = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
+
+  -- 'optSpoNodes' guarantees at least one requested node, and every requested node
+  -- either started or aborted the run above, so this only teaches the types.
+  testnetNodes' <- maybe (throwString "cardanoTestnet: no testnet nodes were configured") pure $
+    NEL.nonEmpty startedNodes
 
   -- Interrupt cardano nodes when the main process is interrupted
   liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
@@ -410,20 +415,14 @@ cardanoTestnet
   -- as soon as a stall is provable.
   when enableChainStallWatchdog $ do
     testThread <- liftIOAnnotated myThreadId
-    watchedNode <- case uncons testnetNodes' of
-      Just (node, _) -> pure node
-      Nothing -> throwString "cardanoTestnet: no testnet node to watch for chain stalls"
     void . asyncRegister_ $
       chainStallWatchdog stderrTracer shelleyGenesis
-        (testnetNodeConnectionInfo testnetMagic watchedNode)
-        (nodeProcessHandle <$> testnetNodes') testThread
+        (testnetNodeConnectionInfo testnetMagic (NEL.head testnetNodes'))
+        (NEL.toList $ nodeProcessHandle <$> testnetNodes') testThread
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-  node1sprocket <- case uncons $ testnetSprockets runtime of
-        Just (sprocket, _) -> pure sprocket
-        Nothing            -> throwString "No testnet sprocket available"
-  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath (NEL.head $ testnetSprockets runtime) testnetMagic
 
   forM_ wallets $ \wallet -> do
 

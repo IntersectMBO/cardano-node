@@ -30,6 +30,7 @@ import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.Control (MonadBaseControl, liftBaseOp)
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
@@ -69,7 +70,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
   TestnetRuntime
     { configurationFile
     , testnetMagic
-    , testnetNodes = node : _
+    , testnetNodes = node :| _
     , wallets = wallet0 : wallet1 : _
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf

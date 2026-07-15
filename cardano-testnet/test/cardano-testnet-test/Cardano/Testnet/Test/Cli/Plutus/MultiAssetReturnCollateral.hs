@@ -17,6 +17,7 @@ import           Prelude
 import           Control.Monad (mfilter, void)
 import qualified Data.Aeson as Aeson
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as T
 import           System.FilePath ((</>))
 
@@ -54,7 +55,7 @@ hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-toke
     , wallets=wallet0:wallet1:wallet2:_
     } <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0

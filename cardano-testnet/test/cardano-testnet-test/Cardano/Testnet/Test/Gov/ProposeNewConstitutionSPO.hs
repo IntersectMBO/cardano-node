@@ -21,6 +21,7 @@ import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Default.Class
 import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
@@ -77,7 +78,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

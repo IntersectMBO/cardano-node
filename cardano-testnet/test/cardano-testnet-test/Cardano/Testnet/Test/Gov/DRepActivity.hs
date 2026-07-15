@@ -26,6 +26,7 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Data (Typeable)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Word (Word16)
@@ -76,7 +77,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

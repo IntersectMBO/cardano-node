@@ -41,8 +41,9 @@ import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSC
-import           Data.List (isInfixOf, uncons)
+import           Data.List (isInfixOf)
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NEL
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
@@ -488,9 +489,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     False -> do
       liftIOAnnotated $ appendFile logFile ""
 
-      let socketPath = case uncons (testnetSprockets testnetRuntime) of
-            Just (sprocket, _) -> H.sprocketSystemName sprocket
-            Nothing            -> throwString "No testnet sprocket available"
+      let socketPath = H.sprocketSystemName . NEL.head $ testnetSprockets testnetRuntime
 
       void $ asyncRegister_ . runExceptT $
                   foldEpochState

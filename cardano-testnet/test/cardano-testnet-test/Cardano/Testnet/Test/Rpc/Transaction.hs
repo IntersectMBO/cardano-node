@@ -29,6 +29,7 @@ import           Prelude
 
 import           Control.Monad.Trans.Control (liftBaseOp)
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           GHC.Stack
 import           Lens.Micro
 
@@ -54,7 +55,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
 
   TestnetRuntime
     { configurationFile
-    , testnetNodes = node0 : _
+    , testnetNodes = node0 :| _
     , wallets = wallet0@(PaymentKeyInfo _ addressText0) : (PaymentKeyInfo _ addressText1) : _
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf

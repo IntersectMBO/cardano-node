@@ -25,6 +25,7 @@ import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
 import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
@@ -219,7 +220,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
             }
         }
   testnetRuntime <- createAndRunTestnet creationOptions def conf
-  let allNodes = testnetNodes testnetRuntime
+  let allNodes = NEL.toList $ testnetNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
   node <- H.headM allNodes
@@ -260,7 +261,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
         }
   testnetRuntime
     <- createAndRunTestnet creationOptions def conf
-  TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
+  let TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} = NEL.head $ testnetNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle

@@ -17,6 +17,7 @@ import           Prelude
 import           Control.Monad.Trans.State.Strict
 import           Data.Default.Class
 import           Data.List (sortOn)
+import qualified Data.List.NonEmpty as NEL
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Lens.Micro ((^.))
@@ -51,7 +52,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- createAndRunTestnet creationOptions def conf
 
   (execConfig, socketPathAbs) <- do
-    TestnetNode{nodeSprocket} <- H.headM testnetNodes
+    let TestnetNode{nodeSprocket} = NEL.head testnetNodes
     poolSprocket1 <- H.noteShow nodeSprocket
     let socketPath' = H.sprocketArgumentName poolSprocket1
     socketPathAbs <- Api.File <$> H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
