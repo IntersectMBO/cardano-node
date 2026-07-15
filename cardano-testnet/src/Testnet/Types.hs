@@ -131,10 +131,10 @@ testnetSprockets :: TestnetRuntime -> NonEmpty Sprocket
 testnetSprockets = fmap nodeSprocket . testnetNodes
 
 spoNodes :: TestnetRuntime -> [TestnetNode]
-spoNodes = filter isTestnetNodeSpo . NEL.toList . testnetNodes
+spoNodes = NEL.filter isTestnetNodeSpo . testnetNodes
 
 relayNodes :: TestnetRuntime -> [TestnetNode]
-relayNodes = filter (not . isTestnetNodeSpo) . NEL.toList . testnetNodes
+relayNodes = NEL.filter (not . isTestnetNodeSpo) . testnetNodes
 
 data TestnetNode = TestnetNode
   { nodeName :: !String

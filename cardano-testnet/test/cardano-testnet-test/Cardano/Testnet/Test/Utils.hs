@@ -44,7 +44,7 @@ nodesProduceBlocks envDir TestnetRuntime{testnetNodes, testnetMagic} = do
   TestnetNode
     { nodeProcessHandle
     , nodeSprocket
-    } <- case filter isTestnetNodeSpo (NEL.toList testnetNodes) of
+    } <- case NEL.filter isTestnetNodeSpo testnetNodes of
       [spoNode] -> pure spoNode
       spoNodes -> do
         H.note_ $ "Number of SPO nodes different than 1. SPO nodes: " <> show (nodeName <$> spoNodes)

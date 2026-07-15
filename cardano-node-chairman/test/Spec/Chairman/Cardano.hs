@@ -8,7 +8,6 @@ module Spec.Chairman.Cardano where
 import           Cardano.Testnet
 
 import           Data.Default.Class
-import qualified Data.List.NonEmpty as NEL
 import           Testnet.Property.Util (integrationRetryWorkspace)
 
 import qualified Hedgehog as H
@@ -21,6 +20,6 @@ hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' 
   conf <- mkConf tempAbsPath'
 
   let creationOptions = def{ creationNodes = cardanoDefaultTestnetNodesWithOptions }
-  allNodes <- NEL.toList . testnetNodes <$> createAndRunTestnet creationOptions def conf
+  allNodes <- testnetNodes <$> createAndRunTestnet creationOptions def conf
 
   chairmanOver 120 50 conf allNodes

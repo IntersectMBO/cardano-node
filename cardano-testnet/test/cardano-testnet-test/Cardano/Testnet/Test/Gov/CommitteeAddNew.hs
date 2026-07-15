@@ -95,7 +95,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo . NEL.toList $ testnetNodes runtime
+  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . NEL.filter isTestnetNodeSpo $ testnetNodes runtime
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

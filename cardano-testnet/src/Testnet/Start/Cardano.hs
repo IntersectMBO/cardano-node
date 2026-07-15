@@ -382,8 +382,6 @@ cardanoTestnet
   unless (null failedNodes) $ do
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
 
-  -- 'optSpoNodes' guarantees at least one requested node, and every requested node
-  -- either started or aborted the run above, so this only teaches the types.
   testnetNodes' <- maybe (throwString "cardanoTestnet: no testnet nodes were configured") pure $
     NEL.nonEmpty startedNodes
 
@@ -418,7 +416,7 @@ cardanoTestnet
     void . asyncRegister_ $
       chainStallWatchdog stderrTracer shelleyGenesis
         (testnetNodeConnectionInfo testnetMagic (NEL.head testnetNodes'))
-        (NEL.toList $ nodeProcessHandle <$> testnetNodes') testThread
+        (nodeProcessHandle <$> testnetNodes') testThread
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 

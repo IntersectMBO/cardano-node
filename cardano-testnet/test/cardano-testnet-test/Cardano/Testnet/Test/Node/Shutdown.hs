@@ -220,10 +220,10 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
             }
         }
   testnetRuntime <- createAndRunTestnet creationOptions def conf
-  let allNodes = NEL.toList $ testnetNodes testnetRuntime
-  H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
+  let allNodes = testnetNodes testnetRuntime
+  H.note_ $ "All nodes: " <>  show (nodeName <$> allNodes)
 
-  node <- H.headM allNodes
+  let node = NEL.head allNodes
   H.note_ $ "Node name: " <> nodeName node
 
   -- Wait for the node to exit

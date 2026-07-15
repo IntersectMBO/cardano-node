@@ -24,15 +24,20 @@ import qualified Cardano.Ledger.Shelley.StabilityWindow as SL
 
 import           Prelude
 
+import           Control.Applicative ((<|>))
 import           Control.Concurrent (ThreadId, threadDelay, throwTo)
 import           Control.Exception (Exception (..), asyncExceptionFromException,
                    asyncExceptionToException)
 import           Control.Exception.Safe (SomeException, try)
 import           Control.Monad (void, when)
 import           Control.Tracer (Tracer (..), traceWith)
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (isNothing)
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import qualified Data.Time.Clock as DTC
-import           System.IO (hFlush, hPutStrLn, stderr)
+import           System.IO (hFlush, stderr)
 import           System.Process (ProcessHandle)
 import           System.Timeout (timeout)
 
@@ -85,10 +90,10 @@ chainStallTimeoutFromHorizon horizon = max 60 (2 * horizon)
 -- Run it in a background thread (e.g. with 'Testnet.Runtime.asyncRegister_'); it is
 -- stopped by cancellation like any other background resource.
 chainStallWatchdog
-  :: Tracer IO String -- ^ sink for the diagnosis and escalation notices
+  :: Tracer IO Text -- ^ sink for the diagnosis and escalation notices
   -> ShelleyGenesis -- ^ the genesis backing the testnet, for the stall threshold
   -> LocalNodeConnectInfo -- ^ connection to the node whose chain tip is polled
-  -> [ProcessHandle] -- ^ the testnet node processes, for the kill escalation
+  -> NonEmpty ProcessHandle -- ^ the testnet node processes, for the kill escalation
   -> ThreadId -- ^ the test thread to fail when the chain stalls
   -> IO ()
 chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
@@ -98,12 +103,13 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
     horizon = chainForecastHorizon shelleyGenesis
     stallTimeout = chainStallTimeoutFromHorizon horizon
 
-    go lastAdvance lastTip = do
+    go :: DTC.UTCTime -> Maybe (SlotNo, BlockNo) -> IO ()
+    go lastAdvance mLastTip = do
       threadDelay pollIntervalMicros
       mTip <- queryTip
       now <- DTC.getCurrentTime
-      case mTip of
-        Just tip@(_, blockNo) | (snd <$> lastTip) /= Just blockNo ->
+      case (,) <$> mTip <*> mLastTip of
+        Just (tip@(_, blockNo), (_, lastBlockNo)) | lastBlockNo /= blockNo ->
           -- Restart the stall clock only when the chain height changes: a reorg
           -- can change the tip's slot and hash without the chain growing, so
           -- those fields prove nothing about progress. Any height change counts
@@ -112,9 +118,12 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
           -- freezes the height anyway.
           go now (Just tip)
         _ | now `DTC.diffUTCTime` lastAdvance >= stallTimeout ->
-              reportStall lastTip
+              reportStall (mLastTip <|> mTip)
           | otherwise ->
-              go lastAdvance lastTip
+              -- No height change proven; keep the clock running, but hold on to
+              -- the freshest observation so the very first tip seen becomes the
+              -- baseline for the comparison above.
+              go lastAdvance (mLastTip <|> mTip)
 
     -- One observation of the chain tip. 'Nothing' means nothing usable: the
     -- query failed, timed out, or the tip is still at genesis.
@@ -125,10 +134,6 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
     -- timeout of its own because an unresponsive node (e.g. starved of CPU)
     -- can accept the connection and then never answer, which would block the
     -- polling forever.
-    --
-    -- Asynchronous exceptions are re-thrown ('Control.Exception.Safe.try' does
-    -- not catch them): they are not query failures but this thread being told
-    -- to stop (cancellation from the test teardown).
     queryTip :: IO (Maybe (SlotNo, BlockNo))
     queryTip =
       (try (timeout queryTimeoutMicros (getLocalChainTip connectInfo))
@@ -138,13 +143,14 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
         Right Nothing -> pure Nothing
         Left _ -> pure Nothing
 
-    reportStall lastTip = do
-      let msg = chainStallFailureMessage stallTimeout horizon lastTip
+    reportStall :: Maybe (SlotNo, BlockNo) -> IO ()
+    reportStall mLastTip = do
+      let msg = chainStallFailureMessage stallTimeout horizon mLastTip
           exc = ChainStallException msg
-      traceWith tracer msg
+      traceWith tracer $ Text.pack msg
       delivered <- timeout deliveryGraceMicros $ throwTo testThread exc
       when (isNothing delivered) $ do
-        traceWith tracer $ mconcat
+        traceWith tracer $ Text.pack $ mconcat
           [ "chainStallWatchdog: could not deliver the failure to the test thread within "
           , show (deliveryGraceMicros `div` 1_000_000), "s (it is likely stuck in a foreign "
           , "call or under uninterruptibleMask, where asynchronous exceptions cannot be "
@@ -163,8 +169,17 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
 -- | The standard sink for the watchdog's output: write each message to stderr and
 -- flush. stderr bypasses tasty's buffered reporting, so the diagnosis is visible
 -- even if the test never manages to report a result.
-stderrTracer :: Tracer IO String
-stderrTracer = Tracer $ \msg -> hPutStrLn stderr msg >> hFlush stderr
+--
+-- Like 'Control.Tracer.stdoutTracer', this tracer does not serialise writers:
+-- messages traced from several threads can interleave. Each message is emitted
+-- with a single 'Text.hPutStrLn', so this only matters alongside other writers
+-- to stderr.
+--
+-- TODO: this tracer is temporary: it should move up into the testnet
+-- orchestration configuration and be used everywhere in the orchestration code
+-- instead of ad-hoc printing.
+stderrTracer :: Tracer IO Text
+stderrTracer = Tracer $ \msg -> Text.hPutStrLn stderr msg >> hFlush stderr
 
 -- | Failure message explaining why a chain that stopped extending will never recover.
 -- See https://github.com/IntersectMBO/cardano-node/issues/5762
