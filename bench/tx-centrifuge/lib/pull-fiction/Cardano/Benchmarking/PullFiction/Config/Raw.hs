@@ -182,8 +182,8 @@ instance Aeson.FromJSON Builder where
 data RecycleStrategy
   -- | Recycle immediately after building, before entering the payload queue.
   = RecycleOnBuild
-  -- | Recycle when a worker fetches the payload from the queue.
-  | RecycleOnPull
+  -- | Recycle when a worker dequeues the payload from the queue.
+  | RecycleOnDequeue
   -- | Recycle when an observer confirms the payload. Carries the observer name.
   | RecycleOnConfirm !String
   deriving (Show, Eq)
@@ -194,7 +194,11 @@ instance Aeson.FromJSON RecycleStrategy where
     ty <- o .: "type" :: Aeson.Types.Parser String
     case ty of
       "on_build"   -> pure RecycleOnBuild
-      "on_pull"    -> pure RecycleOnPull
+      -- TODO: rename the JSON value "on_pull" to "on_dequeue", the strategy
+      -- recycles when the payload is DEQUEUED from the pipe, not on a
+      -- TxSubmission "pull".
+      -- Kept as "on_pull" for backward compatibility with existing configs.
+      "on_pull"    -> pure RecycleOnDequeue
       "on_confirm" ->
         RecycleOnConfirm <$> o .: "params"
       _ -> fail $ "RecycleStrategy: unknown \"type\" " ++ show ty

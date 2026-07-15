@@ -250,18 +250,30 @@ validate raw inputs = do
   when (inputCount < Map.size workloadsMap) $
     Left $ "Config: not enough initial inputs (" ++ show inputCount
         ++ ") for " ++ show (Map.size workloadsMap) ++ " workload(s)"
-  -- Unused-observer check. If someone defines an observer but no builder
-  -- references it via RecycleOnConfirm, the observer runs for nothing and the
-  -- generator silently drains funds. The most common cause is placing the
-  -- "recycle" key inside "params" instead of at the builder level.
+  -- Referential integrity between builders and observers. 'referencedObservers'
+  -- are the observers named by some builder's RecycleOnConfirm.
   let referencedObservers =
         [ obsName
         | wl <- Map.elems workloadsMap
         , Just (Raw.RecycleOnConfirm obsName) <- [Raw.builderRecycle (builder wl)]
         ]
-      unusedObservers = filter
-                          (`notElem` referencedObservers)
-                          (Map.keys resolvedObservers)
+      unknownObservers = filter
+                           (`Map.notMember` resolvedObservers)
+                           referencedObservers
+      unusedObservers  = filter
+                           (`notElem` referencedObservers)
+                           (Map.keys resolvedObservers)
+  -- A builder's RecycleOnConfirm must name a defined observer, else its
+  -- confirm/orphan stream has no source. Runtime relies on this: it looks the
+  -- observer up by name (a total 'Map.!'), never re-checking.
+  case unknownObservers of
+    [] -> pure ()
+    _  -> Left $
+      "builder(s) reference undefined observer(s): "
+      ++ show unknownObservers
+  -- Conversely, an observer defined but referenced by no builder runs for
+  -- nothing and the generator silently drains funds. The most common cause is
+  -- placing the "recycle" key inside "params" instead of at the builder level.
   case unusedObservers of
     [] -> pure ()
     _  -> Left $

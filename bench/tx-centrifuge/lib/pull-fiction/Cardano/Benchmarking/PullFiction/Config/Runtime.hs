@@ -3,30 +3,29 @@
 
 --------------------------------------------------------------------------------
 
--- | Resolved runtime configuration. Creates STM resources (rate limiters,
--- pipeline queues) from a 'Validated.Config'.
---
--- Rate-limiter sharing is keyed by 'Validated.rateLimitKey':
--- * @\@global@: one limiter for all targets across all workloads.
--- * @workloadName@: one per workload.
--- * @workloadName.targetName@: one per target.
--- * No rate limit: 'RL.newUnlimited'.
+-- | Resolves a 'Validated.Config' into a 'Runtime': live STM resources
+-- (queues, rate limiters) grouped into name-keyed pools, with the threads
+-- running them. See 'Runtime' for the pools and 'resolve' for resolution.
 module Cardano.Benchmarking.PullFiction.Config.Runtime
   ( -- * Runtime.
     Runtime
-  , config, observers, builders, workloads, asyncs
-  -- User supplied handles needed to create the runtime "object".
+  , config, builders, pipes, recyclers, observers, workloads, asyncs
+    -- * Handles.
+    -- ** Behaviour handles (what the resource does).
+  , BuilderHandle  (..)
   , ObserverHandle (..)
-  , BuilderHandle (..)
-    -- * Pipe.
-  , Pipe
-  , pipeInputQueue, pipePayloadQueue, pipeRecycle
-    -- * Observer.
-  , Observer
-  , observerName, observerAsync
+    -- ** Event handlers (fired here, used for tracing).
+  , PipeHandle     (..)
+  , RecyclerHandle (..)
     -- * Builder.
   , Builder
-  , builderName, builderPipe, builderAsync, recyclerAsync
+  , builderName, builderPipe, builderRecycler, builderAsync
+    -- * Recycler.
+  , Recycler
+  , recyclerName, recyclerInternal, recyclerAsync
+    -- * Observer.
+  , Observer
+  , observerName, observerHandle, observerAsync
     -- * Workload.
   , Workload
   , workloadName, targets
@@ -35,7 +34,7 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
     -- * Target.
   , Target
   , targetName
-  , targetPipe
+  , targetFetcher
   , rateLimiter
   , maxBatchSize, onExhaustion
   , targetAddr, targetPort
@@ -49,14 +48,13 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
 -- base --
 ----------
 import Control.Concurrent (myThreadId)
-import Control.Monad (forever, replicateM)
+import Control.Monad (forever)
 import Data.Foldable (foldlM, toList)
 import GHC.Conc (labelThread)
 import Numeric.Natural (Natural)
 -----------
 -- async --
 -----------
-import Control.Concurrent.Async (Async)
 import Control.Concurrent.Async qualified as Async
 ----------------
 -- containers --
@@ -72,108 +70,165 @@ import Control.Concurrent.STM qualified as STM
 ------------------
 import Cardano.Benchmarking.PullFiction.Config.Raw qualified as Raw
 import Cardano.Benchmarking.PullFiction.Config.Validated qualified as Validated
+import Cardano.Benchmarking.PullFiction.Internal.Pipe qualified as Pipe
 import Cardano.Benchmarking.PullFiction.Internal.RateLimiter qualified as RL
+import Cardano.Benchmarking.PullFiction.Internal.Recycler qualified as Recycler
 
 --------------------------------------------------------------------------------
 
 -- | Fully resolved top-level configuration.
-data Runtime input payload = Runtime
+--
+-- Everything is a name-keyed pool. Today the name is always the workload name
+-- (one builder/pipe/recycler/observer per workload), but the pools are the
+-- natural home once the config allows sharing or interconnection.
+--
+-- Each pool entry carries its own name and the async(s) running it, so
+-- 'asyncs' just gathers all of them. The exception is 'pipes': a pipe is
+-- pure structure, a queue pair ('Pipe.Pipe') with no name and no async.
+data Runtime key input payload = Runtime
   { -- | The original validated configuration.
     config    :: !(Validated.Config input)
+    -- | Resolved builders (build loops), keyed by name.
+  , builders  :: !(Map String Builder)
+    -- | Resolved pipes (queue pairs), keyed by name. Pure structure: the
+    -- only pool whose entry has no name and no async, just the queue pair.
+  , pipes     :: !(Map String (Pipe.Pipe key input payload))
+    -- | Resolved recyclers, keyed by name.
+  , recyclers :: !(Map String (Recycler key input payload))
     -- | Resolved observers, keyed by name.
-  , observers :: !(Map String Observer)
-    -- | One per workload, alphabetical order (as 'Map.elems' on 'workloads').
-  , builders  :: [Builder input payload]
-    -- | Resolved workloads, keyed by name.
-  , workloads :: !(Map String (Workload input payload))
-    -- | All asyncs (observers + builders + recyclers), linked.
-    -- Caller should append their own worker asyncs for cleanup.
-  , asyncs    :: [Async ()]
+  , observers :: !(Map String (Observer key))
+    -- | Resolved workloads (target groups), keyed by name.
+  , workloads :: !(Map String (Workload key input payload))
+    -- | All asyncs (builders + recyclers + confirm forwarders + observers),
+    -- linked. Caller should append their own worker asyncs for cleanup.
+  , asyncs    :: ![Async.Async ()]
   }
 
 --------------------------------------------------------------------------------
-
--- | Caller-provided observer handle. 'resolve' spawns 'ohRun' in a labeled,
--- linked async and uses the subscription for 'Raw.RecycleOnConfirm' recycling.
-data ObserverHandle key confirmed = ObserverHandle
-  { -- | IO action that runs the observer (e.g. a NodeToNode connection).
-    ohRun        :: !(IO ())
-    -- | Subscribe to the observer's broadcast channel.
-    -- 'Right' = confirmed (recycle output inputs).
-    -- 'Left'  = orphaned  (recycle original inputs).
-  , ohSubscribe  :: !(IO (STM.TChan (Either confirmed confirmed)))
-    -- | Extract the recycling key from a confirmed or orphaned event.
-  , ohExtractKey :: !(confirmed -> key)
-  }
 
 -- | Caller-provided build handle. 'resolve' spawns a builder async that pulls
 -- inputs via 'bhInputsPerBatch' and produces payloads.
 data BuilderHandle key input payload = BuilderHandle
   { -- | How many inputs the builder needs per call to 'bhBuildPayload'.
     bhInputsPerBatch :: !Natural
-    -- | Returns @(confirmation key, payload, recyclable outputs)@.
+    -- | Build a payload from the pulled inputs.
+    -- Returns @(confirmation key, payload, recyclable outputs)@.
   , bhBuildPayload   :: [input] -> IO (key, payload, [input])
+  }
+
+-- | Caller-provided pipe queue-event handlers (e.g. for tracing). 'resolve'
+-- unpacks these into the workload's 'Pipe', which fires them as items are added
+-- to or removed from its two queues. Queue mechanics are pipe events, not
+-- builder events, so they live here and not on 'BuilderHandle'.
+data PipeHandle key input = PipeHandle
+  { -- | Fired after inputs added to the input queue (initial load or recycle).
+    phOnInputsEnqueued  :: !(Pipe.OnInputsEvent input)
+    -- | Fired after inputs are removed from the input queue (builder take).
+  , phOnInputsDequeued  :: !(Pipe.OnInputsEvent input)
+    -- | Fired after a payload is added to the payload queue.
+  , phOnPayloadEnqueued :: !(Pipe.OnPayloadEvent key)
+    -- | Fired after payload removed from the payload queue (worker dequeue).
+  , phOnPayloadDequeued :: !(Pipe.OnPayloadEvent key)
+  }
+
+-- | Caller-provided recycler event handlers (e.g. for tracing). 'resolve'
+-- unpacks them into the workload's 'Recycler', which fires them as payloads
+-- enter the pending backlog and as inputs are added to the pipe's input
+-- queue. Kept separate from 'PipeHandle' because recycling is a 'Recycler'
+-- concern, not a 'Pipe' one.
+data RecyclerHandle input = RecyclerHandle
+  { -- | Fired by the recycler with the inputs it holds and the resulting
+    -- pending count each time a payload enters the backlog.
+    rhOnPending   :: !(Recycler.OnPendingEvent input)
+    -- | Fired by the recycler with the inputs it adds to the pipe and the
+    -- resulting pending count, each recycle.
+  , rhOnAddToPipe :: !(Recycler.OnAddToPipeEvent input)
+  }
+
+-- | Caller-provided observer handle. 'resolve' spawns 'ohRun' in a labeled,
+-- linked async and uses the subscription for 'Raw.RecycleOnConfirm' recycling.
+data ObserverHandle key = ObserverHandle
+  { -- | IO action that runs the observer (e.g. a NodeToNode connection).
+    ohRun       :: !(IO ())
+    -- | Subscribe to the observer's event stream: returns an STM action that
+    -- reads the next event as its recycle key.
+    -- 'Right' = confirmed (recycle output inputs).
+    -- 'Left'  = orphaned  (recycle original inputs).
+  , ohSubscribe :: !(IO (STM.STM (Either key key)))
   }
 
 --------------------------------------------------------------------------------
 
--- | A resolved observer with its lifecycle managed by 'resolve'.
-data Observer = Observer
+-- | A resolved build loop: it takes inputs from a pipe, builds payloads, and
+-- signals a recycler. It references its 'pipes' and 'recyclers' entries /by
+-- name/ (today both the workload name). Its loop thread is 'builderAsync',
+-- also collected into 'asyncs'.
+data Builder = Builder
+  { -- | This builder's name (today the workload name).
+    builderName     :: !String
+    -- | Name of the 'pipes' entry it drives (takes from / adds to).
+  , builderPipe     :: !String
+    -- | Name of the 'recyclers' entry it signals via 'Recycler.onBuild'.
+  , builderRecycler :: !String
+    -- | Linked async running the build loop.
+  , builderAsync    :: !(Async.Async ())
+  }
+
+-- | A resolved recycler: the 'Internal.Recycler' logic plus the async running
+-- its worker. A thin wrapper so the 'recyclers' pool carries its own thread,
+-- like 'Builder' and 'Observer'. The 'Recycler.Recycler' inside deliberately
+-- holds no async. The observer bridge for 'RecycleOnConfirm' is a separate
+-- thread ('spawnConfirmForwarders'), not held here.
+data Recycler key input payload = Recycler
+  { -- | This recycler's name (today the workload name).
+    recyclerName     :: !String
+    -- | The underlying recycler from "Internal.Recycler".
+  , recyclerInternal :: !(Recycler.Recycler key input payload)
+    -- | Linked async running its worker (the sole writer of recycled inputs
+    -- back onto the pipe).
+  , recyclerAsync    :: !(Async.Async ())
+  }
+
+-- | A resolved observer with its lifecycle managed by 'resolve': the
+-- caller-provided 'ObserverHandle' plus the async running its 'ohRun'.
+data Observer key = Observer
   { -- | Key from the config's @\"observers\"@ object.
-    observerName  :: !String
-    -- | Linked async running the observer connection.
-  , observerAsync :: !(Async ())
-  }
-
--- | Pipeline queues for a workload. All targets share the same 'Pipe'.
-data Pipe input payload = Pipe
-  { -- | Unbounded: must never block on write (bulk-load at startup, recycle
-    -- bursts at steady-state). Backpressure comes from 'pipePayloadQueue'.
-    pipeInputQueue   :: !(STM.TQueue input)
-    -- | Bounded (capacity 8192); sole source of backpressure.
-  , pipePayloadQueue :: !(STM.TBQueue (payload, [input]))
-    -- | Recycle consumed inputs back to 'pipeInputQueue'.
-  , pipeRecycle      :: [input] -> STM.STM ()
-  }
-
--- | Builder resources for one workload (exactly one per workload).
-data Builder input payload = Builder
-  { -- | Same as the workload name.
-    builderName   :: !String
-    -- | Shared with all targets in the workload.
-  , builderPipe   :: !(Pipe input payload)
-    -- | Linked async running the builder loop.
-  , builderAsync  :: !(Async ())
-    -- | 'Raw.RecycleOnConfirm' recycler; 'Nothing' for other strategies.
-  , recyclerAsync :: !(Maybe (Async ()))
+    observerName   :: !String
+    -- | The caller-provided handle ('ohRun' + 'ohSubscribe'). The confirm
+    -- forwarders subscribe to it for 'RecycleOnConfirm' workloads.
+  , observerHandle :: !(ObserverHandle key)
+    -- | Linked async running the observer connection ('ohRun').
+  , observerAsync  :: !(Async.Async ())
   }
 
 -- | Fully resolved workload. Builder resources live in 'Builder' on the
 -- 'Runtime', not here.
-data Workload input payload = Workload
+data Workload key input payload = Workload
   { -- | Unique name identifying this workload.
     workloadName :: !String
     -- | Resolved targets, keyed by name.
-  , targets      :: !(Map String (Target input payload))
+  , targets      :: !(Map String (Target key input payload))
   }
 
--- | A fully resolved target. Targets in the same workload share a 'Pipe';
--- targets with the same 'Validated.rateLimitKey' share a 'RL.RateLimiter'.
-data Target input payload = Target
+-- | A fully resolved target. Targets in the same workload share a 'Pipe'.
+-- Targets with the same 'Validated.rateLimitKey' share a 'RL.RateLimiter'.
+data Target key input payload = Target
   { -- | Unique name identifying this target.
-    targetName   :: !String
-    -- | Shared with all targets in the same workload.
-  , targetPipe   :: !(Pipe input payload)
+    targetName    :: !String
+    -- | Rate-limited, recycling payload fetch for this target, pre-built by
+    -- 'resolveTarget' (wraps the shared pipe's fetcher through the recycler).
+    -- The worker pulls through this and never touches the pipe or the recycler.
+  , targetFetcher :: !(Pipe.PayloadFetcher payload)
     -- | Shared when 'Validated.rateLimitKey' matches.
-  , rateLimiter  :: !RL.RateLimiter
+  , rateLimiter   :: !RL.RateLimiter
     -- | Resolved max tokens per request for this target.
-  , maxBatchSize :: !Natural
+  , maxBatchSize  :: !Natural
     -- | What to do when the payload queue is exhausted.
-  , onExhaustion :: !Raw.OnExhaustion
+  , onExhaustion  :: !Raw.OnExhaustion
     -- | IP address or hostname of the target endpoint.
-  , targetAddr   :: !String
+  , targetAddr    :: !String
     -- | Port number of the target endpoint.
-  , targetPort   :: !Int
+  , targetPort    :: !Int
   }
 
 --------------------------------------------------------------------------------
@@ -185,227 +240,322 @@ data Target input payload = Target
 -- Threaded across workloads so that top-level Shared limiters are reused.
 type LimiterCache = Map String RL.RateLimiter
 
--- | Resolve a 'Validated.Config' into a 'Runtime': create observers, rate
--- limiters, pipeline queues, and spawn builder asyncs.
--- Initial inputs are partitioned equally across workloads (last absorbs
+-- | Resolve a 'Validated.Config' into a 'Runtime'. Everything is built into
+-- name-keyed pools in dependency order: observers, then pipes, then recyclers
+-- (each references its pipe), then builders and targets (each references a pipe
+-- and recycler). A separate top-level pass ('spawnConfirmForwarders') bridges
+-- each 'RecycleOnConfirm' observer to its recycler. Today the name is always
+-- the workload name (one of each per workload).
+--
+-- Initial inputs are partitioned equally across workloads (last absorbs the
 -- remainder).
 resolve
   :: Ord key
   -- | Builder factory (index, name, config).
   => (Int -> String -> Raw.Builder  -> IO (BuilderHandle  key input payload))
+  -- | Pipe-events factory (index, name): the tracing handlers the pipe fires at
+  -- each queue event.
+  -> (Int -> String -> IO (PipeHandle key input))
+  -- | Recycler-events factory (index, name): the tracing handlers the recycler
+  -- fires as payloads enter the pending backlog and as it recycles inputs.
+  -> (Int -> String -> IO (RecyclerHandle input))
   -- | Observer factory (index, name, config).
-  -> (Int -> String -> Raw.Observer -> IO (ObserverHandle key confirmed))
-  -- | Recycle callback (e.g. for tracing).
-  -- Receives the builder name, the recycled transaction's key, whether
-  -- this is an orphan recycle, and the recycled inputs.
-  -> (String -> key -> Bool -> [input] -> IO ())
+  -> (Int -> String -> Raw.Observer -> IO (ObserverHandle key))
   -> Validated.Config input
-  -> IO (Runtime input payload)
-resolve mkBuilderFn mkObserverFn onRecycle validatedConfig = do
-  -- Create all observers via the factory callback.
-  handleResults <- Map.fromAscList <$> mapM
+  -> IO (Runtime key input payload)
+resolve mkBuilderFn mkPipeHandleFn mkRecyclerHandleFn mkObserverFn validatedConfig = do
+  let workloadsMap = Validated.workloads validatedConfig
+  -- Observers first, so the confirm forwarders below can subscribe to them.
+  resolvedObservers <- resolveObservers
+                         mkObserverFn
+                         (Validated.observers validatedConfig)
+  -- Distribute initial inputs equally across workloads, keyed by workload name.
+  -- Both Maps share the same ascending key order, so zip + fromAscList is safe.
+  let inputsByWorkload =
+        Map.fromAscList $ zip
+          (Map.keys workloadsMap)
+          (partitionInputs
+            (Map.size workloadsMap)
+            (toList (Validated.initialInputs validatedConfig))
+          )
+  -- Resolve the name-keyed pools. The binding order below is the /dependency/
+  -- order (each pool references the earlier ones), the reverse of the builder,
+  -- pipe, recycler, observer order the fields use. A recycler needs its pipe, a
+  -- builder needs its pipe and recycler.
+  resolvedPipes     <- resolvePipes     mkPipeHandleFn inputsByWorkload workloadsMap
+  resolvedRecyclers <- resolveRecyclers mkRecyclerHandleFn resolvedPipes workloadsMap
+  resolvedBuilders  <- resolveBuilders  mkBuilderFn resolvedPipes resolvedRecyclers workloadsMap
+  resolvedWorkloads <- resolveWorkloads resolvedPipes resolvedRecyclers workloadsMap
+  -- Bridge each RecycleOnConfirm observer to its recycler (see the forwarders).
+  forwarderAsyncs   <- spawnConfirmForwarders resolvedRecyclers resolvedObservers workloadsMap
+  -- Assemble the final runtime.
+  pure Runtime
+    { config    = validatedConfig
+    , builders  = resolvedBuilders
+    , pipes     = resolvedPipes
+    , recyclers = resolvedRecyclers
+    , observers = resolvedObservers
+    , workloads = resolvedWorkloads
+    -- Collect all asyncs. Each pool entry carries a single async
+    -- ('builderAsync', 'recyclerAsync', 'observerAsync'). The confirm
+    -- forwarders are separate, from 'spawnConfirmForwarders'.
+    , asyncs    =     map builderAsync  (Map.elems resolvedBuilders)
+                   ++ map recyclerAsync (Map.elems resolvedRecyclers)
+                   ++ forwarderAsyncs
+                   ++ map observerAsync (Map.elems resolvedObservers)
+    }
+
+--------------------------------------------------------------------------------
+-- Named-pool resolution (builders, pipes, recyclers, observers).
+--------------------------------------------------------------------------------
+
+-- Definitions are listed builder, pipe, recycler, observer for consistency
+-- with the field order. 'resolve' calls them in the reverse (dependency) order.
+
+-- | Resolve one builder per workload into a name-keyed pool: spawn its build
+-- loop over the workload's pipe and recycler (both by workload name). Each loop
+-- takes inputs, builds a payload, records the tx's recyclable inputs with the
+-- recycler ('Recycler.onBuild'), then enqueues the payload. Each 'Builder'
+-- keeps its loop thread as 'builderAsync' (which 'resolve' also collects into
+-- 'asyncs'). The pipe fires its own (pure) trace handlers. The recycler owns
+-- all recycle timing.
+resolveBuilders
+  -- | Builder factory (index, name, config).
+  :: (Int -> String -> Raw.Builder -> IO (BuilderHandle key input payload))
+  -> Map String (Pipe.Pipe key input payload)
+  -> Map String (Recycler key input payload)
+  -> Map String Validated.Workload
+  -> IO (Map String Builder)
+resolveBuilders mkBuilderFn resolvedPipes resolvedRecyclers workloadsMap =
+  Map.fromAscList <$> mapM
+    (\(ix, (wlName, validatedWorkload)) -> do
+      let thePipe  = resolvedPipes     Map.! wlName
+          recycler = recyclerInternal (resolvedRecyclers Map.! wlName)
+      builderHandle <- mkBuilderFn ix wlName (Validated.builder validatedWorkload)
+      async <- Async.async $ do
+        -- Always labeled threads.
+        tid <- myThreadId
+        labelThread tid wlName
+        forever $ do
+          inputs <- Pipe.takeInputs thePipe (bhInputsPerBatch builderHandle)
+          (key, payload, outputInputs) <- bhBuildPayload builderHandle inputs
+          -- Record the recyclable inputs with the recycler, then make the
+          -- payload dequeuable. The recycler handles the build and the later
+          -- release ('onDequeue' \/ 'onConfirm') in either order, so this order
+          -- is just the natural one, not a correctness requirement.
+          Recycler.onBuild recycler key inputs outputInputs
+          Pipe.addPayload thePipe key payload
+      Async.link async
+      pure ( wlName
+           , Builder { builderName     = wlName
+                     , builderPipe     = wlName
+                     , builderRecycler = wlName
+                     , builderAsync    = async
+                     }
+           )
+    )
+    -- Zero-based index and name provided to the builder factory.
+    (zip [0..] (Map.toAscList workloadsMap))
+
+-- | Resolve one pipe per workload into a name-keyed pool (name = workload
+-- name), loading that workload's initial inputs into it. 'Pipe.mkPipe' owns all
+-- queue creation and wires the caller's tracing handlers. The pipe knows
+-- nothing about recycling.
+resolvePipes
+  -- | Pipe-events factory (index, name): the tracing handlers the pipe fires at
+  -- each queue event.
+  :: (Int -> String -> IO (PipeHandle key input))
+  -- | Each workload's initial inputs, keyed by workload name.
+  -> Map String [input]
+  -> Map String Validated.Workload
+  -> IO (Map String (Pipe.Pipe key input payload))
+resolvePipes mkPipeHandleFn inputsByWorkload workloadsMap =
+  Map.fromAscList <$> mapM
+    (\(ix, (wlName, _validatedWorkload)) -> do
+      pipeHandle <- mkPipeHandleFn ix wlName
+      thePipe <- Pipe.mkPipe
+                   (phOnInputsEnqueued  pipeHandle)
+                   (phOnInputsDequeued  pipeHandle)
+                   (phOnPayloadEnqueued pipeHandle)
+                   (phOnPayloadDequeued pipeHandle)
+      -- Load the initial inputs one at a time through 'Pipe.addInputs', the
+      -- same call the recycler uses so each enters exactly like a recycled one.
+      mapM_
+        (\initialInput -> Pipe.addInputs thePipe [initialInput])
+        (inputsByWorkload Map.! wlName)
+      pure (wlName, thePipe)
+    )
+    -- Zero-based index and name provided to the pipe factory.
+    (zip [0..] (Map.toAscList workloadsMap))
+
+-- | Resolve one recycler per workload into a name-keyed pool. For each, build
+-- the 'Internal.Recycler' logic and start its worker (the sole writer of
+-- recycled inputs back onto the pipe). Each 'Recycler' wraps that logic with
+-- its worker 'recyclerAsync', collected into 'asyncs'. The observer bridge for
+-- 'RecycleOnConfirm' is spawned separately, by 'spawnConfirmForwarders'.
+resolveRecyclers
+  :: Ord key
+  -- | Recycler-events factory (index, name): the tracing handlers the recycler
+  -- fires as payloads enter the pending backlog and as it recycles inputs.
+  => (Int -> String -> IO (RecyclerHandle input))
+  -> Map String (Pipe.Pipe key input payload)
+  -> Map String Validated.Workload
+  -> IO (Map String (Recycler key input payload))
+resolveRecyclers mkRecyclerHandleFn resolvedPipes workloadsMap =
+  Map.fromAscList <$> mapM
+    (\(ix, (wlName, validatedWorkload)) -> do
+      let recycleStrategy = Raw.builderRecycle (Validated.builder validatedWorkload)
+      recyclerHandle <- mkRecyclerHandleFn ix wlName
+      internal <- Recycler.mkRecycler
+                    recycleStrategy
+                    (resolvedPipes Map.! wlName)
+                    (rhOnPending recyclerHandle)
+                    (rhOnAddToPipe recyclerHandle)
+      worker <- Recycler.runRecycler internal wlName
+      Async.link worker
+      pure ( wlName
+           , Recycler { recyclerName     = wlName
+                      , recyclerInternal = internal
+                      , recyclerAsync    = worker
+                      }
+           )
+    )
+    -- Zero-based index and name provided to the recycler factory.
+    (zip [0..] (Map.toAscList workloadsMap))
+
+-- | Resolve the observers into a name-keyed pool, spawning each one's 'ohRun'
+-- in a labeled, linked async. Each 'Observer' keeps its 'ObserverHandle' (as
+-- 'observerHandle'), which the confirm forwarders subscribe to on behalf of
+-- each 'RecycleOnConfirm' workload's recycler.
+resolveObservers
+  -- | Observer factory (index, name, config).
+  :: (Int -> String -> Raw.Observer -> IO (ObserverHandle key))
+  -> Map String Raw.Observer
+  -> IO (Map String (Observer key))
+resolveObservers mkObserverFn rawObservers =
+  Map.fromAscList <$> mapM
     (\(ix, (obsName, rawObs)) -> do
-      -- The ObserverHandle's run action is spawned in a labeled, linked async
-      -- (same pattern as builders).
       obsHandle <- mkObserverFn ix obsName rawObs
-      obsAsync <- Async.async $ do
+      obsAsync  <- Async.async $ do
+        -- Always labeled threads.
         tid <- myThreadId
         labelThread tid ("observer/" ++ obsName)
         ohRun obsHandle
       Async.link obsAsync
-      -- The subscription pair is kept locally for `RecycleOnConfirm`.
       pure ( obsName
-           , ( Observer { observerName  = obsName
-                        , observerAsync = obsAsync
-                        }
-             , obsHandle
-             )
+           , Observer { observerName   = obsName
+                      , observerHandle = obsHandle
+                      , observerAsync  = obsAsync
+                      }
            )
     )
     -- Zero-based index and name provided to the observer factory.
-    (zip
-      [0..]
-      (Map.toAscList (Validated.observers validatedConfig))
-    )
-  let resolvedObservers = Map.map fst handleResults
-      observerHandles   = Map.map snd handleResults
-  let validatedWorkloadsMap = Validated.workloads validatedConfig
-  -- Distribute initial inputs equally across workloads, keyed by workload name.
-  -- Both Maps share the same ascending key order, so zip + fromAscList is safe.
-  let inputsByWorkloadMap =
-        let workloadsCount = Map.size validatedWorkloadsMap
-            inputChunks = partitionInputs
-                            workloadsCount
-                            (toList (Validated.initialInputs validatedConfig))
-        in  Map.fromAscList
-              (zip (Map.keys validatedWorkloadsMap) inputChunks)
-  -- Create all builders via the factory callback.
-  -- Resolve builders first: each builder creates its own Pipe (input queue,
-  -- payload queue, recycle action) and loads initial inputs.
-  resolvedBuilders <- Map.fromAscList <$> mapM
-    (\(ix, (wlName, validatedWorkload)) -> do
-      let workloadInputs = inputsByWorkloadMap Map.! wlName
-          workloadBuilder = Validated.builder validatedWorkload
-      builder <- resolveBuilder
-                   mkBuilderFn
-                   observerHandles
-                   onRecycle
-                   ix
-                   validatedWorkload
-                   workloadBuilder
-                   workloadInputs
-      pure (wlName, builder)
-    )
-    -- Zero-based index and name provided to the builder factory.
-    (zip
-      [0..]
-      (Map.toAscList validatedWorkloadsMap)
-    )
-  -- Resolve workloads: assign the pipe from each builder to its targets and
-  -- resolve each target's rate limiter. The limiter cache is threaded as a
-  -- pure accumulator so that top-level Shared limiters are reused.
-  (resolvedWorkloads, _) <-
-    foldlM
-      (\(acc, cache) (wlName, validatedWorkload) -> do
-        let resolvedBuilder = resolvedBuilders Map.! wlName
-        (resolved, cache') <-
-          resolveWorkload validatedWorkload cache (builderPipe resolvedBuilder)
-        pure (Map.insert wlName resolved acc, cache')
-      )
-      (Map.empty, Map.empty)
-      (Map.toAscList validatedWorkloadsMap)
-  -- Collect all asyncs: observers + builders + recyclers.
-  let builderList = Map.elems resolvedBuilders
-      observerAsyncs = map observerAsync (Map.elems resolvedObservers)
-      builderAsyncs = concatMap
-        (\b -> builderAsync b : maybe [] pure (recyclerAsync b))
-        builderList
-  -- Assemble the final runtime.
-  pure Runtime
-    { config    = validatedConfig
-    , observers = resolvedObservers
-    , builders  = builderList
-    , workloads = resolvedWorkloads
-    , asyncs    = observerAsyncs ++ builderAsyncs
-    }
+    (zip [0..] (Map.toAscList rawObservers))
 
 --------------------------------------------------------------------------------
--- Builder resolution.
+-- Confirm forwarders (observer to recycler, for RecycleOnConfirm).
 --------------------------------------------------------------------------------
 
--- | Create builder resources for one workload (queues, recycle action, builder
--- async). The returned 'Pipe' is shared with all targets.
-resolveBuilder
-  :: Ord key
-  -- | Builder factory (index, name, config).
-  => (Int -> String -> Raw.Builder -> IO (BuilderHandle key input payload))
-  -- | Observer handles keyed by name, for 'RecycleOnConfirm' subscriptions.
-  -> Map String (ObserverHandle key confirmed)
-  -- | Recycle callback (e.g. for tracing).
-  -> (String -> key -> Bool -> [input] -> IO ())
-  -- | Zero-based builder index.
-  -> Int
-  -- | Validated workload configuration.
-  -> Validated.Workload
-  -- | Builder configuration (opaque type + params).
-  -> Raw.Builder
-  -- | Initial inputs for this workload.
-  -> [input]
-  -> IO (Builder input payload)
-resolveBuilder
-  mkBuilderFn
-  observerHandles
-  onRecycle
-  builderIndex
-  validatedWorkload
-  validatedBuilder
-  initialInputs = do
-  -- Input queue: unbounded (TQueue) so that bulk-loading initial inputs and
-  -- recycling outputs never block. See 'Pipe' for the full rationale.
-  inputQueue <- STM.newTQueueIO
-  STM.atomically $ mapM_ (STM.writeTQueue inputQueue) initialInputs
-  -- Payload queue: bounded (TBQueue, capacity 8192); the sole source of
-  -- backpressure. The builder blocks here when workers cannot consume fast
-  -- enough. The capacity must be large enough to absorb GC pauses at high TPS
-  -- (e.g. 100k TPS drains 256 entries in ~2.5 ms).
-  payloadQ <- STM.newTBQueueIO 8192
-  let thePipe = Pipe
-        { pipeInputQueue   = inputQueue
-        , pipePayloadQueue = payloadQ
-          -- pipeRecycle: write recycled inputs back to the unbounded input
-          -- queue. Because TQueue has no capacity limit, this can never stall
-          -- the worker thread inside STM.
-        , pipeRecycle       = \is -> mapM_ (STM.writeTQueue inputQueue) is
-        }
-  let name    = Validated.workloadName validatedWorkload
-      recycle = Raw.builderRecycle validatedBuilder
-  -- Resolve observer handle for RecycleOnConfirm.
-  mObserverHandle <- case recycle of
-    Just (Raw.RecycleOnConfirm obsName) ->
-      case Map.lookup obsName observerHandles of
-        Nothing -> fail $ "resolveBuilder: builder references unknown observer "
-                       ++ show obsName
-        Just handle -> pure (Just handle)
-    _ -> pure Nothing
-  -- Set up recycling and get the enqueue action + optional recycler async.
-  (enqueue, mRecycler) <-
-    builderRunner recycle thePipe name mObserverHandle (onRecycle name)
-  -- Create the caller's build handle.
-  builderHandle <- mkBuilderFn builderIndex name validatedBuilder
-  -- Spawn the builder async: forever pull inputs, build, enqueue.
-  async <- Async.async $ do
-    tid <- myThreadId
-    labelThread tid name
-    forever $ do
-      inputs <- STM.atomically $
-        replicateM (fromIntegral (bhInputsPerBatch builderHandle))
-          (STM.readTQueue (pipeInputQueue thePipe))
-      (key, payload, outputInputs) <- bhBuildPayload builderHandle inputs
-      enqueue inputs key payload outputInputs
-  Async.link async
-  -- Link the recycler async (consistent with builder async linking above).
-  case mRecycler of
-    Just r  -> Async.link r
-    Nothing -> pure ()
-  pure Builder
-    { builderName   = name
-    , builderPipe   = thePipe
-    , builderAsync  = async
-    , recyclerAsync = mRecycler
-    }
+-- | Spawn the confirm forwarders. For every 'RecycleOnConfirm' workload, this
+-- starts a thread that reads the named observer's confirm\/orphan stream and
+-- forwards each event to the recycler via 'Recycler.onConfirm'. It is the sole
+-- bridge from the observer (which knows a transaction's outcome) to the
+-- recycler, which is observer-agnostic and drains only its own event queue.
+-- Workloads with any other strategy contribute no forwarder. Returns the
+-- forwarder asyncs for 'resolve' to collect into 'asyncs'.
+spawnConfirmForwarders
+  -- | The recyclers to notify, keyed by workload name.
+  :: Map String (Recycler key input payload)
+  -- | Observers keyed by name (a strategy names the one to subscribe to).
+  -> Map String (Observer key)
+  -- | Validated workloads (their recycle strategy selects the on-confirm ones).
+  -> Map String Validated.Workload
+  -> IO [Async.Async ()]
+spawnConfirmForwarders resolvedRecyclers resolvedObservers workloadsMap =
+  fmap concat $ mapM
+    (\(wlName, validatedWorkload) ->
+      case Raw.builderRecycle (Validated.builder validatedWorkload) of
+        Just (Raw.RecycleOnConfirm obsName) -> do
+          -- Both are guaranteed present: recyclers are keyed by workload name,
+          -- and 'Validated.validate' rejects an undefined observer reference.
+          let recycler = recyclerInternal (resolvedRecyclers Map.! wlName)
+          readEvent <- ohSubscribe (observerHandle (resolvedObservers Map.! obsName))
+          forwarder <- Async.async $ do
+            -- Always labeled threads.
+            tid <- myThreadId
+            labelThread tid (wlName ++ "/confirm-forwarder")
+            forever $ do
+              event <- STM.atomically readEvent
+              case event of
+                -- 'Left' = orphaned (rolled back). 'Right' = confirmed.
+                Left  key -> Recycler.onConfirm recycler key True
+                Right key -> Recycler.onConfirm recycler key False
+          Async.link forwarder
+          pure [forwarder]
+        _ -> pure []
+    )
+    (Map.toAscList workloadsMap)
 
 --------------------------------------------------------------------------------
 -- Workload resolution.
 --------------------------------------------------------------------------------
 
--- | Resolve a single workload: assign the pre-created 'Pipe' to each target and
--- resolve each target's rate limiter.
+-- | Resolve every workload's targets into a name-keyed pool, threading the
+-- rate-limiter cache across all of them so top-level Shared limiters are
+-- reused.
+-- Each workload's targets fetch from that workload's pipe and signal its
+-- recycler (both looked up by workload name). See 'resolveWorkload'.
+resolveWorkloads
+  :: Map String (Pipe.Pipe key input payload)
+  -> Map String (Recycler key input payload)
+  -> Map String Validated.Workload
+  -> IO (Map String (Workload key input payload))
+resolveWorkloads resolvedPipes resolvedRecyclers workloadsMap = do
+  (resolvedWorkloads, _) <- foldlM
+    (\(acc, cache) (wlName, validatedWorkload) -> do
+      (resolved, cache') <-
+        resolveWorkload
+          validatedWorkload
+          cache
+          (resolvedPipes Map.! wlName)
+          (recyclerInternal (resolvedRecyclers Map.! wlName))
+      pure (Map.insert wlName resolved acc, cache')
+    )
+    (Map.empty, Map.empty)
+    (Map.toAscList workloadsMap)
+  pure resolvedWorkloads
+
+-- | Resolve a single workload: build each target's rate-limited recycling fetch
+-- and resolve each target's rate limiter.
 --
--- The 'Pipe' is created by 'resolveBuilder' and passed in so that the 'Builder'
--- and all targets share the same underlying queues.
+-- The 'Pipe' and its 'Recycler' come from the 'pipes' \/ 'recyclers' pools
+-- (created by 'resolvePipes' \/ 'resolveRecyclers') and are passed in so that
+-- all of the workload's targets share the same underlying queues and recycle
+-- loop.
 --
 -- Cascading defaults and conflict checks have already been performed by
--- "Cardano.Benchmarking.PullFiction.Config.Validated"; this function only
--- creates rate limiters.
+-- "Cardano.Benchmarking.PullFiction.Config.Validated". This function only
+-- creates rate limiters and fetchers.
 resolveWorkload
   :: Validated.Workload
   -- | Limiter cache (threaded as a pure accumulator).
   -> LimiterCache
-  -- | Pipe for this workload (created by 'resolveBuilder').
-  -> Pipe input payload
-  -> IO (Workload input payload, LimiterCache)
-resolveWorkload validatedWorkload cache0 thePipe = do
+  -- | Pipe shared by all the workload's targets (from the 'pipes' pool).
+  -> Pipe.Pipe key input payload
+  -- | Recycler for this workload (from the 'recyclers' pool).
+  -> Recycler.Recycler key input payload
+  -> IO (Workload key input payload, LimiterCache)
+resolveWorkload validatedWorkload cache0 thePipe recycler = do
   let wlName = Validated.workloadName validatedWorkload
       validatedTargets = Validated.targets validatedWorkload
-  (resolvedTargets, cache') <-
-    foldlM
-      (\(acc, cache) (tName, validatedTarget) -> do
-        (resolved, cache'') <-
-          resolveTarget cache thePipe validatedTarget
-        pure (Map.insert tName resolved acc, cache'')
-      )
-      (Map.empty, cache0)
-      (Map.toAscList validatedTargets)
+  (resolvedTargets, cache') <- foldlM
+    (\(acc, cache) (tName, validatedTarget) -> do
+      (resolved, cache'') <-
+        resolveTarget cache thePipe recycler validatedTarget
+      pure (Map.insert tName resolved acc, cache'')
+    )
+    (Map.empty, cache0)
+    (Map.toAscList validatedTargets)
   pure ( Workload { workloadName = wlName
                   , targets      = resolvedTargets
                   }
@@ -417,32 +567,57 @@ resolveWorkload validatedWorkload cache0 thePipe = do
 --------------------------------------------------------------------------------
 
 -- | Resolve a single target: look up or create its rate limiter from the cache,
--- then build the 'Target' record.
+-- build its rate-limited recycling fetch from the workload's recycler, then
+-- build the 'Target' record.
 resolveTarget
   :: LimiterCache
-  -> Pipe input payload
+  -> Pipe.Pipe key input payload
+  -> Recycler.Recycler key input payload
   -> Validated.Target
-  -> IO (Target input payload, LimiterCache)
-resolveTarget cache thePipe validatedTarget = do
+  -> IO (Target key input payload, LimiterCache)
+resolveTarget cache thePipe recycler validatedTarget = do
   (limiter, cache') <- getOrCreateLimiter cache validatedTarget
+  let onEx = Validated.onExhaustion validatedTarget
+      -- The recycling fetch: fetch from the pipe, tell the recycler a dequeue
+      -- happened, deliver the payload. Runtime only calls the pipe's fetcher
+      -- and fires the dequeue event. The recycler decides whether that dequeue
+      -- matters.
+      inner = Pipe.payloadFetcher thePipe limiter onEx
+      fetcher = Pipe.PayloadFetcher
+        { Pipe.fetchPayload = do
+            (key, payload) <- Pipe.fetchPayload inner
+            Recycler.onDequeue recycler key
+            pure payload
+        , Pipe.tryFetchPayload = do
+            mKeyPayload <- Pipe.tryFetchPayload inner
+            case mKeyPayload of
+              Nothing             -> pure Nothing
+              Just (key, payload) -> do
+                Recycler.onDequeue recycler key
+                pure (Just payload)
+        }
   pure ( Target
-           { targetName   = Validated.targetName validatedTarget
-           , targetPipe   = thePipe
-           , rateLimiter  = limiter
-           , maxBatchSize = Validated.maxBatchSize validatedTarget
-           , onExhaustion = Validated.onExhaustion validatedTarget
-           , targetAddr   = Validated.addr validatedTarget
-           , targetPort   = Validated.port validatedTarget
+           { targetName    = Validated.targetName validatedTarget
+           , targetFetcher = fetcher
+           , rateLimiter   = limiter
+           , maxBatchSize  = Validated.maxBatchSize validatedTarget
+           , onExhaustion  = onEx
+           , targetAddr    = Validated.addr validatedTarget
+           , targetPort    = Validated.port validatedTarget
            }
        , cache'
        )
 
--- | Look up or create a 'RL.RateLimiter' for a target.
+-- | Look up or create a 'RL.RateLimiter' for a target. Limiters are shared by
+-- the pre-computed 'Validated.rateLimitKey', which encodes the sharing scope:
 --
--- * 'Nothing' rate limit source → 'RL.newUnlimited' (no cache entry).
--- * Otherwise, use the pre-computed 'Validated.rateLimitKey' as the cache key.
---   If the key already exists the existing limiter is reused; otherwise a
---   'RL.newTokenBucket' is created and inserted.
+-- * @\@global@: one limiter for all targets across all workloads.
+-- * @workloadName@: one per workload.
+-- * @workloadName.targetName@: one per target.
+-- * no rate-limit source: 'RL.newUnlimited' (uncached).
+--
+-- A cache hit reuses the existing limiter. A miss creates a
+-- 'RL.newTokenBucket', inserts it, and returns it.
 getOrCreateLimiter
   :: LimiterCache
   -> Validated.Target
@@ -458,136 +633,6 @@ getOrCreateLimiter cache target =
         Nothing       -> do
           limiter <- RL.newTokenBucket tpsValue
           pure (limiter, Map.insert key limiter cache)
-
---------------------------------------------------------------------------------
--- Builder runner.
---------------------------------------------------------------------------------
-
--- | Set up recycling infrastructure for a builder and return an enqueue action
--- and an optional recycler async.
---
--- For 'RecycleOnConfirm', a background recycler async reads confirmations from
--- the provided channel and recycles the output inputs. The original inputs are
--- retained in the pending map so that orphaned transactions (rolled back by the
--- node) can recover their consumed inputs instead of permanently leaking them
--- from the recycling loop.
-builderRunner
-  :: Ord key
-  -- | Recycling strategy (or 'Nothing' for no recycling).
-  => Maybe Raw.RecycleStrategy
-  -- | Pipeline queues shared with all targets in the workload.
-  -> Pipe input payload
-  -- | Builder name (used to label the recycler thread).
-  -> String
-  -- | For 'RecycleOnConfirm': the observer handle to subscribe to for
-  -- transaction confirmations and rollback orphans. Ignored for other
-  -- strategies.
-  -> Maybe (ObserverHandle key confirmed)
-  -- | Callback invoked each time inputs are recycled (e.g. for tracing).
-  -> (key -> Bool -> [input] -> IO ())
-  -- | Returns the enqueue action (see 'mkEnqueue') and an optional recycler
-  -- async (only for 'RecycleOnConfirm').
-  -> IO ([input] -> key -> payload -> [input] -> IO (), Maybe (Async ()))
-builderRunner strategy pipe name mObserverHandle onRecycle = do
-  pendingRecycle <- STM.newTVarIO Map.empty
-  -- For RecycleOnConfirm, spawn a recycler that reads confirmations and
-  -- recycles the matching inputs. The recycler async is returned to the caller
-  -- ('resolveBuilder') which links it.
-  mRecycler <- case (strategy, mObserverHandle) of
-    (Just (Raw.RecycleOnConfirm _), Just handle) -> do
-      chan <- ohSubscribe handle
-      let extractKey = ohExtractKey handle
-      recycler <- Async.async $ do
-        tid <- myThreadId
-        labelThread tid (name ++ "/recycler")
-        forever $ do
-          event <- STM.atomically $ STM.readTChan chan
-          let k = either extractKey extractKey event
-          mEntry <- STM.atomically $ do
-            m <- STM.readTVar pendingRecycle
-            case Map.lookup k m of
-              Nothing    -> pure Nothing
-              Just entry -> do
-                STM.writeTVar pendingRecycle (Map.delete k m)
-                pure (Just entry)
-          case mEntry of
-            Nothing -> pure ()
-            Just (originalInputs, outputInputs) -> do
-              let (isOrphan, toRecycle) = case event of
-                    Left  _ -> (True,  originalInputs)
-                    Right _ -> (False, outputInputs)
-              STM.atomically $ pipeRecycle pipe toRecycle
-              onRecycle k isOrphan toRecycle
-      pure (Just recycler)
-    _ -> pure Nothing
-  pure (mkEnqueue strategy pipe pendingRecycle onRecycle, mRecycler)
-
--- | Enqueue a built payload and handle input recycling.
---
--- Called by the builder loop after each payload is built. Parameters follow
--- the pipeline order: consumed inputs → confirmation key → payload → produced
--- outputs.
---
--- * 'Nothing': enqueue @(payload, [])@, no recycling at all.
--- * 'Raw.RecycleOnBuild': enqueue @(payload, [])@, recycle outputs immediately.
--- * 'Raw.RecycleOnPull': enqueue @(payload, outputs)@, recycled on fetch.
--- * 'Raw.RecycleOnConfirm': enqueue @(payload, [])@, track @key →
---   (originalInputs, outputInputs)@ in a pending map.
---
--- The @key@ and @originalInputs@ parameters are only used by 'RecycleOnConfirm'
--- and ignored otherwise.
-mkEnqueue
-  :: Ord key
-  -- | Recycling strategy (or 'Nothing' for no recycling).
-  => Maybe Raw.RecycleStrategy
-  -- | Pipeline queues shared with all targets in the workload.
-  -> Pipe input payload
-  -- | Pending recycle map (shared with the recycler async).
-  -> STM.TVar (Map key ([input], [input]))
-  -- | Callback invoked each time inputs are recycled (e.g. for tracing).
-  -> (key -> Bool -> [input] -> IO ())
-  -- | Inputs consumed to build this payload. Stored by 'RecycleOnConfirm' so
-  -- orphaned transactions can recover their consumed inputs.
-  -> [input]
-  -- | Confirmation key (only used by 'RecycleOnConfirm').
-  -> key
-  -- | The built payload to enqueue for workers.
-  -> payload
-  -- | New inputs produced by this payload (recycled on confirmation or
-  -- immediately, depending on the strategy).
-  -> [input]
-  -> IO ()
-mkEnqueue
-  strategy
-  pipe
-  pendingRecycle
-  onRecycle
-  originalInputs
-  key
-  payload
-  outputInputs =
-    case strategy of
-      Nothing -> STM.atomically $ do
-        ---------- STM START ----------
-        STM.writeTBQueue (pipePayloadQueue pipe) (payload, [])
-        ---------- STM ENDED ----------
-      Just Raw.RecycleOnBuild -> do
-        STM.atomically $ do
-          ---------- STM START ----------
-          STM.writeTBQueue (pipePayloadQueue pipe) (payload, [])
-          pipeRecycle pipe outputInputs
-          ---------- STM ENDED ----------
-        onRecycle key False outputInputs
-      Just Raw.RecycleOnPull -> STM.atomically $ do
-        ---------- STM START ----------
-        STM.writeTBQueue (pipePayloadQueue pipe) (payload, outputInputs)
-        ---------- STM ENDED ----------
-      Just (Raw.RecycleOnConfirm _) -> STM.atomically $ do
-        ---------- STM START ----------
-        STM.writeTBQueue (pipePayloadQueue pipe) (payload, [])
-        STM.modifyTVar' pendingRecycle
-          (Map.insert key (originalInputs, outputInputs))
-        ---------- STM ENDED ----------
 
 --------------------------------------------------------------------------------
 -- Input partitioning.
