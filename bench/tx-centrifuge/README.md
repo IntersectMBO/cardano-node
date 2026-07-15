@@ -129,7 +129,10 @@ To enable indefinite-duration runs with finite resources, inputs must be returne
     ```json
     "recycle": { "type": "on_build" }
     ```
-2.  **`on_pull`** — The builder pairs the payload with the resources to be recycled as a `(payload, [input])` tuple in the payload queue. When a worker **fetches** this tuple (triggered by a downstream request), the library returns those resources to the `Input Queue` in a separate STM transaction before handing the payload to the worker. Note: recycling happens on fetch, not on downstream acknowledgement — if the worker is killed between fetch and delivery, those inputs are lost.
+2.  **`on_pull`** — The recycler remembers the payload's resources when it is built and returns them to the `Input Queue` when a worker **dequeues** the payload from the pipe (triggered by a downstream request), on its own thread. Recycling happens on dequeue, not on downstream acknowledgement.
+
+    > **TODO:** rename the config value `on_pull` to `on_dequeue` — the strategy recycles when the payload is *dequeued* from the pipe, not on a TxSubmission "pull". Kept as `on_pull` for backward compatibility (the code type is already `RecycleOnDequeue`).
+
     ```json
     "recycle": { "type": "on_pull" }
     ```
@@ -216,6 +219,76 @@ An optional **top-level** field that delays the start of transmission. Waits thi
   "workloads": { "...": {} }
 }
 ```
+
+### Tracing
+
+The generator emits structured traces through `trace-dispatcher` (the same
+library the node uses). Trace settings live in the **same config file** you pass
+to `tx-centrifuge`, under a `TraceOptions` object keyed by namespace: `""` is the
+root default and every other key overrides one namespace. When `TraceOptions` is
+absent, a default applies that writes every namespace to **stdout** in machine
+(JSON) format at `Debug` severity, so all traces are on out of the box.
+
+```json
+{
+  "rate_limit": { "type": "token_bucket", "params": { "tps": 100000 } },
+  "workloads": { "...": {} },
+
+  "TraceOptions": {
+    "": {
+      "severity": "Info",
+      "detail": "DNormal",
+      "backends": ["Stdout MachineFormat"]
+    },
+    "TxCentrifuge.Pipe": { "severity": "Silence" },
+    "TxCentrifuge.Recycler": { "maxFrequency": 1.0 },
+    "TxCentrifuge.Observer": { "severity": "Silence" },
+    "TxCentrifuge.Builder.NewTx": { "detail": "DMaximum" },
+    "TxCentrifuge.TxSubmission": { "detail": "DDetailed" },
+    "TxSubmission2": { "severity": "Silence" },
+    "KeepAlive": { "severity": "Silence" }
+  }
+}
+```
+
+Per namespace you can set `severity` (the minimum level to emit, or `Silence` to
+drop it), `detail` (`DMinimal`, `DNormal`, `DDetailed`, `DMaximum`), `backends`
+(such as `Stdout MachineFormat`, `Stdout HumanFormatColoured`, or `Forwarder`),
+and `maxFrequency` (a cap in messages per second). The application-level traces
+(severity `Info`) are:
+
+| Namespace | What it reports | Detail levels |
+| :--- | :--- | :--- |
+| `TxCentrifuge.Builder.NewTx` | A new transaction was built from input UTxOs, producing output UTxOs. Carries the builder name and the TxId. Fires once per built transaction. | `DDetailed` adds the `inputs`/`outputs` as UTxO reference strings. `DMaximum` renders each fund in full (its `utxo` reference and `lovelace` value). |
+| `TxCentrifuge.Pipe.InputsEnqueued` | Inputs were added to a pipe's input queue (initial funds or recycled ones). Carries the pipe name and the resulting queue `depth`. | `DDetailed` adds a `count` of the inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Pipe.InputsDequeued` | Inputs were taken off the input queue for the builder. Carries the pipe name and the resulting queue `depth`. | `DDetailed` adds a `count` of the inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Pipe.PayloadEnqueued` | A payload was added to the bounded payload queue. Carries the pipe name and the resulting queue `depth`. | `DMaximum` adds the payload's `txId` (payload events carry no `count`). |
+| `TxCentrifuge.Pipe.PayloadDequeued` | A payload was pulled off the payload queue by a worker. Carries the pipe name and the observed queue `depth`. | `DMaximum` adds the payload's `txId` (payload events carry no `count`). |
+| `TxCentrifuge.Recycler.Pending` | A payload entered the recycler's pending backlog (built or released first), its recyclable inputs held until its confirm, dequeue, or orphan signal matches it. Carries the recycler name and the resulting `pending` (the number of payloads held but not yet matched). | `DDetailed` adds a `count` of the held inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Recycler.AddToPipe` | The recycler added a held payload's inputs back onto a pipe's input queue (via `Pipe.addInputs`), closing the loop. Carries the recycler name, the pipe name, and the resulting `pending`. | `DDetailed` adds a `count` of the recycled inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Observer.Announce` | The observer saw a transaction confirmed or orphaned (rolled back), carrying the observer name, the TxId, and an `isOrphan` flag. Fires only for confirmation-based workloads, but there it is currently **unfiltered**: it reports every transaction in the confirmed blocks its node sees, not just this generator's, so its volume is roughly the whole chain's throughput. | All fields are shown at every level. |
+| `TxCentrifuge.TxSubmission.RequestTxIds` | The node requested TxId announcements (blocking or non-blocking). Carries the `target` node and the ACK and REQ counts. | `DDetailed` and up add the list of currently unacked TxIds. |
+| `TxCentrifuge.TxSubmission.ReplyTxIds` | We replied with TxId announcements and their sizes. Carries the `target`. | `DDetailed` and up add the ACK and REQ counts, the announced TxIds with sizes, and the updated unacked list. |
+| `TxCentrifuge.TxSubmission.RequestTxs` | The node requested full transactions by TxId. Carries the `target`. | `DDetailed` and up add the list of requested TxIds. |
+| `TxCentrifuge.TxSubmission.ReplyTxs` | We sent the requested transactions. Carries the `target`. | `DDetailed` and up add the sent TxIds with sizes, plus the list the node requested. |
+
+Every `TxSubmission` trace carries a `target` field naming the remote node, so
+submission activity can be attributed per target. The `Pipe`, `Recycler`, and
+`Observer` traces fire on roughly every transaction. Each `Pipe` event carries
+its queue `depth` and each `Recycler` event its `pending` count (the number of
+payloads held but not yet matched) on every event and at every detail level.
+Raising `detail` to `DDetailed` adds a `count` of the items involved (input and
+recycler events only, since payload events carry no count), and `DMaximum` adds
+the items themselves (the `inputs` funds, or a payload's `txId`). At
+high TPS that is a firehose, so you will usually want to silence them or cap them
+with `maxFrequency`. Because a `maxFrequency` cap samples a namespace at a fixed
+rate, setting it on these depth-carrying traces gives a periodic depth readout
+(the equivalent of a periodic queue-depth tracer) straight from config, with no
+code change. The `Observer` trace is unfiltered today (see the table above), so
+it too runs at roughly chain throughput. Below the application traces, the raw
+`ouroboros-network`
+protocol is traced verbosely under the `TxSubmission2` and `KeepAlive`
+namespaces.
 
 ## Cardano Implementation (`tx-centrifuge`)
 
@@ -465,11 +538,13 @@ tx-centrifuge/
 │   │       ├── Config/
 │   │       │   ├── Raw.hs           # JSON parsing (no validation)
 │   │       │   ├── Validated.hs     # Validation + cascading defaults
-│   │       │   └── Runtime.hs       # STM resources, rate limiters, builder spawning
+│   │       │   └── Runtime.hs       # Resolves config into named pools + limiters
 │   │       ├── Clock.hs             # Monotonic time source
-│   │       ├── WorkloadRunner.hs    # Rate-limited workload execution
+│   │       ├── WorkloadRunner.hs    # Rate-limited per-target workers
 │   │       └── Internal/
-│   │           └── RateLimiter.hs   # GCRA token bucket
+│   │           ├── Pipe.hs          # Generic input + payload queue pair
+│   │           ├── RateLimiter.hs   # GCRA token bucket
+│   │           └── Recycler.hs      # Closed-loop input recycling (worker + strategy)
 │   │
 │   └── tx-centrifuge/           # Cardano-specific library
 │       └── Cardano/Benchmarking/TxCentrifuge/

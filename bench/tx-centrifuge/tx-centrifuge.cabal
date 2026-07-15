@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:             tx-centrifuge
-version:          0.1.0.0
+version:          0.2.0.0
 synopsis:         Standalone transaction generator for Cardano benchmarking
 description:      Pull-based transaction generator targeting the higher TPS
                   rates and workload isolation that Leios benchmarking requires.
@@ -90,7 +90,9 @@ library pull-fiction
                       Cardano.Benchmarking.PullFiction.Config.Validated
                       Cardano.Benchmarking.PullFiction.Clock
                       Cardano.Benchmarking.PullFiction.WorkloadRunner
-  other-modules:      Cardano.Benchmarking.PullFiction.Internal.RateLimiter
+  other-modules:      Cardano.Benchmarking.PullFiction.Internal.Pipe
+                      Cardano.Benchmarking.PullFiction.Internal.RateLimiter
+                      Cardano.Benchmarking.PullFiction.Internal.Recycler
   build-depends:      base >=4.12 && <5
                     , aeson
                     , async

@@ -103,21 +103,37 @@ nodeName i = "node-" ++ (if i < 10 then "0" else "") ++ show i
 -- so the pipeline exercises rate limiting and recycling without real
 -- transaction building.  'loadConfig' is a thin wrapper for the common case
 -- of @()@ inputs.
-resolveConfig :: FilePath -> NE.NonEmpty input -> IO (Runtime.Runtime input input)
+resolveConfig :: FilePath -> NE.NonEmpty input -> IO (Runtime.Runtime Int input input)
 resolveConfig path inputs = do
   raw <- Aeson.eitherDecodeFileStrict path >>= either fail pure
   validated <- either fail pure $ Validated.validate raw inputs
+  -- Unique per-payload key (a plain counter). The recycler keys its pending map
+  -- by it, so each in-flight payload must have a distinct key (see the INVARIANT
+  -- on 'Internal.Recycler'); one shared atomic counter keeps them unique.
+  keyCounter <- IORef.newIORef (0 :: Int)
   Runtime.resolve
     -- mkBuilder: 1 input per batch; input IS the payload; recycle the same
-    -- input as output.
+    -- input as output. Each payload gets a fresh, unique key from the counter.
     (\_ _ _ -> pure Runtime.BuilderHandle
       { Runtime.bhInputsPerBatch = 1
-      , Runtime.bhBuildPayload   = \is -> pure ((), head is, is)
+      , Runtime.bhBuildPayload   = \is -> do
+          key <- IORef.atomicModifyIORef' keyCounter (\n -> (n + 1, n))
+          pure (key, head is, is)
+      })
+    -- mkPipeHandle: no-op trace handlers.
+    (\_ _ -> pure Runtime.PipeHandle
+      { Runtime.phOnInputsEnqueued  = \_ _ -> pure ()
+      , Runtime.phOnInputsDequeued  = \_ _ -> pure ()
+      , Runtime.phOnPayloadEnqueued = \_ _ -> pure ()
+      , Runtime.phOnPayloadDequeued = \_ _ -> pure ()
+      })
+    -- mkRecyclerHandle: no-op recycle handler.
+    (\_ _ -> pure Runtime.RecyclerHandle
+      { Runtime.rhOnPending   = \_ _ -> pure ()
+      , Runtime.rhOnAddToPipe = \_ _ -> pure ()
       })
     -- mkObserver: no test config uses observers.
     (\_ name _ -> fail $ "resolveConfig: unexpected observer: " ++ name)
-    -- onRecycle: no-op.
-    (\_ _ -> pure ())
     validated
 
 -- | Load a generator config from a JSON file with dummy inputs and resolve into
@@ -125,7 +141,7 @@ resolveConfig path inputs = do
 --
 -- Useful for tests that only need config metadata (rate limits, targets) and do
 -- not use the input pipeline.
-loadConfig :: FilePath -> IO (Runtime.Runtime () ())
+loadConfig :: FilePath -> IO (Runtime.Runtime Int () ())
 loadConfig path = resolveConfig path (() NE.:| [])
 
 -- | Run the pipeline scaffolding shared by all test runners.
@@ -138,15 +154,15 @@ loadConfig path = resolveConfig path (() NE.:| [])
 --
 -- @payload = input@ — the builder treats the input itself as the payload.
 runTest
-  :: Runtime.Runtime input input
-  -> Double                           -- ^ Duration in seconds.
-  -> (Runtime.Workload input input   -- ^ Workload the worker belongs to.
-       -> Runtime.Target input input -- ^ Target the worker serves.
-       -> IO input                    -- ^ Blocking fetch (rate-limited).
-       -> IO (Maybe input)            -- ^ Non-blocking fetch.
-       -> IO ()                       -- ^ Worker body.
+  :: Runtime.Runtime Int input input
+  -> Double                              -- ^ Duration in seconds.
+  -> (Runtime.Workload Int input input   -- ^ Workload the worker belongs to.
+       -> Runtime.Target Int input input -- ^ Target the worker serves.
+       -> IO input                       -- ^ Blocking fetch (rate-limited).
+       -> IO (Maybe input)               -- ^ Non-blocking fetch.
+       -> IO ()                          -- ^ Worker body.
      )
-  -> IO Double                        -- ^ Elapsed wall-clock seconds.
+  -> IO Double                           -- ^ Elapsed wall-clock seconds.
 runTest runtime durationSecs workerBody = do
   let allWorkloads = Map.elems (Runtime.workloads runtime)
   -- Start time.

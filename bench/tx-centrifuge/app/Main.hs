@@ -16,7 +16,7 @@ module Main (main) where
 ----------
 import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
-import Control.Monad (when)
+import Control.Monad (forever, when)
 import Data.Bifunctor (first)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe)
@@ -125,13 +125,13 @@ import Cardano.Benchmarking.TxCentrifuge.TxAssembly qualified as TxAssembly
 main :: IO ()
 main = do
 
-  -- Config.
-  ----------
+  -- Loand and validate config.
+  -----------------------------
 
   (validated, codecConfig, networkId, networkMagic, tracers) <- loadConfig
 
-  -- Callbacks.
-  -------------
+  -- Callbacks / handlers.
+  ------------------------
 
   -- From 'String' (address) and 'Int' (port) to 'AddrInfo'.
   let resolveAddr ip port = do
@@ -147,68 +147,8 @@ main = do
           []    -> die $ "Cannot resolve target: " ++ ip ++ ":" ++ show port
           (a:_) -> pure a
 
-  -- Observer factory: called by Runtime.resolve for each observer in the
-  -- config. Creates an N2N or N2C connection for transaction confirmation
-  -- tracking and returns an ObserverHandle. Takes the IOManager as first
-  -- argument (partial-applied below).
-  let mkObserver ioManager _observerIndex observerName rawObserver = do
-        -- From JSON/Aeson.Value to the cardano-node specific observer.
-        observer <- case interpretObserver rawObserver of
-          Left err -> die $ "Observer " ++ observerName ++ ": " ++ err
-          Right o  -> pure o
-        case observer of
-          -- N2N: ChainSync (headers) + BlockFetch (blocks) + KeepAlive.
-          NodeToNode addr port depth -> do
-            syncState <- TxIdSyncN2N.emptyState
-              TxIdSyncN2N.Config
-                { TxIdSyncN2N.confirmationDepth = depth }
-            keepAlive <- KeepAlive.keepAliveClient 10
-            let clients = N2N.emptyClients
-                  { N2N.clientChainSync  =
-                      Just $ TxIdSyncN2N.chainSyncClient  syncState
-                  , N2N.clientBlockFetch =
-                      Just $ TxIdSyncN2N.blockFetchClient syncState
-                  , N2N.clientKeepAlive  = Just keepAlive
-                  }
-            addrInfo <- resolveAddr addr port
-            pure Runtime.ObserverHandle
-              { Runtime.ohRun = do
-                  result <- N2N.connect
-                    ioManager codecConfig networkMagic tracers
-                    addrInfo clients
-                  case result of
-                    Left err ->
-                      die $ "observer " ++ observerName ++ ": " ++ err
-                    Right () -> pure ()
-              , Runtime.ohSubscribe  = STM.atomically $
-                  STM.dupTChan (TxIdSyncN2N.stateBroadcast syncState)
-              , Runtime.ohExtractKey = Block.blockTxId
-              }
-          -- N2C: LocalChainSync (full blocks, no BlockFetch needed).
-          NodeToClient socketPath depth -> do
-            syncState <- TxIdSyncN2C.emptyState
-              TxIdSyncN2C.Config
-                { TxIdSyncN2C.confirmationDepth = depth }
-            let clients = N2C.emptyClients
-                  { N2C.clientChainSync =
-                      Just $ TxIdSyncN2C.chainSyncClient syncState
-                  }
-            pure Runtime.ObserverHandle
-              { Runtime.ohRun = do
-                  result <- N2C.connect
-                    ioManager codecConfig networkMagic tracers
-                    socketPath clients
-                  case result of
-                    Left err ->
-                      die $ "observer " ++ observerName ++ ": " ++ err
-                    Right () -> pure ()
-              , Runtime.ohSubscribe  = STM.atomically $
-                  STM.dupTChan (TxIdSyncN2C.stateBroadcast syncState)
-              , Runtime.ohExtractKey = Block.blockTxId
-              }
-
-  -- Builder factory passed to 'Runtime.resolve'. Given a zero-based index,
-  -- the builder name, and the opaque builder config, returns a BuilderHandle.
+  -- Builder factory passed to 'Runtime.resolve'. Returns a 'BuilderHandle'.
+  -- Receives builder's zero-based index and name and the opaque builder config.
   let mkBuilder builderIndex builderName rawBuilder = do
         -- From JSON/Aeson.Value to the cardano-node specific builder.
         builder <- interpretBuilder rawBuilder
@@ -228,16 +168,181 @@ main = do
               case buildTxAns of
                 Left err -> die $ "TxAssembly.buildTx: " ++ err
                 Right (tx, outputFunds) -> do
-                  -- Trace the building action.
-                  Tracing.traceWith
-                    (Tracing.trBuilder tracers)
-                    (Tracing.mkBuilderNewTx
-                      builderName tx inputFunds outputFunds
-                    )
                   -- The TxID is needed for the "on_confirm" recycling strategy.
                   let txId = Api.getTxId (Api.getTxBody tx)
+                  -- Trace the newly built transaction (TxCentrifuge.Builder.NewTx)
+                  -- — purely a construction event, no pipe/queue info.
+                  Tracing.traceWith
+                    (Tracing.trBuilder tracers)
+                    (Tracing.BuilderNewTx builderName txId inputFunds outputFunds)
                   pure (txId, tx, outputFunds)
           }
+
+  -- Pipe-events factory passed to 'Runtime.resolve'. Returns a 'PipeHandle'
+  -- Given builder's zero-based index and name create the handlers for the four
+  -- pipe's queue mechanics (TxCentrifuge.Pipe.*): payloads added/removed (with
+  -- the resulting queue depth) and inputs added/removed
+  -- (TxCentrifuge.Pipe.Inputs{Enqueued,Dequeued}, with the inputs themselves
+  -- and the resulting queue depth).
+  let mkPipeHandle _pipeIndex builderName =
+        pure Runtime.PipeHandle
+          { Runtime.phOnInputsEnqueued = \inputs depth ->
+              Tracing.traceWith (Tracing.trPipe tracers)
+                (Tracing.PipeInputsEnqueued builderName depth inputs)
+          , Runtime.phOnInputsDequeued = \inputs depth ->
+              Tracing.traceWith (Tracing.trPipe tracers)
+                (Tracing.PipeInputsDequeued builderName depth inputs)
+          , Runtime.phOnPayloadEnqueued = \key depth ->
+              Tracing.traceWith (Tracing.trPipe tracers)
+                (Tracing.PipePayloadEnqueued builderName depth key)
+          , Runtime.phOnPayloadDequeued = \key depth ->
+              Tracing.traceWith (Tracing.trPipe tracers)
+                (Tracing.PipePayloadDequeued builderName depth key)
+          }
+
+  -- Recycler-events factory passed to 'Runtime.resolve'. Returns a
+  -- 'RecyclerHandle'. Given the builder's zero-based index and name, creates the
+  -- handlers that trace when a payload enters the pending backlog
+  -- (TxCentrifuge.Recycler.Pending) and when its inputs are added to the pipe
+  -- (TxCentrifuge.Recycler.AddToPipe). The pipe and recycler are both named by
+  -- the workload here (one of each per workload).
+  let mkRecyclerHandle _recyclerIndex builderName =
+        pure Runtime.RecyclerHandle
+          { Runtime.rhOnPending = \inputs pending ->
+              Tracing.traceWith (Tracing.trRecycler tracers)
+                (Tracing.RecyclerPending builderName pending inputs)
+          , Runtime.rhOnAddToPipe = \inputs pending ->
+              Tracing.traceWith (Tracing.trRecycler tracers)
+                (Tracing.RecyclerAddToPipe builderName builderName pending inputs)
+          }
+
+  -- Observer factory passed to 'Runtime.resolve'. Returns an 'ObserverHandle'.
+  -- For each observer in the config creates an N2N or N2C connection for
+  -- transaction confirmation tracking.
+  -- Takes the 'IOManager' as first argument (partial-applied below).
+  let mkObserver ioManager _observerIndex observerName rawObserver = do
+        -- From JSON/Aeson.Value to the cardano-node specific observer.
+        observer <- case interpretObserver rawObserver of
+          Left err -> die $ "Observer " ++ observerName ++ ": " ++ err
+          Right o  -> pure o
+        -- Observer announce loop: dup the confirmation broadcast and log every
+        -- confirmed/orphaned tx (TxCentrifuge.Observer.Announce), decoupled from
+        -- the pipe and recycling. Runs alongside the connection in 'ohRun'.
+        -- TODO: this is all-chain — it logs every confirmed tx the observer sees
+        -- on the chain, not just this generator's transactions (the broadcast is
+        -- unfiltered). Filter to our own txIds once Main tracks its in-flight set.
+        let announceLoop broadcast = do
+              chan <- STM.atomically $ STM.dupTChan broadcast
+              forever $ do
+                eitherBlockTx <- STM.atomically $ STM.readTChan chan
+                let (isOrphan, txId) = case eitherBlockTx of
+                      Left  blockTx -> (True,  Block.blockTxId blockTx)
+                      Right blockTx -> (False, Block.blockTxId blockTx)
+                Tracing.traceWith (Tracing.trObserver tracers)
+                  (Tracing.ObserverAnnounce observerName txId isOrphan)
+        case observer of
+          -- N2N: ChainSync (headers) + BlockFetch (blocks) + KeepAlive.
+          --------------------------------------------------------------
+          NodeToNode addr port depth -> do
+            syncState <- TxIdSyncN2N.emptyState
+              TxIdSyncN2N.Config
+                { TxIdSyncN2N.confirmationDepth = depth }
+            keepAlive <- KeepAlive.keepAliveClient 10
+            let clients = N2N.emptyClients
+                  { N2N.clientChainSync  =
+                      Just $ TxIdSyncN2N.chainSyncClient  syncState
+                  , N2N.clientBlockFetch =
+                      Just $ TxIdSyncN2N.blockFetchClient syncState
+                  , N2N.clientKeepAlive  = Just keepAlive
+                  }
+            addrInfo <- resolveAddr addr port
+            pure Runtime.ObserverHandle
+              { Runtime.ohRun =
+                  -- The announce loop runs alongside the connection and is
+                  -- cancelled when the connection ends.
+                  Async.withAsync
+                    (announceLoop (TxIdSyncN2N.stateBroadcast syncState)) $ \announceAsync -> do
+                      -- Link the announce loop so its failure aborts the
+                      -- observer instead of being silently swallowed.
+                      Async.link announceAsync
+                      result <- N2N.connect
+                        ioManager codecConfig networkMagic tracers
+                        addrInfo clients
+                      case result of
+                        Left err ->
+                          die $ "observer " ++ observerName ++ ": " ++ err
+                        Right () -> pure ()
+              , Runtime.ohSubscribe = do
+                  chan <- STM.atomically $
+                    STM.dupTChan (TxIdSyncN2N.stateBroadcast syncState)
+                  -- Reduce each broadcast BlockTx to its TxId (the recycle key).
+                  pure $ do
+                    eitherBlockTx <- STM.readTChan chan
+                    pure $ case eitherBlockTx of
+                      Left  blockTx -> Left  (Block.blockTxId blockTx)
+                      Right blockTx -> Right (Block.blockTxId blockTx)
+              }
+          -- N2C: LocalChainSync (full blocks, no BlockFetch needed).
+          -----------------------------------------------------------
+          NodeToClient socketPath depth -> do
+            syncState <- TxIdSyncN2C.emptyState
+              TxIdSyncN2C.Config
+                { TxIdSyncN2C.confirmationDepth = depth }
+            let clients = N2C.emptyClients
+                  { N2C.clientChainSync =
+                      Just $ TxIdSyncN2C.chainSyncClient syncState
+                  }
+            pure Runtime.ObserverHandle
+              { Runtime.ohRun =
+                  Async.withAsync
+                    (announceLoop (TxIdSyncN2C.stateBroadcast syncState)) $ \announceAsync -> do
+                      -- Link the announce loop so its failure aborts the
+                      -- observer instead of being silently swallowed.
+                      Async.link announceAsync
+                      result <- N2C.connect
+                        ioManager codecConfig networkMagic tracers
+                        socketPath clients
+                      case result of
+                        Left err ->
+                          die $ "observer " ++ observerName ++ ": " ++ err
+                        Right () -> pure ()
+              , Runtime.ohSubscribe = do
+                  chan <- STM.atomically $
+                    STM.dupTChan (TxIdSyncN2C.stateBroadcast syncState)
+                  -- Reduce each broadcast BlockTx to its TxId (the recycle key).
+                  pure $ do
+                    eitherBlockTx <- STM.readTChan chan
+                    pure $ case eitherBlockTx of
+                      Left  blockTx -> Left  (Block.blockTxId blockTx)
+                      Right blockTx -> Right (Block.blockTxId blockTx)
+              }
+
+  -- The 'TargetWorker' callback (the last caller-supplied handler): run once
+  -- per 'Target' by 'runWorkload'. Connects to the target node and drives the
+  -- TxSubmission2 client with the two fetch actions. Takes the 'IOManager'
+  -- first (partial-applied inside 'withIOManager' below), the same shape as
+  -- 'mkObserver'.
+  let targetWorker ioManager target fetchTx tryFetchTx = do
+        addrInfo <- resolveAddr
+          (Runtime.targetAddr target)
+          (Runtime.targetPort target)
+        keepAliveClient <- KeepAlive.keepAliveClient 10
+        result <- N2N.connect ioManager codecConfig networkMagic tracers addrInfo
+          N2N.emptyClients
+            { N2N.clientKeepAlive = Just keepAliveClient
+            , N2N.clientTxSubmission = Just $
+                TxSubmission.txSubmissionClient
+                  (Tracing.trTxSubmission tracers)
+                  (Runtime.targetName target)
+                  (Runtime.maxBatchSize target)
+                  fetchTx tryFetchTx
+            }
+        case result of
+          Left err -> die $ Runtime.targetName target ++ ": " ++ err
+          Right () -> pure ()
+
+  -- Start workloads.
+  -------------------
 
   -- IOManager: no-op on POSIX, required on Windows for IOCP. All network I/O
   -- and cleanup must live inside this block as the handle is invalidated when
@@ -247,32 +352,10 @@ main = do
     -- limiters, and spawns builders. All asyncs are linked and tracked.
     runtime <- Runtime.resolve
       mkBuilder
+      mkPipeHandle
+      mkRecyclerHandle
       (mkObserver ioManager)
-      (\name txId isOrphan funds ->
-        Tracing.traceWith
-          (Tracing.trBuilder tracers)
-          (Tracing.mkBuilderRecycle name txId isOrphan funds)
-      )
       validated
-    -- The 'TargetWorker' callback, called once per 'Target'.
-    let targetWorker target fetchTx tryFetchTx = do
-          addrInfo <- resolveAddr
-            (Runtime.targetAddr target)
-            (Runtime.targetPort target)
-          keepAliveClient <- KeepAlive.keepAliveClient 10
-          result <- N2N.connect ioManager codecConfig networkMagic tracers addrInfo
-            N2N.emptyClients
-              { N2N.clientKeepAlive = Just keepAliveClient
-              , N2N.clientTxSubmission = Just $
-                  TxSubmission.txSubmissionClient
-                    (Tracing.trTxSubmission tracers)
-                    (Runtime.targetName target)
-                    (Runtime.maxBatchSize target)
-                    fetchTx tryFetchTx
-              }
-          case result of
-            Left err -> die $ Runtime.targetName target ++ ": " ++ err
-            Right () -> pure ()
     -- Startup delay.
     -- Sleeps after the builders are already spawned and running so they keep
     -- filling the payload queues for the whole delay, while the workers below
@@ -285,7 +368,7 @@ main = do
       hPutStrLn stderr "Startup delay complete, connecting to targets."
     -- For each 'Workload'.
     workers <- concat <$> mapM
-      (\workload -> runWorkload workload targetWorker)
+      (\workload -> runWorkload workload (targetWorker ioManager))
       (Map.elems $ Runtime.workloads runtime)
     -- runWorkload returns unlinked asyncs; link them here so failures
     -- propagate to the main thread immediately.
