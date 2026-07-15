@@ -38,10 +38,12 @@ import           System.Exit (exitFailure)
 import           System.Info (arch, compilerName, compilerVersion, os)
 import           System.IO (hPutStrLn, stderr)
 
+import           GhcDebugWrap (withGhcDebugIfEnabled)
+
 import           Paths_cardano_node (version)
 
 main :: IO ()
-main = do
+main = withGhcDebugIfEnabled $ do
   Crypto.cryptoInit
 
   toplevelExceptionHandler $ do
