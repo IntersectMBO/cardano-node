@@ -271,13 +271,17 @@ data BuilderTrace
     -- * 'String': builder name (the workload name, see 'Runtime.builderName').
     -- * 'Api.TxId': Blake2b-256 hash identifying the new transaction.
     --   Obtain via @'Api.getTxId' ('Api.getTxBody' signedTx)@.
+    -- * 'Api.AddressInEra': the destination address this transaction pays to
+    --   (the builder's own address, from 'destination_signing_key'). Rendered
+    --   as bech32 only at 'Logging.DMaximum'.
     -- * @['Fund.Fund']@ (inputs): funds consumed by this transaction. Each
     --   fund's 'Fund.fundTxIn' is a 'Api.TxIn' pointing to an existing UTxO
     --   on the ledger.
     -- * @['Fund.Fund']@ (outputs): funds produced by this transaction. Each
     --   fund's 'Fund.fundTxIn' is derived from the new 'Api.TxId' and a
     --   sequential 'Api.TxIx' index (0, 1, 2, ...).
-    BuilderNewTx !String !Api.TxId [Fund.Fund] [Fund.Fund]
+    BuilderNewTx
+      !String !Api.TxId !(Api.AddressInEra Api.ConwayEra) [Fund.Fund] [Fund.Fund]
 
 -- | Namespace: @TxCentrifuge.Builder.NewTx@. The outer prefix
 -- @[\"TxCentrifuge\", \"Builder\"]@ is set when creating the tracer via
@@ -315,12 +319,14 @@ instance Logging.MetaTrace BuilderTrace where
 -- }
 -- @
 --
--- Machine format ('Logging.DMaximum'): renders each fund in full, as a JSON
--- object with its @\"utxo\"@ reference and @\"lovelace\"@ value.
+-- Machine format ('Logging.DMaximum'): renders each fund in full (a JSON
+-- object with its @\"utxo\"@ reference and @\"lovelace\"@ value) and adds the
+-- @\"destination\"@ address the transaction pays to.
 --
 -- @
 -- { \"builder\": \"workload-name\"
 -- , \"txId\": \"\<64-char hex\>\"
+-- , \"destination\": \"addr...\"
 -- , \"inputs\": [{\"utxo\": \"\<txid\>#\<ix\>\", \"lovelace\": 1000000}, ...]
 -- , \"outputs\": [{\"utxo\": \"\<txid\>#\<ix\>\", \"lovelace\": 500000}, ...]
 -- }
@@ -332,9 +338,12 @@ instance Logging.MetaTrace BuilderTrace where
 -- NewTx [workload-name] \<txid\> inputs=[...] outputs=[...]
 -- @
 instance Logging.LogFormatting BuilderTrace where
-  forMachine dtal (BuilderNewTx name txId inputs outputs) = mconcat $
+  forMachine dtal (BuilderNewTx name txId dest inputs outputs) = mconcat $
        [ "builder" .= name
        , "txId"    .= String (Api.serialiseToRawBytesHexText txId)
+       ]
+    ++ [ "destination" .= Api.serialiseAddress dest
+       | dtal >= Logging.DMaximum
        ]
     ++ [ "inputs"  .= map (renderFund dtal) inputs
        | dtal >= Logging.DDetailed
@@ -342,7 +351,7 @@ instance Logging.LogFormatting BuilderTrace where
     ++ [ "outputs" .= map (renderFund dtal) outputs
        | dtal >= Logging.DDetailed
        ]
-  forHuman (BuilderNewTx name txId inputs outputs) =
+  forHuman (BuilderNewTx name txId _dest inputs outputs) =
        "NewTx [" <> Text.pack name <> "] "
     <> Api.serialiseToRawBytesHexText txId
     <> " inputs=["  <> renderFundTxIns inputs  <> "]"

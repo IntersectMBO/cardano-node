@@ -9,6 +9,7 @@ module Cardano.Benchmarking.TxCentrifuge.Fund
   ( Fund (..)
   , loadFunds
   , genesisTxIn
+  , readSigningKey
   ) where
 
 --------------------------------------------------------------------------------

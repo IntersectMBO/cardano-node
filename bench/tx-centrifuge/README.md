@@ -259,7 +259,7 @@ and `maxFrequency` (a cap in messages per second). The application-level traces
 
 | Namespace | What it reports | Detail levels |
 | :--- | :--- | :--- |
-| `TxCentrifuge.Builder.NewTx` | A new transaction was built from input UTxOs, producing output UTxOs. Carries the builder name and the TxId. Fires once per built transaction. | `DDetailed` adds the `inputs`/`outputs` as UTxO reference strings. `DMaximum` renders each fund in full (its `utxo` reference and `lovelace` value). |
+| `TxCentrifuge.Builder.NewTx` | A new transaction was built from input UTxOs, producing output UTxOs. Carries the builder name and the TxId. Fires once per built transaction. | `DDetailed` adds the `inputs`/`outputs` as UTxO reference strings. `DMaximum` renders each fund in full (`utxo` + `lovelace`) and adds the `destination` address the tx pays to. |
 | `TxCentrifuge.Pipe.InputsEnqueued` | Inputs were added to a pipe's input queue (initial funds or recycled ones). Carries the pipe name and the resulting queue `depth`. | `DDetailed` adds a `count` of the inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
 | `TxCentrifuge.Pipe.InputsDequeued` | Inputs were taken off the input queue for the builder. Carries the pipe name and the resulting queue `depth`. | `DDetailed` adds a `count` of the inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
 | `TxCentrifuge.Pipe.PayloadEnqueued` | A payload was added to the bounded payload queue. Carries the pipe name and the resulting queue `depth`. | `DMaximum` adds the payload's `txId` (payload events carry no `count`). |
@@ -296,6 +296,7 @@ namespaces.
 These parameters define the **transaction profile** for a workload:
 - `inputs_per_tx` / `outputs_per_tx`: Controls the transaction structure (size and complexity).
 - `fee`: Fixed Lovelace fee per transaction.
+- `destination_signing_key` (optional): Path to a `.skey` file (a payment or genesis UTxO key, like the `signing_key` entries in funds.json) whose address receives every output this builder produces and which spends the recycled UTxOs. When omitted, a built-in per-builder key is derived instead. Supplying your own key lets you fund and inspect a known address, which is printed to stderr at startup.
 - `recycle` (optional): Controls when output UTxOs are returned to the input queue. See [Resource Recycling](#resource-recycling) for the three strategies (`on_build`, `on_pull`, `on_confirm`). When omitted, outputs are **not recycled** — the generator consumes initial funds and eventually exhausts them.
 
 ## Usage

@@ -91,6 +91,10 @@ import Ouroboros.Network.IOManager (withIOManager)
 -- stm --
 ---------
 import Control.Concurrent.STM qualified as STM
+----------
+-- text --
+----------
+import Data.Text qualified as Text
 ------------------
 -- transformers --
 ------------------
@@ -150,19 +154,22 @@ main = do
   -- Builder factory passed to 'Runtime.resolve'. Returns a 'BuilderHandle'.
   -- Receives builder's zero-based index and name and the opaque builder config.
   let mkBuilder builderIndex builderName rawBuilder = do
-        -- From JSON/Aeson.Value to the cardano-node specific builder.
-        builder <- interpretBuilder rawBuilder
-        -- Based on index we create a new unique address/key for each builder.
-        let (signingKey, signingAddr) = createSigningKeyAndAddress
-                                          networkId
-                                          builderIndex
+        -- Interpret the opaque builder config into a concrete builder, with its
+        -- destination signing key and address already resolved.
+        builder <- interpretBuilder networkId builderIndex rawBuilder
+        -- Announce the destination address so an operator knows which address
+        -- to fund and can inspect its UTxOs.
+        hPutStrLn stderr $
+          "Builder " ++ builderName ++ ": destination address "
+          ++ Text.unpack (Api.serialiseAddress (destinationAddress builder))
         pure Runtime.BuilderHandle
           { -- The number of inputs to wait for.
             Runtime.bhInputsPerBatch = inputsPerTx builder
             -- Build and sign.
           , Runtime.bhBuildPayload   = \inputFunds -> do
               let buildTxAns = TxAssembly.buildTx
-                                 signingAddr signingKey
+                                 (destinationAddress builder)
+                                 (destinationSigningKey builder)
                                  inputFunds (outputsPerTx builder)
                                  (L.Coin (fee builder))
               case buildTxAns of
@@ -170,11 +177,15 @@ main = do
                 Right (tx, outputFunds) -> do
                   -- The TxID is needed for the "on_confirm" recycling strategy.
                   let txId = Api.getTxId (Api.getTxBody tx)
-                  -- Trace the newly built transaction (TxCentrifuge.Builder.NewTx)
-                  -- — purely a construction event, no pipe/queue info.
+                  -- Trace the newly built transaction
+                  -- (TxCentrifuge.Builder.NewTx), purely a construction event,
+                  -- no pipe/queue info.
                   Tracing.traceWith
                     (Tracing.trBuilder tracers)
-                    (Tracing.BuilderNewTx builderName txId inputFunds outputFunds)
+                    (Tracing.BuilderNewTx
+                      builderName txId (destinationAddress builder)
+                      inputFunds outputFunds
+                    )
                   pure (txId, tx, outputFunds)
           }
 
@@ -428,37 +439,54 @@ instance Aeson.FromJSON InitialFunds where
 -- | Interpreted "value" builder configuration with defaults applied.
 data ValueBuilder
   = ValueBuilder
-    { inputsPerTx  :: !Natural
-    , outputsPerTx :: !Natural
-    , fee          :: !Integer
+    { inputsPerTx           :: !Natural
+    , outputsPerTx          :: !Natural
+    , fee                   :: !Integer
+    , destinationSigningKey :: !(Api.SigningKey Api.PaymentKey)
+    , destinationAddress    :: !(Api.AddressInEra Api.ConwayEra)
     }
 
 -- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
--- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1)
--- and validates invariants.
-interpretBuilder :: Raw.Builder -> IO ValueBuilder
-interpretBuilder raw = case Raw.builderType raw of
+-- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1),
+-- validates invariants, and resolves the destination signing key and address.
+--
+-- Each builder pays to (and recycles under) a single signing key. It comes from
+-- the 'destination_signing_key' builder param when set, otherwise we fall back
+-- to a per-index built-in key. The destination address is derived from it.
+interpretBuilder :: Api.NetworkId -> Int -> Raw.Builder -> IO ValueBuilder
+interpretBuilder networkId builderIndex raw = case Raw.builderType raw of
   "value" ->
     case Aeson.Types.parseEither parseValueParams (Raw.builderParams raw) of
       Left err -> die $ "Builder params error: " ++ err
-      Right (maybeInputs, maybeOutputs, rawFee) -> do
+      Right (maybeInputs, maybeOutputs, rawFee, maybeDestPath) -> do
         let nInputs  = fromMaybe 1 maybeInputs
             nOutputs = fromMaybe 1 maybeOutputs
         when (nInputs  == 0) $ die "Builder: inputs_per_tx must be >= 1"
         when (nOutputs == 0) $ die "Builder: outputs_per_tx must be >= 1"
         when (rawFee   <  0) $ die "Builder: fee must be >= 0"
+        (destKey, destAddr) <- case maybeDestPath of
+          Nothing   -> pure (createSigningKeyAndAddress networkId builderIndex)
+          Just path -> do
+            eitherSkey <- Fund.readSigningKey path
+            case eitherSkey of
+              Left err ->
+                die $ "destination_signing_key (" ++ path ++ "): " ++ err
+              Right skey -> pure (skey, deriveAddress networkId skey)
         pure ValueBuilder
-          { inputsPerTx       = nInputs
-          , outputsPerTx      = nOutputs
-          , fee               = rawFee
+          { inputsPerTx           = nInputs
+          , outputsPerTx          = nOutputs
+          , fee                   = rawFee
+          , destinationSigningKey = destKey
+          , destinationAddress    = destAddr
           }
   other -> die $
     "Builder: unknown type " ++ show other ++ ", expected \"value\""
   where
     parseValueParams = Aeson.withObject "ValueParams" $ \o ->
-      (,,) <$> o .:? "inputs_per_tx"
-           <*> o .:? "outputs_per_tx"
-           <*> o .:  "fee"
+      (,,,) <$> o .:? "inputs_per_tx"
+            <*> o .:? "outputs_per_tx"
+            <*> o .:  "fee"
+            <*> o .:? "destination_signing_key"
 
 --------------------------------------------------------------------------------
 -- Observer interpretation.
@@ -498,13 +526,13 @@ interpretObserver raw = case Raw.observerType raw of
 -- Signing key loading
 --------------------------------------------------------------------------------
 
--- | Load a signing key from a hex string, applying an integer suffix to the
--- last 3 hex characters, and derive its address.
+-- | Built-in fallback signing key and address for a builder index, used when a
+-- builder has no 'destination_signing_key'. Builds the key from a hex string,
+-- applying an integer suffix to the last 3 hex characters, and derives its
+-- address via 'deriveAddress'.
 createSigningKeyAndAddress
   :: Api.NetworkId
   -> Int
-  -- Signing key used for all generated transactions.
-  -- Destination address derived from the signing key.
   -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)
 createSigningKeyAndAddress networkId n
   | n < 0 || n > 999 =
@@ -525,16 +553,22 @@ createSigningKeyAndAddress networkId n
         Left err -> error $
                       "createSigningKeyAndAddress: Failed to deserialise: "
                       ++ show err
-        Right signingKey ->
-          let signingAddr =
-                Api.shelleyAddressInEra
-                  (Api.shelleyBasedEra @Api.ConwayEra) $
-                Api.makeShelleyAddress networkId
-                  (Api.PaymentCredentialByKey
-                    (Api.verificationKeyHash
-                      (Api.getVerificationKey signingKey)))
-                  Api.NoStakeAddress
-          in (signingKey, signingAddr)
+        Right signingKey -> (signingKey, deriveAddress networkId signingKey)
+
+-- | Derive the enterprise (no-stake) Shelley address controlled by a payment
+-- signing key under the given network.
+deriveAddress
+  :: Api.NetworkId
+  -> Api.SigningKey Api.PaymentKey
+  -> Api.AddressInEra Api.ConwayEra
+deriveAddress networkId signingKey =
+  Api.shelleyAddressInEra
+    (Api.shelleyBasedEra @Api.ConwayEra) $
+  Api.makeShelleyAddress networkId
+    (Api.PaymentCredentialByKey
+      (Api.verificationKeyHash
+        (Api.getVerificationKey signingKey)))
+    Api.NoStakeAddress
 
 --------------------------------------------------------------------------------
 -- Cardano parameters

@@ -68,6 +68,7 @@ executable tx-centrifuge
                     , ouroboros-consensus:{ouroboros-consensus,cardano}
                     , ouroboros-network:{framework}
                     , stm
+                    , text
                     , transformers
                     , tx-centrifuge:pull-fiction
                     , tx-centrifuge:tx-centrifuge-lib
