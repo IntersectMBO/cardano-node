@@ -38,7 +38,6 @@ jobs:
         cardano-tracer
         trace-dispatcher
         trace-forward
-        trace-resources
 
     steps:
     - name: Download stylish-haskell

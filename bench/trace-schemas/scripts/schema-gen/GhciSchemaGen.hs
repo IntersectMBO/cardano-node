@@ -56,7 +56,6 @@ rootDirs =
   , "../ouroboros-consensus/ouroboros-consensus-cardano/src"
   , "../hermod-tracing/trace-dispatcher/src"
   , "trace-forward/src"
-  , "trace-resources/src"
   ]
 
 type ConstructorName = String

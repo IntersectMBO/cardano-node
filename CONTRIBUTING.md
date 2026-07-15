@@ -212,7 +212,6 @@ Without further ado (**NOTE**: *the order of steps is important!*):
       ``` console
       packages:
           ...
-          trace-resources
           trace-forward
           ../ouroboros-consensus/ouroboros-consensus-protocol
           ../ouroboros-consensus/ouroboros-consensus-cardano
