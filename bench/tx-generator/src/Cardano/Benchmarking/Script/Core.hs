@@ -247,10 +247,11 @@ submitInEra submitMode generator txParams era = do
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     SubmitToEndpoint endpoint -> case endpoint of
-      OgmiosEndpoint (EndpointUri uri) ->
+      OgmiosEndpoint (EndpointUri uri) -> do
+        tracers <- getBenchTracers
         Submission.runSubmitTransport
           (Submission.onRejectionFor generator)
-          (OgmiosBackend.withOgmiosTransport uri)
+          (OgmiosBackend.withOgmiosTransport (Submission.traceProgress tracers) uri)
           txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream

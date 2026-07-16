@@ -19,6 +19,9 @@
     * Setup phases stop at the first rejection.
     * The benchmark phase finishes the stream, then fails if anything was rejected.
     * Rejections are traced through the normal pipeline, including the detail the endpoint reports.
+  * Endpoint runs trace their operation: connection lifecycle, every
+    transaction's outcome (acceptances with the tx id the endpoint reports),
+    and a final accepted/rejected tally.
 
 * **Fix: clean exit for non-benchmark runs.** Scripts that never start the
   Node-to-Node benchmark machinery now exit cleanly instead of crashing at

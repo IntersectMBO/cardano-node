@@ -20,6 +20,7 @@ module Cardano.Benchmarking.Script.Submission
   , onRejectionFor
   , submitLoop
   , runSubmitTransport
+  , traceProgress
   ) where
 
 import           Cardano.Api (Tx)
@@ -43,10 +44,12 @@ import           Prettyprinter.Render.Text (renderStrict)
 import           Streaming
 
 -- | A backend that can submit a single transaction and report, synchronously,
--- whether the endpoint accepted it or rejected it. The rejection type @e@ is
--- the backend's own; this module never inspects it, only renders it.
+-- whether the endpoint accepted it or rejected it. An acceptance carries the
+-- endpoint's identifier for the transaction (its tx id), used for tracing.
+-- The rejection type @e@ is the backend's own; this module never inspects
+-- it, only renders it.
 newtype SubmitTransport era e = SubmitTransport
-  { submitOne :: Tx era -> IO (Either e ()) }
+  { submitOne :: Tx era -> IO (Either e Text) }
 
 -- | How to proceed when the endpoint rejects a transaction.
 data OnRejection
@@ -73,8 +76,10 @@ onRejectionFor generator = case generator of
   _        -> AbortOnRejection
 
 -- | Drive a transaction stream through a transport, returning a @(sent, failed)@
--- tally. Rejections are traced (rendered via 'Pretty') and counted; how the loop
--- reacts depends on the 'OnRejection' policy.
+-- tally. Every transaction's outcome is traced: acceptances as plain progress
+-- with the tx id the endpoint reports, rejections (rendered via 'Pretty') as
+-- errors; how the loop reacts to a rejection depends on the 'OnRejection'
+-- policy.
 submitLoop
   :: forall era e. Pretty e
   => BenchTracers
@@ -93,7 +98,9 @@ submitLoop tracers onRejection transport = go 0 0
       Right (Right tx :> rest) -> do
         outcome <- submitOne transport tx
         case outcome of
-          Right () -> go (sent + 1) failed rest
+          Right acceptedId -> do
+            traceProgress tracers $ "endpoint accepted tx " ++ Text.unpack acceptedId
+            go (sent + 1) failed rest
           Left e -> do
             let rendered = renderRejection e
             traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubError rendered
@@ -104,6 +111,12 @@ submitLoop tracers onRejection transport = go 0 0
 
 renderRejection :: Pretty e => e -> Text
 renderRejection = renderStrict . layoutPretty defaultLayoutOptions . pretty
+
+-- | Trace an endpoint-submission progress line through the standard tx-submit
+-- tracer: the IO counterpart of 'Cardano.Benchmarking.Script.Env.traceDebug',
+-- for the submission loop and transport backends, which run in plain 'IO'.
+traceProgress :: BenchTracers -> String -> IO ()
+traceProgress tracers = traceWith (btTxSubmit_ tracers) . TraceBenchTxSubDebug
 
 -- | Run a transaction stream through a transport within the script monad: open
 -- the transport, drive the loop, and turn the outcome into the run's result —
@@ -123,7 +136,8 @@ runSubmitTransport onRejection withTransport txStream = do
   case result of
     Left err -> liftTxGenError err
     Right (sent, failed) -> do
-      traceDebug $ "submission done, " ++ show sent ++ " sent, " ++ show failed ++ " failed"
+      traceDebug $ "endpoint submission finished: " ++ show sent ++ " accepted, "
+        ++ show failed ++ " rejected"
       when (failed > 0) $ liftTxGenError $ TxGenError $
         show failed ++ " of " ++ show (sent + failed)
           ++ " transactions were rejected"

@@ -16,7 +16,9 @@ This is a __functional submission transport, not a benchmarking one__:
 
 * one transaction per round trip, over a single WebSocket connection;
 * TPS pacing is ignored;
-* no submission metrics — only a sent/failed count, traced at debug level.
+* no submission metrics — instead, the trace output carries the connection
+  lifecycle, every transaction's outcome (acceptances with the tx id the
+  endpoint reports), and a final accepted/rejected tally.
 
 __A submission endpoint replaces @targetNodes@__ — the high-level config
 compiler requires @targetNodes@ to be empty when an endpoint is configured,
@@ -123,17 +125,20 @@ instance Exception OgmiosProtocolError
 
 -- | Open a WebSocket connection to an Ogmios endpoint and run an action with a
 -- 'SubmitTransport' backed by it. Connection-level and protocol faults are
--- surfaced as a 'Left' 'TxGenError'.
+-- surfaced as a 'Left' 'TxGenError'; the connection lifecycle is reported
+-- through the given tracer, so a healthy run leaves evidence too.
 withOgmiosTransport
   :: forall era a. IsShelleyBasedEra era
-  => URI
+  => (String -> IO ())
+     -- ^ progress tracer for backend events (connection lifecycle)
+  -> URI
   -> (SubmitTransport era OgmiosRejection -> IO (Either TxGenError a))
   -> IO (Either TxGenError a)
-withOgmiosTransport uri use =
+withOgmiosTransport traceProgress uri use =
   case parseOgmiosUrl uri of
     Left err -> return $ Left $ TxGenError err
     Right (host, port, path) ->
-      WS.runClient host port path runWithConn
+      WS.runClient host port path (runWithConn host port path)
         `catches`
           [ Handler $ \(e :: WS.HandshakeException)  -> connectionFailure e
           , Handler $ \(e :: WS.ConnectionException) -> connectionFailure e
@@ -141,20 +146,24 @@ withOgmiosTransport uri use =
           , Handler $ \(OgmiosProtocolError m)       -> return $ Left $ TxGenError $ "Ogmios: " ++ m
           ]
  where
-  runWithConn conn = do
+  runWithConn host port path conn = do
+    traceProgress $ "connected to Ogmios at ws://" ++ host ++ ":" ++ show port ++ path
     -- a per-connection counter mirrors each request's JSON-RPC id, so a
     -- response can be matched back to the request that produced it
     reqIdRef <- newIORef 0
-    use SubmitTransport { submitOne = ogmiosSubmitOne conn reqIdRef }
+    result <- use SubmitTransport { submitOne = ogmiosSubmitOne conn reqIdRef }
+    traceProgress "closing the Ogmios connection"
+    return result
   connectionFailure :: Show e => e -> IO (Either TxGenError a)
   connectionFailure e = return $ Left $ TxGenError $ "Ogmios connection failure: " ++ show e
 
 -- | Submit a single transaction and await its response on the same connection.
--- A transaction rejection is returned as 'Left'; a protocol-level fault throws
--- 'OgmiosProtocolError' (caught by 'withOgmiosTransport').
+-- An acceptance is returned as 'Right' with the transaction id Ogmios reports;
+-- a rejection as 'Left'. A protocol-level fault throws 'OgmiosProtocolError'
+-- (caught by 'withOgmiosTransport').
 ogmiosSubmitOne
   :: IsShelleyBasedEra era
-  => WS.Connection -> IORef Int -> Tx era -> IO (Either OgmiosRejection ())
+  => WS.Connection -> IORef Int -> Tx era -> IO (Either OgmiosRejection Text)
 ogmiosSubmitOne conn reqIdRef tx = do
   reqId <- atomicModifyIORef' reqIdRef $ \n -> (n + 1, n)
   -- the send can stall too (a wedged peer with full TCP buffers), so it
@@ -173,9 +182,11 @@ ogmiosSubmitOne conn reqIdRef tx = do
         | respId /= Just reqId -> throwIO $ OgmiosProtocolError $
             "response id mismatch: expected " ++ show reqId
               ++ ", got " ++ show respId ++ " (" ++ describe result ++ ")"
-        | OgmiosError code errMsg errData <- result ->
-            return $ Left $ OgmiosRejection code errMsg errData
-        | otherwise -> return $ Right ()
+        | otherwise -> return $ case result of
+            OgmiosSuccess txId ->
+              Right txId
+            OgmiosError code errMsg errData ->
+              Left $ OgmiosRejection code errMsg errData
  where
   describe (OgmiosSuccess txId)  = "success, tx " ++ Text.unpack txId
   describe (OgmiosError _ msg _) = "error: " ++ Text.unpack msg
