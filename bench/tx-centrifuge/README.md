@@ -13,7 +13,6 @@ A basic configuration defines how to load initial resources, how to build payloa
   "initial_inputs": {
     "type": "genesis_utxo_keys",
     "params": {
-      "network_magic": 42,
       "signing_keys_file": "funds.json"
     }
   },
@@ -143,13 +142,16 @@ To enable indefinite-duration runs with finite resources, inputs must be returne
 
 ## Configuration
 
+### Node Configuration (`nodeConfig`)
+The top-level `nodeConfig` field is the path to the Cardano node's configuration file (e.g., `node-config.json`). The generator reads the consensus protocol from it and derives the network it runs against (mainnet or a testnet magic) from that protocol. This is the single source of the network: it is used to build addresses, submit transactions, and query the node for UTxOs, so no network magic is configured anywhere else.
+
 ### Initial Inputs (`initial_inputs`)
 The generator requires a set of initial UTxOs, configured in the `initial_inputs` section of the main configuration file.
 
-- **`type`**: The input loader variant (e.g., `"genesis_utxo_keys"`).
-- **`params`**:
-  - **`network_magic`**: Required for deriving UTxO references from keys (e.g., `42` for testnet).
-  - **`signing_keys_file`**: Path to a JSON file (e.g., `funds.json`) containing the actual fund data.
+The `type` field selects the loader. Two variants are available:
+
+**`genesis_utxo_keys`** — load funds from a JSON file. `params`:
+- **`signing_keys_file`**: Path to a JSON file (e.g., `funds.json`) containing the actual fund data.
 
 #### `funds.json` entry types
 The file contains an array of fund objects. Each object has two required fields (`signing_key`, `value`) and one optional field (`tx_in`):
@@ -171,6 +173,25 @@ When `tx_in` is **omitted**, the fund is treated as a genesis UTxO: the `TxId` i
 ```
 
 **Design Note**: The `funds.json` format is designed to be compatible with the output of `cardano-cli conway create-testnet-data --utxo-keys`. This allows you to immediately use an arbitrary large set of Shelley genesis keys created during testnet bootstrapping as the initial fund pool for the generator, without needing to manually create UTxOs once the network is live.
+
+#### `local_utxo_query`
+Discover the starting funds **on chain** at startup instead of from a file. The generator queries the local node (over its NodeToClient socket) for the UTxOs at one or more signing keys' addresses. This makes restarts **stateless**: each builder recycles its outputs back to its `destination_signing_key` address, so pointing this at those same keys re-discovers whatever a previous run left on chain.
+
+`params`:
+- **`socket_path`**: Path to the local node's NodeToClient socket.
+- **`signing_keys`**: Array of `.skey` file paths. Each key's address is queried, and every UTxO found there becomes an initial fund tagged with that key (so it can be spent).
+
+The query era is detected from the node at runtime, so it follows the chain across the Shelley-based eras cardano-api supports (Shelley through Conway today). If no UTxOs are found at any queried address, the generator exits with an error rather than starting. Fund the address of at least one configured `signing_keys` entry and restart.
+
+```json
+"initial_inputs": {
+  "type": "local_utxo_query",
+  "params": {
+    "socket_path": "/run/node/node.sock",
+    "signing_keys": ["dest.skey"]
+  }
+}
+```
 
 ### Rate Limiting (`rate_limit`)
 The `rate_limit` field can be set at the **top level** or at the **workload level** (but not both — setting it at both levels is a validation error). If omitted entirely, targets run **unlimited** (no rate ceiling).
@@ -316,7 +337,6 @@ Optimized for maximum TPS using simple 1-in/1-out transactions. Outputs are recy
   "initial_inputs": {
     "type": "genesis_utxo_keys",
     "params": {
-      "network_magic": 42,
       "signing_keys_file": "funds.1.json"
     }
   },
@@ -362,7 +382,6 @@ Uses complex transactions with independent rate limits for each target connectio
   "initial_inputs": {
     "type": "genesis_utxo_keys",
     "params": {
-      "network_magic": 42,
       "signing_keys_file": "funds.2.json"
     }
   },
@@ -473,7 +492,6 @@ Both emit the same `BlockTx` events on the same broadcast channel type, so the d
   "initial_inputs": {
     "type": "genesis_utxo_keys",
     "params": {
-      "network_magic": 42,
       "signing_keys_file": "funds.3.json"
     }
   },

@@ -413,14 +413,18 @@ main = do
 
 -- | How to load initial funds for the generator.
 --
--- This type is node-specific (it references signing keys and network magic),
+-- This type is node-specific (it references signing keys),
 -- so it lives here rather than in the @pull-fiction@ sub-library. The raw JSON
 -- config stores this as an opaque 'Aeson.Value'; @Main@ parses it into this ADT
 -- and loads funds before passing them to 'Validated.validate'.
 data InitialFunds
   = GenesisUTxOKeys
-      !Natural  -- ^ Network magic.
-      !FilePath -- ^ Path to signing keys file.
+      !FilePath -- ^ Signing keys (to sign and derive address) and lovelace.
+  | LocalUTxOQuery
+      !FilePath   -- ^ NodeToClient socket path of the local node to query.
+      ![FilePath] -- ^ Signing key files. Each key's derived address is
+                  --   queried, and every UTxO found there is tagged with that
+                  --   key so the spending transaction can be signed.
 
 instance Aeson.FromJSON InitialFunds where
   parseJSON = Aeson.withObject "InitialFunds" $ \o -> do
@@ -428,9 +432,12 @@ instance Aeson.FromJSON InitialFunds where
     case ty of
       "genesis_utxo_keys" -> do
         p <- o .: "params"
-        GenesisUTxOKeys <$> p .: "network_magic" <*> p .: "signing_keys_file"
+        GenesisUTxOKeys <$> p .: "signing_keys_file"
+      "local_utxo_query" -> do
+        p <- o .: "params"
+        LocalUTxOQuery <$> p .: "socket_path" <*> p .: "signing_keys"
       _ -> fail $ "InitialFunds: unknown type " ++ show ty
-                ++ ", expected \"genesis_utxo_keys\""
+                ++ ", expected \"genesis_utxo_keys\" or \"local_utxo_query\""
 
 --------------------------------------------------------------------------------
 -- Builder interpretation.
@@ -471,7 +478,7 @@ interpretBuilder networkId builderIndex raw = case Raw.builderType raw of
             case eitherSkey of
               Left err ->
                 die $ "destination_signing_key (" ++ path ++ "): " ++ err
-              Right skey -> pure (skey, deriveAddress networkId skey)
+              Right skey -> pure (skey, Fund.deriveAddress networkId skey)
         pure ValueBuilder
           { inputsPerTx           = nInputs
           , outputsPerTx          = nOutputs
@@ -553,22 +560,8 @@ createSigningKeyAndAddress networkId n
         Left err -> error $
                       "createSigningKeyAndAddress: Failed to deserialise: "
                       ++ show err
-        Right signingKey -> (signingKey, deriveAddress networkId signingKey)
-
--- | Derive the enterprise (no-stake) Shelley address controlled by a payment
--- signing key under the given network.
-deriveAddress
-  :: Api.NetworkId
-  -> Api.SigningKey Api.PaymentKey
-  -> Api.AddressInEra Api.ConwayEra
-deriveAddress networkId signingKey =
-  Api.shelleyAddressInEra
-    (Api.shelleyBasedEra @Api.ConwayEra) $
-  Api.makeShelleyAddress networkId
-    (Api.PaymentCredentialByKey
-      (Api.verificationKeyHash
-        (Api.getVerificationKey signingKey)))
-    Api.NoStakeAddress
+        Right signingKey ->
+          (signingKey, Fund.deriveAddress networkId signingKey)
 
 --------------------------------------------------------------------------------
 -- Cardano parameters
@@ -632,32 +625,42 @@ loadConfig = do
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
 
-  -- Load initial funds.
-  -- Parse the opaque initialInputs JSON into the node-level InitialFunds ADT,
-  -- then load actual UTxO funds before validation.
-  funds <- case Aeson.fromJSON (Raw.initialInputs raw) of
-    Aeson.Error err -> die $ "initialInputs: " ++ err
-    Aeson.Success (GenesisUTxOKeys magic path) -> do
-      hPutStrLn stderr $ "Loading funds from: " ++ path
-      result <- Fund.loadFunds (magicToNetworkId magic) path
-      case result of
-        Left err -> die ("Fund.loadFunds: " ++ err)
-        Right [] -> die "Fund.loadFunds: no funds loaded"
-        Right (f:fs) -> do
-          let allFunds = f NE.:| fs
-          hPutStrLn stderr $ "  Loaded " ++ show (NE.length allFunds) ++ " funds"
-          pure allFunds
-  -- Validate config.
-  -- Pipeline: Raw → Validated (with pre-loaded funds).
-  validated <- either die pure $ Validated.validate raw funds
-
-  -- Load node configuration and create consensus protocol.
+  -- Load node configuration and create the consensus protocol first: the
+  -- network id it yields is needed to load funds (both to derive query
+  -- addresses and to open the LocalStateQuery connection).
   hPutStrLn stderr $ "Loading node config from: " ++ nodeConfigPath
   nodeConfig <- mkNodeConfig nodeConfigPath >>= either die pure
   protocol   <- mkConsensusProtocol nodeConfig >>= either die pure
   let codecConfig  = protocolToCodecConfig protocol
       networkId    = protocolToNetworkId protocol
       networkMagic = protocolToNetworkMagic protocol
+
+  -- Load initial funds. Parse the opaque initialInputs JSON into the node-level
+  -- InitialFunds ADT, then obtain actual UTxO funds before validation: either
+  -- from a genesis signing-keys file, or by querying the node on chain.
+  -- Each variant announces itself and returns its loader's result. Handling
+  -- that result (fail on error or empty, report the count, build the non-empty
+  -- list) is shared below.
+  funds <- do
+    result <- case Aeson.fromJSON (Raw.initialInputs raw) of
+      Aeson.Error err -> die $ "initialInputs: " ++ err
+      Aeson.Success (GenesisUTxOKeys path) -> do
+        hPutStrLn stderr $ "Loading funds from: " ++ path
+        Fund.loadFunds networkId path
+      Aeson.Success (LocalUTxOQuery socketPath keyPaths) -> do
+        hPutStrLn stderr $ "Querying UTxOs via N2C socket: " ++ socketPath
+        Fund.discoverFunds networkId socketPath keyPaths
+    case result of
+      Left err     -> die $ "initialInputs: " ++ err
+      Right []     -> die "initialInputs: no funds loaded"
+      Right (f:fs) -> do
+        let allFunds = f NE.:| fs
+        hPutStrLn stderr $ "  Loaded " ++ show (NE.length allFunds) ++ " funds"
+        pure allFunds
+
+  -- Validate config.
+  -- Pipeline: Raw → Validated (with pre-loaded funds).
+  validated <- either die pure $ Validated.validate raw funds
 
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
@@ -721,9 +724,3 @@ protocolToNetworkMagic
       fst $ Api.protocolInfo @IO info
 protocolToNetworkMagic _ =
   error "protocolToNetworkMagic: non-Cardano protocol"
-
--- | Convert a raw network magic number to a 'Api.NetworkId'.
--- Mainnet uses the well-known magic 764824073; everything else is a testnet.
-magicToNetworkId :: Natural -> Api.NetworkId
-magicToNetworkId 764824073 = Api.Mainnet
-magicToNetworkId n         = Api.Testnet (Api.NetworkMagic (fromIntegral n))
