@@ -41,7 +41,7 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), throwSigTerm)
+import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), installSigTermHandler)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
@@ -123,7 +123,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Control.Applicative (empty)
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent (killThread, getNumCapabilities)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
@@ -158,7 +158,6 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, m
 import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
-import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
@@ -214,25 +213,6 @@ buildNodeConfiguration partialConf = do
     (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
     pure
     $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
-
--- | Workaround to ensure that the main thread throws an async exception on
--- receiving a SIGTERM signal.
-installSigTermHandler :: SigTermPhase -> IO ()
-installSigTermHandler phase = do
-#ifdef UNIX
-  -- Similar implementation to the RTS's handling of SIGINT (see GHC's
-  -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
-  runThreadIdWk <- mkWeakThreadId =<< myThreadId
-  _ <- Signals.installHandler
-    Signals.sigTERM
-    (Signals.CatchOnce $ do
-      runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId ->
-        throwSigTerm phase runThreadId
-    )
-    Nothing
-#endif
-  return ()
 
 handleNodeWithTracers
   :: PartialNodeConfiguration

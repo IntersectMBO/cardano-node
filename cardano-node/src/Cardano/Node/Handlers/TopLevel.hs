@@ -1,8 +1,14 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeApplications #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Cardano.Node.Handlers.TopLevel
   ( SigTermException (..)
   , SigTermPhase (..)
+  , installSigTermHandler
   , throwSigTerm
   , toplevelExceptionHandler
   ) where
@@ -53,12 +59,27 @@ import qualified Ouroboros.Network.Diffusion.Types as Network
 
 import           Prelude
 
-import           Control.Concurrent (ThreadId)
+import           Control.Concurrent
+                   ( ThreadId
+#ifdef UNIX
+                   , mkWeakThreadId
+                   , myThreadId
+#endif
+                   )
 import           Control.Exception
+#ifdef UNIX
+import           Control.Monad (forM_, void)
+#endif
 import           Control.Monad.Class.MonadAsync (ExceptionInLinkedThread (..))
+#ifdef UNIX
+import           GHC.Weak (deRefWeak)
+#endif
 import           System.Environment
 import           System.Exit
 import           System.IO
+#ifdef UNIX
+import qualified System.Posix.Signals as Signals
+#endif
 
 -- | Internal async exception used to route SIGTERM through the top-level
 -- handler without letting ordinary exception handlers catch it.
@@ -82,6 +103,25 @@ throwSigTerm phase threadId =
   case phase of
     SigTermDuringStartup -> throwTo threadId SigTermException
     SigTermDuringRuntime -> throwTo threadId ExitSuccess
+
+-- | Ensure that SIGTERM throws an async exception to the main node thread.
+installSigTermHandler :: SigTermPhase -> IO ()
+#ifdef UNIX
+installSigTermHandler phase = do
+  -- Similar implementation to the RTS's handling of SIGINT (see GHC's
+  -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
+  runThreadIdWk <- mkWeakThreadId =<< myThreadId
+  void $ Signals.installHandler
+    Signals.sigTERM
+    (Signals.CatchOnce $ do
+      runThreadIdMay <- deRefWeak runThreadIdWk
+      forM_ runThreadIdMay $ \runThreadId ->
+        throwSigTerm phase runThreadId
+    )
+    Nothing
+#else
+installSigTermHandler _ = pure ()
+#endif
 
 -- | An exception handler to use for a program top level, as an alternative to
 -- the default top level handler provided by GHC.
