@@ -13,7 +13,10 @@ module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
        , NodeDescription (..)
        , SubmissionEndpointProtocol (..)
+       , SubmissionEndpoint (..)
        , EndpointUri (..)
+       , mkSubmissionEndpoint
+       , describeSubmissionEndpoint
        , defaultKeepaliveTimeout
        , getKeepaliveTimeout
        , getNodeAlias
@@ -38,7 +41,6 @@ import           Cardano.TxGenerator.Types
 import           Data.Aeson.Types as Aeson
 import           Data.Foldable (find)
 import           Data.Function (on)
-import           Data.List.NonEmpty (NonEmpty (..))
 import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as Clock (DiffTime, secondsToDiffTime)
@@ -63,7 +65,10 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_cardanoTracerSocket  :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile In
   , _nix_localNodeSocketPath  :: String
-  , _nix_targetNodes          :: NonEmpty NodeDescription
+    -- | Targets for Node-to-Node benchmark submission. Must be non-empty for
+    -- a benchmark run, and empty when a submission endpoint is configured:
+    -- the endpoint replaces the target nodes as the submission target.
+  , _nix_targetNodes          :: [NodeDescription]
   , _nix_submissionEndpointProtocol :: Maybe SubmissionEndpointProtocol
   , _nix_submissionEndpointURI  :: Maybe EndpointUri
   } deriving (Show, Eq)
@@ -84,6 +89,31 @@ instance FromJSON SubmissionEndpointProtocol where
 
 instance ToJSON SubmissionEndpointProtocol where
   toJSON Ogmios = String "Ogmios"
+
+-- | A fully-specified submission endpoint: a backend protocol together with
+-- the endpoint it addresses. A protocol cannot occur without an endpoint, so
+-- code past config resolution never needs to handle that combination. Each
+-- future backend adds a constructor carrying exactly the connection
+-- configuration it needs (turning this into a plain @data@ then).
+newtype SubmissionEndpoint
+  = OgmiosEndpoint EndpointUri
+  deriving (Show, Eq, Generic)
+
+-- | Pair a protocol tag from the config with the endpoint it addresses.
+mkSubmissionEndpoint :: SubmissionEndpointProtocol -> EndpointUri -> SubmissionEndpoint
+mkSubmissionEndpoint Ogmios = OgmiosEndpoint
+
+-- | Render an endpoint for log and error messages.
+describeSubmissionEndpoint :: SubmissionEndpoint -> String
+describeSubmissionEndpoint (OgmiosEndpoint (EndpointUri uri)) =
+  "Ogmios at " ++ uriToString id uri ""
+
+instance FromJSON SubmissionEndpoint where
+  parseJSON = withObject "SubmissionEndpoint" $ \o ->
+    mkSubmissionEndpoint <$> o .: "protocol" <*> o .: "uri"
+
+instance ToJSON SubmissionEndpoint where
+  toJSON (OgmiosEndpoint uri) = object ["protocol" .= Ogmios, "uri" .= uri]
 
 -- | A submission endpoint address, well-formed by construction: decoding
 -- only accepts absolute URIs (a scheme is required, e.g. @ws://host:1337@).

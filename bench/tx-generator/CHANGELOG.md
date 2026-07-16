@@ -12,7 +12,9 @@
     sent over a WebSocket as a JSON-RPC 2.0 `submitTransaction` call.
   * It reroutes **every** phase, but only tx submission: genesis fund import, UTxO splitting, and benchmarking.
   * It is a **functional transport, not a benchmark**: no TPS pacing, no metrics.
-    * So it requires `debugMode: true`. The compiler rejects an endpoint config on its own.
+    * The endpoint replaces `targetNodes` as the submission target: set
+      `"targetNodes": []` alongside an endpoint. The compiler rejects a config
+      that sets both (and, as before, a benchmark with an empty `targetNodes`).
   * **A rejected transaction fails the whole run** (the process exits non-zero):
     * Setup phases stop at the first rejection.
     * The benchmark phase finishes the stream, then fails if anything was rejected.

@@ -18,9 +18,9 @@ This is a __functional submission transport, not a benchmarking one__:
 * TPS pacing is ignored;
 * no submission metrics — only a sent/failed count, traced at debug level.
 
-__Using a submission endpoint requires @debugMode: true@__ — the high-level
-config compiler rejects a @submissionEndpointURI@ config that does not also
-set it.
+__A submission endpoint replaces @targetNodes@__ — the high-level config
+compiler requires @targetNodes@ to be empty when an endpoint is configured,
+and rejects a config that sets both.
 
 == Throughput
 

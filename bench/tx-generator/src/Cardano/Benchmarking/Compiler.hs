@@ -23,6 +23,7 @@ import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Functor ((<&>))
+import           Data.List.NonEmpty (nonEmpty)
 import           Data.Maybe
 import qualified Data.Text as Text
 
@@ -61,6 +62,7 @@ compileToScript = do
         pure
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
+  logSubmissionEndpoint
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
@@ -200,18 +202,22 @@ benchmarkingPhase wallet collateralWallet = do
   txParams <- askNixOption txGenTxParams
   endpoint <- resolveSubmissionEndpoint
   doneWallet <- newWallet "done_wallet"
-  -- A submission endpoint is a functional submission transport, not a
-  -- benchmarking one: it ignores tps and targetNodes and produces no
-  -- submission metrics, so a config that asks for a real benchmark must fail
-  -- fast here instead of running unpaced and unmeasured.
-  submitMode <- case (endpoint, debugMode) of
-    (Just (eType, uri), True)  -> pure $ SubmitToEndpoint eType uri
-    (Just _,            False) -> throwCompileError $ SomeCompilerError
-      "submissionEndpointURI is a functional submission transport: it ignores \
-      \tps and targetNodes and produces no benchmark metrics. Set debugMode: \
-      \true to acknowledge this, or remove it to run a real benchmark."
-    (Nothing,           True)  -> pure LocalSocket
-    (Nothing,           False) -> pure $ Benchmark targetNodes tps txCount
+  -- A submission endpoint replaces the target nodes as the submission target
+  -- (and is a functional transport: unpaced, unmeasured), so a config that
+  -- provides both is contradictory and fails fast here.
+  submitMode <- case endpoint of
+    Just ep
+      | null targetNodes -> pure $ SubmitToEndpoint ep
+      | otherwise -> throwCompileError $ SomeCompilerError
+          "a submission endpoint replaces targetNodes as the submission \
+          \target: set targetNodes to [] (or drop the endpoint to benchmark \
+          \against the target nodes)."
+    Nothing
+      | debugMode -> pure LocalSocket
+      | Just nodes <- nonEmpty targetNodes -> pure $ Benchmark nodes tps txCount
+      | otherwise -> throwCompileError $ SomeCompilerError
+          "a benchmark requires at least one entry in targetNodes (or a \
+          \submission endpoint to submit through)."
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
@@ -262,21 +268,32 @@ askNixOption = asks
 
 getSetupSubmitMode :: Compiler SubmitMode
 getSetupSubmitMode =
-  maybe LocalSocket (uncurry SubmitToEndpoint) <$> resolveSubmissionEndpoint
+  maybe LocalSocket SubmitToEndpoint <$> resolveSubmissionEndpoint
 
--- | Resolve the configured submission endpoint, requiring its type and URI to
--- be set together (or both omitted). The URI itself is already parsed: decoding
--- the config only accepts a well-formed absolute URI.
-resolveSubmissionEndpoint :: Compiler (Maybe (SubmissionEndpointProtocol, EndpointUri))
+-- | Resolve the configured submission endpoint, requiring its protocol and URI
+-- to be set together (or both omitted). The URI itself is already parsed:
+-- decoding the config only accepts a well-formed absolute URI.
+resolveSubmissionEndpoint :: Compiler (Maybe SubmissionEndpoint)
 resolveSubmissionEndpoint = do
-  mType <- askNixOption _nix_submissionEndpointProtocol
-  mUri  <- askNixOption _nix_submissionEndpointURI
-  case (mType, mUri) of
+  mProtocol <- askNixOption _nix_submissionEndpointProtocol
+  mUri      <- askNixOption _nix_submissionEndpointURI
+  case (mProtocol, mUri) of
     (Nothing, Nothing) -> pure Nothing
-    (Just t,  Just u)  -> pure $ Just (t, u)
+    (Just p,  Just u)  -> pure $ Just $ mkSubmissionEndpoint p u
     _ -> throwCompileError $ SomeCompilerError
       "submissionEndpointProtocol and submissionEndpointURI must be set together \
       \(or both omitted)."
+
+-- | Leave run-time evidence of an endpoint run in the trace: it behaves
+-- differently from a benchmark (unpaced, unmeasured), and that should be
+-- readable off the logs rather than only off the config.
+logSubmissionEndpoint :: Compiler ()
+logSubmissionEndpoint = resolveSubmissionEndpoint >>= mapM_ (\ep ->
+  logMsg $ Text.pack $
+    "Every phase submits through an endpoint: " ++ describeSubmissionEndpoint ep
+      ++ ". This is a functional transport, not a benchmark: tps is not \
+         \enforced, targetNodes is unused, and no benchmark metrics are \
+         \produced.")
 
 delay :: Compiler ()
 delay = cmd1 Delay _nix_init_cooldown

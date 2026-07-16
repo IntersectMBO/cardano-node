@@ -170,10 +170,11 @@ if [ -z "$SIG_KEY" ]; then
 fi
 
 CONFIG_FILE="$WORKDIR/tx-generator-config.json"
-# debugMode is mandatory alongside a submission endpoint: it is a functional
-# transport without pacing or metrics, and the config compiler rejects it for
-# benchmark (non-debug) runs. submissionEndpointProtocol and submissionEndpointURI
-# must be set together.
+# submissionEndpointProtocol and submissionEndpointURI must be set together.
+# The endpoint replaces targetNodes as the submission target: the compiler
+# requires targetNodes to be empty alongside an endpoint, which is automatic
+# here — --testnet-config-dir discovers no target nodes when an endpoint is
+# configured.
 cat > "$CONFIG_FILE" << EOF
 {
   "tx_count": 10,
@@ -186,7 +187,7 @@ cat > "$CONFIG_FILE" << EOF
   "init_cooldown": 5,
   "era": "Conway",
   "keepalive": 30,
-  "debugMode": true,
+  "debugMode": false,
   "plutus": null,
   "sigKey": "$SIG_KEY",
   "submissionEndpointProtocol": "Ogmios",
