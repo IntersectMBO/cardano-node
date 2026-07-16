@@ -41,7 +41,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview
+  , v8Preview, v9Preview, v11Preview
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
@@ -418,6 +418,9 @@ v8Preview = helper_addOverlayOrDie "v8-preview"
 --       v9Preview = helper_addOverlayOrDie "v9-preview" . v8Preview
 v9Preview :: HasCallStack => Types.Profile -> Types.Profile
 v9Preview = helper_addOverlayOrDie "v9-preview"
+
+v11Preview :: HasCallStack => Types.Profile -> Types.Profile
+v11Preview = helper_addOverlayOrDie "v11-preview"
 
 -- Budget:
 
@@ -891,15 +894,19 @@ analysisFiltersAppend str = analysis
     else a {Types.filters = Types.filters a ++ [str]}
   )
 
+-- for 88k blocks: from 2.6k to 8.8k
 analysisSizeSmall :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeSmall = analysisFiltersAppend "size-small"
 
+-- for 88k blocks: from 7k to 9.8k
 analysisSizeModerate :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate = analysisFiltersAppend "size-moderate"
 
+-- for 88k blocks: from 6.7k to 9.2k
 analysisSizeModerate2 :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate2 = analysisFiltersAppend "size-moderate-2"
 
+-- for 88k blocks: larger than 79.2k
 analysisSizeFull :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeFull = analysisFiltersAppend "size-full"
 

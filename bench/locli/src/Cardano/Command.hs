@@ -35,6 +35,7 @@ import Cardano.Report
 import Cardano.Unlog.BackendDB
 import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
+import Cardano.Unlog.PlutusBudgetSummary
 import Cardano.Util             hiding (head)
 
 data CommandError
@@ -857,10 +858,21 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   -- For the time being, typst output is only used by the `compare` CLI command.
   -- It's automatically created side-by-side with the Org mode report, and will
   -- replace it eventually.
-  let typstPath = Cardano.Util.replaceExtension outfp "typ"
+  let
+    typstPath   = Cardano.Util.replaceExtension outfp "typ"
+    scalingFile = "plutus-workload-scaling.csv"
+
+  scalings :: [PlutusBudgetSummary] <- catMaybes <$> forM runs
+    (\(unJsonInputFile -> sumf, _, _) ->
+      let budgetSummary = takeDirectory sumf </> ".." </> "generator" </> "plutus-budget-summary.json"
+      in liftIO $ readBudgetSummaryMaybe budgetSummary
+    )
+  mScalingCSV <- if length scalings == length xs        -- if for every run, we also got a Plutus budget summary...
+    then liftIO (writeResultsCSV (takeDirectory outfp </> scalingFile) scalings) >> pure (Just scalingFile)
+    else pure Nothing
   (tmplEnv', typstReport) <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateTypst (takeFileName typstPath) baseline deltas
+      Cardano.Report.generateTypst (takeFileName typstPath) mScalingCSV baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
   liftIO $

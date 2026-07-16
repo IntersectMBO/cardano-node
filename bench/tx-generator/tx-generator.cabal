@@ -30,7 +30,7 @@ common with-library
   -- It makes sure, we only depend on that package if it is buildable.
   -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
   if flag(withplutuslib) && !(impl(ghc <9.6) || impl(ghc >=9.7))
-    build-depends:      plutus-scripts-bench ^>= 1.0.4
+    build-depends:      plutus-scripts-bench ^>= 1.0.5
     cpp-options:        -DWITH_LIBRARY
 
 common maybe-unix

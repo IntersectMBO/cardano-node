@@ -93,6 +93,7 @@ data Workload
   | WPlutusLoopSECP
   | WPlutusLoopBLST
   | WPlutusLoopRipemd
+  | WPlutusLoopExpMod
   | WPlutusUnknown
 
 instance ToJSON Workload where
@@ -102,6 +103,7 @@ instance ToJSON Workload where
     WPlutusLoopSECP      -> "Plutus SECP loop"
     WPlutusLoopBLST      -> "Plutus BLST loop"
     WPlutusLoopRipemd    -> "Plutus RIPEMD-160 loop"
+    WPlutusLoopExpMod    -> "Plutus ExpMod loop"
     WPlutusUnknown       -> "Plutus (other)"
 
 filenameInfix :: Workload -> Text
@@ -110,6 +112,7 @@ filenameInfix = \case
   WPlutusLoopSECP       -> "plutus-secp"
   WPlutusLoopBLST       -> "plutus-blst"
   WPlutusLoopRipemd     -> "plutus-ripemd"
+  WPlutusLoopExpMod     -> "plutus-expmod"
   WValue                -> "value-only"
   _                     -> "unknown"
 
@@ -174,14 +177,16 @@ liftTmplRun Summary{sumWorkload=generatorProfile
   , trManifest  = manifest & unsafeShortenManifest 5
   , trWorkload  =
     case plutusLoopScript generatorProfile of
-      Nothing                               -> WValue
+      Nothing                                  -> WValue
       Just script
-        | "Loop" `T.isPrefixOf` script      -> WPlutusLoopCountdown
-        | script == "EcdsaSecp256k1Loop"    -> WPlutusLoopSECP
-        | script == "SchnorrSecp256k1Loop"  -> WPlutusLoopSECP
-        | script == "HashOntoG2AndAdd"      -> WPlutusLoopBLST
-        | script == "Ripemd160"             -> WPlutusLoopRipemd
-        | otherwise                         -> WPlutusUnknown
+        | "Loop"        `T.isPrefixOf` script  -> WPlutusLoopCountdown
+        | "EcdsaSecp"   `T.isPrefixOf` script  -> WPlutusLoopSECP
+        | "SchnorrSecp" `T.isPrefixOf` script  -> WPlutusLoopSECP
+        | script == "HashOntoG2AndAdd"         -> WPlutusLoopBLST
+        | script == "MultiScalarMulG1"         -> WPlutusLoopBLST
+        | script == "Ripemd160"                -> WPlutusLoopRipemd
+        | script == "ExpModInteger"            -> WPlutusLoopExpMod
+        | otherwise                            -> WPlutusUnknown
   }
 
 data TmplRun
@@ -468,9 +473,10 @@ extractAverage fieldSelr x =
 
 generateTypst ::
             FilePath
+         -> Maybe FilePath
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, Text)
-generateTypst typstFileName theBase@(SomeSummary summ, cp, SomeBlockProp bp) rest = do
+generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlockProp bp) rest = do
   ctx       <- getReport metas (last templates & trManifest & getComponent "cardano-node" & ciVersion)
   tmplMain  <- getDataFileName $ "report-templates" </> "typst" </> "main_comparison.ede"
   tmpl      <- parseFile tmplMain
@@ -517,7 +523,7 @@ generateTypst typstFileName theBase@(SomeSummary summ, cp, SomeBlockProp bp) res
      where
       analysesContents = transpose $ map selAnalyses allRuns
 
-   mkTmplEnv rc runTempls = fromPairs
+   mkTmplEnv rc runTempls = fromPairs $
      [ "report"     .= rc
      , "base"       .= Util.head runTempls
      , "runs"       .= runTempls
@@ -527,6 +533,7 @@ generateTypst typstFileName theBase@(SomeSummary summ, cp, SomeBlockProp bp) res
      , "charts"     .= charts
      , "typstFile"  .= typstFileName
      ]
+     ++ maybe [] (\csvFile -> ["scalingCSV" .= csvFile]) mScalingCSV
 
 
 --

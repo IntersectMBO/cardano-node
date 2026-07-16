@@ -1,24 +1,19 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | This validator script is based on the Plutus benchmark
---      'Hash n bytestrings onto G2 and add points'
---  cf. https://github.com/IntersectMBO/plutus/blob/master/plutus-benchmark/bls12-381-costs/test/9.6/bls12-381-costs.golden
-
-module Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd (script) where
+module Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3 (script) where
 
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
-import           GHC.ByteOrder (ByteOrder (LittleEndian))
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import           PlutusLedgerApi.Common (serialiseCompiledCode)
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
+import qualified PlutusTx.Builtins as Builtins
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
-import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
+import           PlutusTx.Prelude as P hiding (Semigroup (..), (.), (<$>))
 import           Prelude as Haskell ((.), (<$>))
 
 
@@ -32,9 +27,9 @@ script = mkPlutusBenchScript
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinUnit
 mkValidator arg =
-  if red_n < 1000000 -- large number ensures same bitsize for all counter values
+  if red_n < (1000000 :: Integer) -- large number ensures same bitsize for all counter values
     then traceError "redeemer is < 1000000"
-    else loop red_n red_l
+    else loop red_n red_vkey red_msg red_sig
   where
     -- lazily decode script context up to redeemer, which is less expensive and results in much smaller tx size
     constrArgs :: BuiltinData -> BI.BuiltinList BuiltinData
@@ -47,15 +42,13 @@ mkValidator arg =
     redeemer = BI.head redeemerFollowedByScriptInfo
 
     red_n :: Integer
-    red_l :: [BuiltinByteString]
-    (red_n, red_l) = PlutusV3.unsafeFromBuiltinData redeemer
+    red_vkey :: BuiltinByteString
+    red_msg :: BuiltinByteString
+    red_sig :: BuiltinByteString
+    (red_n, red_vkey, red_msg, red_sig) = PlutusV3.unsafeFromBuiltinData redeemer
 
-    hashAndAddG2 :: [BuiltinByteString] -> Integer -> BuiltinBLS12_381_G2_Element
-    hashAndAddG2 l i =
-      go l (Tx.bls12_381_G2_uncompress Tx.bls12_381_G2_compressed_zero)
-      where go [] !acc     = acc
-            go (q:qs) !acc = go qs $ Tx.bls12_381_G2_add (Tx.bls12_381_G2_hashToGroup q (integerToByteString LittleEndian 0 i)) acc
-    loop i l
+    loop i v m s
       | i == 1000000 = BI.unitval
-      | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
+      | Builtins.verifyEcdsaSecp256k1Signature v m s = loop (pred i) v m s
+      | otherwise = P.traceError "Trace error: ECDSA validation failed"
 

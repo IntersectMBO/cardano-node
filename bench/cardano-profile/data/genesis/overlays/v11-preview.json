@@ -1,7 +1,18 @@
 {
-  "description": "Preview overlay for protocol version 11 (Van Rossem). Carries the PlutusV1 (166), PlutusV2 (147) and PlutusV3 (53) cost-model parameters that PV11 newly introduces, with values taken from the parameter-change governance action linked under `source`.",
-  "source": "https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62#0",
+  "description": "Preview overlay for protocol version 11 (Van Rossem). Carries budget changes and cost model changes. PlutusV1 (169), PlutusV2 (160) and PlutusV3 (60) cost-model entries that PV11 changes: the newly-introduced parameters plus van Rossem's re-prices of a few existing ones, with values taken from the parameter-change governance action linked under `source`.",
+  "sources": [
+    "https://gov.tools/governance_actions/c21b00f90f18fce4003edf42b0b0d455126e01c946e80cc5341a9f9750caf795#0",
+    "https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62#0"
+  ],
   "epoch_params": {
+    "alonzo": {
+      "maxTxExUnits": {
+        "exUnitsMem": 16500000
+      },
+      "maxBlockExUnits": {
+        "exUnitsMem": 72000000
+      }
+    },
     "shelley": {
       "protocolParams": {
         "protocolVersion": {
@@ -18,6 +29,9 @@
   },
   "cost_model": {
     "plutusV1": {
+      "equalsByteString-cpu-arguments-constant": 30623,
+      "equalsByteString-cpu-arguments-intercept": 28755,
+      "equalsByteString-cpu-arguments-slope": 75,
       "serialiseData-cpu-arguments-intercept": 955506,
       "serialiseData-cpu-arguments-slope": 213312,
       "serialiseData-memory-arguments-intercept": 0,
@@ -186,6 +200,19 @@
       "scaleValue-memory-arguments-slope": 21
     },
     "plutusV2": {
+      "equalsByteString-cpu-arguments-constant": 30623,
+      "equalsByteString-cpu-arguments-intercept": 28755,
+      "equalsByteString-cpu-arguments-slope": 75,
+      "integerToByteString-cpu-arguments-c0": 1293828,
+      "integerToByteString-cpu-arguments-c1": 28716,
+      "integerToByteString-cpu-arguments-c2": 63,
+      "integerToByteString-memory-arguments-intercept": 0,
+      "integerToByteString-memory-arguments-slope": 1,
+      "byteStringToInteger-cpu-arguments-c0": 1006041,
+      "byteStringToInteger-cpu-arguments-c1": 43623,
+      "byteStringToInteger-cpu-arguments-c2": 251,
+      "byteStringToInteger-memory-arguments-intercept": 0,
+      "byteStringToInteger-memory-arguments-slope": 1,
       "cekConstrCost-exBudgetCPU": 16000,
       "cekConstrCost-exBudgetMemory": 100,
       "cekCaseCost-exBudgetCPU": 16000,
@@ -335,6 +362,13 @@
       "scaleValue-memory-arguments-slope": 21
     },
     "plutusV3": {
+      "divideInteger-cpu-arguments-model-arguments-c11": 960,
+      "equalsByteString-cpu-arguments-constant": 30623,
+      "equalsByteString-cpu-arguments-intercept": 28755,
+      "equalsByteString-cpu-arguments-slope": 75,
+      "modInteger-cpu-arguments-model-arguments-c11": 960,
+      "quotientInteger-cpu-arguments-model-arguments-c11": 960,
+      "remainderInteger-cpu-arguments-model-arguments-c11": 960,
       "expModInteger-cpu-arguments-coefficient00": 607153,
       "expModInteger-cpu-arguments-coefficient11": 231697,
       "expModInteger-cpu-arguments-coefficient12": 53144,

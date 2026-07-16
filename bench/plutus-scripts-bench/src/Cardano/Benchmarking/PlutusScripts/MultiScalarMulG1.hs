@@ -3,21 +3,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | This validator script is based on the Plutus benchmark
---      'Hash n bytestrings onto G2 and add points'
---  cf. https://github.com/IntersectMBO/plutus/blob/master/plutus-benchmark/bls12-381-costs/test/9.6/bls12-381-costs.golden
-
-module Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd (script) where
+module Cardano.Benchmarking.PlutusScripts.MultiScalarMulG1 (script) where
 
 import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
-import           GHC.ByteOrder (ByteOrder (LittleEndian))
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
 import           PlutusLedgerApi.Common (serialiseCompiledCode)
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
+import           PlutusTx.Builtins as BI (bls12_381_G1_multiScalarMul)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 import           Prelude as Haskell ((.), (<$>))
 
@@ -28,13 +24,12 @@ script = mkPlutusBenchScript
            PlutusScriptV3
            (serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||]))
 
-
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinUnit
 mkValidator arg =
   if red_n < 1000000 -- large number ensures same bitsize for all counter values
     then traceError "redeemer is < 1000000"
-    else loop red_n red_l
+    else loop (fmap Tx.bls12_381_G1_uncompress red_bss) red_is red_n
   where
     -- lazily decode script context up to redeemer, which is less expensive and results in much smaller tx size
     constrArgs :: BuiltinData -> BI.BuiltinList BuiltinData
@@ -46,16 +41,29 @@ mkValidator arg =
     redeemer :: BuiltinData
     redeemer = BI.head redeemerFollowedByScriptInfo
 
-    red_n :: Integer
-    red_l :: [BuiltinByteString]
-    (red_n, red_l) = PlutusV3.unsafeFromBuiltinData redeemer
+    red_n   :: Integer
+    red_is  :: [Integer]
+    red_bss :: [BuiltinByteString]
+    (red_n, red_is, red_bss) = PlutusV3.unsafeFromBuiltinData redeemer
 
-    hashAndAddG2 :: [BuiltinByteString] -> Integer -> BuiltinBLS12_381_G2_Element
-    hashAndAddG2 l i =
-      go l (Tx.bls12_381_G2_uncompress Tx.bls12_381_G2_compressed_zero)
-      where go [] !acc     = acc
-            go (q:qs) !acc = go qs $ Tx.bls12_381_G2_add (Tx.bls12_381_G2_hashToGroup q (integerToByteString LittleEndian 0 i)) acc
-    loop i l
-      | i == 1000000 = BI.unitval
-      | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
+    -- see Note[1]
+    loop points scalars n
+      | n == 1000000 = BI.unitval
+      | otherwise    = let !_ = BI.bls12_381_G1_multiScalarMul (n : scalars) points in loop points scalars (pred n)
 
+{-
+Note[1]:
+
+  The benchmarking loop's counter will always be used as a nonce, prepended to the list of scalars.
+  Hence, make sure that in the redeemer args,
+    >> THE LIST OF SCALARS IS ALWAYS 1 ELEMENT SHORTER THAN THE LIST OF POINTS <<
+
+  == Reason for Nonce-as-Head ('n : scalars'):
+  1. Defeats Pippenger Bucket-Caching: Mutating a single scalar
+     head element breaks the windowed bit-partitioning configuration. This forces
+     the 'blst' library to perform full, un-cached linear combination logic from
+     scratch rather than reusing pre-computed bucket structures.
+  2. Minmize execution units to achieve 1.: Prepending a head nonce element
+     guarantees a predictable O(1) overhead, focusing execution cost purely on the underlying
+     curve arithmetic. Also, this guarantees a stable memory footprint.
+-}
