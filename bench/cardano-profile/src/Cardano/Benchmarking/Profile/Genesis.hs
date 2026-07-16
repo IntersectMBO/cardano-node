@@ -394,8 +394,8 @@ plutusV1CostNames =
   , "verifySignature-cpu-arguments-slope"
   , "verifySignature-memory-arguments"
   --------------------------------------------------
-  -- Positions 166..331 (166 entries): PV11 (Van Rossem) additions.
-  -- Not yet enacted on mainnet. See governance action:
+  -- Positions 166..331 (166 entries): van Rossem (enacted on epoch 638).
+  -- See governance action:
   -- gov_action1eqhnsdyf3exhp5mqt7sdjtl7xy69wqg8tvg854psns2jt72cra3qqrcnr8r
   -- (https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62).
   , "serialiseData-cpu-arguments-intercept"
@@ -750,9 +750,10 @@ plutusV2CostNames =
   , "verifySchnorrSecp256k1Signature-cpu-arguments-intercept"
   , "verifySchnorrSecp256k1Signature-cpu-arguments-slope"
   , "verifySchnorrSecp256k1Signature-memory-arguments"
-  -- Positions 175..184 (10 entries):
-  --   post-Vasil on-chain parameter update at mainnet epoch 492
-  --   (integerToByteString, byteStringToInteger).
+  -- Positions 175..331 (157 entries): van Rossem (enacted on epoch 638).
+  -- See governance action:
+  -- gov_action1eqhnsdyf3exhp5mqt7sdjtl7xy69wqg8tvg854psns2jt72cra3qqrcnr8r
+  -- (https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62).
   , "integerToByteString-cpu-arguments-c0"
   , "integerToByteString-cpu-arguments-c1"
   , "integerToByteString-cpu-arguments-c2"
@@ -763,10 +764,6 @@ plutusV2CostNames =
   , "byteStringToInteger-cpu-arguments-c2"
   , "byteStringToInteger-memory-arguments-intercept"
   , "byteStringToInteger-memory-arguments-slope"
-  -- Positions 185..331 (147 entries): PV11 (Van Rossem) additions.
-  -- Not yet enacted on mainnet. See governance action:
-  -- gov_action1eqhnsdyf3exhp5mqt7sdjtl7xy69wqg8tvg854psns2jt72cra3qqrcnr8r
-  -- (https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62).
   , "cekConstrCost-exBudgetCPU"
   , "cekConstrCost-exBudgetMemory"
   , "cekCaseCost-exBudgetCPU"
@@ -1225,8 +1222,8 @@ plutusV3CostNames =
   , "ripemd_160-cpu-arguments-intercept"
   , "ripemd_160-cpu-arguments-slope"
   , "ripemd_160-memory-arguments"
-  -- Positions 297..349 (53 entries): PV11 (Van Rossem) additions.
-  -- Not yet enacted on mainnet. See governance action:
+  -- Positions 297..349 (53 entries): van Rossem (enacted on epoch 638).
+  -- See governance action:
   -- gov_action1eqhnsdyf3exhp5mqt7sdjtl7xy69wqg8tvg854psns2jt72cra3qqrcnr8r
   -- (https://gov.tools/governance_actions/c82f3834898e4d70d3605fa0d92ffe31345701075b107a54309c1525f9581f62).
   , "expModInteger-cpu-arguments-coefficient00"

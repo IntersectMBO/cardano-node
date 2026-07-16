@@ -190,19 +190,19 @@ plutusTypeLoop :: Types.Profile -> Types.Profile
 plutusTypeLoop =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop"
   . P.redeemerInt 1000000
-  . P.txFee 1360000
+  . P.txFee 1415000
 
 plutusTypeLoopV3 :: Types.Profile -> Types.Profile
 plutusTypeLoopV3 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "LoopV3"
   . P.redeemerInt 1000000
-  . P.txFee 1412000
+  . P.txFee 1452000
 
 plutusTypeLoop2024 :: Types.Profile -> Types.Profile
 plutusTypeLoop2024 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop2024"
   . P.redeemerInt 1000000
-  . P.txFee 1412000
+  . P.txFee 1415000
 
 plutusTypeECDSA :: Types.Profile -> Types.Profile
 plutusTypeECDSA =

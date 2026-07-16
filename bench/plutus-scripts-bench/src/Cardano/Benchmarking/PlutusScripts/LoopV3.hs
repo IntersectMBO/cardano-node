@@ -1,36 +1,26 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Benchmarking.PlutusScripts.LoopV3 (script) where
 
-import           Cardano.Api (PlutusScript (..), PlutusScriptV3, PlutusScriptVersion (..),
-                   Script (..), toScriptInAnyLang)
-
-import           Cardano.Benchmarking.ScriptAPI
-import qualified PlutusLedgerApi.V3 as PlutusV3
-
-import           Prelude hiding (pred, ($), (&&), (<), (==))
-
-import qualified Data.ByteString.Short as SBS
-
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
-import           PlutusTx
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
+import           Cardano.Benchmarking.ScriptAPI (PlutusBenchScript, mkPlutusBenchScript)
+import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
+import           PlutusLedgerApi.Common (serialiseCompiledCode)
+import qualified PlutusTx (compile)
 import           PlutusTx.Builtins (unsafeDataAsI)
 import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
                    unsafeDataAsConstr)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), unless, (.), (<$>))
+import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-
-scriptName :: String
-scriptName
-  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
-script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
+script = mkPlutusBenchScript
+           $(LitE . StringL . loc_module <$> qLocation)
+           PlutusScriptV3
+           (serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||]))
 
 
 {-# INLINABLE mkValidator #-}
@@ -54,8 +44,3 @@ mkValidator arg =
 
     loop i = if i == 1000000 then BI.unitval else loop (pred i)
 
-loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
-
-scriptSerialized :: PlutusScript PlutusScriptV3
-scriptSerialized = PlutusScriptSerialised loopScriptShortBs
