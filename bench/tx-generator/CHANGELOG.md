@@ -15,6 +15,9 @@
     * The endpoint replaces `targetNodes` as the submission target: set
       `"targetNodes": []` alongside an endpoint. The compiler rejects a config
       that sets both (and, as before, a benchmark with an empty `targetNodes`).
+    * Both options are registered with the NixOS service
+      (`nix/nixos/tx-generator-service.nix`), which checks this contract at
+      evaluation time.
   * **A rejected transaction fails the whole run** (the process exits non-zero):
     * Setup phases stop at the first rejection.
     * The benchmark phase finishes the stream, then fails if anything was rejected.
