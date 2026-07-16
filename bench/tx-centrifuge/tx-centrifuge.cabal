@@ -112,6 +112,7 @@ library tx-centrifuge-lib
                       Cardano.Benchmarking.TxCentrifuge.NodeToClient
                       Cardano.Benchmarking.TxCentrifuge.NodeToClient.TxIdSync
                       Cardano.Benchmarking.TxCentrifuge.NodeToClient.TxSubmission
+                      Cardano.Benchmarking.TxCentrifuge.NodeToClient.UTxOQuery
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode.KeepAlive
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxIdSync
