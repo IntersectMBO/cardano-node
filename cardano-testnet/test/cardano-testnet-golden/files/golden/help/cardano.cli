@@ -13,6 +13,7 @@ Usage: cardano-testnet cardano
   [--enable-new-epoch-state-logging]
   [--enable-grpc]
   [--use-kes-agent]
+  [--disable-chain-stall-watchdog]
 
   Start a testnet and keep it running until stopped
 
@@ -61,4 +62,8 @@ Available options:
                            directory as node's N2C socket.
   --use-kes-agent          Get Praos block forging credentials from kes-agent
                            via the default socket path
+  --disable-chain-stall-watchdog
+                           Disable the background watchdog that makes the run
+                           fail fast, with a diagnosis, when the chain stops
+                           producing blocks forever.
   -h,--help                Show this help text

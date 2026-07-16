@@ -23,9 +23,9 @@ import           Data.Word (Word64)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
 import           Options.Applicative.Types (readerAsk)
-import           Text.Parsec (char, many1, noneOf,
-                     sepBy1, string, try, (<?>), parse, eof, notFollowedBy)
 import qualified Text.Parsec as Parsec
+import           Text.Parsec (char, eof, many1, noneOf, notFollowedBy, parse, sepBy1, string, try,
+                   (<?>))
 import qualified Text.Parsec.String as Parsec
 
 import           Testnet.Defaults (defaultEra)
@@ -73,6 +73,7 @@ pRuntimeOptions = TestnetRuntimeOptions
   <$> pEnableNewEpochStateLogging
   <*> pEnableRpc
   <*> pKesSource
+  <*> pEnableChainStallWatchdog
 
 pScratchOutputDir :: Parser (Maybe FilePath)
 pScratchOutputDir = optional $ OA.strOption
@@ -109,6 +110,12 @@ pKesSource = OA.flag UseKesKeyFile UseKesSocket
   (   OA.long "use-kes-agent"
   <>  OA.help "Get Praos block forging credentials from kes-agent via the default socket path"
   <>  OA.showDefault
+  )
+
+pEnableChainStallWatchdog :: Parser Bool
+pEnableChainStallWatchdog = OA.flag True False
+  (   OA.long "disable-chain-stall-watchdog"
+  <>  OA.help "Disable the background watchdog that makes the run fail fast, with a diagnosis, when the chain stops producing blocks forever."
   )
 
 pTestnetNodesWithOptions :: Parser TestnetNodesWithOptions

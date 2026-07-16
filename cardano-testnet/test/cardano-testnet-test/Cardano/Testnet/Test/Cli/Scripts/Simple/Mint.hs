@@ -21,6 +21,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as T
 import           System.FilePath ((</>))
 
@@ -57,7 +58,7 @@ hprop_simple_script_mint = integrationRetryWorkspace 2 "simple-script-mint" $ \t
     , wallets=wallet0:wallet1:_
     } <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0

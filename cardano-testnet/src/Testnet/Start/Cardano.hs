@@ -47,7 +47,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 
 import           Prelude hiding (lines)
 
-import           Control.Concurrent (threadDelay)
+import           Control.Concurrent (myThreadId, threadDelay)
 import           Control.Monad (forM, forM_, guard, unless, when)
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Exception (IOException)
@@ -61,7 +61,7 @@ import           Data.Default.Class ()
 import           Data.Either
 import           Data.Maybe (mapMaybe)
 import           Data.Functor
-import           Data.List (sort, stripPrefix, uncons)
+import           Data.List (sort, stripPrefix)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
@@ -74,16 +74,17 @@ import qualified System.Directory as IO
 import qualified System.Process as Process
 import           System.FilePath ((</>))
 
+import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog, stderrTracer)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
                    defaultPortFile, defaultUtxoAddrPath)
 import           Testnet.Filepath
-import           Testnet.Handlers (interruptNodesOnSigINT)
 import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
 import           Testnet.Property.Assert (assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
+import           Testnet.Signal (interruptNodesOnSigINT)
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
 
@@ -248,6 +249,7 @@ cardanoTestnet
     { runtimeEnableNewEpochStateLogging=enableNewEpochStateLogging
     , runtimeEnableRpc=cardanoEnableRpc
     , runtimeKESSource=cardanoKESSource
+    , runtimeEnableChainStallWatchdog=enableChainStallWatchdog
     }
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
@@ -376,15 +378,25 @@ cardanoTestnet
         <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
-  let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
+  let (failedNodes, startedNodes) = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
     throwString $ "Some nodes failed to start:\n" ++ show (vsep $ prettyError <$> failedNodes)
+
+  testnetNodes' <- maybe (throwString "cardanoTestnet: no testnet nodes were configured") pure $
+    NEL.nonEmpty startedNodes
 
   -- Interrupt cardano nodes when the main process is interrupted
   liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
 
-  -- Make sure that all nodes are healthy by waiting for a chain extension
-  mapConcurrently_ (waitForBlockThrow 45 (File nodeConfigFile)) testnetNodes'
+  -- Make sure that all nodes are healthy by waiting for a chain extension.
+  -- The deadline covers the worst case in which the chain can still start: genesis start
+  -- time lies at most 'startTimeOffsetSeconds' in the future, and the first block must
+  -- appear within the forecast horizon after it (see 'chainForecastHorizon'), plus
+  -- 'startupDetectionMarginSeconds'.
+  let startupHorizon = chainForecastHorizon shelleyGenesis
+      startupBlockTimeout =
+        startTimeOffsetSeconds + ceiling startupHorizon + startupDetectionMarginSeconds
+  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile)) testnetNodes'
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
@@ -395,12 +407,20 @@ cardanoTestnet
         , delegators = []
         }
 
+  -- The chain can also stall irrecoverably later, at any point of the test, if an
+  -- overloaded machine starves the nodes of CPU for longer than the forecast horizon.
+  -- So watch the chain in the background and fail the test with a diagnosis
+  -- as soon as a stall is provable.
+  when enableChainStallWatchdog $ do
+    testThread <- liftIOAnnotated myThreadId
+    void . asyncRegister_ $
+      chainStallWatchdog stderrTracer shelleyGenesis
+        (testnetNodeConnectionInfo testnetMagic (NEL.head testnetNodes'))
+        (nodeProcessHandle <$> testnetNodes') testThread
+
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-  node1sprocket <- case uncons $ testnetSprockets runtime of
-        Just (sprocket, _) -> pure sprocket
-        Nothing            -> throwString "No testnet sprocket available"
-  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath (NEL.head $ testnetSprockets runtime) testnetMagic
 
   forM_ wallets $ \wallet -> do
 
@@ -428,11 +448,12 @@ cardanoTestnet
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
                       => MonadCatch m
-                      => Int -- ^ timeout in seconds
+                      => DTC.NominalDiffTime -- ^ the chain's forecast horizon, for diagnostics
+                      -> Int -- ^ timeout in seconds
                       -> NodeConfigFile 'In
                       -> TestnetNode
                       -> m ()
-    waitForBlockThrow timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
+    waitForBlockThrow horizon timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
       result <- timeout (timeoutSeconds * 1_000_000) $
         runExceptT . foldEpochState
           nodeConfigFile
@@ -453,8 +474,23 @@ cardanoTestnet
         Just (Left err) ->
           throwString $ "foldBlocks on " <> nodeName <> " encountered an error while waiting for new blocks: " <> show (prettyError err)
         _ ->
-          throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s"
+          throwString $ mconcat
+            [ nodeName, " was unable to produce any blocks for ", show timeoutSeconds, "s. "
+            , "The testnet probably missed its startup window and can never produce a block: nodes can only forge "
+            , "while the wall-clock slot is at most 3 * securityParam / activeSlotsCoeff slots past the "
+            , "chain tip (", show horizon, " of wall clock for this testnet), and the genesis start "
+            , "time is set only ", show startTimeOffsetSeconds, "s after the testnet files are "
+            , "created."
+            ]
 
+-- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
+-- plus the forecast horizon) when waiting for testnet startup: covers node process
+-- startup (spawning, parsing the configuration and genesis files, creating the
+-- socket) and the latency of observing the block once it is forged. Without a
+-- margin, a node forging its first block near the end of the window would be
+-- declared dead.
+startupDetectionMarginSeconds :: Int
+startupDetectionMarginSeconds = 15
 
 idToRemoteAddressP2P :: ()
   => MonadIO m

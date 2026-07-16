@@ -21,6 +21,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Typeable (Typeable)
 import           Data.Word (Word16)
@@ -74,7 +75,7 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

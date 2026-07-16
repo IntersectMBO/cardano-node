@@ -18,6 +18,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class (Default (def))
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
@@ -63,7 +64,7 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
         } <-
         createAndRunTestnet creationOptions def conf
 
-    poolNode1 <- H.headM testnetNodes
+    let poolNode1 = NEL.head testnetNodes
     poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
     execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
     epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)

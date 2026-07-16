@@ -202,6 +202,11 @@ data TestnetRuntimeOptions = TestnetRuntimeOptions
   { runtimeEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   , runtimeEnableRpc :: RpcSupport -- ^ Whether to enable gRPC endpoints in all testnet nodes
   , runtimeKESSource :: PraosCredentialsSource
+  , runtimeEnableChainStallWatchdog :: Bool
+    -- ^ Whether to run a background watchdog that kills the testnet with a diagnosis as
+    -- soon as the chain has provably stopped producing blocks forever (see
+    -- "Testnet.ChainWatchdog"). On by default; disable it only for tests that
+    -- legitimately halt all block production.
   } deriving (Eq, Show)
 
 instance Default TestnetRuntimeOptions where
@@ -209,6 +214,7 @@ instance Default TestnetRuntimeOptions where
     { runtimeEnableNewEpochStateLogging = True
     , runtimeEnableRpc = RpcDisabled
     , runtimeKESSource = def
+    , runtimeEnableChainStallWatchdog = True
     }
 
 -- | Options specific to the @--node-env@ path: the environment directory

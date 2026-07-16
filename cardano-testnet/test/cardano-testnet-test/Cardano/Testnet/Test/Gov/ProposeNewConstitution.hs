@@ -28,6 +28,7 @@ import           Control.Monad.State.Strict (StateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.Ratio ((%))
@@ -129,7 +130,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
     }
     <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

@@ -20,6 +20,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as T
 import           System.FilePath ((</>))
 
@@ -66,7 +67,7 @@ hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purpos
     , wallets=wallet0:wallet1:_
     } <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
@@ -216,7 +217,7 @@ hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $
     , wallets=wallet0:_
     } <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   SpoNodeKeys{poolNodeKeysCold=KeyPair{verificationKey=spoKeyCold}} <- H.nothingFail $ poolKeys node
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Testnet.Process.Run
@@ -11,6 +12,7 @@ module Testnet.Process.Run
   , execCliStdoutToJson
   , execKESAgentControl
   , execKESAgentControl_
+  , cleanupProcessBounded
   , initiateProcess
   , procCli
   , procNode
@@ -25,6 +27,7 @@ module Testnet.Process.Run
 
 import           Prelude
 
+import           Control.Concurrent (threadDelay)
 import           Control.Exception (IOException)
 import           Control.Monad
 import           Control.Monad.Catch
@@ -46,6 +49,7 @@ import qualified System.Process as IO
 import           System.Process
 
 import           Testnet.Process.RunIO (liftIOAnnotated)
+import           Testnet.Signal (hardKillProcess)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
@@ -271,8 +275,40 @@ initiateProcess cp = do
     <- handlesExceptT resourceAndIOExceptionHandlers . liftIOAnnotated $ IO.createProcess cp
 
   releaseKey <- handlesExceptT resourceAndIOExceptionHandlers
-                  . register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
+                  . register $ cleanupProcessBounded (mhStdin, mhStdout, mhStderr, hProcess)
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
+
+-- | Like 'IO.cleanupProcess', but with termination guaranteed (in bounded time): asks
+-- the process to terminate, waits up to a grace period for it to exit, and escalates
+-- to @SIGKILL@ - which a process cannot ignore or block, even while stopped - if it
+-- did not. If the process still does not exit (e.g. it is stuck in an uninterruptible
+-- kernel sleep), gives up and leaks it rather than blocking.
+cleanupProcessBounded :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
+cleanupProcessBounded (mStdin, mStdout, mStderr, hProcess) = do
+  IO.terminateProcess hProcess
+  forM_ [mStdin, mStdout, mStderr] . mapM_ $ \h ->
+    void (try (hClose h) :: IO (Either IOException ()))
+  terminated <- waitBounded terminateGracePeriodSeconds
+  unless terminated $ do
+    -- The process did not act on SIGTERM in time; escalate to an unignorable kill.
+    hardKillProcess hProcess
+    void $ waitBounded terminateGracePeriodSeconds
+  where
+    terminateGracePeriodSeconds :: Int
+    terminateGracePeriodSeconds = 15
+
+    -- Poll for process exit without ever blocking ('IO.getProcessExitCode' is
+    -- non-blocking, unlike 'IO.waitForProcess').
+    waitBounded :: Int -> IO Bool
+    waitBounded seconds = go (seconds * 10)
+      where
+        go :: Int -> IO Bool
+        go n
+          | n <= 0 = pure False
+          | otherwise =
+              IO.getProcessExitCode hProcess >>= \case
+                Just _ -> pure True
+                Nothing -> threadDelay 100000 >> go (n - 1)
 
 -- We can throw an IOException from createProcess or an ResourceCleanupException from the ResourceT monad
 resourceAndIOExceptionHandlers :: Applicative m => [Handler m ProcessError]

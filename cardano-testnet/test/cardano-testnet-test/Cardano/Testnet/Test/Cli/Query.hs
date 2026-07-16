@@ -37,6 +37,7 @@ import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import           Data.String (IsString (fromString))
@@ -107,7 +108,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node
