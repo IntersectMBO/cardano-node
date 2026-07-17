@@ -1,5 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 --------------------------------------------------------------------------------
 
@@ -62,10 +62,14 @@ data BuildError
 -- Signing keys are extracted from the input funds. If inputs belong to
 -- different keys, all unique keys are used as witnesses.
 --
--- Fixed to ConwayEra. No Plutus, no metadata, fixed fee.
+-- Era-generic: the caller passes the target 'Api.ShelleyBasedEra', so the same
+-- code builds transactions in any Shelley-based era.
+-- No Plutus, no metadata, fixed fee.
 buildTx
+  -- | Target era (also fixes the address and output transaction types).
+  :: forall era. Api.ShelleyBasedEra era
   -- | Destination address for outputs (embeds the network identifier).
-  :: Api.AddressInEra Api.ConwayEra
+  -> Api.AddressInEra era
   -- | Signing key for recycled output funds.
   -> Api.SigningKey Api.PaymentKey
   -- | Input funds.
@@ -74,8 +78,8 @@ buildTx
   -> Natural
   -- | Fee.
   -> L.Coin
-  -> Either BuildError (Api.Tx Api.ConwayEra, [Fund])
-buildTx destAddr outKey inFunds numOutputs fee
+  -> Either BuildError (Api.Tx era, [Fund])
+buildTx sbe destAddr outKey inFunds numOutputs fee
   | null inFunds     = Left (InvalidInput "no input funds")
   | numOutputs  == 0 = Left (InvalidInput "outputs_per_tx must be >= 1")
   | feeLovelace  < 0 = Left (InvalidInput "fee must be >= 0")
@@ -94,15 +98,13 @@ buildTx destAddr outKey inFunds numOutputs fee
       ++ " lovelace change yields " ++ show minOutputLovelace
       ++ " lovelace per output"
   | otherwise =
-      let maybeTxBody = Api.createTransactionBody
-                         (Api.shelleyBasedEra @Api.ConwayEra)
-                         txBodyContent
+      let maybeTxBody = Api.createTransactionBody sbe txBodyContent
       in case maybeTxBody of
         Left err ->
           Left (LedgerFailure ("createTransactionBody: " ++ show err))
         Right txBody ->
           let signedTx = Api.signShelleyTransaction
-                           (Api.shelleyBasedEra @Api.ConwayEra)
+                           sbe
                            txBody
                            (map Api.WitnessPaymentKey uniqueKeys)
               txId = Api.getTxId txBody
@@ -152,7 +154,7 @@ buildTx destAddr outKey inFunds numOutputs fee
     txIns
       :: [ ( Api.TxIn
            , Api.BuildTxWith Api.BuildTx
-               (Api.Witness Api.WitCtxTxIn Api.ConwayEra)
+               (Api.Witness Api.WitCtxTxIn era)
            )
          ]
     txIns = map
@@ -163,35 +165,28 @@ buildTx destAddr outKey inFunds numOutputs fee
         )
       ) inFunds
 
-    mkTxOut :: Integer -> Api.TxOut Api.CtxTx Api.ConwayEra
+    mkTxOut :: Integer -> Api.TxOut Api.CtxTx era
     mkTxOut lovelace = Api.TxOut
       destAddr
-      ( Api.shelleyBasedEraConstraints
-          (Api.shelleyBasedEra @Api.ConwayEra) $
-          Api.lovelaceToTxOutValue
-            (Api.shelleyBasedEra @Api.ConwayEra)
-            (Api.Coin lovelace)
-      )
+      (Api.lovelaceToTxOutValue sbe (Api.Coin lovelace))
       Api.TxOutDatumNone
       Api.ReferenceScriptNone
 
-    txBodyContent :: Api.TxBodyContent Api.BuildTx Api.ConwayEra
-    txBodyContent = Api.defaultTxBodyContent Api.ShelleyBasedEraConway
+    txBodyContent :: Api.TxBodyContent Api.BuildTx era
+    txBodyContent = Api.defaultTxBodyContent sbe
       & Api.setTxIns txIns
       & Api.setTxInsCollateral Api.TxInsCollateralNone
       & Api.setTxOuts (map mkTxOut outAmounts)
       & Api.setTxFee
           ( Api.TxFeeExplicit
-              (Api.shelleyBasedEra @Api.ConwayEra)
+              sbe
               (Api.Coin feeLovelace)
           )
       & Api.setTxValidityLowerBound Api.TxValidityNoLowerBound
       & Api.setTxValidityUpperBound
-          ( Api.defaultTxValidityUpperBound
-              Api.ShelleyBasedEraConway
-          )
+          ( Api.defaultTxValidityUpperBound sbe )
       & Api.setTxMetadata Api.TxMetadataNone
       -- We are using an explicit fee!
-      -- Using `Nothing` instead of `ledgerPP :: Api.LedgerProtocolParameters Api.ConwayEra`.
+      -- Using `Nothing` instead of `ledgerPP :: Api.LedgerProtocolParameters era`.
       -- TODO: Will need something else for plutus scripts!
       & Api.setTxProtocolParams (Api.BuildTxWith Nothing)
