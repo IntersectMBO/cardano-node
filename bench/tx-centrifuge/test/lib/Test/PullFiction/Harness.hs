@@ -114,12 +114,10 @@ resolveConfig path inputs = do
   Runtime.resolve
     -- mkBuilder: 1 input per batch; input IS the payload; recycle the same
     -- input as output. Each payload gets a fresh, unique key from the counter.
-    (\_ _ _ -> pure Runtime.BuilderHandle
-      { Runtime.bhInputsPerBatch = 1
-      , Runtime.bhBuildPayload   = \is -> do
-          key <- IORef.atomicModifyIORef' keyCounter (\n -> (n + 1, n))
-          pure (key, head is, is)
-      })
+    (\_ _ _ -> pure $ Runtime.BuilderHandle $ \api -> forever $ do
+      is  <- Runtime.baTakeInputs api 1
+      key <- IORef.atomicModifyIORef' keyCounter (\n -> (n + 1, n))
+      Runtime.baAddPayload api key (head is) is is)
     -- mkPipeHandle: no-op trace handlers.
     (\_ _ -> pure Runtime.PipeHandle
       { Runtime.phOnInputsEnqueued  = \_ _ -> pure ()

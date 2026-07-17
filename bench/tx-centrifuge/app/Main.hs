@@ -162,32 +162,59 @@ main = do
         hPutStrLn stderr $
           "Builder " ++ builderName ++ ": destination address "
           ++ Text.unpack (Api.serialiseAddress (destinationAddress builder))
-        pure Runtime.BuilderHandle
-          { -- The number of inputs to wait for.
-            Runtime.bhInputsPerBatch = inputsPerTx builder
-            -- Build and sign.
-          , Runtime.bhBuildPayload   = \inputFunds -> do
-              let buildTxAns = TxAssembly.buildTx
-                                 (destinationAddress builder)
-                                 (destinationSigningKey builder)
-                                 inputFunds (outputsPerTx builder)
-                                 (L.Coin (fee builder))
-              case buildTxAns of
-                Left err -> die $ "TxAssembly.buildTx: " ++ err
-                Right (tx, outputFunds) -> do
-                  -- The TxID is needed for the "on_confirm" recycling strategy.
-                  let txId = Api.getTxId (Api.getTxBody tx)
-                  -- Trace the newly built transaction
-                  -- (TxCentrifuge.Builder.NewTx), purely a construction event,
-                  -- no pipe/queue info.
-                  Tracing.traceWith
-                    (Tracing.trBuilder tracers)
-                    (Tracing.BuilderNewTx
-                      builderName txId (destinationAddress builder)
-                      inputFunds outputFunds
-                    )
-                  pure (txId, tx, outputFunds)
-          }
+        -- This builder owns its loop: it pulls a fixed 'inputsPerTx' batch,
+        -- builds a transaction, and either publishes it or, when the batch is
+        -- unbuildable (an all-dust batch whose input value does not cover the
+        -- fee), drops it and stays up. The engine hands over 'api', a sealed
+        -- window onto this builder's pipe and recycler.
+        pure $ Runtime.BuilderHandle $ \api -> forever $ do
+          inputFunds <- Runtime.baTakeInputs api (inputsPerTx builder)
+          let buildTxAns = TxAssembly.buildTx
+                             (destinationAddress builder)
+                             (destinationSigningKey builder)
+                             inputFunds (outputsPerTx builder)
+                             (L.Coin (fee builder))
+          case buildTxAns of
+            -- A per-batch value failure: these particular inputs cannot cover
+            -- the fee plus one valid output each (the only 'buildTx' failure
+            -- that depends on the inputs). Abandon the batch via 'baDropInputs'
+            -- (the engine neither recycles nor enqueues it), then emit the
+            -- TxCentrifuge.Builder.InputsDropped trace. Action first, then the
+            -- trace, as everywhere else.
+            --
+            -- Whole-batch, not per-input, on purpose: 'buildTx' sums ALL
+            -- inputs, so a batch fails only when they are COLLECTIVELY worth at
+            -- most the fee. A small input among good ones is summed in and
+            -- spent, never dropped. Filtering out every input with value <= fee
+            -- would instead discard dust that is productively swept into a tx
+            -- today.
+            Left (TxAssembly.InsufficientValue reason) -> do
+              Runtime.baDropInputs api inputFunds
+              Tracing.traceWith
+                (Tracing.trBuilder tracers)
+                (Tracing.BuilderInputsDropped builderName inputFunds reason)
+            -- The remaining failures do not depend on the batch, so every batch
+            -- would hit them and dropping would spin forever: fail loudly.
+            -- 'InvalidInput' is a bad builder argument (already guarded in
+            -- 'interpretBuilder', so defensive here). 'LedgerFailure' is an
+            -- opaque cardano-api construction error.
+            Left (TxAssembly.InvalidInput reason) ->
+              die $ "TxAssembly.buildTx: invalid builder parameters: " ++ reason
+            Left (TxAssembly.LedgerFailure reason) ->
+              die $ "TxAssembly.buildTx: ledger construction failed: " ++ reason
+            Right (tx, outputFunds) -> do
+              -- The TxID is needed for the "on_confirm" recycling strategy.
+              let txId = Api.getTxId (Api.getTxBody tx)
+              -- Trace the newly built transaction
+              -- (TxCentrifuge.Builder.NewTx), purely a construction event, no
+              -- pipe/queue info.
+              Tracing.traceWith
+                (Tracing.trBuilder tracers)
+                (Tracing.BuilderNewTx
+                  builderName txId (destinationAddress builder)
+                  inputFunds outputFunds
+                )
+              Runtime.baAddPayload api txId tx inputFunds outputFunds
 
   -- Pipe-events factory passed to 'Runtime.resolve'. Returns a 'PipeHandle'
   -- Given builder's zero-based index and name create the handlers for the four

@@ -282,19 +282,33 @@ data BuilderTrace
     --   sequential 'Api.TxIx' index (0, 1, 2, ...).
     BuilderNewTx
       !String !Api.TxId !(Api.AddressInEra Api.ConwayEra) [Fund.Fund] [Fund.Fund]
+  | -- | A dust batch was dropped: its total input value did not cover the fee,
+    -- so 'TxAssembly.buildTx' produced no valid change output. The inputs are
+    -- abandoned (dropped from the builder loop, not recycled) and the service
+    -- stays up.
+    --
+    -- * 'String': builder name (the workload name).
+    -- * @['Fund.Fund']@: the dropped input funds.
+    -- * 'String': the reason (the 'TxAssembly.buildTx' error string).
+    BuilderInputsDropped !String [Fund.Fund] !String
 
 -- | Namespace: @TxCentrifuge.Builder.NewTx@. The outer prefix
 -- @[\"TxCentrifuge\", \"Builder\"]@ is set when creating the tracer via
 -- 'Logging.mkCardanoTracer' in 'setupTracers'.
 instance Logging.MetaTrace BuilderTrace where
   namespaceFor BuilderNewTx{} = Logging.Namespace [] ["NewTx"]
+  namespaceFor BuilderInputsDropped{} = Logging.Namespace [] ["InputsDropped"]
   severityFor (Logging.Namespace _ ["NewTx"]) _ = Just Logging.Info
+  severityFor (Logging.Namespace _ ["InputsDropped"]) _ = Just Logging.Warning
   severityFor _ _ = Nothing
   documentFor (Logging.Namespace _ ["NewTx"]) = Just
     "A new transaction was built from input UTxOs, producing output UTxOs."
+  documentFor (Logging.Namespace _ ["InputsDropped"]) = Just
+    "A dust batch was dropped: its total input value did not cover the fee, so no valid change output could be produced. The inputs are abandoned, not recycled."
   documentFor _ = Nothing
   allNamespaces =
     [ Logging.Namespace [] ["NewTx"]
+    , Logging.Namespace [] ["InputsDropped"]
     ]
 
 -- | Machine-readable ('forMachine') and human-readable ('forHuman') rendering
@@ -351,11 +365,22 @@ instance Logging.LogFormatting BuilderTrace where
     ++ [ "outputs" .= map (renderFund dtal) outputs
        | dtal >= Logging.DDetailed
        ]
+  forMachine dtal (BuilderInputsDropped name inputs reason) = mconcat $
+       [ "builder" .= name
+       , "reason"  .= reason
+       ]
+    ++ [ "inputs" .= map (renderFund dtal) inputs
+       | dtal >= Logging.DDetailed
+       ]
   forHuman (BuilderNewTx name txId _dest inputs outputs) =
        "NewTx [" <> Text.pack name <> "] "
     <> Api.serialiseToRawBytesHexText txId
     <> " inputs=["  <> renderFundTxIns inputs  <> "]"
     <> " outputs=[" <> renderFundTxIns outputs <> "]"
+  forHuman (BuilderInputsDropped name inputs reason) =
+       "InputsDropped [" <> Text.pack name <> "] "
+    <> "reason=" <> Text.pack reason
+    <> " inputs=[" <> renderFundTxIns inputs <> "]"
 
 -- | Render a single fund for 'forMachine' output.
 --

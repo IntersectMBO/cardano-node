@@ -63,7 +63,7 @@ txTests = Tasty.testGroup "node"
           fee  = L.Coin 200_000
       case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
-          HUnit.assertFailure $ "buildTx failed: " ++ err
+          HUnit.assertFailure $ "buildTx failed: " ++ show err
         Right (tx, outFunds) -> do
           -- One output fund recycled.
           length outFunds @?= 1
@@ -82,7 +82,7 @@ txTests = Tasty.testGroup "node"
       case TxAssembly.buildTx {-- ledgerPP --} addr signKey
              [fund1, fund2] 3 fee of
         Left err ->
-          HUnit.assertFailure $ "buildTx failed: " ++ err
+          HUnit.assertFailure $ "buildTx failed: " ++ show err
         Right (_tx, outFunds) -> do
           -- Three output funds.
           length outFunds @?= 3
@@ -165,7 +165,7 @@ txTests = Tasty.testGroup "node"
       case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
           error $ "throughput test: buildTx failed at iteration "
-            ++ show remaining ++ ": " ++ err
+            ++ show remaining ++ ": " ++ show err
         Right (_, outFunds) ->
           go (remaining - 1) (head outFunds)
             ledgerPP addr signKey fee

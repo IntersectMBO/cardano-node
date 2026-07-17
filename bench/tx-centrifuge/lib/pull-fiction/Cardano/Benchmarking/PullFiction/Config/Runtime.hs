@@ -12,6 +12,7 @@ module Cardano.Benchmarking.PullFiction.Config.Runtime
   , config, builders, pipes, recyclers, observers, workloads, asyncs
     -- * Handles.
     -- ** Behaviour handles (what the resource does).
+  , BuilderApi     (..)
   , BuilderHandle  (..)
   , ObserverHandle (..)
     -- ** Event handlers (fired here, used for tracing).
@@ -106,14 +107,37 @@ data Runtime key input payload = Runtime
 
 --------------------------------------------------------------------------------
 
--- | Caller-provided build handle. 'resolve' spawns a builder async that pulls
--- inputs via 'bhInputsPerBatch' and produces payloads.
-data BuilderHandle key input payload = BuilderHandle
-  { -- | How many inputs the builder needs per call to 'bhBuildPayload'.
-    bhInputsPerBatch :: !Natural
-    -- | Build a payload from the pulled inputs.
-    -- Returns @(confirmation key, payload, recyclable outputs)@.
-  , bhBuildPayload   :: [input] -> IO (key, payload, [input])
+-- | The privileged operations a builder loop may perform, each a closure over
+-- this builder's pipe and recycler. The raw 'Pipe.Pipe' and 'Recycler' are not
+-- exposed, so a builder drives its own loop with full freedom but cannot reach
+-- or corrupt the machinery: it may only pull inputs, publish a payload
+-- (recording the recycle bookkeeping), or abandon inputs.
+--
+-- The builder loop owns conservation of inputs: every batch returned by
+-- 'baTakeInputs' should be handed to exactly one of 'baAddPayload' (as its
+-- consumed set) or 'baDropInputs'. The engine cannot enforce this, so a loop
+-- that leaks a batch merely shrinks the recyclable pool.
+data BuilderApi key input payload = BuilderApi
+  { -- | Pull this many inputs off the input queue. Blocks until that many are
+    -- available.
+    baTakeInputs :: Natural -> IO [input]
+    -- | Publish a payload. Records its consumed inputs and produced outputs
+    -- with the recycler (so the outputs return to the input queue when the
+    -- recycle strategy fires), then enqueues the payload. Arguments:
+    -- confirmation key, payload, consumed inputs, recyclable outputs.
+  , baAddPayload :: key -> payload -> [input] -> [input] -> IO ()
+    -- | Abandon inputs already pulled by 'baTakeInputs': they are neither
+    -- recycled nor re-enqueued. The correct terminus for an unbuildable (e.g.
+    -- dust) batch.
+  , baDropInputs :: [input] -> IO ()
+  }
+
+-- | Caller-provided builder. 'resolve' spawns one async per builder and runs
+-- 'bhRunBuilder' in it, handing over a 'BuilderApi' wired to that builder's pipe
+-- and recycler. The builder owns its loop (batching, grouping, coin selection);
+-- the engine owns the thread and the machinery behind the API.
+newtype BuilderHandle key input payload = BuilderHandle
+  { bhRunBuilder :: BuilderApi key input payload -> IO ()
   }
 
 -- | Caller-provided pipe queue-event handlers (e.g. for tracing). 'resolve'
@@ -332,19 +356,26 @@ resolveBuilders mkBuilderFn resolvedPipes resolvedRecyclers workloadsMap =
       let thePipe  = resolvedPipes     Map.! wlName
           recycler = recyclerInternal (resolvedRecyclers Map.! wlName)
       builderHandle <- mkBuilderFn ix wlName (Validated.builder validatedWorkload)
+      -- The safe capability API handed to the builder loop: closures over this
+      -- builder's pipe and recycler, never the raw resources. 'baAddPayload'
+      -- records the recyclable inputs with the recycler, then makes the payload
+      -- dequeuable. The recycler handles the build and the later release
+      -- ('onDequeue' \/ 'onConfirm') in either order, so this order is just the
+      -- natural one, not a correctness requirement. 'baDropInputs' abandons a
+      -- batch: 'Pipe.takeInputs' already removed it from the input queue, so
+      -- skipping the recycler is all it takes to drop it.
+      let api = BuilderApi
+            { baTakeInputs = Pipe.takeInputs thePipe
+            , baAddPayload = \key payload consumed outputInputs -> do
+                Recycler.onBuild recycler key consumed outputInputs
+                Pipe.addPayload thePipe key payload
+            , baDropInputs = \_inputs -> pure ()
+            }
       async <- Async.async $ do
         -- Always labeled threads.
         tid <- myThreadId
         labelThread tid wlName
-        forever $ do
-          inputs <- Pipe.takeInputs thePipe (bhInputsPerBatch builderHandle)
-          (key, payload, outputInputs) <- bhBuildPayload builderHandle inputs
-          -- Record the recyclable inputs with the recycler, then make the
-          -- payload dequeuable. The recycler handles the build and the later
-          -- release ('onDequeue' \/ 'onConfirm') in either order, so this order
-          -- is just the natural one, not a correctness requirement.
-          Recycler.onBuild recycler key inputs outputInputs
-          Pipe.addPayload thePipe key payload
+        bhRunBuilder builderHandle api
       Async.link async
       pure ( wlName
            , Builder { builderName     = wlName
