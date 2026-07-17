@@ -125,6 +125,21 @@ import Cardano.Benchmarking.TxCentrifuge.Tracing qualified as Tracing
 import Cardano.Benchmarking.TxCentrifuge.TxAssembly qualified as TxAssembly
 
 --------------------------------------------------------------------------------
+-- Era
+--------------------------------------------------------------------------------
+
+-- | The Shelley-based era this generator builds and submits transactions in.
+-- Every era-specific type in this module is written in terms of 'Era', and
+-- 'era' below is its value-level witness. Moving to another era means changing
+-- these two definitions (and wiring the era through the rest of the pipeline).
+type Era = Api.ConwayEra
+
+-- | Value-level witness of 'Era', for cardano-api builders that take an
+-- 'Api.ShelleyBasedEra' argument (such as 'TxAssembly.buildTx').
+era :: Api.ShelleyBasedEra Era
+era = Api.ShelleyBasedEraConway
+
+--------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
@@ -177,6 +192,7 @@ main = do
         pure $ Runtime.BuilderHandle $ \api -> forever $ do
           inputFunds <- Runtime.baTakeInputs api (inputsPerTx builder)
           let buildTxAns = TxAssembly.buildTx
+                             era
                              (destinationAddress builder)
                              (destinationSigningKey builder)
                              inputFunds (outputsPerTx builder)
@@ -484,7 +500,7 @@ data ValueBuilder
     , outputsPerTx          :: !Natural
     , fee                   :: !Integer
     , destinationSigningKey :: !(Api.SigningKey Api.PaymentKey)
-    , destinationAddress    :: !(Api.AddressInEra Api.ConwayEra)
+    , destinationAddress    :: !(Api.AddressInEra Era)
     }
 
 -- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
@@ -574,7 +590,7 @@ interpretObserver raw = case Raw.observerType raw of
 createSigningKeyAndAddress
   :: Api.NetworkId
   -> Int
-  -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)
+  -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra Era)
 createSigningKeyAndAddress networkId n
   | n < 0 || n > 999 =
     error $ "createSigningKeyAndAddress: out of range (0-999): " ++ show n
