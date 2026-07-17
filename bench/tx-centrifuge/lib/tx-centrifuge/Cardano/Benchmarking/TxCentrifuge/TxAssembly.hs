@@ -5,6 +5,7 @@
 
 module Cardano.Benchmarking.TxCentrifuge.TxAssembly
   ( buildTx
+  , BuildError (..)
   ) where
 
 --------------------------------------------------------------------------------
@@ -30,6 +31,30 @@ import Cardano.Benchmarking.TxCentrifuge.Fund ( Fund(..) )
 
 --------------------------------------------------------------------------------
 
+-- | Why 'buildTx' could not produce a transaction. The caller uses the
+-- distinction to decide whether to recover or fail. 'InsufficientValue' is a
+-- per-batch condition (these particular inputs are too small), so dropping the
+-- batch and trying the next is correct. 'InvalidInput' (a bad argument) and
+-- 'LedgerFailure' (an opaque ledger rejection) do not depend on the inputs, so
+-- they are constant across batches and must surface loudly instead of retried.
+data BuildError
+  = -- | The function was called with invalid arguments: no input funds, zero
+    -- outputs, or a negative fee. Precondition violations known immediately
+    -- from the arguments (and guarded upstream in 'interpretBuilder'), so
+    -- reaching one is a caller or config bug, not a recoverable per-batch
+    -- condition.
+    InvalidInput !String
+  | -- | The input funds cannot cover the fee plus one valid (non-zero) output
+    -- each: the change is at or below zero, or too small to split into
+    -- @numOutputs@ outputs. A per-batch condition that depends on the specific
+    -- inputs, so the caller can drop this batch and try the next.
+    InsufficientValue !String
+  | -- | The ledger rejected the transaction in 'Api.createTransactionBody'.
+    -- Internal to cardano-api and opaque to us, and constant across batches for
+    -- our fixed tx shape, so it must surface loudly rather than be retried.
+    LedgerFailure !String
+  deriving Show
+
 -- | Build and sign a transaction consuming the given funds and producing
 -- @numOutputs@ outputs to @destAddr@. Returns the signed transaction and
 -- recycled funds (one per output, keyed with @outKey@ for future spending).
@@ -49,14 +74,14 @@ buildTx
   -> Natural
   -- | Fee.
   -> L.Coin
-  -> Either String (Api.Tx Api.ConwayEra, [Fund])
+  -> Either BuildError (Api.Tx Api.ConwayEra, [Fund])
 buildTx destAddr outKey inFunds numOutputs fee
-  | null inFunds     = Left "buildTx: no input funds"
-  | numOutputs  == 0 = Left "buildTx: outputs_per_tx must be >= 1"
-  | feeLovelace  < 0 = Left "buildTx: fee must be >= 0"
-  | changeTotal <= 0 = Left $ "buildTx: insufficient funds — total inputs ("
-                            ++ show totalIn ++ " lovelace) do not cover fee ("
-                            ++ show feeLovelace ++ " lovelace)"
+  | null inFunds     = Left (InvalidInput "no input funds")
+  | numOutputs  == 0 = Left (InvalidInput "outputs_per_tx must be >= 1")
+  | feeLovelace  < 0 = Left (InvalidInput "fee must be >= 0")
+  | changeTotal <= 0 = Left $ InsufficientValue $
+      "total inputs (" ++ show totalIn ++ " lovelace) do not cover fee ("
+      ++ show feeLovelace ++ " lovelace)"
     -- Guard against outputs that would be below the Cardano minimum UTxO
     -- value. We cannot check the actual protocol-parameter minimum here (it
     -- depends on the serialised output size and the current coinsPerUTxOByte),
@@ -64,16 +89,17 @@ buildTx destAddr outKey inFunds numOutputs fee
     -- produces zero-value or negative outputs. A real minimum UTxO check
     -- should be added once the protocol parameters are threaded through to this
     -- function.
-  | minOutputLovelace <= 0 = Left $ "buildTx: output value too low — "
-                            ++ show numOutputs ++ " outputs from "
-                            ++ show changeTotal ++ " lovelace change yields "
-                            ++ show minOutputLovelace ++ " lovelace per output"
+  | minOutputLovelace <= 0 = Left $ InsufficientValue $
+      show numOutputs ++ " outputs from " ++ show changeTotal
+      ++ " lovelace change yields " ++ show minOutputLovelace
+      ++ " lovelace per output"
   | otherwise =
       let maybeTxBody = Api.createTransactionBody
                          (Api.shelleyBasedEra @Api.ConwayEra)
                          txBodyContent
       in case maybeTxBody of
-        Left err -> Left ("buildTx: " ++ show err)
+        Left err ->
+          Left (LedgerFailure ("createTransactionBody: " ++ show err))
         Right txBody ->
           let signedTx = Api.signShelleyTransaction
                            (Api.shelleyBasedEra @Api.ConwayEra)
