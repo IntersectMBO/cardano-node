@@ -47,7 +47,7 @@ import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals, rende
                    renderScriptHash, renderScriptIntegrityHash, renderTxId)
 import qualified Cardano.Protocol.Crypto as Ledger
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
-import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
+import           Cardano.Protocol.TPraos.BlockHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay

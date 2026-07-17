@@ -90,8 +90,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 482c821260776590a24ec1a0c90c555becdc93c9
-  --sha256: sha256-rue+RXlNAHpnupVafgE4mTIbgoxixe39rp0jnsvLJqM=
+  tag: ddb1b7bbb3156b47acb4ed46b9c4842fde70ea4b
+  --sha256: sha256-qh0Aj//UVJ1cfGJ6Z1gDsuXT1PRolCSScfXEPZahV7s=
   subdir:
     cardano-api
     cardano-rpc
@@ -99,16 +99,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: cfeadc5a03473ddfec809abe49ddfe287c186648
-  --sha256: sha256-gyRNbDmSYaSjBu6fsLDlkzhXWaWqXPVpyOrIiCrBqz0=
+  tag: 15ffac3378dc979a66713c6b11a701e3a5969669
+  --sha256: sha256-P0yyegOgxOiFGFFJqVHt369xrKoEJPW3xqkaoKUGu6g=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 245e63dcd335e3ca29823609e4aaa8f5f096a425
-  --sha256: sha256-chsapfNnY/V7y1snBzjP0LSVnYl/Axt6GjahTPNOKj0=
+  tag: 5399cc5f2f22e9ebd1f1326813b51e208794af21
+  --sha256: sha256-KNsv/ryAZoxip8UGCvbkI7ThHqnXYpjDlk3pXrSiKU8=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -127,6 +127,7 @@ source-repository-package
     libs/cardano-ledger-api
     libs/cardano-ledger-binary
     libs/cardano-ledger-core
+    libs/cardano-protocol
     libs/cardano-protocol-tpraos
     libs/non-integral
     libs/small-steps
@@ -144,16 +145,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: e37ba209ffdbdcb3cc8e7a9cb0fb6d6fa7cce8a3
-  --sha256: sha256-srdli4YUIo3HtdWwpk2Tq5okk4GQ5Fpn/ipFO8eykVU=
+  tag: 8e146c05d034fb7acce2fa592c24126c806c9ff7
+  --sha256: sha256-v+Li2F97JmlkFayHAy2s2OSEX7669NKidQnLUzinWwA=
   subdir:
     .
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 0a614a36c8969e53fd6a1c3890b36da5aff3b0a2
-  --sha256: sha256-p32/Y6jXwiSwa0yVspdx246KHaCBmqe2zB+UpxudeJc=
+  tag: 94daae78d79a9589a99a4b591b1848d0d7476a00
+  --sha256: sha256-4iCw6hKO0udTOmm8ivEflOhp0rm/1iVmHSJhptnlPJ8=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation
@@ -162,9 +163,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/f-f/dmq-node.git
-  tag: 6c0b5f5752c8e0700cd642a7d45475c1c3da8e05
-  --sha256: sha256-lOsYFjr8DpBVVCQzMqsUAezNvXm69S6LK9lBqsv6Cxw=
+  location: https://github.com/IntersectMBO/dmq-node.git
+  tag: 9bf9762d3e78b970ea2a3526a4c0b076382df86c
+  --sha256: sha256-pMU7fiWDs8mHb5F66hs7jVTbXEJYA2O20xQFGRk/WWw=
   subdir:
     dmq-node
 
