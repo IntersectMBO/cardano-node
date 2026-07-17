@@ -23,7 +23,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Last(..))
 import Numeric.Natural (Natural)
 import System.Environment (getArgs)
-import System.Exit (die)
+import System.Exit (die, exitSuccess)
 import System.IO (hPutStrLn, stderr)
 import Text.Printf (printf)
 -----------
@@ -132,7 +132,14 @@ main = do
   -- Loand and validate config.
   -----------------------------
 
-  (validated, codecConfig, networkId, networkMagic, tracers) <- loadConfig
+  (isDryRun, validated, codecConfig, networkId, networkMagic, tracers) <-
+    loadConfig
+
+  -- Dry run: config, protocol and on-chain fund discovery have been validated,
+  -- so exit before creating resources or generating any traffic.
+  when isDryRun $ do
+    hPutStrLn stderr "Dry run OK: config and funds validated, exiting."
+    exitSuccess
 
   -- Callbacks / handlers.
   ------------------------
@@ -618,8 +625,10 @@ instance Aeson.FromJSON ProtocolParameters where
 -- 'Runtime.Runtime'). The caller is responsible for calling 'Runtime.resolve'
 -- to create STM resources.
 loadConfig
-  :: IO ( -- | Validated configuration (no STM resources yet).
-          Validated.Config Fund.Fund
+  :: IO ( -- | Whether this is a dry run: validate, then exit before traffic.
+          Bool
+          -- | Validated configuration (no STM resources yet).
+        , Validated.Config Fund.Fund
           -- | Codec config for serialising blocks on the wire.
         , CodecConfig Block.CardanoBlock
         , Api.NetworkId
@@ -630,9 +639,10 @@ loadConfig
         )
 loadConfig = do
   args <- getArgs
-  configFile <- case args of
-    [f] -> pure f
-    _   -> die "Usage: tx-centrifuge <config.json>"
+  (isDryRun, configFile) <- case args of
+    [cfg]              -> pure (False, cfg)
+    ["--dry-run", cfg] -> pure (True, cfg)
+    _                  -> die "Usage: tx-centrifuge [--dry-run] <config.json>"
 
   hPutStrLn stderr "=== Tx Centrifuge ==="
   hPutStrLn stderr ""
@@ -692,7 +702,7 @@ loadConfig = do
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
 
-  pure ( validated, codecConfig, networkId, networkMagic, tracers )
+  pure ( isDryRun, validated, codecConfig, networkId, networkMagic, tracers )
 
 --------------------------------------------------------------------------------
 -- Protocol helpers (inlined from NodeConfig.hs and OuroborosImports.hs)
