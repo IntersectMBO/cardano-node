@@ -322,8 +322,11 @@ These parameters define the **transaction profile** for a workload:
 ## Usage
 
 ```bash
-tx-centrifuge config.json
+tx-centrifuge config.json            # run the generator
+tx-centrifuge --dry-run config.json  # validate config + funds, then exit 0
 ```
+
+With `--dry-run`, tx-centrifuge performs all startup validation (config parsing, consensus protocol setup, and on-chain fund discovery) and exits before creating any pipelines or generating traffic. Use it to check a config and its funding (for example after a restart or fresh funding) without producing load.
 
 ## Detailed Examples
 
