@@ -87,6 +87,7 @@ import           Network.TypedProtocol.Core
 
 import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
                    traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
 enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]
@@ -1447,6 +1448,8 @@ instance ( tx ~ GenTx blk
           (blockHash blk)
       , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       ]
+  forMachine _dtal (TraceCall (SomeJsonCallTrace ct)) =
+    callTraceToObject ct
 
   forHuman (TraceStartLeadershipCheck slotNo) =
       "Checking for leadership in slot " <> showT (unSlotNo slotNo)
@@ -1522,6 +1525,8 @@ instance ( tx ~ GenTx blk
       "Adoption thread died in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+  forHuman (TraceCall someJsonCallTrace) =
+      "Call trace: " <> showT someJsonCallTrace
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
     IntM "Forge.StateUpdateError" (fromIntegral $ unSlotNo slot) :
@@ -1575,6 +1580,7 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.adopted" Nothing]
   asMetrics (TraceAdoptionThreadDied _slot _) =
     [CounterM "Forge.adoption-thread-died" Nothing]
+  asMetrics (TraceCall _) = []
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
@@ -1615,6 +1621,8 @@ instance MetaTrace (TraceForgeEvent blk) where
     Namespace [] ["AdoptedBlock"]
   namespaceFor TraceAdoptionThreadDied {} =
     Namespace [] ["AdoptionThreadDied"]
+  namespaceFor TraceCall {} =
+    Namespace [] ["Call"]
 
   severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just Info
   severityFor (Namespace _ ["SlotIsImmutable"]) _ = Just Error
@@ -1635,6 +1643,7 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor (Namespace _ ["ForgedInvalidBlock"]) _ = Just Error
   severityFor (Namespace _ ["AdoptedBlock"]) _ = Just Info
   severityFor (Namespace _ ["AdoptionThreadDied"]) _ = Just Error
+  severityFor (Namespace _ ["Call"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   privacyFor (Namespace _ ["ForgeStateUpdateError"]) _ = Just Confidential
@@ -1818,6 +1827,10 @@ instance MetaTrace (TraceForgeEvent blk) where
     ]
   documentFor (Namespace _ ["AdoptionThreadDied"]) = Just $ mconcat
     [ "Block adoption thread died" ]
+  documentFor (Namespace _ ["Call"]) = Just $ mconcat
+    [ "A call/span trace event, recording the start or end (with duration and"
+    , "  allocation measurements) of an instrumented call."
+    ]
   documentFor _ = Nothing
 
   allNamespaces =
@@ -1840,6 +1853,7 @@ instance MetaTrace (TraceForgeEvent blk) where
     , Namespace [] ["ForgedInvalidBlock"]
     , Namespace [] ["AdoptedBlock"]
     , Namespace [] ["AdoptionThreadDied"]
+    , Namespace [] ["Call"]
     ]
 
 --------------------------------------------------------------------------------
@@ -2341,6 +2355,9 @@ instance LogFormatting TraceLeiosKernel where
       "Leios not voted for " <> Text.pack (show ebPoint) <> ": " <> Text.pack (show reason)
     TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
     TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
+    TraceLeiosCertifiedAndAnnounced{atSlot, rbHash} ->
+      "Leios cert assembled and EB announced in RB " <> Text.pack (show rbHash)
+        <> " at slot " <> showT atSlot
   asMetrics _ = []
 
 instance MetaTrace TraceLeiosKernel where
@@ -2358,6 +2375,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosNotVoted{}          = Namespace [] ["NotVoted"]
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
+  namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
 
   severityFor (Namespace _ ["DbException"])        _ = Just Error
   severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
@@ -2380,6 +2398,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["NotVoted"]
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
+    , Namespace [] ["CertifiedAndAnnounced"]
     ]
 
 instance LogFormatting TraceLeiosPeer where
