@@ -288,6 +288,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (RpcConfigUpdateError err) =
       mconcat [ "kind" .= String "RpcConfigUpdateError"
                , "error" .= String ("Error while updating RPC configuration: " <> err) ]
+  forMachine _dtal (RpcUnsupportedBlockType blockType) =
+      mconcat [ "kind" .= String "RpcUnsupportedBlockType"
+               , "blockType" .= String blockType ]
   forMachine _dtal RpcForceDisabled =
       mconcat [ "kind" .= String "RpcForceDisabled"
                , "error" .= String (ppStartupInfoTrace RpcForceDisabled)]
@@ -360,6 +363,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["RpcConfigUpdate"]
   namespaceFor RpcConfigUpdateError {} =
     Namespace [] ["RpcConfigUpdateError"]
+  namespaceFor RpcUnsupportedBlockType {} =
+    Namespace [] ["RpcUnsupportedBlockType"]
   namespaceFor RpcForceDisabled =
     Namespace [] ["RpcForceDisabled"]
   namespaceFor MovedTopLevelOption {} =
@@ -376,6 +381,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor (Namespace _ ["RpcConfigUpdate"]) _ = Just Notice
   severityFor (Namespace _ ["RpcConfigUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["RpcUnsupportedBlockType"]) _ = Just Warning
   severityFor (Namespace _ ["RpcForceDisabled"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
@@ -406,6 +412,8 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["RpcConfigUpdate"]) = Just
     ""
   documentFor (Namespace [] ["RpcConfigUpdateError"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcUnsupportedBlockType"]) = Just
     ""
   documentFor (Namespace [] ["RpcForceDisabled"]) = Just
     ""
@@ -480,6 +488,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["BlockForgingBlockTypeMismatch"]
     , Namespace [] ["RpcConfigUpdate"]
     , Namespace [] ["RpcConfigUpdateError"]
+    , Namespace [] ["RpcUnsupportedBlockType"]
     , Namespace [] ["RpcForceDisabled"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
@@ -606,6 +615,7 @@ ppStartupInfoTrace (LedgerPeerSnapshotLoaded slotNo) =
 
 ppStartupInfoTrace (RpcConfigUpdate config) = "Performing RPC configuration update: " <> config
 ppStartupInfoTrace (RpcConfigUpdateError err) = "Error while updating RPC configuration: " <> err
+ppStartupInfoTrace (RpcUnsupportedBlockType blockType) = "RPC node kernel access is not supported for block type: " <> blockType
 ppStartupInfoTrace RpcForceDisabled = "RPC endpoint has crashed and because of that it got disabled. Enable gRPC endpoint and send SIGHUP to the node to reenable."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage

@@ -50,6 +50,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
+import           Data.IORef
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
@@ -450,6 +451,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    nodeKernelAccessRef <- newIORef Nothing
     void $
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
@@ -482,7 +484,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
               (readTVar ledgerPeerSnapshotVar)
               nc
       in
-      withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic) $ \_ ->
+      withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic nodeKernelAccessRef) $ \_ ->
         Node.run
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do
@@ -492,6 +494,8 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
+                mkNodeKernelAccess (contramap RpcUnsupportedBlockType (startupTracer tracers)) blockType (pInfoConfig pInfo) nodeKernel
+                  >>= writeIORef nodeKernelAccessRef
           }
           StdRunNodeArgs
             { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
@@ -765,8 +769,9 @@ rpcServerLoop :: Tracer IO (StartupTrace blk)
               -> Tracer IO TraceRpc
               -> StrictTVar IO RpcConfig
               -> NetworkMagic
+              -> IORef (Maybe NodeKernelAccess)
               -> IO ()
-rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
+rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccessRef = go
   where
     go = do
       config@RpcConfig{isEnabled = Identity enabled} <- readTVarIO rpcConfigVar
@@ -774,7 +779,7 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
         then
           race_
             (do
-              runRpcServer rpcTracer (config, networkMagic)
+              runRpcServer rpcTracer config networkMagic nodeKernelAccessRef
               traceWith startupTracer RpcForceDisabled
               disableRpcServer)
             (waitForRpcConfigChange config)
