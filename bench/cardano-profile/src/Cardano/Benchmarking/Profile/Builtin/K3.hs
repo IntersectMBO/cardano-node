@@ -27,7 +27,7 @@ profilesK3 =
           P.empty
         & P.fixedLoaded
         . P.uniCircle . V.hosts 3 . P.loopback
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . P.epochLength 600 . P.activeSlotsCoeff 0.05 . P.parameterK 3
         . V.datasetCurrent -- 10000000 UTxO (10000kU), 1300000 delegators (1300kD)
         . V.fundsDefault

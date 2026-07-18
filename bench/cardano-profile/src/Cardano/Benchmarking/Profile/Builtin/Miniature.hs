@@ -69,11 +69,11 @@ profilesMiniature =
       ciBench02  = ciBench & V.hosts  2
       ciBench10  = ciBench & V.hosts 10
       -- Helpers by workload:
-      ciBench02Value    = ciBench02 & V.genesisVariant300
+      ciBench02Value    = ciBench02 & V.genesisVariantVoltaire64k
       ciBench02Plutus   = ciBench02 & V.genesisVariantPreVoltaire
       ciBench02PlutusV3 = ciBench02 & V.genesisVariantVoltaire
-      ciBench10Value    = ciBench10 & V.genesisVariant300
-      ciBench10Plutus   = ciBench10 & V.genesisVariant300
+      ciBench10Value    = ciBench10 & V.genesisVariantVoltaire64k
+      ciBench10Plutus   = ciBench10 & V.genesisVariantVoltaire64k
 
       loop     = V.plutusSaturation           . V.plutusTypeLoop     . P.analysisSizeSmall
       loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024 . P.analysisSizeSmall

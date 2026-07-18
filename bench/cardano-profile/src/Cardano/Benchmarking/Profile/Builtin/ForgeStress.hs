@@ -54,9 +54,9 @@ profilesForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
       -- TODO: Bump all to genesisVariantVoltaire; however, except for the solo profile, forge-stress works better with a smaller block size (64k)
-      n1 = V.genesisVariantPreVoltaire  . V.hosts 1
-      n3 = V.genesisVariant300          . V.hosts 3
-      v6 = V.genesisVariantVoltaire     . V.hosts 6 . P.blocksize64k
+      n1 = V.genesisVariantPreVoltaire . V.hosts 1
+      n3 = V.genesisVariantVoltaire64k . V.hosts 3
+      v6 = V.genesisVariantVoltaire64k . V.hosts 6
   in [
   -- 1 node versions (non-pre).
     fs & P.name "forge-stress-solo-xs"          . V.valueLocal . n1 . V.datasetCurrent . durationXS . P.traceForwardingOn                                         . P.analysisUnitary

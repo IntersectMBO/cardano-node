@@ -10,7 +10,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleCompressed, timescaleSmall, timescaleModel
 , timescaleMainnet, timescaleDevops
 
-, genesisVariant300, genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire
+, genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
 , fundsDefault, fundsDouble, fundsVoting
 
 , hosts
@@ -92,9 +92,6 @@ timescaleDevops =
 -------------------------------------------
 
 -- See: data/genesis/epoch-timeline.json
-genesisVariant300 :: Types.Profile -> Types.Profile
-genesisVariant300 = P.pparamsEpoch 300
-
 -- should always reference the latest entry in data/genesis/epoch-timeline.json
 genesisVariantLatest :: Types.Profile -> Types.Profile
 genesisVariantLatest = P.pparamsEpoch 537
@@ -110,6 +107,10 @@ genesisVariantPreVoltaire = genesisVariantBabbageLatest . P.v8Preview
 -- First Conway epoch in data/genesis/epoch-timeline.json; implicitly includes v8Preview and v9Prievew already
 genesisVariantVoltaire :: Types.Profile -> Types.Profile
 genesisVariantVoltaire = genesisVariantLatest
+
+-- `genesisVariantVoltaire` with a reduced 64k block size (the "blocksize64k" overlay).
+genesisVariantVoltaire64k :: Types.Profile -> Types.Profile
+genesisVariantVoltaire64k = genesisVariantVoltaire . P.blocksize64k
 
 -- Definition vocabulary: funds.
 --------------------------------

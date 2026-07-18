@@ -41,7 +41,7 @@ profilesScalingLocal =
         . V.valueLocal
         . E.fastDuration
   in [
-    fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariant300
+    fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariantVoltaire64k
   ]
 
 profilesScalingCloud :: [Types.Profile]
@@ -71,7 +71,7 @@ profilesScalingCloud =
           P.empty & B.base
         . P.fixedLoaded
         . C.composeFiftytwo
-        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        -- TODO: Use the same genesis variant as the others and move to "Scenario.Base".
         . V.genesisVariantPreVoltaire
         . V.timescaleCompressed
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.

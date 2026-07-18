@@ -218,7 +218,7 @@ profilesCloud =
           P.empty & B.base
         . P.fixedLoaded
         . composeFiftytwo
-        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        -- TODO: Use the same genesis variant as the others and move to "Scenario.Base".
         . V.genesisVariantPreVoltaire
         . V.timescaleCompressed
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
@@ -248,7 +248,7 @@ profilesCloud =
         -- TODO: Inconsistency: "ci-test-nomadperf" uses 2+Explorer nodes and "fast-nomadperf*" 52+Explorer nodes.
         . P.torus . V.hosts 2 . P.withExplorerNode
         -- TODO: Inconsistency: "ci-test-nomadperf" uses epoch 300        and "fast-nomadperf*" the last know epoch.
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
   in [
     fastNP & P.name "fast-nomadperf"
   , ciNP   & P.name "ci-test-nomadperf"
@@ -260,7 +260,7 @@ profilesCloud =
         -- TODO: Inconsistency: "fast-nomadperf*" uses 52+Explorer nodes   and "ci-test-nomadperf" 2+Explorer nodes.
         . P.torus . V.hosts 6 . P.withExplorerNode
         -- TODO: Inconsistency: "ci-test-nomadperf" uses epoch 300        and "fast-nomadperf*" the last know epoch.
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         -- TODO: The only ones without 0 delegators.
         --       Fix and remove `E.baseNoDataset` (Same `E.base` for all).
         . P.delegators 6
@@ -274,7 +274,7 @@ profilesCloud =
         & P.fixedLoaded
         . V.hosts 2 . P.torus . nomadPerf . P.withExplorerNode
         . V.timescaleCompressed
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . V.datasetMiniature . V.fundsDefault
         . P.shutdownOnBlock 15
         -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
