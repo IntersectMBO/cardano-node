@@ -54,9 +54,9 @@ profilesForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
       -- TODO: Bump all to genesisVariantVoltaire; however, except for the solo profile, forge-stress works better with a smaller block size (64k)
-      n1 = V.genesisVariantPreVoltaire  . V.hosts 1
-      n3 = V.genesisVariant300          . V.hosts 3
-      v6 = V.genesisVariantVoltaire     . V.hosts 6 . P.blocksize64k
+      n1 = V.genesisVariantPreVoltaire . V.hosts 1
+      n3 = V.genesisVariantVoltaire64k . V.hosts 3
+      v6 = V.genesisVariantVoltaire64k . V.hosts 6
   in [
   -- 1 node versions (non-pre).
     fs & P.name "forge-stress-solo-xs"          . V.valueLocal . n1 . V.datasetCurrent . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
@@ -84,8 +84,6 @@ profilesForgeStress =
   , fs & P.name "forge-stress-pre-plutus"       . V.plutusLoop . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- -large: voltaire variant, double nodes and double runtime. This needs a 64GB RAM machine.
   , fs & P.name "forge-stress-pre-large"           . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn
-  , fs & P.name "forge-stress-pre-large-rtsqg1"    . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsGcParallel . P.rtsGcLoadBalance
   , fs & P.name "forge-stress-pre-large-rtsN3"     . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 3
   , fs & P.name "forge-stress-pre-large-rtsN4"     . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 4
-  , fs & P.name "forge-stress-pre-large-rtsqg1N4"  . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 4 . P.rtsGcParallel . P.rtsGcLoadBalance
   ]

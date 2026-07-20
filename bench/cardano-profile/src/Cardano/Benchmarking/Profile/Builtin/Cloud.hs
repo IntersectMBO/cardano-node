@@ -143,7 +143,7 @@ profilesCloud =
       -- PParams overlays and calibration for 4 tx per block memory full.
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
-      -- LMDB helper. Node config add the "hostvolume"s as a cluster constraint.
+      -- LSMT helper. Node config add the "hostvolume"s as a cluster constraint.
       ephemeral =
                 -- The name of the defined volume in the Nomad Client config and
                 -- where to mount it inside the isolated chroot.
@@ -168,11 +168,8 @@ profilesCloud =
   , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000
-  , valueVolt & P.name "value-volt-rtsqg1-nomadperf"                       . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
-  , valueVolt & P.name "value-volt-lmdb-nomadperf"                         . P.dreps  10000 . ephemeral . P.lmdb
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
-  , valueVolt & P.name "value-volt-lmdb-cgmem-nomadperf"                   . P.dreps  10000 . ephemeral . P.lmdb . cgmem
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0
   , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000
@@ -186,8 +183,6 @@ profilesCloud =
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . blockMem2x
-  , loopVolt    & P.name "plutus-volt-rtsqg1-nomadperf"                    . P.dreps  10000 . P.rtsGcParallel . P.rtsGcLoadBalance
-  , loopVolt    & P.name "plutus-volt-lmdb-nomadperf"                      . P.dreps  10000 . ephemeral . P.lmdb
   , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . ephemeral . P.lsmt
   -- TODO: scaling the BLST workload only works well for 4 txns/block instead of 8. However, comparing it to other steps-constrained workloads, requires 8txns/block (like all of those).
   , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps  10000
@@ -223,7 +218,7 @@ profilesCloud =
           P.empty & B.base
         . P.fixedLoaded
         . composeFiftytwo
-        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        -- TODO: Use the same genesis variant as the others and move to "Scenario.Base".
         . V.genesisVariantPreVoltaire
         . V.timescaleCompressed
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
@@ -253,7 +248,7 @@ profilesCloud =
         -- TODO: Inconsistency: "ci-test-nomadperf" uses 2+Explorer nodes and "fast-nomadperf*" 52+Explorer nodes.
         . P.torus . V.hosts 2 . P.withExplorerNode
         -- TODO: Inconsistency: "ci-test-nomadperf" uses epoch 300        and "fast-nomadperf*" the last know epoch.
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
   in [
     fastNP & P.name "fast-nomadperf"
   , ciNP   & P.name "ci-test-nomadperf"
@@ -265,7 +260,7 @@ profilesCloud =
         -- TODO: Inconsistency: "fast-nomadperf*" uses 52+Explorer nodes   and "ci-test-nomadperf" 2+Explorer nodes.
         . P.torus . V.hosts 6 . P.withExplorerNode
         -- TODO: Inconsistency: "ci-test-nomadperf" uses epoch 300        and "fast-nomadperf*" the last know epoch.
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         -- TODO: The only ones without 0 delegators.
         --       Fix and remove `E.baseNoDataset` (Same `E.base` for all).
         . P.delegators 6
@@ -279,7 +274,7 @@ profilesCloud =
         & P.fixedLoaded
         . V.hosts 2 . P.torus . nomadPerf . P.withExplorerNode
         . V.timescaleCompressed
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . V.datasetMiniature . V.fundsDefault
         . P.shutdownOnBlock 15
         -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".

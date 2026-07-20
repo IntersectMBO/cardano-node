@@ -28,7 +28,7 @@ profilesChainsync =
         -- TODO: Explorer node is needed ? Or a new property is needed ?
         . P.uniCircle . P.withExplorerNode . P.loopback
         . P.hostsChainsync 1 . P.withChaindbServer
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . V.timescaleMainnet
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".

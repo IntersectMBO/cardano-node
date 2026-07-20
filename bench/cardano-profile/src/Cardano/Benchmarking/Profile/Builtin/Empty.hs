@@ -48,7 +48,7 @@ baseNoDataset =
 
 -- TODO: Move to `base`?
 genesis :: Types.Profile -> Types.Profile
-genesis = V.genesisVariant300
+genesis = V.genesisVariantVoltaire64k
 
 --------------------------------------------------------------------------------
 
@@ -177,8 +177,8 @@ profilesEmpty = map baseNoDataset
         -- TODO: The only one without 0 delegators.
         --       Fix and remove `baseNoDataset` (Same `base` for all).
         . P.utxo 0 . P.delegators 6 . P.dreps 0
-      value  = noCliStop & V.genesisVariant300
-      -- TODO: "fast-plutus" and "ci-test-plutus" are using `genesisVariant300`.
+      value  = noCliStop & V.genesisVariantVoltaire64k
+      -- TODO: "fast-plutus" and "ci-test-plutus" use the value `genesis` variant, not `genesisVariantPreVoltaire`.
       plutus = noCliStop & V.genesisVariantPreVoltaire
       -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
       loop    = P.txFeeOverwrite 1380000 . V.plutusLoop
