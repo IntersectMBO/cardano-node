@@ -38,7 +38,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe (isJust)
-import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
 import           GHC.Exts (fromList)
@@ -256,8 +255,8 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
 
     H.note_ "Verify the transaction outputs"
     map (\o -> (o ^. U5c.address, o ^. U5c.coin)) (protoTx ^. U5c.outputs)
-      H.=== [ (Text.encodeUtf8 (serialiseAddress address1), inject amount)
-            , (Text.encodeUtf8 (serialiseAddress address0), inject change)
+      H.=== [ (serialiseToRawBytes address1, inject amount)
+            , (serialiseToRawBytes address0, inject change)
             ]
 
     H.note_ "The transaction has no reference inputs and no certificates"
@@ -390,7 +389,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
 
     H.note_ "Verify the output carries the minted asset"
     [mintOutput] <- H.noteShow $ mintProtoTx ^. U5c.outputs
-    mintOutput ^. U5c.address H.=== Text.encodeUtf8 (serialiseAddress address0)
+    mintOutput ^. U5c.address H.=== serialiseToRawBytes address0
     mintOutput ^. U5c.coin H.=== inject (change - fee)
     map (\ma -> (ma ^. U5c.policyId, assetsOf ma)) (mintOutput ^. U5c.assets)
       H.=== [(serialiseToRawBytes mintPolicyId, [(serialiseToRawBytes mintAssetName, inject mintQuantity)])]
