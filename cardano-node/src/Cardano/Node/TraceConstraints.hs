@@ -47,6 +47,7 @@ type TraceConstraints blk =
     , HasIssuer blk
 
     , ToJSON (HeaderHash blk)
+    , Show (Header blk)
 
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
