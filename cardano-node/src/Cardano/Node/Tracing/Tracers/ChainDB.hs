@@ -1687,7 +1687,7 @@ instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
   asMetrics _ = []
 
 instance MetaTrace (PerasCertDB.TraceEvent blk) where
-  namespaceFor (PerasCertDB.AddCert _ _ _) = Namespace [] ["AddCert"]
+  namespaceFor (PerasCertDB.AddCert {}) = Namespace [] ["AddCert"]
   namespaceFor (PerasCertDB.GarbageCollected _) = Namespace [] ["GarbageCollected"]
   allNamespaces =
     [ Namespace [] ["AddCert"]

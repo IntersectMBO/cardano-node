@@ -24,7 +24,7 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
-import           Cardano.Api hiding (Active)
+import           Cardano.Api hiding (Active, CardanoBlock)
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
@@ -36,7 +36,6 @@ import qualified Ouroboros.Consensus.Cardano.Block as Block
                    (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                    ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))

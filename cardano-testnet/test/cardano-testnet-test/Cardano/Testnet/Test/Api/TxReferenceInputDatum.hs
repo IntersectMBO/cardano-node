@@ -155,7 +155,6 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
           (unLedgerProtocolParameters pparams)
           mempty
           mempty
-          mempty
           ledgerUtxo
           content
           addr0

@@ -15,7 +15,6 @@ import           Cardano.Api
 
 import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Ouroboros.Consensus.Block.Abstract
-import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Config.SecurityParam
 import           Ouroboros.Network.AnchoredFragment (Anchor, AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF

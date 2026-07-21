@@ -96,7 +96,7 @@ data BlockfrostParams = BlockfrostParams
   , bfgNOpt                   :: Word16
   , bfgPoolDeposit            :: Coin
   , bfgProtocolMajorVer       :: Version
-  , bfgProtocolMinorVer       :: Natural
+  , bfgProtocolMinorVer       :: Word32
   , bfgRho                    :: UnitInterval
   , bfgTau                    :: UnitInterval
   } deriving (Eq, Show)

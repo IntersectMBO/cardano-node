@@ -43,8 +43,8 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
         -> SlotNo
         -> BlockNo
         -> StateT [(SlotNo, BlockNo)] IO ConditionResult
-      handler _ slotNo blockNo = do
-        modify ((slotNo, blockNo):)
+      handler _ slotNo blockNo' = do
+        modify ((slotNo, blockNo'):)
         s <- get
         if length s >= 10
           then pure ConditionMet

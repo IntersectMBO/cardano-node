@@ -1,6 +1,5 @@
 {- HLINT ignore "Eta reduce" -}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.OuroborosImports

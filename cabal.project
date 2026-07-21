@@ -90,8 +90,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: ddb1b7bbb3156b47acb4ed46b9c4842fde70ea4b
-  --sha256: sha256-qh0Aj//UVJ1cfGJ6Z1gDsuXT1PRolCSScfXEPZahV7s=
+  tag: 856e3c7f25ebf8b5f8083e24bd292676449ae4df
+  --sha256: sha256-KjA475iq66pFefawNjYd8gKqoJuzlWpkEhpfIYhh0n8=
   subdir:
     cardano-api
     cardano-rpc
@@ -99,16 +99,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 15ffac3378dc979a66713c6b11a701e3a5969669
-  --sha256: sha256-P0yyegOgxOiFGFFJqVHt369xrKoEJPW3xqkaoKUGu6g=
+  tag: 3df8a98d42a906e0640716a89290d6a4a1c701d2
+  --sha256: sha256-2Vf0K7FvI81KsHs3AktLNlK6syQDbAGy99aYS6dTC84=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 5399cc5f2f22e9ebd1f1326813b51e208794af21
-  --sha256: sha256-KNsv/ryAZoxip8UGCvbkI7ThHqnXYpjDlk3pXrSiKU8=
+  tag: e9827fdc3def69c02fe826fdf46e2a412620ef98
+  --sha256: sha256-bVR1ZFs1VDc7ag2QEpSf5rVj1mdBCB/Ag7nhj00UXQE=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -145,16 +145,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 8e146c05d034fb7acce2fa592c24126c806c9ff7
-  --sha256: sha256-v+Li2F97JmlkFayHAy2s2OSEX7669NKidQnLUzinWwA=
+  tag: e468a936006a890d4469d1cbfaa3cfbe6867e29c
+  --sha256: sha256-X1Yd6TMYhhxbm8qiD3y8Ad3nY2D5wieGWf9kwoRCWxc=
   subdir:
     .
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 94daae78d79a9589a99a4b591b1848d0d7476a00
-  --sha256: sha256-4iCw6hKO0udTOmm8ivEflOhp0rm/1iVmHSJhptnlPJ8=
+  tag: 17b295595f983efc7c6c18db282c0dba9c95c00b
+  --sha256: sha256-dnBX7+Pyy3g5/MdRXgUn+WJPpa0C3z/7B6bWiGeqiS4=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation
@@ -168,18 +168,6 @@ source-repository-package
   --sha256: sha256-pMU7fiWDs8mHb5F66hs7jVTbXEJYA2O20xQFGRk/WWw=
   subdir:
     dmq-node
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/plutus.git
-  tag: b1db04cc425fab303ac3b79d7140dc2a17f29e6d
-  --sha256: sha256-XtYzjNVx4+IGWpgm+p/YTf56DrJtK0I98umZCTE3U80=
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
-    plutus-metatheory
 
 source-repository-package
   type: git

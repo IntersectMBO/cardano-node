@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -512,14 +511,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
-    !txLogicTracer  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["txLogic", "Remote"]
-
     !txPerasCertDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Inbound"]
     !txPerasVoteDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Inbound"]
-
-    configureTracers configReflection trConfig [txLogicTracer]
 
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = mkTracer $
@@ -536,8 +529,6 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = mkTracer $
           traceWith peerSharingTracer
-      , NtN.tTxLogicTracer = mkTracer $
-          traceWith txLogicTracer
       , NtN.tPerasCertDiffusionTracer = mkTracer $
           traceWith txPerasCertDiffusion
       , NtN.tPerasVoteDiffusionTracer = mkTracer $

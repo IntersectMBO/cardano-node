@@ -110,7 +110,7 @@ import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
-import           Data.Word (Word64)
+import           Data.Word (Word32, Word64)
 import           Lens.Micro
 import           Numeric.Natural
 import           Test.Cardano.Ledger.Core.Rational
@@ -418,7 +418,7 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (12, 0)
 
 -- TODO: Expose from cardano-api
-mkProtVer :: (Natural, Natural) -> ProtVer
+mkProtVer :: (Natural, Word32) -> ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
     Just pVer -> pVer
