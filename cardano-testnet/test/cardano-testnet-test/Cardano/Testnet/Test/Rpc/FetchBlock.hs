@@ -87,16 +87,16 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     -- Get chain tip via CLI
     QueryTipLocalStateOutput{localStateChainTip} <-
       H.noteShowM $ execCliStdoutToJson execConfig [eraName, "query", "tip"]
-    (slot, blockHash, tipBlockNumber) <- case localStateChainTip of
+    (slot, tipHash, tipBlockNumber) <- case localStateChainTip of
       ChainTipAtGenesis -> H.failure
       ChainTip (SlotNo tipSlot) (HeaderHash hash) (BlockNo bn) -> pure (tipSlot, SBS.fromShort hash, bn)
 
     H.note_ $ "Tip slot: " <> show slot
     H.note_ $ "Tip block number: " <> show tipBlockNumber
-    H.note_ $ "Tip hash: " <> show (BS.length blockHash) <> " bytes"
+    H.note_ $ "Tip hash: " <> show (BS.length tipHash) <> " bytes"
 
     -- Call FetchBlock via gRPC
-    let blockRef = def & U5c.slot .~ slot & U5c.hash .~ blockHash
+    let blockRef = def & U5c.slot .~ slot & U5c.hash .~ tipHash
         request = def & U5c.ref .~ blockRef
 
     response <- H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
@@ -111,7 +111,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
 
     -- Verify cardano block header matches the requested tip
     block ^. U5c.cardano . U5c.header . U5c.slot H.=== slot
-    block ^. U5c.cardano . U5c.header . U5c.hash H.=== blockHash
+    block ^. U5c.cardano . U5c.header . U5c.hash H.=== tipHash
 
     -- height is the block number from ChainDB
     block ^. U5c.cardano . U5c.header . U5c.height H.=== tipBlockNumber
@@ -151,6 +151,22 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     H.note_ "FetchBlock with an invalid hash length fails with INVALID_ARGUMENT"
     fetchBlockExpectingError GrpcInvalidArgument $
       def & U5c.slot .~ slot & U5c.hash .~ "abc"
+
+    H.note_ "ReadTip returns the current tip"
+    readTipResponse <- H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "readTip")) def
+    -- the chain may have advanced since the CLI tip query above, so slot and
+    -- height are only bounded from below
+    let tipRef = readTipResponse ^. U5c.tip
+    H.assertWith (tipRef ^. U5c.slot) (>= slot)
+    H.assertWith (tipRef ^. U5c.height) (>= tipBlockNumber)
+    H.assertWith (tipRef ^. U5c.hash) ((== 32) . BS.length)
+
+    -- the timestamp must agree with the slot time of the returned tip slot
+    expectedTipTimestampMs :: Word64 <- H.leftFail $ do
+      utcTime <- slotToUTCTime systemStart eraHistory (SlotNo (tipRef ^. U5c.slot))
+      pure . round $ utcTimeToPOSIXSeconds utcTime * 1000
+    H.assertWithinTolerance (tipRef ^. U5c.timestamp) expectedTipTimestampMs 1000
 
   (txId', txIn0, change, address0, address1, vkeyBytes0) <- do
     H.note_ "Build and submit a payment transaction via RPC"
