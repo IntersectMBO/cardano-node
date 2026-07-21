@@ -19,7 +19,8 @@ import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
 import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
                    messageLeiosFetchToObject, messageLeiosNotifyToObject)
-import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
+import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, Header, StandardHash,
+                   getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
@@ -476,7 +477,8 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
 -- CBOR payload that the derived 'Show' would dump.
 --------------------------------------------------------------------------------
 
-instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
+instance ( Show (Header blk)
+         ) => LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)) where
   forHuman = showT
 
   forMachine _dtal (AnyMessageAndAgency _stok msg) =
@@ -488,7 +490,7 @@ instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) w
   forMachine _dtal (AnyMessageAndAgency _stok msg) =
     messageLeiosFetchToObject msg
 
-instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote)) where
+instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)) where
   namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
     LN.MsgLeiosNotificationRequestNext{} -> Namespace [] ["RequestNext"]
     LN.MsgLeiosBlockAnnouncement{}       -> Namespace [] ["BlockAnnouncement"]

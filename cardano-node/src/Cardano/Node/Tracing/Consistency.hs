@@ -275,7 +275,7 @@ getAllNamespaces =
         leiosNotifyNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosNotify", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (AnyMessage (LN.LeiosNotify LeiosPoint () LeiosVote))])
+                                 (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote))])
         leiosFetchNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosFetch", "Remote"])
                              (allNamespaces :: [Namespace
