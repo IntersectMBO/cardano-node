@@ -63,6 +63,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teStateDir              = Nothing
         , teMetricsHelp           = []
         , teTimeseriesHandle      = Nothing
+        , teAlarmRegistry         = Nothing
         }
 
       -- NOTE: no reforwarding in this acceptor.
@@ -81,6 +82,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasTimeseries    = Nothing
+    , alarms           = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
     , rotation         = Nothing
