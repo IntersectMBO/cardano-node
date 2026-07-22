@@ -27,7 +27,7 @@ instance LogFormatting ConsensusStartupException where
 instance MetaTrace ConsensusStartupException where
   namespaceFor ConsensusStartupException {} = Namespace [] ["ConsensusStartupException"]
 
-  severityFor (Namespace _ ["ConsensusStartupException"]) Nothing = Just Error
+  severityFor (Namespace _ ["ConsensusStartupException"]) _ = Just Error
   severityFor _ _ = Nothing
 
   documentFor (Namespace _ ["ConsensusStartupException"]) = Just
