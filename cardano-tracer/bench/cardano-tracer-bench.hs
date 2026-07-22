@@ -118,6 +118,7 @@ main = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasTimeseries    = Nothing
+    , alarms           = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams root FileMode format]
     , rotation         = Nothing

@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
+import qualified Cardano.Tracer.Test.Alarms.Tests as Alarms
 import qualified Cardano.Tracer.Test.DataPoint.Tests as DataPoint
 import qualified Cardano.Tracer.Test.Logs.Tests as Logs
 import           Cardano.Tracer.Test.TestSetup
@@ -47,6 +48,7 @@ main = do
       (testGroup "Tests"
        [      Logs.tests ts
        , DataPoint.tests ts
+       ,      Alarms.tests
 --       ,   Restart.tests ts
 --       ,   Queue.tests ts
        ])
