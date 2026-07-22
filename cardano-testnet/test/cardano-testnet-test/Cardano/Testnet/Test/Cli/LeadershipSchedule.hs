@@ -31,6 +31,7 @@ import qualified Data.IP as IP
 import           Data.List ((\\))
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
@@ -88,7 +89,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     , testnetNodes
     } <- createAndRunTestnet cTestnetOptions def conf
 
-  node1sprocket <- H.headM $ testnetSprockets tr
+  let node1sprocket = NEL.head $ testnetSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   ----------------Need to register an SPO------------------
@@ -236,7 +237,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.createDirectoryIfMissing_ testSpoDir
   let topology = defaultP2PTopology
                    [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
-                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                     | TestnetNode{nodeIpv4,nodePort} <- NEL.toList testnetNodes
                    ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"

@@ -32,6 +32,7 @@ import           Control.Exception
 import           Control.Monad
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as M
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
@@ -65,7 +66,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   tr@TestnetRuntime
     { testnetMagic
     , configurationFile
-    , testnetNodes = node0@TestnetNode{nodeSprocket} : _
+    , testnetNodes = node0@TestnetNode{nodeSprocket} :| _
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf
 

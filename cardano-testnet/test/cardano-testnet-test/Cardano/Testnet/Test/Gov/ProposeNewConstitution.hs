@@ -13,8 +13,10 @@ import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
+import qualified Cardano.Ledger.Conway.Genesis as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.Governance as Ledger
+import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Hashes as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
@@ -26,8 +28,10 @@ import           Control.Monad.State.Strict (StateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.Maybe.Strict
+import           Data.Ratio ((%))
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
@@ -49,6 +53,7 @@ import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -67,12 +72,21 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  -- Generate model for votes
-  let allVotes :: [(String, Int)]
-      allVotes = zip (concatMap (uncurry replicate) [(4, "yes"), (3, "no"), (2, "abstain")]) [1..]
-  annotateShow allVotes
+  -- Generate model for votes in two rounds.
+  -- The Conway DRep voting ratio is: yes / (yes + no + non-voters). Abstainers are excluded
+  -- from the denominator entirely. Non-voters count against (as implicit no).
+  -- Round 1: 3 yes, 6 non-voting. Ratio = 3/9 = 33.3%, below 51% threshold - proposal stays alive.
+  -- Round 2: +1 yes, +3 no, +2 abstain. Ratio = (3+1)/(9-2) = 57.1% (abstain excluded), triggers ratification.
+  let round1Votes :: [(String, Int)]
+      round1Votes = zip (replicate 3 "yes") [1..]
+  annotateShow round1Votes
 
-  let numVotes :: Int
+  let round2Votes :: [(String, Int)]
+      round2Votes = zip (concatMap (uncurry replicate) [(1, "yes"), (3, "no"), (2, "abstain")]) [4..]
+  annotateShow round2Votes
+
+  let allVotes = round1Votes ++ round2Votes
+      numVotes :: Int
       numVotes = length allVotes
   annotateShow numVotes
 
@@ -87,15 +101,37 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
         , creationGenesisOptions = def { genesisEpochLength = 200 }
         }
 
+  liftToIntegration $ createTestnetEnv creationOptions conf
+
+  -- Override Conway genesis: raise dvtUpdateToConstitution to 51% so a minority of yes-votes
+  -- cannot trigger ratification, and extend govActionLifetime so the proposal survives long
+  -- enough for the pulsing snapshot to refresh with votes.
+  let conwayGenesisFile = tempAbsBasePath' </> defaultGenesisFilepath ConwayEra
+  H.rewriteJsonFile conwayGenesisFile $ \conwayGenesis ->
+    let upPParams = L.cgUpgradePParams conwayGenesis
+    in conwayGenesis
+      { L.cgUpgradePParams = upPParams
+          { L.ucppDRepVotingThresholds =
+              L.ucppDRepVotingThresholds upPParams
+                & L.dvtUpdateToConstitutionL .~ unsafeBoundedRational (51 % 100)
+          , L.ucppGovActionLifetime = EpochInterval 10
+          }
+      }
+
+  -- Rehash: the node validates genesis file hashes against configuration.yaml
+  conwayGenesisHash <- getShelleyGenesisHash conwayGenesisFile "ConwayGenesisHash"
+  H.rewriteJsonFile (tempAbsBasePath' </> "configuration.yaml") $
+    \(config :: Aeson.Value) -> config & Aeson._Object %~ (conwayGenesisHash <>)
+
   TestnetRuntime
     { testnetMagic
     , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- createAndRunTestnet creationOptions def conf
+    <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node
@@ -234,7 +270,6 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       $ maybeExtractGovernanceActionIndex governanceActionTxId <$> getEpochState epochStateView
 
   -- Query proposals via CLI before voting to verify proposal structure.
-  -- This is race-free: the proposal cannot be ratified before votes are cast.
   -- Retry until the DRep pulsing snapshot (used by `query proposals`) is refreshed
   -- with the newly submitted proposal. The current proposals map is updated immediately, but the
   -- pulsing snapshot only picks up new proposals at epoch boundaries.
@@ -295,63 +330,104 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
   proposalsTag <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "govAction" . Aeson.key "tag" . Aeson._String
   proposalsTag === "NewConstitution"
 
-  -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  voteFiles <- generateVoteFiles execConfig work "vote-files"
-                                 governanceActionTxId governanceActionIndex
-                                 [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
+  -- Round 1: submit 3 yes votes. Ratio = 3 yes / (3 yes + 6 non-voting) = 33.3%, below 51% threshold.
+  -- The proposal cannot be ratified, so it persists across epoch boundaries.
+  do let drepVotes = [(defaultDRepKeyPair idx, vote) | (vote, idx) <- round1Votes]
+     voteFiles <- generateVoteFiles execConfig work "round1-vote-files"
+                                    governanceActionTxId governanceActionIndex drepVotes
+     voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "round1-vote-tx-body"
+                                        voteFiles wallet0
+     let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(fst <$> drepVotes))
+     voteTxFp <- signTx execConfig cEra gov "round1-signed-vote-tx" voteTxBodyFp signingKeys
+     submitTx execConfig cEra voteTxFp
 
-  -- Submit votes
-  voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
-                                     voteFiles wallet0
+     waitForGovActionVotes epochStateView (EpochInterval 1)
 
-  let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
-  voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
+     -- Verify votes in ledger state
+     govState <- getGovState epochStateView ceo
+     govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+     let votes = govActionState ^. L.gasDRepVotesL . to toList
+     length (filter ((== L.VoteYes) . snd) votes) === 3
+     length (filter ((== L.VoteNo) . snd) votes) === 0
+     length (filter ((== L.Abstain) . snd) votes) === 0
+     length votes === length round1Votes
 
-  submitTx execConfig cEra voteTxFp
+     -- Verify votes via CLI. The proposal is below the ratification threshold,
+     -- so it cannot be removed - this query is deterministic.
+     cliProposal <-
+       retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ do
+         json :: Aeson.Value <- execCliStdoutToJson execConfig
+                                  [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow governanceActionTxId
+                                  , "--governance-action-index", "0"
+                                  ]
+         pure $ do
+           arr <- json ^? Aeson._Array
+           guard (length arr == 1)
+           let p = arr Vector.! 0
+           dv <- p ^? Aeson.key "dRepVotes" . Aeson._Object
+           guard (length dv == length round1Votes)
+           pure p
 
-  waitForGovActionVotes epochStateView (EpochInterval 1)
+     drepVotesJson <- H.evalMaybe $ cliProposal ^? Aeson.key "dRepVotes" . Aeson._Object
+     length drepVotesJson === length round1Votes
 
-  -- Count votes before checking for ratification. It may happen that the proposal gets removed after
-  -- ratification because of a long waiting time, so we won't be able to access votes.
-  govState <- getGovState epochStateView ceo
-  govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
-  let votes = govActionState ^. L.gasDRepVotesL . to toList
+     committeeVotes <- H.evalMaybe $ cliProposal ^? Aeson.key "committeeVotes" . Aeson._Object
+     committeeVotes === mempty
 
-  length (filter ((== L.VoteYes) . snd) votes) === 4
-  length (filter ((== L.VoteNo) . snd) votes) === 3
-  length (filter ((== L.Abstain) . snd) votes) === 2
-  length votes === fromIntegral numVotes
+     stakePoolVotes <- H.evalMaybe $ cliProposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
+     stakePoolVotes === mempty
 
-  -- Query proposals via CLI to verify vote counts are reported correctly.
-  -- The proposal may have been ratified at an epoch boundary between the ledger check above and this
-  -- CLI query, in which case the proposal is removed from gov-state and the query returns [].
-  -- The pulsing snapshot may also not yet include the votes even though they are in the ledger state.
-  -- The ledger-level vote checks above already verified correctness, so we skip gracefully in both cases.
-  votedProposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
-                                        [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow governanceActionTxId
-                                        , "--governance-action-index", "0"
-                                        ]
+  -- Round 2: submit +1 yes, +3 no, +2 abstain. Ratio = (3+1) yes / (9-2 abstain) = 57.1% > 51%
+  -- (abstainers excluded from denominator), triggers ratification.
+  do let drepVotes = [(defaultDRepKeyPair idx, vote) | (vote, idx) <- round2Votes]
+     voteFiles <- generateVoteFiles execConfig work "round2-vote-files"
+                                    governanceActionTxId governanceActionIndex drepVotes
+     voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "round2-vote-tx-body"
+                                        voteFiles wallet0
+     let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(fst <$> drepVotes))
+     voteTxFp <- signTx execConfig cEra gov "round2-signed-vote-tx" voteTxBodyFp signingKeys
+     submitTx execConfig cEra voteTxFp
 
-  H.note_ $ Text.unpack . decodeUtf8 $ prettyPrintJSON votedProposalsJSON
+     -- Wait for all round 2 votes to appear in the ledger.
+     -- Cannot use waitForGovActionVotes here: it only checks for ANY votes, so it returns
+     -- immediately seeing round 1's votes before round 2 votes hit the ledger.
+     votes <-
+       retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ do
+         govState <- getGovState epochStateView ceo
+         pure $ do
+           govActionState <- listToMaybe $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+           let vs = govActionState ^. L.gasDRepVotesL . to toList
+           guard (length vs == numVotes)
+           pure vs
 
-  votedProposalsArray <- H.evalMaybe $ votedProposalsJSON ^? Aeson._Array
-  unless (null votedProposalsArray) $ do
-    length votedProposalsArray === 1
-    let votedProposal = votedProposalsArray Vector.! 0
+     length (filter ((== L.VoteYes) . snd) votes) === 4
+     length (filter ((== L.VoteNo) . snd) votes) === 3
+     length (filter ((== L.Abstain) . snd) votes) === 2
+     length votes === numVotes
 
-    -- Check that dRepVotes has the expected number of votes
-    proposalsDRepVotes <- H.evalMaybe $ votedProposal ^? Aeson.key "dRepVotes" . Aeson._Object
-    -- Skip if the pulsing snapshot has not yet refreshed with votes
-    unless (null proposalsDRepVotes) $ do
-      length proposalsDRepVotes === numVotes
+     -- Verify all votes via CLI. Retry until the pulsing snapshot reflects the full vote set.
+     cliProposal <-
+       retryUntilJustM epochStateView (WaitForEpochs $ EpochInterval 2) $ do
+         json :: Aeson.Value <- execCliStdoutToJson execConfig
+                                  [ eraName, "query", "proposals", "--governance-action-tx-id", prettyShow governanceActionTxId
+                                  , "--governance-action-index", "0"
+                                  ]
+         pure $ do
+           arr <- json ^? Aeson._Array
+           guard (length arr == 1)
+           let p = arr Vector.! 0
+           dv <- p ^? Aeson.key "dRepVotes" . Aeson._Object
+           guard (length dv == numVotes)
+           pure p
 
-      -- Check that committeeVotes is an empty object
-      proposalsCommitteeVotes <- H.evalMaybe $ votedProposal ^? Aeson.key "committeeVotes" . Aeson._Object
-      proposalsCommitteeVotes === mempty
+     drepVotesJson <- H.evalMaybe $ cliProposal ^? Aeson.key "dRepVotes" . Aeson._Object
+     length drepVotesJson === numVotes
 
-      -- Check the stake pool votes are empty
-      proposalsStakePoolVotes <- H.evalMaybe $ votedProposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
-      proposalsStakePoolVotes === mempty
+     committeeVotes <- H.evalMaybe $ cliProposal ^? Aeson.key "committeeVotes" . Aeson._Object
+     committeeVotes === mempty
+
+     stakePoolVotes <- H.evalMaybe $ cliProposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
+     stakePoolVotes === mempty
 
   -- We check that constitution was successfully ratified
   void . H.leftFailM . H.evalIO $ do
@@ -362,7 +438,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
         configurationFile
         socketPath
         FullValidation
-        (EpochNo 10)
+        (EpochNo 20)
         ()
         (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 

@@ -23,6 +23,7 @@ module Testnet.Types
   , nodeSocketPath
   , nodeRpcSocketPath
   , nodeConnectionInfo
+  , testnetNodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -61,6 +62,8 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as A
 import           Data.List (intercalate)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           GHC.Exts (IsString (..))
@@ -119,19 +122,19 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
   , testnetMagic :: !Int -- TODO change to Word32
-  , testnetNodes :: ![TestnetNode]
+  , testnetNodes :: !(NonEmpty TestnetNode)
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
   }
 
-testnetSprockets :: TestnetRuntime -> [Sprocket]
+testnetSprockets :: TestnetRuntime -> NonEmpty Sprocket
 testnetSprockets = fmap nodeSprocket . testnetNodes
 
 spoNodes :: TestnetRuntime -> [TestnetNode]
-spoNodes = filter isTestnetNodeSpo . testnetNodes
+spoNodes = NEL.filter isTestnetNodeSpo . testnetNodes
 
 relayNodes :: TestnetRuntime -> [TestnetNode]
-relayNodes = filter (not . isTestnetNodeSpo) . testnetNodes
+relayNodes = NEL.filter (not . isTestnetNodeSpo) . testnetNodes
 
 data TestnetNode = TestnetNode
   { nodeName :: !String
@@ -176,11 +179,17 @@ nodeConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} index =
     Nothing -> do
       H.note_ $ "There is no node in the testnet with index: " <> show index <> ". Number of nodes: " <> show (length testnetNodes)
       H.failure
-    Just node ->
-        pure LocalNodeConnectInfo
-              { localNodeSocketPath= nodeSocketPath node
-              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
-              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+    Just node -> pure $ testnetNodeConnectionInfo testnetMagic node
+
+-- | Connection data for the given node of a testnet with the given magic
+testnetNodeConnectionInfo :: Int -- ^ testnet magic
+                          -> TestnetNode
+                          -> LocalNodeConnectInfo
+testnetNodeConnectionInfo testnetMagic node =
+  LocalNodeConnectInfo
+    { localNodeSocketPath= nodeSocketPath node
+    , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+    , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
 
 
 data SpoNodeKeys = SpoNodeKeys

@@ -13,6 +13,7 @@ import           Prelude
 import           Control.Concurrent.Async ()
 import           Control.Monad.Trans.State.Strict
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -35,7 +36,7 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
   runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet creationOptions def conf
 
   socketPathAbs <- do
-    socketPath' <- H.sprocketArgumentName <$> H.headM (testnetSprockets runtime)
+    let socketPath' = H.sprocketArgumentName . NEL.head $ testnetSprockets runtime
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   let handler :: ()

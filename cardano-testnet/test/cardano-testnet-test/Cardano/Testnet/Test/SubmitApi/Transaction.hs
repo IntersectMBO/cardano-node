@@ -27,6 +27,7 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -72,7 +73,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
     , wallets=wallet0:_
     } <- createAndRunTestnet creationOptions def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
 
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
 

@@ -33,6 +33,7 @@ import           Control.Exception (try)
 import           Control.Monad.Trans.Control (liftBaseOp)
 import           Data.ByteString (ByteString)
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           GHC.Stack
 import           Lens.Micro
 import           Network.GRPC.Spec (GrpcError (..), GrpcException (..))
@@ -65,7 +66,7 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
 
   TestnetRuntime
     { configurationFile
-    , testnetNodes = node0 : _
+    , testnetNodes = node0 :| _
     , wallets = wallet0@(PaymentKeyInfo _ addressText0) : (PaymentKeyInfo _ addressText1) : _
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf

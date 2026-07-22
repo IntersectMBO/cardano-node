@@ -9,7 +9,6 @@
 bench/                                                        @intersectmbo/performance-and-tracing
 nix/workbench/                                                @intersectmbo/performance-and-tracing
 trace-forward/                                                @intersectmbo/performance-and-tracing
-trace-resources/                                              @intersectmbo/performance-and-tracing
 Makefile                                                      @intersectmbo/performance-and-tracing
 *.mk                                                          @intersectmbo/performance-and-tracing
 

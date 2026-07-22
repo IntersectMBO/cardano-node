@@ -33,7 +33,7 @@ profilesDish =
         -- Using `P.newTracing` like all "forge-stress" profiles.
           P.empty & FS.base
         . V.hosts 3
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . P.delegators 0 . P.dreps 0
         . FS.durationM
         . P.traceForwardingOn

@@ -110,12 +110,12 @@ library
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
                         Testnet.Blockfrost
+                        Testnet.ChainWatchdog
                         Testnet.Components.Configuration
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
                         Testnet.Filepath
-                        Testnet.Handlers
                         Testnet.Orphans
                         Testnet.Ping
                         Testnet.Process.Cli.DRep
@@ -128,6 +128,7 @@ library
                         Testnet.Property.Run
                         Testnet.Property.Util
                         Testnet.Runtime
+                        Testnet.Signal
                         Testnet.Start.Byron
                         Testnet.Start.Cardano
                         Testnet.Start.Types

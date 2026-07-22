@@ -44,7 +44,6 @@ packages:
   bench/tx-generator
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
-  trace-resources
   trace-forward
 
 -- Needed when cross compiling
@@ -153,8 +152,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 17b295595f983efc7c6c18db282c0dba9c95c00b
-  --sha256: sha256-dnBX7+Pyy3g5/MdRXgUn+WJPpa0C3z/7B6bWiGeqiS4=
+  tag: 7d5261376493afa83f9033e72717576b07bac251
+  --sha256: sha256-gLphW8Pl9P7Du8WL8cQTkKx+gVyf5HEqSD4uFy3I+uE=
   subdir:
     ./cardano-diffusion
     ./monoidal-synchronisation

@@ -21,6 +21,7 @@ import           Prelude
 
 import           Data.Default.Class
 import           Data.Either
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified System.Info as SYS
@@ -56,7 +57,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
       slotPrecision = round $ 1 / slotLength
       epochSize = fromIntegral (unEpochSize sgEpochLength) :: Int
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 

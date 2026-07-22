@@ -15,6 +15,7 @@ Usage: cardano-testnet cardano
   [--enable-new-epoch-state-logging]
   [--enable-grpc]
   [--use-kes-agent]
+  [--disable-chain-stall-watchdog]
 
   Start a testnet and keep it running until stopped
 
