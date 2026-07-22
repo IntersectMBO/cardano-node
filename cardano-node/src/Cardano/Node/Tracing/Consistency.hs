@@ -14,6 +14,7 @@ module Cardano.Node.Tracing.Consistency
 
 
 import           Cardano.Logging
+import           Cardano.Logging.DocuGenerator (dtWarnings)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
@@ -93,7 +94,6 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
@@ -112,7 +112,7 @@ checkNodeTraceConfiguration ::
   -> IO NSWarnings
 checkNodeTraceConfiguration configFileName = do
   w1 <- checkTraceConfiguration
-          configFileName
+          (FromFile configFileName)
           defaultCardanoConfig
           getAllNamespaces
   (dt,_) <- docTracersFirstPhase Nothing

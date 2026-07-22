@@ -48,13 +48,17 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/node-11.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
 
     utils.url = "github:numtide/flake-utils";
+
+    # Mithril signer is required as a release artifact constitutent.
+    # Use explicit ref tag path to ensure we get exactly what we expect.
+    mithril.url = "github:input-output-hk/mithril?ref=refs/tags/2617.0";
   };
 
   outputs = {
@@ -63,6 +67,7 @@
     haskellNix,
     incl,
     iohkNix,
+    mithril,
     nixpkgs,
     self,
     utils,
@@ -70,7 +75,7 @@
   } @ input: let
     inherit (builtins) elem match;
     inherit (nixpkgs) lib;
-    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate;
+    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optional optionals recursiveUpdate;
     inherit (utils.lib) eachSystem flattenTree;
     inherit (iohkNix.lib) prefixNamesWith;
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
@@ -367,9 +372,11 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = collect isDerivation (
-                    filterAttrs (n: _: elem n releaseBins) projectExes
-                  );
+                  exes =
+                    collect isDerivation (
+                      filterAttrs (n: _: elem n releaseBins) projectExes
+                    )
+                    ++ optional (system == "x86_64-linux") mithril.packages.${system}.mithril-signer;
                 };
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;

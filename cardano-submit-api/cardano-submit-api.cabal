@@ -42,7 +42,7 @@ library
                       , cardano-api ^>= 11.3
                       , cardano-binary
                       , cardano-cli ^>= 11.1
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-crypto-class ^>=2.5
                       , containers
                       , ekg-core
                       , http-media
@@ -99,4 +99,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base
-                      , cardano-crypto-class ^>=2.3
+                      , cardano-crypto-class ^>=2.5

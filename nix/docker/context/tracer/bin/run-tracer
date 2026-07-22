@@ -25,7 +25,10 @@ printRunEnv () {
 
   echo "CARDANO_CONFIG=$CARDANO_CONFIG"
   echo "CARDANO_STATE_DIR=$CARDANO_STATE_DIR"
-  [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]] && echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
+
+  if [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]]; then
+    echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
+  fi
 }
 
 #####################################################################
@@ -34,7 +37,7 @@ printRunEnv () {
 #
 writeRootEnv () {
 
-cat << EOF > /usr/local/bin/env
+cat << EOF > "$CARDANO_RUNTIME_DIR/env"
 #!/usr/bin/env bash
 
 # Docker run ENV vars
@@ -44,7 +47,7 @@ EOF
 
 if [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]]; then
   echo "CARDANO_MIN_LOG_SEVERITY=\"$CARDANO_MIN_LOG_SEVERITY\"" \
-    >> /usr/local/bin/env
+    >> "$CARDANO_RUNTIME_DIR/env"
 fi
 }
 

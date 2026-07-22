@@ -39,7 +39,6 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
-import           Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),
@@ -53,6 +52,10 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import           System.Directory (getFileSize)
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
+import           System.FilePath (takeDirectory)
 import qualified System.IO.MMap as MMap
 
 
@@ -82,7 +85,12 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     leaderCredentials <- firstExceptT PraosLeaderCredentialsError $
                          readLeaderCredentials files
 
+    -- Filesystem rooted at the Shelley genesis directory, used by the ledger to
+    -- read initial funds/staking injected from genesis (testnets only).
+    let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
+
     return $ SomeConsensusProtocol Api.ShelleyBlockType $ Api.ProtocolInfoArgsShelley
+      shelleyGenesisFS
       genesis
       Consensus.ProtocolParamsShelleyBased {
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,

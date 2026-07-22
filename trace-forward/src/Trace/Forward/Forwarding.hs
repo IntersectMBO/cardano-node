@@ -24,7 +24,7 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (HandshakeArguments (..))
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+import           Ouroboros.Network.Protocol.Handshake.Codec (mkVersionedCodecCBORTerm,
                    codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
@@ -210,7 +210,7 @@ launchForwarders iomgr forwarding
              dpStore)
           (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
-          maxReconnectDelay
+          (fromIntegral maxReconnectDelay)
 
 launchForwardersViaLocalSocket
   :: IOManager
@@ -288,7 +288,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
   args = ConnectToArgs {
     ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
     ctaHandshakeTimeLimits = timeLimits,
-    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
     ctaConnectTracers = nullNetworkConnectTracers,
     ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
@@ -337,7 +337,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
       haBearerTracer = nullTracer,
       haHandshakeTracer = nullTracer,
       haHandshakeCodec = codecHandshake forwardingVersionCodec,
-      haVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+      haVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
       haAcceptVersion = acceptableVersion,
       haQueryVersion = queryVersion,
       haTimeLimits = timeLimits

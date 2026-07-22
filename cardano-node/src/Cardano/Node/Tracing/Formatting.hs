@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -24,9 +25,9 @@ import           Data.Void (Void)
 -- | Derives ConvertRawHash for Header blk from ConvertRawHash blk.
 -- Safe because HeaderHash (Header blk) = HeaderHash blk.
 instance ConvertRawHash blk => ConvertRawHash (Header blk) where
-  toShortRawHash   _ = toShortRawHash   (Proxy @blk)
-  fromShortRawHash _ = fromShortRawHash (Proxy @blk)
-  hashSize         _ = hashSize         (Proxy @blk)
+  type HashSize (Header blk) = HashSize blk
+  toShortRawHash         _ = toShortRawHash         (Proxy @blk)
+  unsafeFromShortRawHash _ = unsafeFromShortRawHash (Proxy @blk)
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are

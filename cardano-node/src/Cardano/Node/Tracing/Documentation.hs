@@ -20,13 +20,13 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
-import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
-import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
+import           Cardano.Logging.DocuGenerator (DocTracer (..), docTracer, docTracerDatapoint,
+                   documentTracer, docuResultsToText, docuResultsToMetricsHelptext,
+                   docuResultsToNamespaces)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
@@ -209,7 +209,7 @@ docTracersFirstPhase :: forall blk peer remotePeer.
   -> IO (DocTracer, TraceConfig)
 docTracersFirstPhase condConfigFileName = do
     trConfig      <- case condConfigFileName of
-                        Just fn -> readConfigurationWithDefault fn defaultCardanoConfig
+                        Just fn -> readConfigurationWithDefault (FromFile fn) defaultCardanoConfig
                         Nothing -> pure defaultCardanoConfig
     let trBase    :: Logging.Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Logging.Trace IO FormattedMessage = docTracer Forwarder

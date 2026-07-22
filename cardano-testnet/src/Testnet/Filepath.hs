@@ -9,18 +9,26 @@ module Testnet.Filepath
   , makeSocketDir
   , makeSprocket
   , makeTmpBaseAbsPath
+  , mkNodeConfigFs
   ) where
 
 import           Prelude
 
 import           Data.String (IsString (..))
+import           System.Directory (makeAbsolute)
 import           System.FilePath
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
 import           RIO (Display (..))
 
+import           Cardano.Api (File (..))
+
 import           Cardano.Node.Testnet.Paths (defaultSocketDir)
+
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 
 makeSprocket
@@ -51,3 +59,8 @@ makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirecto
 
 makeLogDir :: TmpAbsolutePath -> FilePath
 makeLogDir (TmpAbsolutePath fp) = addTrailingPathSeparator $ fp </> "logs"
+
+mkNodeConfigFs :: File content direction -> IO (SomeHasFS IO)
+mkNodeConfigFs configFile = do
+  configDir <- takeDirectory <$> makeAbsolute (unFile configFile)
+  pure $ SomeHasFS (ioHasFS (MountPoint configDir))

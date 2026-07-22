@@ -45,6 +45,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (unsafeEraFromSbe, waitForGovActionVotes)
+import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
@@ -429,14 +430,17 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
      stakePoolVotes === mempty
 
   -- We check that constitution was successfully ratified
-  void . H.leftFailM . H.evalIO . runExceptT $
-    foldEpochState
-      configurationFile
-      socketPath
-      FullValidation
-      (EpochNo 20)
-      ()
-      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
+  void . H.leftFailM . H.evalIO $ do
+    fs <- mkNodeConfigFs configurationFile
+    runExceptT $
+      foldEpochState
+        fs
+        configurationFile
+        socketPath
+        FullValidation
+        (EpochNo 20)
+        ()
+        (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash

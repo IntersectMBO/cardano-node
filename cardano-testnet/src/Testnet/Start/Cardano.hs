@@ -454,16 +454,18 @@ cardanoTestnet
                       -> TestnetNode
                       -> m ()
     waitForBlockThrow horizon timeoutSeconds nodeConfigFile node@TestnetNode{nodeName} = do
+      fs <- liftIO $ mkNodeConfigFs nodeConfigFile
       result <- timeout (timeoutSeconds * 1_000_000) $
         runExceptT . foldEpochState
+          fs
           nodeConfigFile
           (nodeSocketPath node)
           QuickValidation
           (EpochNo maxBound)
           minBound
-          $ \_ slotNo blockNo -> do
+          $ \_ slotNo blockNo' -> do
             put slotNo
-            pure $ if blockNo >= 1
+            pure $ if blockNo' >= 1
                then ConditionMet -- we got one block
                else ConditionNotMet
 

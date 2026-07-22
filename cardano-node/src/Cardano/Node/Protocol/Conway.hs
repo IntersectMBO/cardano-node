@@ -98,6 +98,7 @@ emptyConwayGenesis cm =
                    , cgCommittee = DefaultClass.def
                    , cgDelegs = mempty
                    , cgInitialDReps = mempty
+                   , cgExtraConfig = SNothing
                    }
 
 

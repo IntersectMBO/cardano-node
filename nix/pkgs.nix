@@ -108,6 +108,15 @@ in with final;
         stateDir = "/data";
         dbPrefix = "db";
         socketPath = "/ipc/node.socket";
+        # Direct GHC RTS output to /logs (a writable mount) so it stays off
+        # the container's read-only root. This matters even with
+        # profiling = "none": the lightweight `-t...cardano-node.stats`
+        # summary is emitted on every run, and without a prefix it would be
+        # written to the container's cwd (/), which fails under --read-only.
+        # Profiling/heap/eventlog output (when enabled) lands here too.
+        # Scoped to the image here rather than scripts.nix so bare
+        # `nix run .#<env>/node` is unaffected.
+        profilingOutputDir = "/logs";
       };
     in
     callPackage ./docker {
@@ -147,6 +156,13 @@ in with final;
             logFormat = "ForHuman";
           }
         ];
+        # As with the node image: direct GHC RTS output to /logs (a writable
+        # mount) so it stays off the read-only root. This matters even with
+        # profiling = "none" -- the always-on `-t...cardano-tracer.stats`
+        # summary would otherwise be written to the container cwd (/) and
+        # fail under --read-only. Profiling/heap/eventlog output lands here
+        # too when enabled.
+        profilingOutputDir = "/logs";
       };
     in
     callPackage ./docker/tracer.nix {

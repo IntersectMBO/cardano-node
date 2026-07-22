@@ -24,6 +24,7 @@ import           Data.Time.Clock
 import           GHC.Conc (ThreadStatus (..), threadStatus)
 import           GHC.Stack
 
+import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Runtime
 import           Testnet.Start.Types
@@ -68,8 +69,10 @@ hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sa
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> unFile socketPath
 
+  fs <- evalIO $ mkNodeConfigFs configurationFile
   !ret <- runExceptT $ handleIOExceptionsWith IOE
                    $ evalIO $ runExceptT $ foldBlocks
+                       fs
                        configurationFile
                        socketPath
                        FullValidation

@@ -454,7 +454,7 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 instance MetaTrace (TraceKeepAliveClient remotePeer) where
   namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
 
-  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
+  severityFor (Namespace _ ["KeepAliveClient"]) _ = Just Info
   severityFor _ _ = Nothing
 
   documentFor (Namespace _ ["KeepAliveClient"]) = Just

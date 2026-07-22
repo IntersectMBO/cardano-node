@@ -54,7 +54,6 @@ let
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
           alejandra
-          lmdb
           nix-prefetch-git
           pkg-config
           git
@@ -216,7 +215,6 @@ let
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
                 "configuration/cardano/mainnet-config.json"
-                "configuration/cardano/mainnet-config-legacy.json"
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"

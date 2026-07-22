@@ -15,7 +15,6 @@ import           Cardano.Api
 
 import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Ouroboros.Consensus.Block.Abstract
-import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Config.SecurityParam
 import           Ouroboros.Network.AnchoredFragment (Anchor, AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -272,7 +271,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                           , localNodeSocketPath = socketPath
                           }
               chairmanChainSyncClient = LocalChainSyncClient $
-                chainSyncClient (showTracing tracer) socketPath chainsVar secParam
+                chainSyncClient (show >$< tracer) socketPath chainsVar secParam
               protocolsInMode = LocalNodeClientProtocols
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing

@@ -69,8 +69,8 @@ startProtocol configFile tracerSocket = do
   setEnvGenesis $ getGenesis protocol
   iomgr <- askIOManager
 
+  networkId <- liftIO $ protocolToNetworkId protocol
   let
-    networkId = protocolToNetworkId protocol
     tracerSocket' = (,,) iomgr networkId `fmap` tracerSocket
 
   setEnvNetworkId networkId

@@ -42,6 +42,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (unsafeEraFromSbe)
+import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
@@ -272,7 +273,8 @@ getAnyWithdrawals
   -> EpochNo
   -> m (Maybe (Map (Credential Staking) Coin))
 getAnyWithdrawals nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
-  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath FullValidation maxEpoch Nothing
+  fs <- evalIO $ mkNodeConfigFs nodeConfigFile
+  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState fs nodeConfigFile socketPath FullValidation maxEpoch Nothing
     $ \(AnyNewEpochState actualEra newEpochState _) _ _ ->
         obtainCommonConstraints (unsafeEraFromSbe actualEra) $ do
           let withdrawals = newEpochState
@@ -297,7 +299,8 @@ getTreasuryWithdrawalProposal
   -> EpochNo -- ^ The termination epoch: the withdrawal proposal must be found *before* this epoch
   -> m (Maybe L.GovActionId)
 getTreasuryWithdrawalProposal nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
-  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  fs <- evalIO $ mkNodeConfigFs nodeConfigFile
+  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState _) _ _ ->
           obtainCommonConstraints (unsafeEraFromSbe actualEra) $ do
             let proposals = newEpochState

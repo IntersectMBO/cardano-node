@@ -9,7 +9,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -39,6 +38,7 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Tools (estimateMinFeeTx)
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -57,7 +57,6 @@ import           Prelude
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.Trans.RWS.Strict (ask)
-import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
@@ -137,11 +136,12 @@ getConnectClient = do
   protocol <- getEnvProtocol
   void $ return $ btSubmission2_ tracers
   envConsts <- lift ask
+  codecConfig <- liftIO $ protocolToCodecConfig protocol
   return $ benchmarkConnectTxSubmit
                        envConsts
-                       (Tracer $ traceWith (btConnect_ tracers))
+                       (mkTracer $ traceWith (btConnect_ tracers))
                        mempty -- (btSubmission2_ tracers)
-                       (protocolToCodecConfig protocol)
+                       codecConfig
                        networkMagic
 waitBenchmark :: ActionM ()
 waitBenchmark = do
@@ -354,10 +354,12 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             Right tx -> do
               let
                 txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+                txFeeEstimate = case tx of
+                  ShelleyTx sbe ledgerTx -> shelleyBasedEraConstraints sbe $
+                    case toLedgerPParams sbe protocolParameters of
+                      Left{}              -> Nothing
+                      Right ledgerPParams -> Just $
+                        estimateMinFeeTx ledgerPParams ledgerTx (inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
               traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
               -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
