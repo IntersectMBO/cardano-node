@@ -11,10 +11,10 @@ module Cardano.Node.Protocol.Checkpoints
 import           Cardano.Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Node.Types
+import           Cardano.Protocol.Crypto ()
 import           Ouroboros.Consensus.Block
-import           Ouroboros.Consensus.Cardano
+import           Ouroboros.Consensus.Cardano ()
 import           Ouroboros.Consensus.Config (CheckpointsMap (..), emptyCheckpointsMap)
 
 import           Control.Exception (IOException)

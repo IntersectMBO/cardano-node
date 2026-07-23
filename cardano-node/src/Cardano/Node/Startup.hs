@@ -145,6 +145,8 @@ data StartupTrace blk =
   | RpcConfigUpdate Text
   -- | Log RPC configuration update error
   | RpcConfigUpdateError Text
+  -- | Log that node kernel access is not supported for the running block type.
+  | RpcUnsupportedBlockType Text
   -- | Log RPC is forcefully disabled after a RPC server crash.
   | RpcForceDisabled
 

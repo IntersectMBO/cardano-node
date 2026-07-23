@@ -13,7 +13,7 @@ import           Cardano.Api.Pretty
 
 import           Cardano.Logging hiding (nsInner)
 import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcQuery (..), TraceRpcSubmit (..),
-                   TraceSpanEvent (..))
+                   TraceRpcSync (..), TraceSpanEvent (..))
 
 import           Data.Aeson (Object, Value (..), (.=))
 
@@ -48,6 +48,14 @@ instance LogFormatting TraceRpc where
                 TraceRpcSubmitSpan s -> [spanToObject s]
                 TraceRpcEvalTxDecodingError _ -> []
                 TraceRpcEvalTxSpan s -> [spanToObject s]
+          TraceRpcSync syncTrace ->
+            ["kind" .= String "SyncService"]
+              <> case syncTrace of
+                TraceRpcFetchBlockSpan s -> [spanToObject s]
+                TraceRpcReadTipSpan s -> [spanToObject s]
+                TraceRpcFetchBlockNotFound _ -> []
+                TraceRpcNodeKernelAccessUnavailable -> []
+                TraceRpcForkerError _ -> []
 
   forHuman = docToText . pretty
 
@@ -59,6 +67,8 @@ instance LogFormatting TraceRpc where
     TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" Nothing]
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
+    TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
+    TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" Nothing]
     _ -> []
 
 instance MetaTrace TraceRpc where
@@ -81,6 +91,14 @@ instance MetaTrace TraceRpc where
             TraceRpcSubmitSpan _ -> ["SubmitTx", "Span"]
             TraceRpcEvalTxDecodingError _ -> ["EvalTxDecodingError"]
             TraceRpcEvalTxSpan _ -> ["EvalTx", "Span"]
+      TraceRpcSync syncTrace ->
+        "SyncService"
+          : case syncTrace of
+            TraceRpcFetchBlockSpan _ -> ["FetchBlock", "Span"]
+            TraceRpcReadTipSpan _ -> ["ReadTip", "Span"]
+            TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
+            TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
+            TraceRpcForkerError _ -> ["ForkerError"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
@@ -94,6 +112,11 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "TxDecodingError"] -> Just Debug -- request error
     ["SubmitService", "TxValidationError"] -> Just Debug -- request error
     ["SubmitService", "EvalTxDecodingError"] -> Just Debug -- request error
+    ["SyncService", "FetchBlock", "Span"] -> Just Debug
+    ["SyncService", "ReadTip", "Span"] -> Just Debug
+    ["SyncService", "FetchBlockNotFound"] -> Just Debug -- normal: block may have been pruned
+    ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning -- kernel not yet ready
+    ["SyncService", "ForkerError"] -> Just Warning -- unexpected ledger forker error
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -110,6 +133,11 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "TxDecodingError"] -> Just "A regular request error, when submitted transaction decoding fails."
     ["SubmitService", "TxValidationError"] -> Just "A regular request error, when submitted transaction is invalid."
     ["SubmitService", "EvalTxDecodingError"] -> Just "A regular request error, when evalTx transaction decoding fails."
+    ["SyncService", "FetchBlock", "Span"] -> Just "Span for the FetchBlock SyncService method."
+    ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip SyncService method."
+    ["SyncService", "FetchBlockNotFound"] -> Just "Requested block was not found in ChainDB."
+    ["SyncService", "NodeKernelAccessUnavailable"] -> Just "Node kernel access not yet initialised. The node is still starting up."
+    ["SyncService", "ForkerError"] -> Just "Unexpected error from ledger forker."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -123,6 +151,10 @@ instance MetaTrace TraceRpc where
       [("rpc.request.SubmitService.SubmitTx", "Span for the SubmitTx UTXORPC method.")]
     ["SubmitService", "EvalTx", "Span"] ->
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
+    ["SyncService", "FetchBlock", "Span"] ->
+      [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock SyncService method.")]
+    ["SyncService", "ReadTip", "Span"] ->
+      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip SyncService method.")]
     _ -> []
 
   allNamespaces =
@@ -138,6 +170,11 @@ instance MetaTrace TraceRpc where
           , ["SubmitService", "TxDecodingError"]
           , ["SubmitService", "TxValidationError"]
           , ["SubmitService", "EvalTxDecodingError"]
+          , ["SyncService", "FetchBlock", "Span"]
+          , ["SyncService", "ReadTip", "Span"]
+          , ["SyncService", "FetchBlockNotFound"]
+          , ["SyncService", "NodeKernelAccessUnavailable"]
+          , ["SyncService", "ForkerError"]
           ]
 
 -- helper functions

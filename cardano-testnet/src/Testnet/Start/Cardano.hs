@@ -42,43 +42,43 @@ import qualified Cardano.Api.Byron as Byron
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.TopologyP2P ()
+import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile, defaultPortFile,
+                   defaultUtxoAddrPath)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
 
 import           Control.Concurrent (myThreadId, threadDelay)
-import           Control.Monad (forM, forM_, guard, unless, when)
-import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Exception (IOException)
+import           Control.Monad (forM, forM_, guard, unless, when)
 import           Control.Monad.Catch
+import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson
 import qualified Data.Aeson.Encode.Pretty as A
-import qualified Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
-import           Data.Maybe (mapMaybe)
 import           Data.Functor
 import           Data.List (sort, stripPrefix)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
+import           Data.Maybe (mapMaybe)
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
 import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
+import qualified Data.Yaml as Yaml
 import           GHC.Stack
 import qualified System.Directory as IO
-import qualified System.Process as Process
 import           System.FilePath ((</>))
+import qualified System.Process as Process
 
 import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog, stderrTracer)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
-import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
-                   defaultPortFile, defaultUtxoAddrPath)
 import           Testnet.Filepath
 import           Testnet.Orphans ()
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
@@ -461,9 +461,9 @@ cardanoTestnet
           QuickValidation
           (EpochNo maxBound)
           minBound
-          $ \_ slotNo blockNo -> do
+          $ \_ slotNo currentBlockNo -> do
             put slotNo
-            pure $ if blockNo >= 1
+            pure $ if currentBlockNo >= 1
                then ConditionMet -- we got one block
                else ConditionNotMet
 
