@@ -1,8 +1,8 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Use map with tuple-section" -}
@@ -20,15 +20,19 @@ module Cardano.TxGenerator.Genesis
 where
 
 import           Cardano.Api hiding (ShelleyGenesis)
+import           Cardano.Api.Experimental (AnyWitness (..), Era, IsEra (useEra), LedgerEra,
+                   SignedTx (..), makeKeyWitness, makeUnsignedTx, obtainCommonConstraints, signTx)
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
+import           Cardano.Ledger.Core (mkCoinTxOut)
 import           Cardano.Ledger.Shelley.API (Addr (..))
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
-import           Data.Bifunctor (bimap, second)
+import           Data.Bifunctor (first, second)
 import           Data.Function ((&))
 import           Data.List (find)
 import qualified Data.ListMap as ListMap (toList)
@@ -38,23 +42,21 @@ genesisValidate ::  ShelleyGenesis -> Either String ()
 genesisValidate
   = validateGenesis
 
-genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
+genesisSecureInitialFund :: forall era. IsEra era =>
      NetworkId
   -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> SigningKey PaymentKey
   -> TxGenTxParams
-  -> Either TxGenError (Tx era, Fund)
+  -> Either TxGenError (SignedTx era, Fund)
 genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
-  = case genesisInitialFundForKey @era networkId genesis srcKey of
-      Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
-      Just (_, lovelace)  ->
-        let
-          txOutValue :: TxOutValue era
-          txOutValue = lovelaceToTxOutValue (shelleyBasedEra @era) $ lovelace - txParamFee
-        in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
-  where
-    destAddr = keyAddress @era networkId destKey
+  = obtainCommonConstraints (useEra @era) $
+      case genesisInitialFundForKey @era networkId genesis srcKey of
+        Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
+        Just (_, lovelace)  ->
+          let
+            destAddress = keyAddress @era networkId destKey
+          in genesisExpenditure networkId srcKey destAddress (lovelace - txParamFee) txParamFee txParamTTL destKey
 
 genesisInitialFunds :: forall era. IsShelleyBasedEra era
   => NetworkId
@@ -88,50 +90,51 @@ genesisTxInput networkId
     . getVerificationKey
     . castKey
 
-genesisExpenditure ::
-     IsShelleyBasedEra era
+genesisExpenditure :: forall era.
+     IsEra era
   => NetworkId
   -> SigningKey PaymentKey
   -> AddressInEra era
-  -> TxOutValue era
+  -> L.Coin
   -> L.Coin
   -> SlotNo
   -> SigningKey PaymentKey
-  -> Either TxGenError (Tx era, Fund)
+  -> Either TxGenError (SignedTx era, Fund)
 genesisExpenditure networkId inputKey addr value fee ttl outputKey
-  = second (\tx -> (tx, Fund $ InAnyCardanoEra cardanoEra $ fund tx)) eTx
+  = obtainCommonConstraints era $
+      second (\tx -> (tx, Fund $ InAnyCardanoEra cardanoEra $ fund (lovelaceToTxOutValue (shelleyBasedEra @era) value) tx))
+        $ mkGenesisTransaction era (castKey inputKey) ttl fee [pseudoTxIn]
+            [Exp.TxOut $ mkCoinTxOut (toShelleyAddr addr) value]
  where
-  eTx         = mkGenesisTransaction (castKey inputKey) ttl fee [pseudoTxIn] [txout]
-  txout       = TxOut addr value TxOutDatumNone ReferenceScriptNone
+  era = useEra @era
   pseudoTxIn  = genesisTxInput networkId inputKey
 
-  fund tx = FundInEra {
-    _fundTxIn = TxIn (getTxId $ getTxBody tx) (TxIx 0)
-  , _fundWitness = KeyWitness KeyWitnessForSpending
-  , _fundVal  = value
+  fund txOutValue tx = FundInEra {
+    _fundTxIn = TxIn (txIdFromSignedTx tx) (TxIx 0)
+  , _fundWitness = AnyKeyWitnessPlaceholder
+  , _fundVal  = txOutValue
   , _fundSigningKey = Just outputKey
   }
 
-mkGenesisTransaction :: forall era .
-     IsShelleyBasedEra era
-  => SigningKey GenesisUTxOKey
+mkGenesisTransaction ::
+     Era era
+  -> SigningKey GenesisUTxOKey
   -> SlotNo
   -> L.Coin
   -> [TxIn]
-  -> [TxOut CtxTx era]
-  -> Either TxGenError (Tx era)
-mkGenesisTransaction key ttl fee txins txouts
-  = bimap
-      ApiError
-      (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
-      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
- where
-  txBodyContent = defaultTxBodyContent shelleyBasedEra
-    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
-    & setTxOuts txouts
-    & setTxFee (mkTxFee fee)
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (mkTxValidityUpperBound ttl)
+  -> [Exp.TxOut (LedgerEra era)]
+  -> Either TxGenError (SignedTx era)
+mkGenesisTransaction era key ttl fee txins txouts
+  = obtainCommonConstraints era $ do
+      let expInputs = map (,AnyKeyWitnessPlaceholder) txins
+          txBodyContent = Exp.defaultTxBodyContent
+            & Exp.setTxIns expInputs
+            & Exp.setTxOuts txouts
+            & Exp.setTxFee fee
+            & Exp.setTxValidityUpperBound ttl
+      unsignedTx <- first (\err -> TxGenError $ "mkGenesisTransaction: " ++ show err) $ makeUnsignedTx era txBodyContent
+      let witVKey = makeKeyWitness era unsignedTx (WitnessGenesisUTxOKey key)
+      Right $ signTx era [] [witVKey] unsignedTx
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
