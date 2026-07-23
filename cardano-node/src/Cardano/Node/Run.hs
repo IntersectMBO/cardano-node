@@ -41,6 +41,7 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), installSigTermHandler)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
@@ -58,7 +59,7 @@ import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
+import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Logging.Types (LogFormatting)
 import           Cardano.Logging.Utils (showT)
@@ -122,7 +123,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Control.Applicative (empty)
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent (killThread, getNumCapabilities)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
@@ -157,7 +158,6 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, m
 import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
-import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
@@ -175,7 +175,7 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-  installSigTermHandler
+  installSigTermHandler SigTermDuringStartup
 
   Crypto.cryptoInit
 
@@ -213,24 +213,6 @@ buildNodeConfiguration partialConf = do
     (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
     pure
     $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
-
--- | Workaround to ensure that the main thread throws an async exception on
--- receiving a SIGTERM signal.
-installSigTermHandler :: IO ()
-installSigTermHandler = do
-#ifdef UNIX
-  -- Similar implementation to the RTS's handling of SIGINT (see GHC's
-  -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
-  runThreadIdWk <- mkWeakThreadId =<< myThreadId
-  _ <- Signals.installHandler
-    Signals.sigTERM
-    (Signals.CatchOnce $ do
-      runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId -> Exception.throwTo runThreadId ExitSuccess
-    )
-    Nothing
-#endif
-  return ()
 
 handleNodeWithTracers
   :: PartialNodeConfiguration
@@ -449,6 +431,7 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    installSigTermHandler SigTermDuringRuntime
     void $
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {

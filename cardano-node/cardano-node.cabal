@@ -249,6 +249,7 @@ test-suite cardano-node-test
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
+                        Test.Cardano.Node.TopLevel
                         Test.Cardano.Tracing.NewTracing.Consistency
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
