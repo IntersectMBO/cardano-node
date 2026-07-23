@@ -103,7 +103,8 @@ profilesForgeStress =
   -- 1 node versions (non-pre).
     fs & P.name "forge-stress-solo-xs"          . V.valueLocal . n1 . V.datasetCurrent . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-solo"             . V.valueLocal . n1 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
-  , fs & P.name "forge-stress-plutus-solo"      . V.plutusLoop . n1 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
+  , fs & P.name "forge-stress-plutus-solo"      . V.plutusLoop   . n1 . V.datasetCurrent . durationM  . P.traceForwardingOn                                       . P.analysisSizeSmall
+  , fs & P.name "forge-stress-plutusv3-solo"    . V.plutusLoopV3 . n1 . V.datasetCurrent . durationM  . P.traceForwardingOn                                       . P.analysisSizeSmall
   -- 1 node versions (pre)
   , fs & P.name "forge-stress-pre-solo-xs"      . V.valueLocal . n1 . V.datasetOct2021 . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo"         . V.valueLocal . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
