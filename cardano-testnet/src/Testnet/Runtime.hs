@@ -490,11 +490,8 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             Just (sprocket, _) -> H.sprocketSystemName sprocket
             Nothing            -> throwString "No testnet sprocket available"
 
-      fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
-
       void $ asyncRegister_ . runExceptT $
                   foldEpochState
-                    fs
                     (configurationFile testnetRuntime)
                     (Api.File socketPath)
                     Api.QuickValidation

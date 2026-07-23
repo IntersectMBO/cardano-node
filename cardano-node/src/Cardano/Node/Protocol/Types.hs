@@ -22,6 +22,7 @@ import           Ouroboros.Network.Block (HeaderHash)
 import           Control.DeepSeq (NFData)
 import           Data.Aeson
 import           GHC.Generics (Generic)
+import           System.FS.API (SomeHasFS)
 
 import           NoThunks.Class (NoThunks)
 
@@ -52,5 +53,6 @@ data SomeConsensusProtocol where
                                           , Ouroboros.Consensus.Storage.LedgerDB.Forker.ResolveLeiosBlock blk
                                           )
                            => Api.BlockType blk
-                           -> Api.ProtocolInfoArgs IO blk
+                           -> SomeHasFS IO
+                           -> Api.ProtocolInfoArgs blk
                            -> SomeConsensusProtocol

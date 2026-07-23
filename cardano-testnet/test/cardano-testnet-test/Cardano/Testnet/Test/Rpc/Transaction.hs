@@ -18,7 +18,7 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Rpc.Client (Proto)
 import qualified Cardano.Rpc.Client as Rpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc

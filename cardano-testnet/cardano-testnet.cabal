@@ -41,8 +41,8 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 11.3
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.1
+                      , cardano-api ^>= 11.0
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.0
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -237,7 +237,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
-                        Cardano.Testnet.Test.Rpc.Eval
+                        -- Cardano.Testnet.Test.Rpc.Eval -- evalTx removed from SubmitService in current cardano-rpc
                         Cardano.Testnet.Test.Rpc.Query
                         Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction

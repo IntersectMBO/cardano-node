@@ -114,8 +114,8 @@ run RunOpts
       Right p  -> pure p
 
   (k , nId) <- case p of
-            SomeConsensusProtocol _ runP -> do
-              ProtocolInfo { pInfoConfig } <- fst <$> Api.protocolInfo @IO runP
+            SomeConsensusProtocol _ fs runP -> do
+              ProtocolInfo { pInfoConfig } <- fst <$> Api.protocolInfo @IO fs runP
               pure ( Consensus.configSecurityParam pInfoConfig
                    , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
                    )

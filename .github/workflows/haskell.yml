@@ -106,6 +106,10 @@ jobs:
       with:
         persist-credentials: false
 
+    - name: Enable git long paths (Windows)
+      if: runner.os == 'Windows'
+      run: git config --global core.longpaths true
+
     - name: Cache and install Cabal dependencies
       uses: input-output-hk/cardano-dev/actions/cabal-cache@e811e25d3927d62ba87f1762ea51c36e65f0b09a # cabal-cache-0.0.1.0
       with:

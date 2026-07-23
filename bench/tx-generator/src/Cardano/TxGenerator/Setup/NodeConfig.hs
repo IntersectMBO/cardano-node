@@ -31,10 +31,10 @@ import           Data.Monoid
 -- NB. this helper is *only* for protocols created with this module
 -- as this guarantees proper error handling when trying to create a non-Cardano protocol.
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
-getGenesis (SomeConsensusProtocol CardanoBlockType proto)
+getGenesis (SomeConsensusProtocol CardanoBlockType _ proto)
     = getConst $ Ledger.tcShelleyGenesisL Const transCfg
   where
-    ProtocolInfoArgsCardano _ Consensus.CardanoProtocolParams
+    ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
       { Consensus.cardanoLedgerTransitionConfig = transCfg
       } = proto
 

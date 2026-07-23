@@ -47,6 +47,16 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
+        # ouroboros-consensus/koslambrou/leios-prototype uses cardano-blueprint
+        # as a git submodule; fetch with submodules so the extra-source-files
+        # referenced in ouroboros-consensus.cabal are present during planning.
+        "https://github.com/input-output-hk/ouroboros-consensus/3511ac5ad2ded55553d821e7305a2c10e1cfbeca" =
+          pkgs.fetchgit {
+            url = "https://github.com/input-output-hk/ouroboros-consensus";
+            rev = "3511ac5ad2ded55553d821e7305a2c10e1cfbeca";
+            fetchSubmodules = true;
+            sha256 = "sha256-NAokIKE0yOW5EIx6zFgvuwa95iD4vzIq13CJOUUe0mA=";
+          };
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";

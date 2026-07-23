@@ -79,6 +79,9 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
+  -- cardano-cli/koslambrou/ch1bo-palas/key-registration has tight upper bounds
+  -- incompatible with the leios-prototype stack versions
+  , cardano-cli:*
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -91,29 +94,34 @@ source-repository-package
   tag: b71bd2c89d576d8112a0748adf3b890475f9d170
   --sha256: sha256-tIjrQkEkS79FdYarjV5Dy+U/Q7kIkOXjdFcddkwA3Us=
 
--- Points to ouroboros-ledger/leios-prototype
+-- Points to cardano-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 9edd1c664054803348e5f9edfa13529e4e844284
-  --sha256: sha256-TkgeO5d1p18VwTMtuNY8SsPZXXyn1HIrZBZ4IHVTWuE=
+  tag: fb8d6f8a83b0efb86281e0b80e7ffba160dad8b1
+  --sha256: sha256-U/vpyZNerL1YXiQg1TIAOL5L438NNE3XkuIYD0HPTJw=
   subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/impl
+    eras/shelley/test-suite
     libs/cardano-data
     libs/cardano-ledger-api
-    libs/small-steps
     libs/cardano-ledger-binary
     libs/cardano-ledger-core
     libs/cardano-protocol-tpraos
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/test-suite
-    eras/mary/impl
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/conway/impl
-    eras/dijkstra/impl
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
 
 -- Points to ouroboros-network/leios-prototype
 source-repository-package
@@ -126,23 +134,23 @@ source-repository-package
     cardano-diffusion
     network-mux
 
--- Points to cardano-api/leios-prototype
+-- Points to cardano-api/ch1bo-palas/key-registration
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-api
-  tag: 28e2f4f085eceee4cb63c3eb9103a80e3852ce7a
-  --sha256: sha256-9Wugp6Cd+ERSc8kfIUDFbq3QjuhIr1gu6rRSV3Yo/9M=
+  location: https://github.com/input-output-hk/cardano-api
+  tag: 6bd3d265aac5a968f966cdcfd2896331b53389f1
+  --sha256: sha256-3HC8nie+gC/sxWnXuoNOXpEvBAIq8enns1LJbIp1sCQ=
   subdir:
     cardano-api
     cardano-api-gen
     cardano-rpc
 
--- Points to cardano-cli/leios-prototype
+-- Points to cardano-cli/koslambrou/ch1bo-palas/key-registration
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 97a1258f9654478dff6c7e7497fcc693213b1a36
-  --sha256: sha256-e2mxwfy2pN3itQIx0+1j2XV7JTNKckIpfzaN6rOtZn0=
+  tag: 56c3d72a1d8df6b632a06e79849ed44bac8b0c59
+  --sha256: sha256-r7SnGBTKcQuEYW4Jh9FW5aaxr+bKbCD+t20Gf6d6iRM=
   subdir:
     cardano-cli
 

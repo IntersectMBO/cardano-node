@@ -80,7 +80,6 @@ import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
 
-import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Assert
 import           Testnet.Runtime
@@ -104,10 +103,9 @@ waitUntilEpoch
   -> m EpochNo -- ^ The epoch number reached
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
   result <- H.evalIO $ do
-    fs <- mkNodeConfigFs nodeConfigFile
     runExceptT $
       foldEpochState
-        fs nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
+        nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
@@ -391,8 +389,7 @@ getEpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   esv <- H.evalIO $ EpochStateView <$> newTVarIO (Left EpochStateNotInitialised) <*> newTVarIO 0
   _ <- asyncRegister_ $ do
-    fs <- mkNodeConfigFs nodeConfigFile
-    result <- runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation (EpochNo maxBound) ()
+    result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) ()
       $ \epochState slotNumber blockNumber -> do
           liftIOAnnotated . atomically $ writeEpochStateView esv $ Right (epochState, slotNumber, blockNumber)
           pure ConditionNotMet

@@ -156,7 +156,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
     let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
 
     return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano shelleyGenesisFS $ Consensus.CardanoProtocolParams {
+      SomeConsensusProtocol CardanoBlockType shelleyGenesisFS $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
         Consensus.byronProtocolParams =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,

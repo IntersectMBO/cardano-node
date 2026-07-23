@@ -16,10 +16,11 @@ where
 import           Cardano.Api
 import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Ledger.Core as LC
 
 import           Cardano.Rpc.Client (Proto (..))
 import qualified Cardano.Rpc.Client as Rpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (utxoRpcBigIntToInteger)
 import           Cardano.Testnet
@@ -148,7 +149,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
   ------------------------------------
   (fundLedgerTx, fundTxEval) <- evalTxFile sbe rpcServer fundTx
 
-  let fundCliFee = fundLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+  let fundCliFee = fundLedgerTx ^. L.bodyTxL . LC.feeTxBodyL
 
   H.note_ "EvalTx minimum fee should not exceed the CLI-computed fee"
   fundEvalFee <- H.leftFail $ fundTxEval ^. U5c.fee . to utxoRpcBigIntToInteger
@@ -220,7 +221,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
   ------------------------------------
   (ledgerTx, txEval) <- evalTxFile sbe rpcServer spendTx
 
-  let cliFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
+  let cliFee = ledgerTx ^. L.bodyTxL . LC.feeTxBodyL
 
   H.note_ "EvalTx minimum fee should not exceed the CLI-computed fee"
   evalFee <- H.leftFail $ txEval ^. U5c.fee . to utxoRpcBigIntToInteger
@@ -406,7 +407,7 @@ evalTxFile
   => ShelleyBasedEra era
   -> Rpc.Server
   -> FilePath
-  -> m (L.Tx L.TopTx (ShelleyLedgerEra era), Proto U5c.TxEval)
+  -> m (L.Tx LC.TopTx (ShelleyLedgerEra era), Proto U5c.TxEval)
 evalTxFile sbe' rpcServer txFile = withFrozenCallStack $ shelleyBasedEraConstraints sbe' $ do
   textEnvelope <- H.leftFailM . H.evalIO $ readTextEnvelopeFromFile txFile
   ShelleyTx _ ledgerTx <- H.leftFail $ deserialiseFromTextEnvelope @(Tx era) textEnvelope

@@ -34,7 +34,6 @@ import           System.FilePath ((</>))
 import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Defaults
-import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
@@ -247,10 +246,8 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     ]
 
   -- We check that info action was successfully ratified
-  fs <- evalIO $ mkNodeConfigFs configurationFile
   !meInfoRatified
     <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
-                      fs
                       configurationFile
                       socketPath
                       FullValidation

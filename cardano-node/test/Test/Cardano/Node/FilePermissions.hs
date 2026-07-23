@@ -38,16 +38,18 @@ import           Data.Maybe (Maybe (..))
 import           Data.Semigroup (Semigroup (..))
 import           System.Directory (removeFile)
 import           System.IO (FilePath, IO)
+import           Text.Show (Show (..))
+
+#ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
-import           Text.Show (Show (..))
+#endif
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (Group (..), failWith)
-#endif
 
 
 {- HLINT ignore "Use fewer imports" -}

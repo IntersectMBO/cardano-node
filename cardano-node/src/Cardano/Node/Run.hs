@@ -156,6 +156,7 @@ import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.FilePath (isAbsolute, takeDirectory, (</>))
+import           System.FS.API (SomeHasFS)
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -241,8 +242,8 @@ handleNodeWithTracers
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
-  (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
+handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType fs runP) = do
+  (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO fs runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
@@ -269,7 +270,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType runP tracers nc networkMagic
+  handleSimpleNode blockType fs runP tracers nc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -306,7 +307,8 @@ handleSimpleNode
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
-  -> Api.ProtocolInfoArgs IO blk
+  -> SomeHasFS IO
+  -> Api.ProtocolInfoArgs blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
   -> NetworkMagic
@@ -315,7 +317,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
+handleSimpleNode blockType fs runP tracers nc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -327,7 +329,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  pInfo <- fst <$> Api.protocolInfo @IO runP
+  pInfo <- fst <$> Api.protocolInfo @IO fs runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -418,7 +420,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              (_, mkBlockForging) <- Api.protocolInfo runP
+              (_, mkBlockForging) <- Api.protocolInfo fs runP
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $
@@ -647,11 +649,11 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
           setBlockForging nodeKernel []
         _NothingOrOtherFileError ->
           traceWith startupTracer (BlockForgingUpdateError err)
-    Right (SomeConsensusProtocol blockType' runP') ->
+    Right (SomeConsensusProtocol blockType' fs' runP') ->
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          (_, mkBlockForging) <- Api.protocolInfo runP'
+          (_, mkBlockForging) <- Api.protocolInfo fs' runP'
           blockForging <- mkBlockForging kesAgentTracer
           traceWith startupTracer
                     (BlockForgingUpdate (if null blockForging
