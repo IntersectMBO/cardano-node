@@ -258,9 +258,8 @@ cardanoConfigToPartialNodeConfiguration cfg =
 
     fromCfgBackend :: Cfg.LedgerDbBackendSelector -> LedgerDbSelectorFlag
     fromCfgBackend Cfg.V2InMemory = V2InMemory
-    -- The node's 'V2LSM' only carries the database path; cardano-config's extra
-    -- export path has no node counterpart and is dropped here.
-    fromCfgBackend (Cfg.V2LSM dbPath _exportPath) = V2LSM (strictMaybeToMaybe dbPath)
+    fromCfgBackend (Cfg.V2LSM dbPath exportPath) =
+      V2LSM (strictMaybeToMaybe dbPath) (strictMaybeToMaybe exportPath)
 
     -- cardano-config's 'GenesisConfigFlags' mirrors the node's field-for-field,
     -- except 'gcfCSJJumpSize' is a raw 'Word64' there vs a 'SlotNo' here, and the

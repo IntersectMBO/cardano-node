@@ -144,8 +144,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-config
-  tag: 200f0333a352718152315a712dfc1f39b7ed5e4a
-  --sha256: sha256-YgVaOMt6Vjqg9pg10ovsXOJvV5dRmOCjIoQJOs5zjbU=
+  tag: 146fae3b13ad13a72a72ca9792a8a44ef5076b52
+  --sha256: sha256-M+LYeNr30ng261MnjwOURcWe1Gajn8T4YArAUf3XyRY=
 
 source-repository-package
   type: git
