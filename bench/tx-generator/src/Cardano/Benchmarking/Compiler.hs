@@ -23,6 +23,7 @@ import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Functor ((<&>))
+import           Data.List.NonEmpty (nonEmpty)
 import           Data.Maybe
 import qualified Data.Text as Text
 
@@ -61,6 +62,7 @@ compileToScript = do
         pure
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
+  logSubmissionEndpoint
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
@@ -82,8 +84,9 @@ importGenesisFunds = do
   wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
   txParams <- askNixOption txGenTxParams
+  setupMode <- getSetupSubmitMode
   cmd1 (ReadSigningKey keyNameGenesisInputFund) _nix_sigKey
-  emit $ Submit era LocalSocket txParams $ SecureGenesis wallet keyNameGenesisInputFund keyNameTxGenFunds
+  emit $ Submit era setupMode txParams $ SecureGenesis wallet keyNameGenesisInputFund keyNameTxGenFunds
   delay
   logMsg "Importing Genesis Fund. Done."
   return wallet
@@ -102,7 +105,8 @@ addCollaterals src = do
                         (PayToAddr keyNameCollaterals collateralWallet)
                         (PayToAddr keyNameTxGenFunds src)
                         [ safeCollateral ]
-      emit $ Submit era LocalSocket txParams generator
+      setupMode <- getSetupSubmitMode
+      emit $ Submit era setupMode txParams generator
       logMsg "Create collaterals. Done."
       return $ Just collateralWallet
 
@@ -129,7 +133,8 @@ splittingPhase srcWallet = do
     let generator = case split of
           SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-    emit $ Submit era LocalSocket txParams generator
+    setupMode <- getSetupSubmitMode
+    emit $ Submit era setupMode txParams generator
     delay
     logMsg "Splitting step: Done"
 
@@ -195,16 +200,31 @@ benchmarkingPhase wallet collateralWallet = do
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
   txParams <- askNixOption txGenTxParams
+  endpoint <- resolveSubmissionEndpoint
   doneWallet <- newWallet "done_wallet"
+  -- A submission endpoint replaces the target nodes as the submission target
+  -- (and is a functional transport: unpaced, unmeasured), so a config that
+  -- provides both is contradictory and fails fast here.
+  submitMode <- case endpoint of
+    Just ep
+      | null targetNodes -> pure $ SubmitToEndpoint ep
+      | otherwise -> throwCompileError $ SomeCompilerError
+          "a submission endpoint replaces targetNodes as the submission \
+          \target: set targetNodes to [] (or drop the endpoint to benchmark \
+          \against the target nodes)."
+    Nothing
+      | debugMode -> pure LocalSocket
+      | Just nodes <- nonEmpty targetNodes -> pure $ Benchmark nodes tps txCount
+      | otherwise -> throwCompileError $ SomeCompilerError
+          "a benchmark requires at least one entry in targetNodes (or a \
+          \submission endpoint to submit through)."
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
-    submitMode = if debugMode
-        then LocalSocket
-        else Benchmark targetNodes tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
   emit $ Submit era submitMode txParams generator
-  unless debugMode $ do
-    emit WaitBenchmark
+  case submitMode of
+    Benchmark {} -> emit WaitBenchmark
+    _            -> return ()
   return doneWallet
 
 data Fees = Fees {
@@ -245,6 +265,35 @@ cmd1 cmd arg = emit . cmd =<< askNixOption arg
 
 askNixOption :: (NixServiceOptions -> v) -> Compiler v
 askNixOption = asks
+
+getSetupSubmitMode :: Compiler SubmitMode
+getSetupSubmitMode =
+  maybe LocalSocket SubmitToEndpoint <$> resolveSubmissionEndpoint
+
+-- | Resolve the configured submission endpoint, requiring its protocol and URI
+-- to be set together (or both omitted). The URI itself is already parsed:
+-- decoding the config only accepts a well-formed absolute URI.
+resolveSubmissionEndpoint :: Compiler (Maybe SubmissionEndpoint)
+resolveSubmissionEndpoint = do
+  mProtocol <- askNixOption _nix_submissionEndpointProtocol
+  mUri      <- askNixOption _nix_submissionEndpointURI
+  case (mProtocol, mUri) of
+    (Nothing, Nothing) -> pure Nothing
+    (Just p,  Just u)  -> pure $ Just $ mkSubmissionEndpoint p u
+    _ -> throwCompileError $ SomeCompilerError
+      "submissionEndpointProtocol and submissionEndpointURI must be set together \
+      \(or both omitted)."
+
+-- | Leave run-time evidence of an endpoint run in the trace: it behaves
+-- differently from a benchmark (unpaced, unmeasured), and that should be
+-- readable off the logs rather than only off the config.
+logSubmissionEndpoint :: Compiler ()
+logSubmissionEndpoint = resolveSubmissionEndpoint >>= mapM_ (\ep ->
+  logMsg $ Text.pack $
+    "Every phase submits through an endpoint: " ++ describeSubmissionEndpoint ep
+      ++ ". This is a functional transport, not a benchmark: tps is not \
+         \enforced, targetNodes is unused, and no benchmark metrics are \
+         \produced.")
 
 delay :: Compiler ()
 delay = cmd1 Delay _nix_init_cooldown
