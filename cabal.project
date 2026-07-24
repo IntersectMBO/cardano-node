@@ -103,6 +103,7 @@ source-repository-package
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
+    eras/alonzo/test-suite
     eras/babbage/impl
     eras/byron/chain/executable-spec
     eras/byron/crypto
