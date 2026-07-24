@@ -87,16 +87,16 @@ allow-newer:
 -- Points to ouroboros-consensus/leios-prototype
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: b71bd2c89d576d8112a0748adf3b890475f9d170
-  --sha256: sha256-tIjrQkEkS79FdYarjV5Dy+U/Q7kIkOXjdFcddkwA3Us=
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: e790deca75b4f72e57a1e36c2775bf4111220450
+  --sha256: sha256-W64c1D44drtWNnUI6Nq5YP6X2LhRNEiJu1MM+d+Rp2s=
 
 -- Points to ouroboros-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 9edd1c664054803348e5f9edfa13529e4e844284
-  --sha256: sha256-TkgeO5d1p18VwTMtuNY8SsPZXXyn1HIrZBZ4IHVTWuE=
+  tag: fb8d6f8a83b0efb86281e0b80e7ffba160dad8b1
+  --sha256: sha256-U/vpyZNerL1YXiQg1TIAOL5L438NNE3XkuIYD0HPTJw=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -130,8 +130,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 28e2f4f085eceee4cb63c3eb9103a80e3852ce7a
-  --sha256: sha256-9Wugp6Cd+ERSc8kfIUDFbq3QjuhIr1gu6rRSV3Yo/9M=
+  tag: cc4dfe71536d59cb745e8ce1c09ee83dfcde6218
+  --sha256: sha256-n6WJd5w3NSMICUBwefgix2/f+z5La4dkn59dDO4zlHo=
   subdir:
     cardano-api
     cardano-api-gen
@@ -141,8 +141,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 97a1258f9654478dff6c7e7497fcc693213b1a36
-  --sha256: sha256-e2mxwfy2pN3itQIx0+1j2XV7JTNKckIpfzaN6rOtZn0=
+  tag: 2377354ca8d49cd86f63b7f095cfa340b514789d 
+  --sha256: sha256-5c3FjK6Yi8hQEzvTIZ4Ri1wJNTReuKT1rX5+B3BonM4=
   subdir:
     cardano-cli
 
