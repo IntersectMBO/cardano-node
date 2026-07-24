@@ -1,0 +1,42 @@
+{ "bootStakeholders":
+    { "ce2950ee9b35c74336371a7393b2f1fa64d4af1831180076b106208d": 1 }
+, "heavyDelegation":
+    { "ce2950ee9b35c74336371a7393b2f1fa64d4af1831180076b106208d":
+        { "omega": 0
+        , "issuerPk":
+            "0Te/2OpdrE4IFuj6ZCSky8a/oeM9xE0phU0rQJE7v3Zg0wZop+bcZaKVe8qRk1zl0DM5vGIk5+XHZGhv7xh3rQ=="
+        , "delegatePk":
+            "ojky67+tV35+CmAFX7hkCCpPgz7EwrU8HCMDk7qEgoynuLaByN8S4ek4HjQXPq/b3vZFd08+Ip2BN/nC+e6Alg=="
+        , "cert":
+            "a8e1514662b6edd544f9e22d3bc8a961e6cfe5b1db35378188bb4fcd848e27c977952c8e73c29757b8b5b6b6c0b52254357383272c0b83e24cb91558907e8d04"
+        } }
+, "startTime": 1655366659
+, "nonAvvmBalances":
+    { "2657WMsDfac5TVJguqJE11Z1tdx9HP72E9Roz32GVecUrX7oScFb1sXPzC43EnLUx":
+        "30000"
+    , "2657WMsDfac5V9qqEUfJm252BN5L81ni6CZyDS31cN7XZrAtsyqbz4yGr42bKG5B7":
+        "270000"
+    }
+, "blockVersionData":
+    { "scriptVersion": 0
+    , "slotDuration": "20000"
+    , "maxBlockSize": "641000"
+    , "maxHeaderSize": "200000"
+    , "maxTxSize": "4096"
+    , "maxProposalSize": "700"
+    , "mpcThd": "200000"
+    , "heavyDelThd": "300000"
+    , "updateVoteThd": "100000"
+    , "updateProposalThd": "100000"
+    , "updateImplicit": "10000"
+    , "softforkRule":
+        { "initThd": "900000"
+        , "minThd": "600000"
+        , "thdDecrement": "100000"
+        }
+    , "txFeePolicy": { "summand": "0" , "multiplier": "439460" }
+    , "unlockStakeEpoch": "184467"
+    }
+, "protocolConsts": { "k": 2160 , "protocolMagic": 42 }
+, "avvmDistr": {}
+}

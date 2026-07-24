@@ -1,0 +1,77 @@
+{
+  "poolVotingThresholds": {
+    "committeeNormal": 0,
+    "committeeNoConfidence": 0,
+    "hardForkInitiation": 0,
+    "motionNoConfidence": 0,
+    "ppSecurityGroup": 0
+  },
+  "dRepVotingThresholds": {
+    "motionNoConfidence": 0,
+    "committeeNormal": 0,
+    "committeeNoConfidence": 0,
+    "updateToConstitution": 0,
+    "hardForkInitiation": 0,
+    "ppNetworkGroup": 0,
+    "ppEconomicGroup": 0,
+    "ppTechnicalGroup": 0,
+    "ppGovGroup": 0,
+    "treasuryWithdrawal": 0
+  },
+  "committeeMinSize": 0,
+  "committeeMaxTermLength": 0,
+  "govActionLifetime": 0,
+  "govActionDeposit": 0,
+  "dRepDeposit": 0,
+  "dRepActivity": 0,
+  "minFeeRefScriptCostPerByte": 0,
+  "plutusV3CostModel": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  "constitution": {
+    "anchor": {
+      "url": "",
+      "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "committee": {
+    "members": {
+      "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 1,
+      "scriptHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
+    },
+    "threshold": 0.5
+  },
+  "delegs": {
+    "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": {
+      "dRep": "drep-alwaysAbstain"
+    },
+    "keyHash-35bc5e86c42afbc593ab4cdd78301005df84ba67fa1f12f95f8ee103": {
+      "dRep": "drep-alwaysNoConfidence"
+    },
+    "scriptHash-afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9c42cdd7110386": {
+      "dRep": "drep-keyHash-78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd"
+    },
+    "keyHash-df93ab435bc5eafbc500583067fa1f12f9110386c42cdd784ba5f8ee": {
+      "dRep": "drep-scriptHash-01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b"
+    },
+    "keyHash-5df84bcdd7a5f8ee93aafbc500b435bc5e83067fa1f12f9110386c42": {
+      "poolId": "0335bc5e86c42afbc578301005df84ba67fa1f12f95f8ee193ab4cdd"
+    },
+    "keyHash-8ee93a5df84bc42cdd7a5fafbc500b435bc5e83067fa1f12f9110386": {
+      "poolId": "086c42afbc578301005df84ba67fa1f12f95f8ee193ab4cdd335bc5e",
+      "dRep": "drep-alwaysAbstain"
+    }
+  },
+  "initialDReps": {
+    "keyHash-78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd": {
+      "expiry": 1000,
+      "deposit": 5000
+    },
+    "scriptHash-01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b": {
+      "expiry": 300,
+      "deposit": 6000,
+      "anchor": {
+        "url": "example.com",
+        "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  }
+}

@@ -143,9 +143,15 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/IntersectMBO/cardano-config
+  tag: 50994eb21ae1d99528ce468cc5fba08ba67ca1ee
+  --sha256: sha256-h+tYgNmkT+kBQcuE4ujOmbv6WoT8uLVPE2phjtPz4LQ=
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: e468a936006a890d4469d1cbfaa3cfbe6867e29c
-  --sha256: sha256-X1Yd6TMYhhxbm8qiD3y8Ad3nY2D5wieGWf9kwoRCWxc=
+  tag: ba6574636b3f85641cea3c93aea83822d9be5342
+  --sha256: sha256-d5xlkoy5JVuwz+kCF/1o2o5nyK58shmpgdirSBvL7xE=
   subdir:
     .
 

@@ -113,6 +113,7 @@ library
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.HasIssuer
                         Cardano.Node.Tracing.Tracers.Startup
+                        Cardano.Node.Tools.DBSynthesizer
                         Cardano.Node.Types
 
   other-modules:        Paths_cardano_node
@@ -166,7 +167,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 3.0.1
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, unstable-cardano-tools} ^>= 3.0.1
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.0
                       , prettyprinter
@@ -212,6 +213,34 @@ executable cardano-node
                       , cardano-node
                       , optparse-applicative
                       , text
+
+executable db-synthesizer
+  import:               project-config
+  hs-source-dirs:       app
+  main-is:              db-synthesizer.hs
+  ghc-options:          -threaded
+                        -rtsopts
+
+  other-modules:        DBSynthesizer.Parsers
+
+  build-depends:        base
+                      , cardano-crypto-class
+                      , cardano-node
+                      , optparse-applicative
+                      , ouroboros-consensus:{ouroboros-consensus, unstable-cardano-tools} ^>= 3.0.1
+
+test-suite db-synthesizer-test
+  import:               project-config
+  hs-source-dirs:       test/db-synthesizer
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base
+                      , cardano-crypto-class
+                      , cardano-node
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, unstable-cardano-tools} ^>= 3.0.1
+                      , tasty
+                      , tasty-hunit
 
 test-suite cardano-node-test
   import:               project-config

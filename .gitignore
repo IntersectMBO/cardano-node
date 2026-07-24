@@ -79,3 +79,5 @@ cardano-tracer/cardano-tracer-test
 .codex
 
 .serena/
+
+cardano-node/test/db-synthesizer/disk/chaindb
