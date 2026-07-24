@@ -47,15 +47,15 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
-        # ouroboros-consensus/koslambrou/leios-prototype uses cardano-blueprint
-        # as a git submodule; fetch with submodules so the extra-source-files
+        # ouroboros-consensus/leios-prototype uses cardano-blueprint
+        # as a git submodule; fetch with submodules so the data-files
         # referenced in ouroboros-consensus.cabal are present during planning.
-        "https://github.com/input-output-hk/ouroboros-consensus/3511ac5ad2ded55553d821e7305a2c10e1cfbeca" =
+        "https://github.com/IntersectMBO/ouroboros-consensus/e790deca75b4f72e57a1e36c2775bf4111220450" =
           pkgs.fetchgit {
-            url = "https://github.com/input-output-hk/ouroboros-consensus";
-            rev = "3511ac5ad2ded55553d821e7305a2c10e1cfbeca";
+            url = "https://github.com/IntersectMBO/ouroboros-consensus";
+            rev = "e790deca75b4f72e57a1e36c2775bf4111220450";
             fetchSubmodules = true;
-            sha256 = "sha256-NAokIKE0yOW5EIx6zFgvuwa95iD4vzIq13CJOUUe0mA=";
+            sha256 = "sha256-W64c1D44drtWNnUI6Nq5YP6X2LhRNEiJu1MM+d+Rp2s=";
           };
       };
       shell = {
