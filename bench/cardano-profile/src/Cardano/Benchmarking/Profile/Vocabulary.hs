@@ -170,9 +170,13 @@ plutusLoop =
     plutusSaturation
   . plutusTypeLoop
 
+-- Higher submission pressure than `plutusSaturation`: with the LoopV3 script
+-- each tx already maxes out the per-tx execution-unit budget, so a block
+-- caps out at a handful of txs regardless of tps; a low tps just means the
+-- mempool takes many blocks to refill to that cap after each empty start.
 plutusLoopV3 :: Types.Profile -> Types.Profile
 plutusLoopV3 =
-    plutusSaturation
+    plutusBase . P.tps 0.30
   . plutusTypeLoopV3
 
 plutusSaturation :: Types.Profile -> Types.Profile
