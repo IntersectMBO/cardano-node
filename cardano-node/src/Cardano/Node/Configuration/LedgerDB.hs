@@ -49,6 +49,10 @@ data LedgerDbSelectorFlag =
       (Maybe FilePath)
       -- ^ Maybe a custom path to the LSM database. If not provided the default
       -- will be used (@<fast-storage>/lsm@).
+      (Maybe FilePath)
+      -- ^ Maybe a path to which the LSM backend will export standalone
+      -- snapshots on every snapshot. If not provided, no standalone snapshots
+      -- are exported.
 
   deriving (Eq, Show)
 
@@ -88,4 +92,4 @@ selectorToArgs ::
     , CanUpgradeLedgerTables LedgerState blk
     ) => LedgerDbSelectorFlag -> FilePath -> StdGen -> (LedgerDbBackendArgs IO blk, StdGen)
 selectorToArgs V2InMemory _ = InMemory.mkInMemoryArgs
-selectorToArgs (V2LSM fp) fastStoragePath = LSM.mkLSMArgsIO (Proxy @blk) (fromMaybe "lsm" fp) Nothing fastStoragePath
+selectorToArgs (V2LSM fp fpExport) fastStoragePath = LSM.mkLSMArgsIO (Proxy @blk) (fromMaybe "lsm" fp) fpExport fastStoragePath

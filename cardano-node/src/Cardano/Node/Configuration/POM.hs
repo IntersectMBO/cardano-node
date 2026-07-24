@@ -548,7 +548,8 @@ instance FromJSON PartialNodeConfiguration where
                "V2InMemory" -> return V2InMemory
                "V2LSM" -> do
                  lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
-                 pure $ V2LSM lsmPath
+                 lsmExportPath :: Maybe FilePath <- o .:? "LSMExportPath"
+                 pure $ V2LSM lsmPath lsmExportPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
 
              -- A named policy (e.g. `Snapshots: Mithril`) selects a whole predefined
