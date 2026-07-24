@@ -26,9 +26,15 @@ module Cardano.Node.Run
 import           Cardano.Api (File (..), FileDirection (..))
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
+import qualified Cardano.Configuration as Cfg
+import qualified Options.Applicative as Opt
+import           System.Environment (getArgs)
 import           System.Random (randomIO)
 
 import qualified Cardano.Crypto.Init as Crypto
+import           Cardano.Node.Configuration.CardanoConfigAdapter (cardanoConfigToNodeConfiguration)
+import           Cardano.Node.Configuration.CardanoConfigCompare (compareConfigurations,
+                   deprecatedFlagWarnings)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
@@ -141,6 +147,7 @@ import           Data.Either (partitionEithers)
 import           Data.Functor.Identity (Identity (..))
 import           Data.IP (toSockAddr)
 import           Data.Map.Strict (Map)
+import           Data.List (isPrefixOf)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Monoid (Last (..))
@@ -188,6 +195,11 @@ runNode cmdPc = do
   let earlyTracer = stdoutTracer
   traceWith earlyTracer $ "Node configuration: " <> show nc
 
+  -- Also resolve the same configuration with the shared cardano-config parser
+  -- and warn (non-fatally) if it diverges from the node's own parser, so the two
+  -- can be reconciled before cardano-config becomes the sole parser.
+  compareWithCardanoConfig earlyTracer cmdPc nc
+
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
@@ -203,6 +215,71 @@ runNode cmdPc = do
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
+
+-- | Resolve the node configuration with the shared @cardano-config@ parser and
+-- compare it against the node's own POM-resolved configuration, tracing a
+-- non-fatal warning for each field that diverges.
+--
+-- To keep the comparison fair, cardano-config resolves from the SAME two inputs
+-- the node used: it parses the node's own command line with its own CLI parser
+-- and combines that with the configuration file, so both sides are @file + CLI@.
+-- If cardano-config cannot parse the argv (e.g. a node flag its CLI parser does
+-- not model), that is itself a meaningful divergence signal: we warn and fall
+-- back to a file-only cardano-config resolution so the rest is still checked.
+-- Every parse\/resolve failure here is only ever warned about, never fatal.
+compareWithCardanoConfig
+  :: Tracer IO String
+  -> PartialNodeConfiguration
+  -> NodeConfiguration
+  -> IO ()
+compareWithCardanoConfig tracer cmdPc nc =
+  case getLast (pncConfigFile cmdPc) of
+    Nothing -> pure ()
+    Just (ConfigYamlFilePath cfgFp) -> do
+      -- Drop the leading @run@ subcommand token(s) to get the flag list, matching
+      -- cardano-config's flat 'parseCliArgs' (which has no @run@ subcommand).
+      argv <- getArgs
+      let flags = dropWhile (not . ("-" `isPrefixOf`)) argv
+          cliInfo = Opt.info Cfg.parseCliArgs mempty
+      cliArgs <- case Opt.execParserPure Opt.defaultPrefs cliInfo flags of
+        Opt.Success cli -> pure cli
+        Opt.Failure f -> do
+          let (msg, _exit) = Opt.renderFailure f "cardano-config"
+          -- A parse failure usually means a deprecated node flag alias; surface
+          -- actionable guidance for each before the generic parser error.
+          mapM_ (traceWith tracer . ("cardano-config: " <>)) (deprecatedFlagWarnings flags)
+          traceWith tracer $
+            "cardano-config: could not parse the node CLI arguments (a node flag its"
+              <> " parser does not model?); comparing file-only. Parser error: " <> msg
+          pure (Cfg.defaultCliArgs cfgFp)
+        Opt.CompletionInvoked _ -> pure (Cfg.defaultCliArgs cfgFp)
+      -- Parse the same configuration file the node used and resolve it together
+      -- with the CLI arguments, exactly as the node's POM path does.
+      result <- try $ do
+        (fileCfg, _fileWarns) <- Cfg.parseConfigurationFiles cfgFp
+        Exception.evaluate (Cfg.resolveConfiguration cliArgs fileCfg)
+      case result of
+        Left (e :: Exception.SomeException) ->
+          traceWith tracer $
+            "cardano-config: failed to parse node configuration (ignored): " <> show e
+        Right (Left err) ->
+          traceWith tracer $
+            "cardano-config: failed to resolve node configuration (ignored): " <> show err
+        Right (Right (cfgNc, _warns)) ->
+          case cardanoConfigToNodeConfiguration cfgNc of
+            Left adaptErr ->
+              traceWith tracer $
+                "cardano-config: could not adapt to node configuration (ignored): " <> adaptErr
+            Right adaptedNc ->
+              case compareConfigurations nc adaptedNc of
+                [] ->
+                  traceWith tracer
+                    "cardano-config: resolved configuration (file + CLI) agrees with the node parser."
+                divergences ->
+                  traceWith tracer $
+                    unlines $
+                      "cardano-config: WARNING - resolved configuration (file + CLI) diverges from the node parser:"
+                        : map ("  - " <>) divergences
 
 -- | Read node configuration from a file specified in 'PartialNodeConfiguration'
 buildNodeConfiguration :: HasCallStack
