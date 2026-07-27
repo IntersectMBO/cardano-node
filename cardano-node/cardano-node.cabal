@@ -59,7 +59,9 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Node.Configuration.NodeAddress
+  exposed-modules:      Cardano.Node.Configuration.CardanoConfigAdapter
+                        Cardano.Node.Configuration.CardanoConfigCompare
+                        Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
@@ -113,6 +115,7 @@ library
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.HasIssuer
                         Cardano.Node.Tracing.Tracers.Startup
+                        Cardano.Node.Tools.DBSynthesizer
                         Cardano.Node.Types
 
   other-modules:        Paths_cardano_node
@@ -124,6 +127,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.3
+                      , cardano-config
                       , cardano-data
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
@@ -166,7 +170,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 3.0.1
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, unstable-cardano-tools} ^>= 3.0.1
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.1
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.0
                       , prettyprinter
@@ -188,6 +192,7 @@ library
                       , trace-resources ^>= 0.2.4
                       , transformers
                       , transformers-except
+                      , tree-diff
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
                       , yaml
 
@@ -207,11 +212,53 @@ executable cardano-node
   autogen-modules:      Paths_cardano_node
 
   build-depends:        base
+                      , cardano-config
+                      , cardano-config:commands
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
                       , optparse-applicative
                       , text
+
+executable db-synthesizer
+  import:               project-config
+  hs-source-dirs:       app
+  main-is:              db-synthesizer.hs
+  ghc-options:          -threaded
+                        -rtsopts
+
+  other-modules:        DBSynthesizer.Parsers
+
+  build-depends:        base
+                      , cardano-crypto-class
+                      , cardano-node
+                      , optparse-applicative
+                      , ouroboros-consensus:{ouroboros-consensus, unstable-cardano-tools} ^>= 3.0.1
+
+test-suite db-synthesizer-test
+  import:               project-config
+  hs-source-dirs:       test/db-synthesizer
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base
+                      , cardano-crypto-class
+                      , cardano-node
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, unstable-cardano-tools} ^>= 3.0.1
+                      , tasty
+                      , tasty-hunit
+
+test-suite cardano-config-compare-test
+  import:               project-config
+  hs-source-dirs:       test/cardano-config-compare
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base
+                      , cardano-config
+                      , cardano-node
+                      , tasty
+                      , tasty-hunit
 
 test-suite cardano-node-test
   import:               project-config
