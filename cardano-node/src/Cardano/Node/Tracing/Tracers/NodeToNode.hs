@@ -24,6 +24,8 @@ import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, Header, S
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
+import           Ouroboros.Consensus.Storage.LedgerDB.Forker (ResolveLeiosBlock,
+                   headerLeiosAnnouncement)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -478,11 +480,12 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
 --------------------------------------------------------------------------------
 
 instance ( Show (Header blk)
+         , ResolveLeiosBlock blk
          ) => LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)) where
   forHuman = showT
 
   forMachine _dtal (AnyMessageAndAgency _stok msg) =
-    messageLeiosNotifyToObject msg
+    messageLeiosNotifyToObject headerLeiosAnnouncement msg
 
 instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
   forHuman = showT
