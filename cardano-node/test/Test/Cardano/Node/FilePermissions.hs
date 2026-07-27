@@ -38,9 +38,11 @@ import           Data.Maybe (Maybe (..))
 import           Data.Semigroup (Semigroup (..))
 import           System.Directory (removeFile)
 import           System.IO (FilePath, IO)
+#ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
+#endif
 import           Text.Show (Show (..))
 
 import           Hedgehog

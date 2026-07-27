@@ -22,10 +22,12 @@ where
 
 import           Cardano.Api hiding (ShelleyGenesis)
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey))
 import           Cardano.Ledger.Shelley.API (Addr (..))
+import           Cardano.Ledger.Shelley.Genesis (InjectionData (..), ShelleyExtraConfig (..))
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
@@ -50,36 +52,51 @@ genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
   -> SigningKey PaymentKey
   -> TxGenTxParams
   -> Either TxGenError (Tx era, Fund)
-genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
-  = case genesisInitialFundForKey @era networkId genesis srcKey of
-      Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
-      Just (_, lovelace)  ->
-        let
-          txOutValue :: TxOutValue era
-          txOutValue = lovelaceToTxOutValue (shelleyBasedEra @era) $ lovelace - txParamFee
-        in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
+genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL} = do
+  mFund <- genesisInitialFundForKey @era networkId genesis srcKey
+  case mFund of
+    Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
+    Just (_, lovelace)  ->
+      let
+        txOutValue :: TxOutValue era
+        txOutValue = lovelaceToTxOutValue (shelleyBasedEra @era) $ lovelace - txParamFee
+      in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
   where
     destAddr = keyAddress @era networkId destKey
 
 genesisInitialFunds :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> ShelleyGenesis
-  -> [(AddressInEra era, L.Coin)]
-genesisInitialFunds networkId g
- = [ ( shelleyAddressInEra (shelleyBasedEra @era) $
+  -> Either TxGenError [(AddressInEra era, L.Coin)]
+genesisInitialFunds networkId g = do
+  funds <- embeddedInitialFunds g
+  pure
+    [ ( shelleyAddressInEra (shelleyBasedEra @era) $
           makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
-     , coin
-     )
-     | (Addr _ pcr stref, coin) <- ListMap.toList $ sgInitialFunds g
-   ]
+      , coin
+      )
+    | (Addr _ pcr stref, coin) <- funds
+    ]
+
+embeddedInitialFunds :: ShelleyGenesis -> Either TxGenError [(Addr, L.Coin)]
+embeddedInitialFunds g =
+  case sgExtraConfig g of
+    SJust extraConfig -> case secInitialFunds extraConfig of
+      EmbeddedInjection lm -> Right (ListMap.toList lm)
+      NoInjection ->
+        Left $ TxGenError "genesisInitialFunds: extraConfig.secInitialFunds is NoInjection; expected embedded initial funds"
+      InjectionFromFile{} ->
+        Left $ TxGenError "genesisInitialFunds: file-based initial-funds injection is unsupported; expected embedded funds in extraConfig.secInitialFunds"
+    SNothing ->
+      Left $ TxGenError "genesisInitialFunds: genesis has no extraConfig; expected embedded initial funds in extraConfig.secInitialFunds"
 
 genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> ShelleyGenesis
   -> SigningKey PaymentKey
-  -> Maybe (AddressInEra era, L.Coin)
+  -> Either TxGenError (Maybe (AddressInEra era, L.Coin))
 genesisInitialFundForKey networkId genesis key
-  = find (isTxOutForKey . fst) (genesisInitialFunds networkId genesis)
+  = find (isTxOutForKey . fst) <$> genesisInitialFunds networkId genesis
  where
   isTxOutForKey = (keyAddress networkId key ==)
 

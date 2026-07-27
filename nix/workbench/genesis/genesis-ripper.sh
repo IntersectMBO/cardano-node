@@ -384,9 +384,10 @@ dataset-cache-ensure() {
         "$tmpdir/byron-genesis.json"                            \
     > "$tmpdir/dataset.byron.json"
     # - Shelley:
-      jq -c                                                     \
-        '{genDelegs, initialFunds, staking, maxLovelaceSupply}' \
-        "$tmpdir/shelley-genesis.json"                          \
+      jq -c                                                                  \
+        '{genDelegs, initialFunds, staking, maxLovelaceSupply}
+         + (if .extraConfig != null then {extraConfig} else {} end)'         \
+        "$tmpdir/shelley-genesis.json"                                       \
     > "$tmpdir/dataset.shelley.json"
     # - Conway: Default to "{}" if cardano-cli omits initialDReps or delegs:
     #   cardano-node's parser accepts {} but rejects null.
@@ -475,7 +476,7 @@ protocol-cache-key-input() {
                  | del(.bootStakeholders, .heavyDelegation, .nonAvvmBalances,   .startTime  )
                  )
      , shelley:  ( .genesis.shelley  // {}
-                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart)
+                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart, .extraConfig)
                  )
      , alonzo:   ( .genesis.alonzo   // {} )
      , conway:   ( .genesis.conway   // {}
@@ -542,7 +543,8 @@ protocol-cache-ensure() {
                , .initialFunds
                , .staking
                , .maxLovelaceSupply
-               , .systemStart)'          \
+               , .systemStart
+               , .extraConfig)'          \
           "$profile_json"                \
       > "$tmpdir/protocol.shelley.json"
     else
