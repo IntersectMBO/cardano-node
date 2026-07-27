@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.16
+version:                2.17
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -70,7 +70,9 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.Ogmios
                         Cardano.Benchmarking.Script.Selftest
+                        Cardano.Benchmarking.Script.Submission
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
                         Cardano.Benchmarking.Tracer
@@ -140,6 +142,7 @@ library
                       , mtl
                       , network
                       , network-mux
+                      , network-uri
                       , optparse-applicative
                       , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
                       , ouroboros-network:{api, framework, framework-tracing, ouroboros-network, protocols} >= 1.1
@@ -159,6 +162,7 @@ library
                       , transformers
                       , transformers-except
                       , unordered-containers
+                      , websockets
                       , yaml
                       -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
                       , either

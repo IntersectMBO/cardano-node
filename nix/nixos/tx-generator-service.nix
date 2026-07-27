@@ -1,6 +1,16 @@
 pkgs:
 let
   cleanNixServiceOptions = cfg: with cfg;
+    let
+      ## Mirror the config compiler's submission endpoint contract at
+      ## evaluation time, so a bad service config fails the build instead of
+      ## the run: the endpoint keys must be set together, and an endpoint
+      ## replaces targetNodes as the submission target.
+      endpointConfigured =
+        if (submissionEndpointProtocol == null) != (submissionEndpointURI == null)
+        then throw "tx-generator: submissionEndpointProtocol and submissionEndpointURI must be set together (or both omitted)"
+        else submissionEndpointProtocol != null;
+    in
     {
       plutus = if (cfg.plutus.type or null) == null then null else
         {
@@ -17,7 +27,14 @@ let
           datum    = cfg.plutusDatumFile or null;
           inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
         };
-      targetNodes = targetNodesList cfg.targetNodes;
+      targetNodes =
+        if endpointConfigured
+        then if cfg.targetNodes == null || cfg.targetNodes == {}
+             then []
+             else throw "tx-generator: a submission endpoint replaces targetNodes as the submission target; do not set both"
+        else if cfg.targetNodes == null
+             then throw "tx-generator: targetNodes is required when no submission endpoint is set"
+             else targetNodesList cfg.targetNodes;
       era = capitalise cfg.era;
       inherit
         add_tx_size
@@ -29,6 +46,8 @@ let
         nodeConfigFile
         outputs_per_tx
         sigKey
+        submissionEndpointProtocol
+        submissionEndpointURI
         tps
         tx_count
         tx_fee;
@@ -116,6 +135,11 @@ in pkgs.commonLib.defServiceModule
         localNodeConf   = mayOpt attrs       "Config of the local node";
 
         targetNodes     = mayOpt attrs       "Targets: { name = { ip, port } }";
+
+        submissionEndpointProtocol =
+                          mayOpt str         "Submission endpoint protocol (currently: \"Ogmios\"); set together with submissionEndpointURI.";
+        submissionEndpointURI =
+                          mayOpt str         "Submission endpoint URI (e.g. \"ws://127.0.0.1:1337\"); replaces targetNodes as the submission target.";
 
         era             = opt (enum [ "shelley"
                                       "allegra"

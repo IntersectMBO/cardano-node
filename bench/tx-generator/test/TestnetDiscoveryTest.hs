@@ -12,7 +12,7 @@ import           Prelude
 import           Control.Exception (bracket, evaluate, try, SomeException)
 import           Data.Aeson (FromJSON, Value (..), (.=), (.:), encode, fromJSON, object, toJSON,
                    withObject)
-import           Data.Aeson.KeyMap qualified as KM (member)
+import           Data.Aeson.KeyMap qualified as KM (insert, member)
 import           Data.Aeson.Key (Key, fromString)
 import           Data.Aeson.Types (Result (..), parseMaybe)
 import           Data.ByteString.Lazy as LBS (writeFile)
@@ -42,6 +42,7 @@ import           Data.Maybe (fromMaybe)
 testnetDiscoveryTests :: TestTree
 testnetDiscoveryTests = testGroup "TestnetDiscovery"
   [ testCase "round-trip: JSON serialization" roundTripTest
+  , testCase "submission endpoint: no target nodes are discovered" endpointTargetNodesTest
   , testProperty "connection settings always override user config" prop_connectionSettingsOverride
   ]
 
@@ -66,10 +67,25 @@ completeUserConfig = object
 roundTripTest :: Assertion
 roundTripTest = withMockTestnet $ \tmpDir -> do
   opts <- discover tmpDir completeUserConfig
+  assertBool "target nodes discovered" $ not $ null $ _nix_targetNodes opts
   let json = toJSON opts
   case fromJSON json of
     Error err -> assertFailure $ "JSON round-trip failed: " ++ err ++ "\nJSON: " ++ show json
     Success opts' -> opts @?= opts'
+
+
+-- | With a submission endpoint in the user config, discovery must not inject
+-- discovered target nodes: the endpoint replaces them as the submission
+-- target, and the config compiler rejects a config providing both.
+endpointTargetNodesTest :: Assertion
+endpointTargetNodesTest = withMockTestnet $ \tmpDir -> do
+  opts <- discover tmpDir (addEndpoint completeUserConfig)
+  _nix_targetNodes opts @?= []
+  where
+    addEndpoint (Object o) = Object
+      $ KM.insert "submissionEndpointProtocol" (String "Ogmios")
+      $ KM.insert "submissionEndpointURI" (String "ws://127.0.0.1:1337") o
+    addEndpoint v = v
 
 
 -- Property test --
