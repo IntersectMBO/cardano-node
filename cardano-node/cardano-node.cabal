@@ -106,6 +106,7 @@ library
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
                         Cardano.Node.Tracing.Render
+                        Cardano.Node.Tracing.Span
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
                         Cardano.Node.Tracing.Tracers.BlockReplayProgress
@@ -240,6 +241,7 @@ test-suite cardano-node-test
                       , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
                       , cardano-node
                       , cardano-slotting
+                      , containers
                       , contra-tracer
                       , directory
                       , filepath
@@ -251,7 +253,9 @@ test-suite cardano-node-test
                       , mtl
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
+                      , safe-exceptions
                       , text
+                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml
@@ -262,6 +266,7 @@ test-suite cardano-node-test
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
                         Test.Cardano.Node.TopLevel
+                        Test.Cardano.Node.Tracing.Span
                         Test.Cardano.Tracing.NewTracing.Consistency
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
