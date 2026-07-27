@@ -52,6 +52,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Others
   , blocksize64k
+  , blocksize768k
   , voting
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
@@ -439,6 +440,9 @@ budgetBlockMemoryDouble = helper_addOverlayOrDie "budget/block/memory/double"
 -- used to manually reduce block size for e.g. Conway; has to be applied *AFTER* any v?-preview overlay.
 blocksize64k :: HasCallStack => Types.Profile -> Types.Profile
 blocksize64k = helper_addOverlayOrDie "blocksize64k"
+
+blocksize768k :: HasCallStack => Types.Profile -> Types.Profile
+blocksize768k = helper_addOverlayOrDie "blocksize768k"
 
 voting :: HasCallStack => Types.Profile -> Types.Profile
 voting = helper_addOverlayOrDie "voting"
