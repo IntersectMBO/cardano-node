@@ -2356,8 +2356,11 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
     TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
     TraceLeiosCertifiedAndAnnounced{atSlot, rbHash} ->
-      "Leios cert assembled and EB announced in RB " <> Text.pack (show rbHash)
-        <> " at slot " <> showT atSlot
+      "RB certified an EB and announced a new one at slot " <> showT atSlot
+        <> " (RB " <> Text.pack (show rbHash) <> ")"
+    TraceLeiosAnnouncementAccepted src equiv fields mbAge ->
+      "EB announcement accepted from " <> Text.pack (show src)
+        <> " (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields) <> " age=" <> showT mbAge
   asMetrics _ = []
 
 instance MetaTrace TraceLeiosKernel where
@@ -2376,6 +2379,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
   namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
+  namespaceFor TraceLeiosAnnouncementAccepted{}  = Namespace [] ["AnnouncementAccepted"]
 
   severityFor (Namespace _ ["DbException"])        _ = Just Error
   severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
@@ -2399,6 +2403,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
     , Namespace [] ["CertifiedAndAnnounced"]
+    , Namespace [] ["AnnouncementAccepted"]
     ]
 
 instance LogFormatting TraceLeiosPeer where
@@ -2406,11 +2411,14 @@ instance LogFormatting TraceLeiosPeer where
   forHuman = \case
     MkTraceLeiosPeer msg            -> "LeiosPeer: " <> Text.pack msg
     TraceLeiosPeerDbException e     -> "Leios peer DB exception: " <> Text.pack (show e)
+    TraceLeiosPeerAnnouncement equiv fields ->
+      "EB announcement from peer (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields)
   asMetrics _ = []
 
 instance MetaTrace TraceLeiosPeer where
   namespaceFor MkTraceLeiosPeer{}          = Namespace [] ["Msg"]
   namespaceFor TraceLeiosPeerDbException{} = Namespace [] ["DbException"]
+  namespaceFor TraceLeiosPeerAnnouncement{} = Namespace [] ["Announcement"]
 
   severityFor (Namespace _ ["DbException"]) _ = Just Error
   severityFor _ _                             = Just Info
@@ -2420,5 +2428,6 @@ instance MetaTrace TraceLeiosPeer where
   allNamespaces =
     [ Namespace [] ["Msg"]
     , Namespace [] ["DbException"]
+    , Namespace [] ["Announcement"]
     ]
 
