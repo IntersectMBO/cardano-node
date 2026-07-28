@@ -1,0 +1,5 @@
+pr: 6467
+kind:
+  - feature
+description: |
+  Added `--params-file` and `--params-mainnet` flags to `cardano-testnet cardano` subcommand.
