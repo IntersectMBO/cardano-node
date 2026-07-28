@@ -1,0 +1,61 @@
+# Triggered manually via the GitHub Actions UI or CLI:
+#   gh workflow run herald-release.yml -f package=cardano-testnet
+#   gh workflow run herald-release.yml -f package=cardano-testnet -f version=2.0.0.0
+#
+# What it does:
+#   1. Batches changelog fragments into a new changelog section
+#   2. Bumps the version (cabal file or version.txt, auto-computed or explicit)
+#   3. Creates a release commit (tag is deferred to the manual signing step)
+#   4. Adds a release changelog fragment for the next cycle
+#   5. Pushes to a release/PACKAGE-VERSION branch
+#   6. Opens a PR with signing instructions (and optionally CHaP submission commands)
+
+name: Herald release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package name to release (must match a project in .herald.yml)
+        required: true
+        type: choice
+        options:
+          - cardano-node-chairman
+          - cardano-submit-api
+          - cardano-testnet
+      version:
+        description: Explicit version (A.B.C.D). Leave empty to auto-compute.
+        required: false
+        type: string
+      branch:
+        description: Branch to release from and target for the PR. Leave empty to use the branch selected above.
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - uses: input-output-hk/cardano-dev/actions/herald-release@4a0f9088e26a7394879800b682b28819475812d0 # herald-release-0.0.2.0
+        with:
+          package: ${{ inputs.package }}
+          version: ${{ inputs.version }}
+          base-branch: ${{ inputs.branch || github.ref_name }}
+          # Per-package `changes-dir` support (used by our .herald.yml)
+          # landed in herald 0.1.2.0, but herald-release-0.0.2.0 still
+          # defaults to 0.1.1.0. Pin explicitly until herald-release is
+          # re-released with a newer default, then this can be dropped.
+          herald-ref: github:input-output-hk/cardano-dev/herald-0.1.2.0
