@@ -1,7 +1,5 @@
 # Changelog for Cardano-submit-api
 
-## vNext
-
 ## 10.2 -- Jan 2026
 
 * Replace the older tracing & metric system — `iohk-monitoring` with `trace-dispatcher`
