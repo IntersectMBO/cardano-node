@@ -40,3 +40,7 @@ jobs:
           # defaults to 0.1.1.0. Pin explicitly until herald-validate is
           # re-released with a newer default, then this can be dropped.
           herald-ref: github:input-output-hk/cardano-dev/herald-0.1.2.0
+          # Temporarily disabled: the fragments converted from scriv keep the
+          # PR number of the change each one describes, so they cannot match
+          # this pull request.  Re-enable once the changelogs are backfilled.
+          pr: 'false'
