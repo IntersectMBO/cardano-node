@@ -1201,13 +1201,13 @@
       "locked": {
         "lastModified": 1776926918,
         "narHash": "sha256-muV2LpheC4OZsU1ipL9j6TmjGufMpGrXzvon+eWahgg=",
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "repo": "mithril",
         "rev": "2478748ea9771baed8181ef0938c78f79ed60760",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "IntersectMBO",
         "ref": "refs/tags/2617.0",
         "repo": "mithril",
         "type": "github"
