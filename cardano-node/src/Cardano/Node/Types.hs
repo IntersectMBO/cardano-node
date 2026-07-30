@@ -179,6 +179,7 @@ data ProtocolFilepaths =
      , byronKeyFile         :: !(Maybe FilePath)
      , shelleyKESSource     :: !(Maybe KESSource)
      , shelleyVRFFile       :: !(Maybe FilePath)
+     , shelleyBLSFile       :: !(Maybe FilePath)
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
      } deriving (Eq, Show)
@@ -192,6 +193,7 @@ hasProtocolFile ProtocolFilepaths {
     byronKeyFile,
     shelleyKESSource,
     shelleyVRFFile,
+    shelleyBLSFile,
     shelleyCertFile,
     shelleyBulkCredsFile
   }
@@ -199,6 +201,7 @@ hasProtocolFile ProtocolFilepaths {
   || isJust byronKeyFile
   || isJust shelleyKESSource
   || isJust shelleyVRFFile
+  || isJust shelleyBLSFile
   || isJust shelleyCertFile
   || isJust shelleyBulkCredsFile
 

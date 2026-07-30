@@ -72,6 +72,7 @@ mkNodeConfig configFp_
                  , byronKeyFile = Just ""
                  , shelleyKESSource = Just (KESKeyFilePath "")
                  , shelleyVRFFile = Just ""
+                 , shelleyBLSFile = Nothing
                  , shelleyCertFile = Just ""
                  , shelleyBulkCredsFile = Just ""
                  }

@@ -65,6 +65,7 @@ nodeRunParser = do
   byronKeyFile    <- optional parseByronSigningKey
   shelleyKESSource  <- optional parseKesSourceFilePath
   shelleyVRFFile  <- optional parseVrfKeyFilePath
+  shelleyBLSFile  <- optional parseBlsKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
   startAsNonProducingNode <- (\depr new -> Last depr <> Last new)
@@ -103,6 +104,7 @@ nodeRunParser = do
              , byronKeyFile
              , shelleyKESSource
              , shelleyVRFFile
+             , shelleyBLSFile
              , shelleyCertFile
              , shelleyBulkCredsFile
              }
@@ -409,6 +411,15 @@ parseVrfKeyFilePath =
     ( long "shelley-vrf-key"
         <> metavar "FILEPATH"
         <> help "Path to the VRF signing key."
+        <> completer (bashCompleter "file")
+    )
+
+parseBlsKeyFilePath :: Parser FilePath
+parseBlsKeyFilePath =
+  strOption
+    ( long "shelley-bls-key"
+        <> metavar "FILEPATH"
+        <> help "Path to the BLS (Leios) signing key."
         <> completer (bashCompleter "file")
     )
 

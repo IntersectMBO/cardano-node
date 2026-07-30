@@ -184,10 +184,17 @@ readLeaderCredentialsSingleton
 readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
+                      shelleyBLSFile = mBlsFile,
                       shelleyKESSource = Just kesSource
                     } = do
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
+
+    -- The BLS (Leios) key is optional: only block producers participating in
+    -- Leios supply one alongside their VRF/KES/opcert credentials.
+    blsSKey <-
+      firstExceptT FileError $
+        traverse (\blsFile -> newExceptT $ readFileTextEnvelope (File blsFile)) mBlsFile
 
     (credentialsSource, vkey) <- case kesSource of
       KESKeyFilePath kesFile -> do
@@ -202,7 +209,7 @@ readLeaderCredentialsSingleton
         OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
         pure (PraosCredentialsAgent socketFile, vkey)
 
-    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey blsSKey]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
@@ -252,7 +259,8 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      KesSigningKey kesKey <- parseEnvelope scKes
      let credentialsSource = PraosCredentialsUnsound opCert kesKey
      vrfSKey <- parseEnvelope scVrf
-     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey
+     -- Bulk credentials files do not carry a BLS (Leios) key.
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey Nothing
 
    readBulkFile
      :: Maybe FilePath
@@ -277,20 +285,25 @@ mkPraosLeaderCredentials ::
      PraosCredentialsSource StandardCrypto
   -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
+  -> Maybe (SigningKey BlsKey)
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
     credentialsSource
     (StakePoolVerificationKey vkey)
-    (VrfSigningKey vrfKey) =
+    (VrfSigningKey vrfKey)
+    mBlsKey =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
           praosCanBeLeaderCredentialsSource = credentialsSource,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-          praosCanBeLeaderSignKeyVRF = vrfKey
+          praosCanBeLeaderSignKeyVRF = vrfKey,
+          praosCanBeLeaderSignKeyBLS = unBlsSigningKey <$> mBlsKey
         },
       shelleyLeaderCredentialsLabel = "Shelley"
     }
+  where
+    unBlsSigningKey (BlsSigningKey k) = k
 
 parseEnvelope ::
      HasTextEnvelope a
