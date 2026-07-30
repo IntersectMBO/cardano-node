@@ -102,7 +102,7 @@ jobs:
     - name: Install gRPC system dependencies
       uses: input-output-hk/cardano-dev/actions/grpc-deps@64bbe67966d5ee404a795803a2b56718baebffb4 # grpc-deps-0.0.1.0
 
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         persist-credentials: false
 
@@ -208,7 +208,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         persist-credentials: false
 
