@@ -148,9 +148,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/f-f/kes-agent.git
-  tag: 32c1ed675d22a30735d9f22f7afa436a3ef3e64a
-  --sha256: sha256-o7hFX1JnraS6Xq0WoXQwd9Z8GsPPv0Ls2DWvZ08o0ZU=
+  location: https://github.com/input-output-hk/kes-agent.git
+  tag: 4e7ec7b5102a030587413f4af770e87a15c9cb9c
+  --sha256: sha256-OUnBy86ny2RHHJZoOXPHeHbYwvWBHmnXoVyQp0FZjEA=
   subdir:
     kes-agent
     kes-agent-crypto
