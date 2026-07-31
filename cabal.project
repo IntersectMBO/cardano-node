@@ -88,8 +88,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 827e0834be99bba5ce7d23ac69a2a2e3b7d4cf0d
-  --sha256: sha256-pcHxPYElb9cmAq4mdxvG8sPbo2WcfceLkPiNFZnZv8I=
+  tag: 50c97115f8bc4d11b75d3048e360f4a391aaf9b6
+  --sha256: sha256-LqUz8+YoTjS6rec/hpmg6WqXHwIEl6N8Z8JnQiVuO/0=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -139,8 +139,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: cc4dfe71536d59cb745e8ce1c09ee83dfcde6218
-  --sha256: sha256-n6WJd5w3NSMICUBwefgix2/f+z5La4dkn59dDO4zlHo=
+  tag: 947645ea9c912da13feadc16bef44a7550c3c55b
+  --sha256: sha256-+fIsJuJV4YBSPdVe3wpIxq9lf6nAI5yB7qdzH0iKmrc=
   subdir:
     cardano-api
     cardano-api-gen
@@ -150,7 +150,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 2377354ca8d49cd86f63b7f095cfa340b514789d 
+  tag: 2377354ca8d49cd86f63b7f095cfa340b514789d
   --sha256: sha256-5c3FjK6Yi8hQEzvTIZ4Ri1wJNTReuKT1rX5+B3BonM4=
   subdir:
     cardano-cli
