@@ -2865,12 +2865,18 @@ instance (   LogFormatting (LedgerError blk)
         => LogFormatting (ExtValidationError blk) where
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
+    forMachine _ (ExtValidationErrorLeios msg) =
+      mconcat [ "kind" .= String "ExtValidationErrorLeios"
+              , "error" .= String (Text.pack msg)
+              ]
 
     forHuman (ExtValidationErrorLedger err) =  forHuman err
     forHuman (ExtValidationErrorHeader err) =  forHuman err
+    forHuman (ExtValidationErrorLeios msg) = Text.pack msg
 
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err
+    asMetrics (ExtValidationErrorLeios _) = []
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where
