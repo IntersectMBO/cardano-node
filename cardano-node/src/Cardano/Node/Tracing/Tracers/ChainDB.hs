@@ -67,6 +67,8 @@ import           Data.Void (absurd)
 import           Data.Word (Word64)
 import           Numeric (showFFloat)
 
+import           LeiosDemoTypes (LeiosExtValidationError (..))
+
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
 -- A limiter that is not coming from configuration, because it carries a special filter
@@ -2865,18 +2867,54 @@ instance (   LogFormatting (LedgerError blk)
         => LogFormatting (ExtValidationError blk) where
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
-    forMachine _ (ExtValidationErrorLeios msg) =
-      mconcat [ "kind" .= String "ExtValidationErrorLeios"
-              , "error" .= String (Text.pack msg)
-              ]
+    forMachine dtal (ExtValidationErrorLeios err) = forMachine dtal err
 
     forHuman (ExtValidationErrorLedger err) =  forHuman err
     forHuman (ExtValidationErrorHeader err) =  forHuman err
-    forHuman (ExtValidationErrorLeios msg) = Text.pack msg
+    forHuman (ExtValidationErrorLeios err) = forHuman err
 
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err
-    asMetrics (ExtValidationErrorLeios _) = []
+    asMetrics (ExtValidationErrorLeios err) = asMetrics err
+
+instance LogFormatting LeiosExtValidationError where
+    forMachine _ (LeiosCertificateWithoutAnnouncement cert) =
+      mconcat [ "kind" .= String "LeiosCertificateWithoutAnnouncement"
+              , "certificate" .= String (Text.pack (show cert))
+              ]
+    forMachine _ (LeiosMissingCommittee point cert) =
+      mconcat [ "kind" .= String "LeiosMissingCommittee"
+              , "announcedEb" .= String (Text.pack (show point))
+              , "certificate" .= String (Text.pack (show cert))
+              ]
+    forMachine _ (LeiosCertificateAfterGenesis cert point) =
+      mconcat [ "kind" .= String "LeiosCertificateAfterGenesis"
+              , "certificate" .= String (Text.pack (show cert))
+              , "announcedEb" .= String (Text.pack (show point))
+              ]
+    forMachine _ (LeiosInvalidCertificate cert point rbHash verErr) =
+      mconcat [ "kind" .= String "LeiosInvalidCertificate"
+              , "certificate" .= String (Text.pack (show cert))
+              , "announcedEb" .= String (Text.pack (show point))
+              , "announcingRb" .= String (Text.pack (show rbHash))
+              , "verificationError" .= String (Text.pack (show verErr))
+              ]
+
+    forHuman (LeiosCertificateWithoutAnnouncement cert) =
+      "CertRB carries a Leios certificate but its predecessor announced no EB: "
+        <> Text.pack (show cert)
+    forHuman (LeiosMissingCommittee point cert) =
+      "CertRB for " <> Text.pack (show point)
+        <> " but there is no Leios committee to verify its certificate: " <> Text.pack (show cert)
+    forHuman (LeiosCertificateAfterGenesis cert point) =
+      "CertRB for " <> Text.pack (show point)
+        <> " has no announcing ranking block (would certify at genesis): " <> Text.pack (show cert)
+    forHuman (LeiosInvalidCertificate cert point rbHash verErr) =
+      "Invalid Leios certificate for " <> Text.pack (show point)
+        <> " announced by ranking block " <> Text.pack (show rbHash) <> ": " <> Text.pack (show verErr)
+        <> " (" <> Text.pack (show cert) <> ")"
+
+    asMetrics _ = []
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where

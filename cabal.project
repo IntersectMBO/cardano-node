@@ -85,12 +85,11 @@ allow-newer:
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- Points to patch on top of ouroboros-consensus/leios-prototype
--- 80c800f = 50c9711 + reject invalid Leios cert as InvalidBlock (no node crash)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 80c800fa1d3bb99ea2528e1dc5582aa979663740
-  --sha256: sha256-6mGDH1DMs1VPujZLgbzusCO+ZdFms8AeoyoKZ/NhYg4=
+  tag: 08ad5f10d4699b65a2dc47e61cf0632f2b8a32ac
+  --sha256: sha256-2GmXbmL8Mn0pwtmO7T46G6VCsQXDW88L4R+4ptjARBA=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
