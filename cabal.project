@@ -53,7 +53,7 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node >= 0.4.2.0
+extra-packages: alex, dmq-node >= 0.7.0.0
 
 program-options
   ghc-options: -Werror
