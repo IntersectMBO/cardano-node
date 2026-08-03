@@ -40,7 +40,6 @@ in {
           port = 8101;
           network = environment;
           socketPath = config.services.cardano-node.socketPath 0;
-          config = pkgs.cardanoLib.environments.${environment}.submitApiConfig;
         };
 
         cardano-tracer = {
@@ -90,6 +89,12 @@ in {
     machine.wait_for_unit("cardano-submit-api.service", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 8101", timeout=${timeout})
     machine.succeed("systemctl status cardano-submit-api")
+    machine.wait_until_succeeds(
+      "${curl}/bin/curl -sf http://localhost:8081/ | grep -q tx_submit_counter", timeout=${timeout}
+    )
+    machine.succeed(
+      "journalctl -u cardano-submit-api --no-pager | grep -qF TxSubmitApi.Endpoint.ListeningOnPort"
+    )
 
     # Cardano-tracer tests:
     machine.wait_for_unit("cardano-tracer.service", timeout=${timeout})

@@ -4,7 +4,6 @@
 # this service exposes an http port, and connects to a cardano-node over a UNIX socket
 let
   cfg = config.services.cardano-submit-api;
-  inherit (cfg.cardanoNodePackages) cardanoLib;
   envConfig = cfg.environment;
 in {
   options = {
@@ -37,7 +36,10 @@ in {
       };
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = cardanoLib.defaultExplorerLogConfig;
+        # cardanoLib.defaultExplorerLogConfig is a legacy iohk-monitoring config
+        # which trace-dispatcher >= 2.12.1 rejects; submitApiConfig carries a
+        # valid TraceOptions.
+        default = envConfig.submitApiConfig;
       };
       network = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
