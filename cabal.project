@@ -110,4 +110,10 @@ if impl(ghc >= 9.12)
       proto-lens-tests
       proto-lens
 
-
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: 47ce3c41344fab0bcae76c95e500645b70c0496c
+  subdir:
+    network-mux
+  --sha256: sha256-A8BTEp45eulM4K4weYY3/dWXwdATv4or4kyonUO/NEA=
