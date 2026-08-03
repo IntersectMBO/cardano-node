@@ -71,9 +71,9 @@ ConsensusMode: PraosMode
 # Mempool timeout parameters must be either all set or all unset.
 # When unset cardano-node will use default values.
 # Default example values are:
-# MempoolTimeoutSoft = 1.0;
-# MempoolTimeoutHard = 1.5;
-# MempoolTimeoutCapacity = 5.0;
+# MempoolTimeoutSoft: 1.0
+# MempoolTimeoutHard: 1.5
+# MempoolTimeoutCapacity: 5.0
 
 ##### Ledger Configuration #####
 
@@ -92,20 +92,24 @@ LedgerDB:
   # Instead of an object with individual options, a predefined snapshot
   # policy can be selected by name, e.g. `Snapshots: Mithril`.
   Snapshots:
-    # The snapshot interval in slots.
-    SnapshotInterval: 4320
+    # The snapshot interval in slots.  Use `securityParam * 40` to provide
+    # intra-epoch snapshot redundancy while minimizing potential IOWAIT stall on some
+    # spec constrained machines during snapshot write.
+    SnapshotInterval: 86400
 
-    # Start taking the snaphots at a slot offset.
-    # SlotOffset = 172800;
+    # Slot offset at which snapshot scheduling begins.  The pre-Mithril
+    # default was 0; the Mithril default is now 388800.  Pinning 0 explicitly
+    # is done to avoid confusion over the new default. Both are equivalent.
+    SlotOffset: 0
 
     # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
     # Default is 10 minutes.
-    # RateLimit = 600;
+    # RateLimit: 600
 
     # Randomised snapshot delay range, in seconds.
     # Both Min and Max need to be specified, otherwise the default delay of (5min, 10min) will be used.
-    # MinDelay = 300;
-    # MaxDelay = 600;
+    # MinDelay: 300
+    # MaxDelay: 600
 
     # The number of disk snapshots to keep.
     NumOfDiskSnapshots: 2
