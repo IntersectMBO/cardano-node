@@ -15,7 +15,11 @@
     "Backend": "V2InMemory",
     "NumOfDiskSnapshots": 2,
     "QueryBatchSize": 100000,
-    "SnapshotInterval": 4320
+    "Snapshots": {
+      "NumOfDiskSnapshots": 2,
+      "SlotOffset": 0,
+      "SnapshotInterval": 86400
+    }
   },
   "MaxKnownMajorProtocolVersion": 2,
   "MinNodeVersion": "11.1.0",
