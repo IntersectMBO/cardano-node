@@ -57,7 +57,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 hprop_gov_no_confidence :: Property
 hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

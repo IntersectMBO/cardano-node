@@ -8,7 +8,7 @@ module Cardano.Testnet.Test.P2PTopology
 
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Testnet (TestnetCreationOptions (..), cardanoTestnet, createTestnetEnv,
-                   mkConf)
+                   mkConfig)
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
 import           Prelude
@@ -34,7 +34,7 @@ hprop_p2p_topology = integrationRetryWorkspace 2 "p2p-topology" $ \tmpDir -> H.r
       someTopologyFile = tmpDir </> "node-data" </> "node1" </> "topology.json"
 
   -- Generate the sandbox
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Check that the topology is indeed P2P

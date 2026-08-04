@@ -1,0 +1,6 @@
+pr: 6637
+kind:
+  - test
+description: |
+  - Adapted the chairman test to the removal of `mkConf` from `cardano-testnet`:
+    use the pure `mkConfig` instead.

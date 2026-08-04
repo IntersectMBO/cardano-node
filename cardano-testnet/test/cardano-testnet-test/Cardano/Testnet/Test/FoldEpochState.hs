@@ -27,7 +27,7 @@ import qualified Hedgehog.Extras.Test as H
 
 prop_foldEpochState :: H.Property
 prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- TN.mkConf tempAbsBasePath'
+  let conf = TN.mkConfig tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       sbe = ShelleyBasedEraConway

@@ -31,7 +31,7 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   let creationOptions = def { creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   -- Generate the sandbox
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Wait for 20% more than `startTimeOffsetSeconds`, to ensure that
