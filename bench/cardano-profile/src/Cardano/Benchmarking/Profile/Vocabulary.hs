@@ -11,12 +11,12 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleMainnet, timescaleDevops
 
 , genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
-, fundsDefault, fundsDouble, fundsVoting
+, fundsDefault, fundsDouble, fundsVoting, fundsQuadruple
 
 , hosts
 
 , valueBase, valueLocal, valueCloud
-, plutusBase, plutusLoop
+, plutusBase, plutusLoop, plutusLoopV3
 , plutusSaturation, plutusDoubleSaturation, plutusDoublePlusSaturation
 
 , plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
@@ -126,6 +126,10 @@ fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoK
 fundsVoting :: Types.Profile -> Types.Profile
 fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
 
+-- For chain creation with very large blocks (~800k submitted value txs).
+fundsQuadruple :: Types.Profile -> Types.Profile
+fundsQuadruple = P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 1
+
 
 -- Definition vocabulary: composition.
 --------------------------------------
@@ -169,6 +173,15 @@ plutusLoop :: Types.Profile -> Types.Profile
 plutusLoop =
     plutusSaturation
   . plutusTypeLoop
+
+-- Higher submission pressure than `plutusSaturation`: with the LoopV3 script
+-- each tx already maxes out the per-tx execution-unit budget, so a block
+-- caps out at a handful of txs regardless of tps; a low tps just means the
+-- mempool takes many blocks to refill to that cap after each empty start.
+plutusLoopV3 :: Types.Profile -> Types.Profile
+plutusLoopV3 =
+    plutusBase . P.tps 0.30
+  . plutusTypeLoopV3
 
 plutusSaturation :: Types.Profile -> Types.Profile
 plutusSaturation =

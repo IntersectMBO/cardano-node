@@ -27,6 +27,8 @@
       flake = false;
     };
 
+    cardano-dev.url = "github:input-output-hk/cardano-dev";
+
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
@@ -63,6 +65,7 @@
 
   outputs = {
     cardano-automation,
+    cardano-dev,
     CHaP,
     haskellNix,
     incl,
@@ -189,12 +192,17 @@
       # This is used by `nix develop .` to open a devShell
       devShells = let
         shell = import ./shell.nix {inherit pkgs customConfig;};
-      in {
-        inherit (shell) devops workbench-shell;
-        default = shell.dev;
-        cluster = shell;
-        profiled = project.profiled.shell;
-      };
+      in
+        {
+          inherit (shell) devops workbench-shell;
+          default = shell.dev;
+          cluster = shell;
+          profiled = project.profiled.shell;
+        }
+        # Shell used by the "Haddock documentation" workflow (github-page.yml)
+        // optionalAttrs (hostPlatform.system == "x86_64-linux") {
+          haddock = project.haddocked.shell;
+        };
 
       # NixOS tests a sandboxed mainnet edge node with submit-api, ensuring
       # startup and port listening functionality using the nixos service. It
@@ -515,6 +523,10 @@
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
             macOS-security = macOS-security (final.pkgs);
+            # buildPlatform, not hostPlatform: herald is a developer tool that
+            # runs on the machine, so cross shells (e.g. windows) must not try
+            # to resolve it for a system cardano-dev does not build for.
+            herald = cardano-dev.packages.${final.stdenv.buildPlatform.system}.herald;
           })
           .appendModule [
             customConfig.haskellNix

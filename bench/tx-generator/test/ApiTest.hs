@@ -101,10 +101,12 @@ main
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ checkFund nixService genesis sigKey
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
-        case plutusType <$> plutus of
-          Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath'
-          Just{}                    -> checkPlutusLoop protoParamPath' plutus
+        case plutus of
           Nothing                   -> putStrLn "--> no Plutus configuration found - skipping"
+          Just (PlutusOn {plutusType = pt})
+            | pt == BenchCustomCall
+                                    -> checkPlutusBuiltin protoParamPath'
+          Just{}                    -> checkPlutusLoop protoParamPath' plutus
         exitSuccess
 
 -- The type annotations within patterns or expressions that would be

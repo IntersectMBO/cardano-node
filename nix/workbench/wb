@@ -19,6 +19,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
+. "$global_basedir"/chain-fragment.sh
 . "$global_basedir"/manifest.sh
 . "$global_basedir"/nomad.sh
 . "$global_basedir"/publish.sh
@@ -53,6 +54,7 @@ usage_main() {
     $(blue Secondary top-level OPs):
 
     $(red chaindb)      ($(red c))      ChainDB
+    $(red chain-fragment) ($(red cf))   Export a run as an ouroboros-consensus-tools chain fragment
     $(red genesis)      ($(red g))      Genesis
     $(red nomad)        ($(red n))      Nomad and Vault
     $(red topology)     ($(red t))      Topology generation
@@ -371,6 +373,7 @@ main() {
 
         ## Public, internals-y:
         chaindb      | c )        chaindb             "$@";;
+        chain-fragment | cf )     chain_fragment      "$@";;
         genesis      | g )        genesis             "$@";;
         manifest     | m )        manifest            "$@";;
         nomad        | n )        wb_nomad            "$@";;

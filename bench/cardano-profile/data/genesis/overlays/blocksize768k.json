@@ -1,0 +1,9 @@
+{
+  "epoch_params": {
+    "shelley": {
+      "protocolParams": {
+        "maxBlockBodySize": 786432
+      }
+    }
+  }
+}
