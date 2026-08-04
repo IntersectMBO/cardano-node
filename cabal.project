@@ -80,6 +80,10 @@ allow-newer:
   , io-sim:time
   , io-classes:time
 
+-- ekg-forward requires ouroboros-network ^>=1.2 but the SRP is still 1.1.0.0
+allow-older:
+  , ekg-forward:ouroboros-network
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
@@ -186,6 +190,6 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/f-f/ekg-forward
-  tag: b24b3aba2806ce223c62f8ce3e267ec92dcc52e2
-  --sha256: sha256-s5Hxxm04HmFVmdBjAnFEsJEhTqr5Z/uiB4K1s2VaVwE=
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 85470ae7e8fac9711682234ed39a36eec3d45a9b
+  --sha256: sha256-yk67GraJUsFi5mSETnaeuKNSnNRLOri6FK5yzmRLzxU=
