@@ -32,7 +32,7 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
   let creationOptions = def { creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   -- Generate the sandbox
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   liftToIntegration $ createTestnetEnv
     creationOptions
     -- Do not add hashes to the main config file, so that genesis files

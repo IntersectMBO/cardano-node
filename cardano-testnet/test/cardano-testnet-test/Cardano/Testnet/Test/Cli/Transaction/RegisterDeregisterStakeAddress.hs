@@ -43,7 +43,7 @@ import qualified Hedgehog.Extras as H
 hprop_tx_register_deregister_stake_address :: Property
 hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "register-deregister-stake-addr" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

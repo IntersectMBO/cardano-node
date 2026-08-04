@@ -40,7 +40,7 @@ import qualified Hedgehog.Internal.Property as H
 hprop_querySlotNumber :: Property
 hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
 

@@ -33,7 +33,7 @@ import           Text.Printf (printf)
 
 import           Testnet.Process.RunIO
 import           Testnet.Property.Util (integration, integrationWorkspace)
-import           Testnet.Start.Types (Conf, mkConf)
+import           Testnet.Start.Types (Conf, mkConfig)
 
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), spoNodes)
 
@@ -109,7 +109,7 @@ testnetProperty env runTn =
   case env of
       NoUserProvidedEnv -> do
         integrationWorkspace "testnet" $ \workspaceDir -> do
-          mkConf workspaceDir >>= forkAndRunTestnet
+          forkAndRunTestnet $ mkConfig workspaceDir
       UserProvidedEnv userOutputDir ->
         integration $ do
           absUserOutputDir <- H.evalIO $ makeAbsolute userOutputDir
@@ -120,8 +120,7 @@ testnetProperty env runTn =
           else do
             liftIOAnnotated $ createDirectory absUserOutputDir
             H.note_ $ "Created " <> absUserOutputDir
-          conf <- mkConf absUserOutputDir
-          forkAndRunTestnet conf
+          forkAndRunTestnet $ mkConfig absUserOutputDir
   where
     forkAndRunTestnet conf = do
       -- Fork a thread to keep alive indefinitely any resources allocated by testnet.

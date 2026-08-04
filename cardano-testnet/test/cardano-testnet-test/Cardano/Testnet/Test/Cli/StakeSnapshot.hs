@@ -33,7 +33,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
 

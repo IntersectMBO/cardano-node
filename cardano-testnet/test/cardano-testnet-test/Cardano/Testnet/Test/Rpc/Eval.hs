@@ -56,7 +56,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- redeemer, and no errors.
 hprop_rpc_eval_tx :: Property
 hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
+  let conf@Conf{tempAbsPath} = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

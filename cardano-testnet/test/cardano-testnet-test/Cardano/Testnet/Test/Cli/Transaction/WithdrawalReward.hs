@@ -52,7 +52,7 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction build with withdrawal/"'@
 hprop_tx_withdrawal_reward :: Property
 hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
@@ -127,7 +127,7 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction build with plutus withdrawal/"'@
 hprop_tx_withdrawal_reward_plutus_v3 :: Property
 hprop_tx_withdrawal_reward_plutus_v3 = integrationRetryWorkspace 2 "tx-withdrawal-reward-plutus-v3" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

@@ -41,7 +41,7 @@ import qualified Hedgehog.Extras as H
 hprop_transaction_build_wrong_hash :: Property
 hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf@Conf { tempAbsPath } <- H.noteShow $ mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
