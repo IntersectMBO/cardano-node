@@ -2,11 +2,6 @@ pr: 6637
 kind:
   - breaking
 description: |
-  - Cleaned up the naming of the `Conf` constructors in `Testnet.Start.Types`:
-    - Removed `mkConf`. Its only difference with `mkConfig` was noting the path in the test log,
-      which was redundant: every call site passes a workspace path that hedgehog-extras'
-      `workspace` already annotates on creation. Test code now uses the pure `mkConfig`
-      directly, which is now exported (and re-exported from `Cardano.Testnet` in place of
-      `mkConf`).
-    - Renamed `mkConfigAbs` to `mkConfigAbsolute`, and documented that, besides making the
-      path absolute, it also creates the directory if it doesn't exist yet.
+  - Cleaned up the naming of the `*Conf*` constructors in `Testnet.Start.Types`:
+    - Removed `mkConf`. Its only difference with `mkConfig` was noting the path in the test log, which was redundant. Test code now uses the pure `mkConfig` directly, now exported in place of `mkConf`.
+    - Renamed `mkConfigAbs` to `mkConfigAbsolute`, and documented that, besides making the path absolute, it also creates the directory if it doesn't exist yet.
