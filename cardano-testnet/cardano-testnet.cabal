@@ -57,7 +57,7 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-diffusion:ping ^>= 1.0
+                      , cardano-diffusion:ping ^>= 1.1
                       , cardano-prelude
                       , cardano-rpc
                       , contra-tracer
@@ -84,8 +84,8 @@ library
                       , network
                       , optparse-applicative-fork
                       , parsec
-                      , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.1
-                      , cardano-diffusion:{api, cardano-diffusion} ^>= 1.0
+                      , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.2
+                      , cardano-diffusion:{api, cardano-diffusion} ^>= 1.1
                       , prettyprinter
                       , process
                       , resourcet

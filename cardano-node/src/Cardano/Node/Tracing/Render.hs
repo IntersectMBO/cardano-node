@@ -218,9 +218,10 @@ renderScriptPurpose :: ()
   => Api.ShelleyBasedEra era
   -> PlutusPurpose AsItem (Api.ShelleyLedgerEra era)
   -> Aeson.Value
-renderScriptPurpose =
-  Api.caseShelleyToMaryOrAlonzoEraOnwards
-    (const (const Aeson.Null))
+renderScriptPurpose sbe =
+  Api.forEraInEon
+    (Api.toCardanoEra sbe)
+    (const Aeson.Null)
     (\case
       Api.AlonzoEraOnwardsAlonzo -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsBabbage -> renderAlonzoPlutusPurpose

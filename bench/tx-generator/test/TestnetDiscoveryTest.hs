@@ -92,7 +92,7 @@ genUserConfig = do
   tpsVal       <- choose (1 :: Int, 1000)
   txCountVal   <- choose (1 :: Int, 10000)
   socketVal    <- ("/test/socket/" ++) . show <$> choose (1 :: Int, 100)
-  keepaliveVal <- oneof [pure Nothing, Just <$> choose (1 :: Integer, 120)]
+  keepaliveVal <- oneof [pure Nothing, Just <$> choose (1 :: Int, 120)]
   includeConnectionSettings <- arbitrary
 
   included <- frequency

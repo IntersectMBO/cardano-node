@@ -49,7 +49,6 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
                    SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
-import           Ouroboros.Consensus.Util.Args (OverrideOrDefault (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
@@ -486,12 +485,16 @@ instance FromJSON PartialNodeConfiguration where
                 ]
               Nothing -> return Nothing
 
+      defaultSnapshotFrequencyArgs = case spaFrequency defaultSnapshotPolicyArgs of
+        SnapshotFrequency sfa -> sfa
+        DisableSnapshots -> error "defaultSnapshotPolicyArgs unexpectedly disables snapshots"
+
       parseLedgerDbConfig v = do
         let snapInterval x = do
               si <- x .:? "SnapshotInterval"
               when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
-              pure $ Override <$> (si >>= nonZero)
-            snapNum x      = fmap (Override . NumOfDiskSnapshots) <$> x .:? "NumOfDiskSnapshots"
+              pure $ si >>= nonZero
+            snapNum x      = fmap NumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
 
         mTopLevelSnapInterval <- snapInterval v
         mTopLevelSnapNum <- snapNum v
@@ -505,14 +508,9 @@ instance FromJSON PartialNodeConfiguration where
         mLedgerDB <- v .:? "LedgerDB"
         case mLedgerDB of
            Nothing -> do
-             let si = fromMaybe UseDefault mTopLevelSnapInterval
-                 sn = fromMaybe UseDefault mTopLevelSnapNum
-                 sf = SnapshotFrequencyArgs {
-                     sfaInterval = si
-                   , sfaOffset = UseDefault
-                   , sfaRateLimit = UseDefault
-                   , sfaDelaySnapshotRange = UseDefault
-                   }
+             let si = fromMaybe (sfaInterval defaultSnapshotFrequencyArgs) mTopLevelSnapInterval
+                 sn = fromMaybe (spaNum defaultSnapshotPolicyArgs) mTopLevelSnapNum
+                 sf = defaultSnapshotFrequencyArgs { sfaInterval = si }
                  spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) sn
              return $ Just $ LedgerDbConfiguration spArgs DefaultQueryBatchSize V2InMemory deprecatedOpts
 
@@ -520,20 +518,20 @@ instance FromJSON PartialNodeConfiguration where
              -- Parse snapshot options from an object, honouring any top-level
              -- (deprecated) SnapshotInterval / NumOfDiskSnapshots overrides.
              let parseSnapshotOpts s = do
-                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= UseDefault
-                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= UseDefault
-                   sOffset    <- (fmap Override <$> s .:? "SlotOffset") .!= UseDefault
-                   sRateLimit <- (fmap (Override . secondsToDiffTime) <$> s .:? "RateLimit") .!= UseDefault
+                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= sfaInterval defaultSnapshotFrequencyArgs
+                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= spaNum defaultSnapshotPolicyArgs
+                   sOffset    <- s .:? "SlotOffset" .!= sfaOffset defaultSnapshotFrequencyArgs
+                   sRateLimit <- (fmap secondsToDiffTime <$> s .:? "RateLimit") .!= sfaRateLimit defaultSnapshotFrequencyArgs
                    sMinDelay  <- s .:? "MinDelay"
                    sMaxDelay  <- s .:? "MaxDelay"
                    sDelayRange <-
                          case (sMinDelay, sMaxDelay) of
                            (Just minDelay, Just maxDelay) ->
                              if minDelay <= maxDelay then
-                               pure (Override (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay)))
+                               pure (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay))
                              else fail $ "Invalid ledger snapshot delay range, MinDelay > MaxDelay: "
                                        <> show minDelay <> " > " <> show maxDelay
-                           _ -> pure UseDefault
+                           _ -> pure (sfaDelaySnapshotRange defaultSnapshotFrequencyArgs)
                    let sf = SnapshotFrequencyArgs {
                            sfaInterval = sInterval
                          , sfaOffset = sOffset

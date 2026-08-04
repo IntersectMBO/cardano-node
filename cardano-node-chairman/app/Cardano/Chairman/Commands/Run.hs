@@ -19,7 +19,6 @@ import           Cardano.Node.Protocol
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 import           Ouroboros.Consensus.Config.SupportsNode
 import           Ouroboros.Consensus.Node.ProtocolInfo
 

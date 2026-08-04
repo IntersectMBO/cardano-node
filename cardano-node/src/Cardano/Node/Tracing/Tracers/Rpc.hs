@@ -54,7 +54,8 @@ instance LogFormatting TraceRpc where
                 TraceRpcFetchBlockSpan s -> [spanToObject s]
                 TraceRpcFetchBlockNotFound _ -> []
                 TraceRpcNodeKernelAccessUnavailable -> []
-                TraceRpcForkerError _ -> []
+                TraceRpcReadTipSpan s -> [spanToObject s]
+                TraceRpcFollowTipSpan s -> [spanToObject s]
 
   forHuman = docToText . pretty
 
@@ -67,6 +68,8 @@ instance LogFormatting TraceRpc where
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
     TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
+    TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" Nothing]
+    TraceRpcSync (TraceRpcFollowTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FollowTip" Nothing]
     _ -> []
 
 instance MetaTrace TraceRpc where
@@ -95,7 +98,8 @@ instance MetaTrace TraceRpc where
             TraceRpcFetchBlockSpan _ -> ["FetchBlock", "Span"]
             TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
             TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
-            TraceRpcForkerError _ -> ["ForkerError"]
+            TraceRpcReadTipSpan _ -> ["ReadTip", "Span"]
+            TraceRpcFollowTipSpan _ -> ["FollowTip", "Span"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
@@ -112,7 +116,8 @@ instance MetaTrace TraceRpc where
     ["SyncService", "FetchBlock", "Span"] -> Just Debug
     ["SyncService", "FetchBlockNotFound"] -> Just Debug
     ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
-    ["SyncService", "ForkerError"] -> Just Warning
+    ["SyncService", "ReadTip", "Span"] -> Just Debug
+    ["SyncService", "FollowTip", "Span"] -> Just Debug
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -132,7 +137,8 @@ instance MetaTrace TraceRpc where
     ["SyncService", "FetchBlock", "Span"] -> Just "Span for the FetchBlock SyncService method."
     ["SyncService", "FetchBlockNotFound"] -> Just "Requested block was not found in ChainDB."
     ["SyncService", "NodeKernelAccessUnavailable"] -> Just "Node kernel access not yet initialised. The node is still starting up."
-    ["SyncService", "ForkerError"] -> Just "Unexpected error from ledger forker."
+    ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip SyncService method."
+    ["SyncService", "FollowTip", "Span"] -> Just "Span for the FollowTip SyncService method."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -148,6 +154,10 @@ instance MetaTrace TraceRpc where
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
     ["SyncService", "FetchBlock", "Span"] ->
       [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock SyncService method.")]
+    ["SyncService", "ReadTip", "Span"] ->
+      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip SyncService method.")]
+    ["SyncService", "FollowTip", "Span"] ->
+      [("rpc.request.SyncService.FollowTip", "Span for the FollowTip SyncService method.")]
     _ -> []
 
   allNamespaces =
@@ -166,7 +176,8 @@ instance MetaTrace TraceRpc where
           , ["SyncService", "FetchBlock", "Span"]
           , ["SyncService", "FetchBlockNotFound"]
           , ["SyncService", "NodeKernelAccessUnavailable"]
-          , ["SyncService", "ForkerError"]
+          , ["SyncService", "ReadTip", "Span"]
+          , ["SyncService", "FollowTip", "Span"]
           ]
 
 -- helper functions

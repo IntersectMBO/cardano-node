@@ -166,9 +166,9 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 3.0.1
-                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.1
-                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.0
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 4.0
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.2
+                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues

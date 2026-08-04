@@ -48,6 +48,7 @@ pingNode networkMagic sprocket =
       , CNP.pingOptsMode      = CNP.PingMode
       , CNP.pingOptsSRVPrefix = "_cardano._tcp"
       , CNP.pingOptsColor     = CNP.ColorAuto
+      , CNP.pingOptsHashType  = CNP.FullHash
       }
 
 -- | Wait for 'sprocket' to become ready. Periodically tries to connect to 'sprocket', with the provided interval.

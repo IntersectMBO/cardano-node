@@ -69,7 +69,7 @@ library
                       , io-classes
                       , network
                       , network-mux
-                      , ouroboros-network:{api, framework} ^>= 1.1
+                      , ouroboros-network:{api, framework} ^>= 1.2
                       , ekg-core
                       , ekg-forward  >= 1.2
                       , singletons ^>= 3.0

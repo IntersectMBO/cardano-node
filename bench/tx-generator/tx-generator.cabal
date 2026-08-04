@@ -114,7 +114,7 @@ library
                       , cardano-cli ^>= 11.1
                       , cardano-crypto-class
                       , cardano-data
-                      , cardano-diffusion ^>= 1.0
+                      , cardano-diffusion ^>= 1.1
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-api
                       , cardano-ledger-core
@@ -133,7 +133,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.0
                       , ouroboros-network:{api, framework, tracing, ouroboros-network, protocols} >= 1.1
                       , plutus-ledger-api
                       , plutus-tx
