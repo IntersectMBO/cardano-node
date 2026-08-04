@@ -6,6 +6,7 @@
 , CHaP
 , macOS-security
 , windowsCompilerNixName
+, herald
 }:
 let
 
@@ -63,7 +64,7 @@ let
           cabal
           actionlint
           shellcheck
-          scriv
+          herald
           stylish-haskell
         ];
 

@@ -27,6 +27,8 @@
       flake = false;
     };
 
+    cardano-dev.url = "github:input-output-hk/cardano-dev";
+
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
@@ -63,6 +65,7 @@
 
   outputs = {
     cardano-automation,
+    cardano-dev,
     CHaP,
     haskellNix,
     incl,
@@ -515,6 +518,10 @@
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
             macOS-security = macOS-security (final.pkgs);
+            # buildPlatform, not hostPlatform: herald is a developer tool that
+            # runs on the machine, so cross shells (e.g. windows) must not try
+            # to resolve it for a system cardano-dev does not build for.
+            herald = cardano-dev.packages.${final.stdenv.buildPlatform.system}.herald;
           })
           .appendModule [
             customConfig.haskellNix

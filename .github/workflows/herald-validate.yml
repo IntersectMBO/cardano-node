@@ -1,0 +1,42 @@
+name: Changelog check
+#
+# Validates changelog fragments on every pull request:
+#   - All fragment files parse correctly and reference valid projects/kinds
+#   - Modified projects have at least one changelog fragment (--diff)
+#   - PR numbers inside fragments match the pull request number (--pr)
+
+permissions:
+  contents: read
+
+on:
+  merge_group:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  validate:
+    # Skip for merge_group: batched diffs would cause false positives and
+    # PR number context is unavailable.  The trigger is kept so the check
+    # reports "skipped" (passes) when this is a required status check.
+    if: ${{ github.event_name != 'merge_group' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Fetch full history so herald can determine the fork point
+          # for --diff and --pr checks
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - uses: input-output-hk/cardano-dev/actions/herald-validate@4e54328284d3b915d79a0eb20f27d91992baa4b3 # herald-validate-0.0.1.0
+        with:
+          # Per-package `changes-dir` support (used by our .herald.yml)
+          # landed in herald 0.1.2.0, but herald-validate-0.0.1.0 still
+          # defaults to 0.1.1.0. Pin explicitly until herald-validate is
+          # re-released with a newer default, then this can be dropped.
+          herald-ref: github:input-output-hk/cardano-dev/herald-0.1.2.0

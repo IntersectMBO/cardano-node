@@ -58,6 +58,8 @@ cabal run tx-generator -- json_highlevel config.json \
 | `targetNodes`         | List of nodes to submit transactions to (Node-to-Node protocol) | Yes      |
 | `nodeConfigFile`      | Path to node configuration file                                 | Yes      |
 | `sigKey`              | Path to signing key with sufficient funds (genesis key)         | Yes      |
+| `submissionEndpointProtocol` | Optional submission endpoint kind (`Ogmios`); set together with `submissionEndpointURI` | No       |
+| `submissionEndpointURI`  | Optional submission endpoint URI (e.g. `ws://host:port`); set together with `submissionEndpointProtocol` | No       |
 
 ### Transaction Settings
 
@@ -110,6 +112,31 @@ The high-level JSON configuration is automatically compiled into a multi-phase s
 - Reports final submission statistics
 
 **Important**: All phases use the **local node socket** for setup (phases 1-3), and only phase 4 connects to **target nodes** via Node-to-Node protocol for actual benchmarking.
+
+### Submitting through a remote endpoint
+
+Setting a submission endpoint (`submissionEndpointProtocol` together with `submissionEndpointURI`) reroutes the submission of **every** phase — genesis fund import, UTxO splitting, and the final phase — through that endpoint instead of the local socket / Node-to-Node protocols.
+
+This is a **functional submission transport, not a benchmarking one**:
+
+- Transactions are submitted strictly one per round trip, so throughput is bounded by the latency to the endpoint; `tps` pacing and `targetNodes` are not used.
+- No benchmark metrics or submission summary are produced; instead, the trace output carries the connection lifecycle, every transaction's outcome (acceptances with the transaction id the endpoint reports, rejections with the failure detail it returns), and a final accepted/rejected tally.
+- Rejected transactions make the run fail: setup phases (genesis import, splitting) abort at the first rejection, and the final phase exits non-zero if any transaction was rejected. Exit codes can be trusted in scripts.
+- The endpoint replaces `targetNodes` as the submission target: set `"targetNodes": []` alongside an endpoint. The config compiler rejects a config that sets both, and a benchmark (no endpoint) still requires a non-empty `targetNodes`. With `--testnet-config-dir` this is automatic — no target nodes are discovered when an endpoint is configured.
+
+Note that the **local node socket and config file are still required**: protocol-parameter and era queries as well as protocol startup keep using the local node; only transaction submission goes through the endpoint.
+
+#### Ogmios
+
+The only endpoint type currently supported is `Ogmios`. Set:
+
+```json
+"targetNodes": [],
+"submissionEndpointProtocol": "Ogmios",
+"submissionEndpointURI": "ws://127.0.0.1:1337"
+```
+
+Transactions are sent to the [Ogmios](https://ogmios.dev) endpoint as JSON-RPC 2.0 `submitTransaction` calls over a WebSocket (only plain `ws://` is supported).
 
 ## Low-Level JSON Script (Advanced)
 

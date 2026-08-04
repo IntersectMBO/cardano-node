@@ -6,24 +6,25 @@ module Cardano.TxGenerator.Setup.TestnetDiscovery
   , discoverTestnetConfig
   ) where
 
-import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPv4Address (..),
-                   NodeIPv4Address)
+import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
+                   NodeHostIPv4Address (..), NodeIPv4Address)
 import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeDataDir, defaultNodeName,
                    defaultPortFile, defaultSocketPath, defaultUtxoSKeyPath)
+import           Cardano.Prelude (sort, unless)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions, NodeDescription (..))
 
-import           Cardano.Prelude ( unless, sort )
-import           Data.Aeson ((.=), object)
+import           Data.Aeson (object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Char (isDigit)
 import           Data.List (isPrefixOf)
 import           Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (mapMaybe)
 import           Network.Socket (PortNumber)
 import           System.Directory (doesDirectoryExist, doesPathExist, listDirectory)
 import           System.Exit (die)
-import           System.FilePath ((</>), takeDirectory)
+import           System.FilePath (takeDirectory, (</>))
 import           Text.Read (readMaybe)
 
 -- | Location of a @cardano-testnet@ output directory.
@@ -37,14 +38,19 @@ newtype TestnetConfig = TestnetConfig
 --
 -- The 4 connection settings (@localNodeSocketPath@, @sigKey@,
 -- @nodeConfigFile@, @targetNodes@) are always populated from the testnet
--- directory and override any values in the user config.  All other fields
--- must be supplied by the user.
+-- directory and override any values in the user config. All other fields
+-- must be supplied by the user. Exception: when the user config declares a
+-- submission endpoint, @targetNodes@ is set to @[]@ instead of the discovered
+-- nodes: the endpoint replaces the target nodes as the submission target,
+-- and the config compiler rejects a config providing both.
 discoverTestnetConfig :: TestnetConfig -> Aeson.Value -> IO NixServiceOptions
 discoverTestnetConfig TestnetConfig{tcDir} userConfig = do
   dirExists <- doesDirectoryExist tcDir
   unless dirExists $ die $ "discoverTestnetConfig: testnet directory does not exist: " ++ tcDir
 
-  targetNodes <- discoverNodes tcDir
+  targetNodes <- if endpointConfigured userConfig
+    then pure []
+    else NE.toList <$> discoverNodes tcDir
   let socketPath = tcDir </> defaultSocketPath 1
       sigKeyPath = tcDir </> defaultUtxoSKeyPath 1
       configPath = tcDir </> defaultConfigFile
@@ -65,6 +71,15 @@ discoverTestnetConfig TestnetConfig{tcDir} userConfig = do
   case Aeson.fromJSON merged of
     Aeson.Success opts -> pure opts
     Aeson.Error err    -> die $ "discoverTestnetConfig: failed to parse merged config: " ++ err
+
+
+-- | Whether the user config declares a submission endpoint (either of its two
+-- keys counts: the config compiler enforces that they are set together).
+endpointConfigured :: Aeson.Value -> Bool
+endpointConfigured (Aeson.Object o) =
+     KeyMap.member "submissionEndpointProtocol" o
+  || KeyMap.member "submissionEndpointURI" o
+endpointConfigured _ = False
 
 
 -- | Discover nodes by scanning for port files in the testnet directory.

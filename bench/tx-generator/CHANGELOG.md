@@ -1,5 +1,37 @@
 # ChangeLog
 
+## 2.17 -- Jun 2026
+
+* **New remote submission endpoint** — send transactions to a remote endpoint
+  instead of the local socket / Node-to-Node protocols, behind a generic,
+  backend-agnostic transport interface.
+  * Turn it on with the optional `submissionEndpointProtocol` and
+    `submissionEndpointURI` keys, which must be set together, e.g.
+    `"submissionEndpointProtocol": "Ogmios", "submissionEndpointURI": "ws://127.0.0.1:1337"`.
+  * The only endpoint type currently supported is `Ogmios`: each transaction is
+    sent over a WebSocket as a JSON-RPC 2.0 `submitTransaction` call.
+  * It reroutes **every** phase, but only tx submission: genesis fund import, UTxO splitting, and benchmarking.
+  * It is a **functional transport, not a benchmark**: no TPS pacing, no metrics.
+    * The endpoint replaces `targetNodes` as the submission target: set
+      `"targetNodes": []` alongside an endpoint. The compiler rejects a config
+      that sets both (and, as before, a benchmark with an empty `targetNodes`).
+    * Both options are registered with the NixOS service
+      (`nix/nixos/tx-generator-service.nix`), which checks this contract at
+      evaluation time.
+  * **A rejected transaction fails the whole run** (the process exits non-zero):
+    * Setup phases stop at the first rejection.
+    * The benchmark phase finishes the stream, then fails if anything was rejected.
+    * Rejections are traced through the normal pipeline, including the detail the endpoint reports.
+  * Endpoint runs trace their operation: connection lifecycle, every
+    transaction's outcome (acceptances with the tx id the endpoint reports),
+    and a final accepted/rejected tally.
+
+* **Fix: clean exit for non-benchmark runs.** Scripts that never start the
+  Node-to-Node benchmark machinery now exit cleanly instead of crashing at
+  shutdown with "AsyncBenchmarkControl absent".
+  * Affects `debugMode: true` runs and low-level `json` scripts with no
+    `Benchmark` submit phase.
+
 ## 2.16 -- Apr 2026
 
 * Added a `--testnet-config-dir` flag to `tx-generator json_highlevel` that auto-discovers connection settings config (socket path, signing key, node config, target nodes) from a `cardano-testnet` output directory.
