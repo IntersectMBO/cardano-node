@@ -35,6 +35,19 @@ if [[ ${1:-} != "cli" ]]; then
     # Re-assert restrictive perms in case an earlier run left them looser.
     chmod 700 "$CARDANO_RUNTIME_DIR"
   fi
+
+  # A stale directory left by a previous run of this container is safe to
+  # reuse; one in use by a live same-role container is not, and the mkdir
+  # above cannot tell them apart. An exclusive lock can. The fd survives the
+  # exec into the run-* scripts, so the lock is held for the lifetime of the
+  # process and released by the kernel on exit.
+  exec 9>"$CARDANO_RUNTIME_DIR/.lock"
+  if ! flock -n 9; then
+    echo "ERROR: $CARDANO_RUNTIME_DIR is in use by another container." >&2
+    echo "Sharing a /tmp mount across same-role containers is unsupported;" >&2
+    echo "give each container its own /tmp, such as a tmpfs or emptyDir." >&2
+    exit 1
+  fi
 fi
 
 # If the NETWORK env var is set to a valid cardano network, pre-defined

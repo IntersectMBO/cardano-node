@@ -72,7 +72,7 @@ let
 
     # Set up /tmp (override with TMPDIR variable)
     extraCommands = ''
-      mkdir -m 0777 tmp
+      mkdir -m 1777 tmp
     '';
   };
 
