@@ -988,7 +988,7 @@ in {
         }
         {
           assertion = !cfg.systemdSocketActivation;
-          message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
+          message = "Systemd socket activation cannot be used due to a systemd socket re-use issue.";
         }
         {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
