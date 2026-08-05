@@ -137,8 +137,14 @@ let
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
-
-            # GHC 9.6.7 haddock panics on TopTx type family (tyConStupidTheta)
+          })
+          # The haddock of GHC < 9.12.3 panics on `type data` declarations, e.g. the
+          # TopTx type family or AllLedgerPeers ("tyConStupidTheta" panic, GHC issue
+          # #25739, fixed in GHC 9.12.3). Disable haddock of the affected dependencies
+          # for those compilers only, so that shells with a fixed compiler (e.g. the
+          # `.#ghc9124` one used by github-page.yml) still provide dependencies with
+          # documentation.
+          ({ config, lib, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.12.3" < 0) {
             packages.cardano-api.components.library.doHaddock = false;
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
@@ -150,8 +156,8 @@ let
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
-            packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
-            packages.cardano-diffusion.components.library.doHaddock = false; # Currently broken
+            packages.ouroboros-network.components.library.doHaddock = false;
+            packages.cardano-diffusion.components.library.doHaddock = false;
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {

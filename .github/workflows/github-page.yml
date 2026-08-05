@@ -1,6 +1,9 @@
 name: "Haddock documentation"
 
 on:
+  # Allows testing this workflow on a branch before merging (the deploy step
+  # below only runs for master).
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -30,19 +33,21 @@ jobs:
       with:
         persist-credentials: false
 
+    # The `.#ghc9124` shell (see flake.nix) provides a GHC whose haddock does not
+    # panic on `type data` declarations (GHC issue #25739): GHC 9.6.7's does.
     - name: Fetch nix cache and update cabal indices
       run: |
-        nix develop --command \
+        nix develop .#ghc9124 --command \
           cabal update
 
     - name: Build whole project
       run: |
-        nix develop --command \
+        nix develop .#ghc9124 --command \
           cabal build all
 
     - name: Build documentation
       run: |
-        nix develop --command \
+        nix develop .#ghc9124 --command \
           cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
 
     - name: Compress haddocks
