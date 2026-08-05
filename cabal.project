@@ -47,7 +47,11 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node >= 0.7.0.0
+extra-packages: alex
+
+-- Shipped as a release binary but not a dependency of any local package, so it
+-- has to be added to the install plan explicitly.
+extra-packages: dmq-node >= 0.7.0.0
 
 program-options
   ghc-options: -Werror
