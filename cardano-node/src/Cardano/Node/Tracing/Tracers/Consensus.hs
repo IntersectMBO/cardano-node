@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -28,6 +29,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
+import qualified Cardano.Node.Tracing.Cdf as Cdf
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -76,12 +78,8 @@ import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
-import           Data.Int (Int64)
-import           Data.IntPSQ (IntPSQ)
-import qualified Data.IntPSQ as Pq
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
@@ -512,31 +510,19 @@ instance MetaTrace (TraceChainSyncServerEvent blk) where
 -- BlockFetchClient Metrics
 --------------------------------------------------------------------------------
 
-data CdfCounter = CdfCounter {
-    limit   :: !Double
-  , counter :: !Int64
-}
-
-decCdf :: Double -> CdfCounter -> CdfCounter
-decCdf v cdf@CdfCounter{..}
-  | v < limit = cdf {counter = counter - 1}
-  | otherwise = cdf
-
-incCdf :: Double -> CdfCounter -> CdfCounter
-incCdf v cdf@CdfCounter{..}
-  | v < limit = cdf {counter = counter + 1}
-  | otherwise = cdf
-
-data ClientMetrics = ClientMetrics {
-    cmSlotMap   :: IntPSQ Word64 NominalDiffTime
-  , cmCdf1sVar  :: !CdfCounter
-  , cmCdf3sVar  :: !CdfCounter
-  , cmCdf5sVar  :: !CdfCounter
+data ClientMetrics' c = ClientMetrics {
+    cmCdfState  :: Cdf.State SlotNo
+  , cmCdf1sVar  :: !c
+  , cmCdf3sVar  :: !c
+  , cmCdf5sVar  :: !c
   , cmDelay     :: Double
   , cmBlockSize :: Word32
   , cmTraceIt   :: Bool
   , cmTraceVars :: Bool
-}
+  }
+  deriving Functor
+
+type ClientMetrics = ClientMetrics' Cdf.Counter
 
 instance LogFormatting ClientMetrics where
   forMachine _dtal _ = mempty
@@ -553,8 +539,8 @@ instance LogFormatting ClientMetrics where
              ]
         else []
     where
-      size                = Pq.size cmSlotMap
-      cdfMetric name var  = DoubleM name (fromIntegral (counter var) / fromIntegral size)
+      size                = Cdf.size cmCdfState
+      cdfMetric name var  = DoubleM name (fromIntegral (Cdf.counter var) / fromIntegral size)
       lateBlockMetric     = [ CounterM "blockfetchclient.lateblocks" Nothing | cmDelay > 5 ]
 
 instance MetaTrace ClientMetrics where
@@ -579,10 +565,10 @@ instance MetaTrace ClientMetrics where
 initialClientMetrics :: ClientMetrics
 initialClientMetrics =
     ClientMetrics
-      Pq.empty
-      (CdfCounter 1 0)
-      (CdfCounter 3 0)
-      (CdfCounter 5 0)
+      Cdf.empty
+      (Cdf.Counter 1 0)
+      (Cdf.Counter 3 0)
+      (Cdf.Counter 5 0)
       0
       0
       False
@@ -597,50 +583,25 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
     (TraceLabelPeer _ (BlockFetch.CompletedBlockFetch p _ _ _ forgeDelay blockSize)) =
   case pointSlot p of
     Origin -> nothingToDo
-    At (SlotNo slotNo) ->
-      if Pq.null cmSlotMap && forgeDelay > 20                      -- During startup wait until we are in sync
+    At slotNo@(SlotNo slotNo_) ->
+      if Cdf.null cmCdfState && forgeDelay > 20 -- During startup wait until we are in sync
         then nothingToDo
-        else processSlot slotNo
+        else
+          case Cdf.processDataPoint
+                 Cdf.defaultConfig -- should come from config file
+                 (fromIntegral slotNo_, slotNo, forgeDelay)
+                 cmCdfState
+                 cm of
+            Nothing -> nothingToDo
+            Just (cm', cmCdfState')
+              -> cm' { cmTraceIt   = True
+                     , cmTraceVars = Cdf.size cmCdfState' >= 45 -- wait until we have at least 45 samples before providing cdf estimates
+                     , cmBlockSize = getSizeInBytes blockSize
+                     , cmDelay     = realToFrac forgeDelay
+                     }
+
   where
     nothingToDo = cm {cmTraceIt = False}
-    delay       = realToFrac forgeDelay
-
-    processSlot slotNo
-      | fromIntegral slotNo `Pq.member` cmSlotMap = nothingToDo    -- Duplicate, only track the first
-      | otherwise =
-          let slotMap' = Pq.insert (fromIntegral slotNo) slotNo forgeDelay cmSlotMap
-          in if Pq.size slotMap' > 1080                            -- TODO: k/2, should come from config file
-              then trimSlotMap slotMap' slotNo
-              else updateMetrics slotMap'
-
-    trimSlotMap slotMap' slotNo = case Pq.minView slotMap' of
-      Nothing -> nothingToDo                                       -- Error: Just inserted element
-      Just (_, minSlotNo, realToFrac -> minDelay, slotMap'')
-        | minSlotNo == slotNo -> nothingToDo
-        | otherwise -> cm
-            { cmCdf1sVar  = adjust minDelay cmCdf1sVar
-            , cmCdf3sVar  = adjust minDelay cmCdf3sVar
-            , cmCdf5sVar  = adjust minDelay cmCdf5sVar
-            , cmDelay     = delay
-            , cmBlockSize = getSizeInBytes blockSize
-            , cmTraceVars = True
-            , cmTraceIt   = True
-            , cmSlotMap   = slotMap''
-            }
-
-    updateMetrics slotMap' = cm
-      { cmCdf1sVar  = update cmCdf1sVar
-      , cmCdf3sVar  = update cmCdf3sVar
-      , cmCdf5sVar  = update cmCdf5sVar
-      , cmDelay     = delay
-      , cmBlockSize = getSizeInBytes blockSize
-      , cmTraceVars = Pq.size cmSlotMap >= 45                      -- wait until we have at least 45 samples before providing cdf estimates
-      , cmTraceIt   = True
-      , cmSlotMap   = slotMap'
-      }
-
-    update   = incCdf delay
-    adjust d = update . decCdf d
 
 calculateBlockFetchClientMetrics cm _lc _ = cm
 

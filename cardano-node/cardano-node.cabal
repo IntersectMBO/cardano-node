@@ -87,6 +87,7 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
+                        Cardano.Node.Tracing.Cdf
                         Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
