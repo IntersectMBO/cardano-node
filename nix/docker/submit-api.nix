@@ -114,6 +114,7 @@ let
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
       ExposedPorts = {
         "${toString scripts.mainnet.${script}.passthru.service.port}/tcp" = {};
+        "${toString scripts.mainnet.${script}.passthru.service.metricsPort}/tcp" = {};
       };
     };
   }
