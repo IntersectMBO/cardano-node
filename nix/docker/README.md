@@ -206,13 +206,14 @@ shared across containers of the same role** — a second node (or tracer)
 container sharing one `/tmp` would refuse to start rather than collide. Use a
 per-container `/tmp`.
 
-A resolved-configuration snapshot is written at runtime to `env` inside that
-directory and can be `source`d for an interactive debug shell inside the
-container. The path `/usr/local/bin/env` is preserved as a symlink to it for
-backwards compatibility, so `source /usr/local/bin/env` keeps working. This
-is the supported way to locate the effective configuration: sourcing it
-exports `CARDANO_CONFIG`, `CARDANO_TOPOLOGY`, the socket path, etc. as the
-node was actually launched with.
+In "custom" and "merge" modes a resolved-configuration snapshot is written at
+runtime to `env` inside that directory and can be `source`d for an interactive
+debug shell inside the container. The path `/usr/local/bin/env` is preserved as a
+symlink to it for backwards compatibility, so `source /usr/local/bin/env` keeps
+working. This is the supported way to locate the effective configuration:
+sourcing it exports `CARDANO_CONFIG`, `CARDANO_TOPOLOGY`, the socket path, etc.
+as the node was actually launched with. "Scripts" mode does not write the
+snapshot.
 
 In "scripts" mode GHC RTS output is directed to `/logs/` so the image keeps
 working under a read-only root. The lightweight machine-readable RTS summary
@@ -246,6 +247,11 @@ perm, the non-root user needs to run with primary group 0 (the Kubernetes
 default for `runAsUser`) or with supplementary group 0. In Kubernetes
 you can also set `securityContext.fsGroup: 0` to have the kubelet chown
 the volume on mount. For Docker, `--user <uid>:0` is the equivalent.
+
+Note what group 0 grants on a shared `/ipc` volume: any process holding it can
+replace `node.socket`, and so intercept the cli and submit-api traffic that
+reaches the node through it. Where that matters, give the sidecars their own
+group and pre-chown the volumes instead of relying on group 0.
 
 For example, the read-only invocation above, run as a non-root UID in
 group 0:
