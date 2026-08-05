@@ -90,6 +90,7 @@ import           Network.TypedProtocol.Core
 
 import           LeiosDemoTypes (AnnouncementFields (..), TraceLeiosKernel (..), TraceLeiosPeer (..),
                    traceLeiosKernelToObject, traceLeiosPeerToObject)
+import qualified LeiosDemoTypes as Leios
 import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
@@ -2436,6 +2437,14 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosBlockAcquired pt      -> "EB body acquired: "        <> Text.pack (show pt)
     TraceLeiosBlockPointMissing pt  -> "EB point missing on body acquisition: " <> Text.pack (show pt)
     TraceLeiosBlockTxsAcquired pt   -> "EB txs acquired: "         <> Text.pack (show pt)
+    TraceLeiosTxCacheEbBody pt ibs ->
+      "EB body added to TxCache " <> Text.pack (show pt)
+        <> ": " <> showT (Leios.ibsTxsInEb ibs) <> " txs"
+        <> ", " <> showT (Leios.ibsTracked ibs) <> " already tracked"
+        <> " (" <> showT (Leios.ibsAcquired ibs) <> " acquired"
+        <> ", " <> showT (Leios.ibsValidated ibs) <> " validated)"
+        <> "; cache now holds " <> showT (Leios.ibsCacheTxCount ibs) <> " txs"
+        <> ", load " <> showT (Leios.ibsCacheLoad ibs)
     TraceLeiosBlockForged{slot, eb} ->
       "EB forged at slot " <> showT slot <> ": " <> Text.pack (show eb)
     TraceLeiosBlockStored{slot, eb} ->
@@ -2464,6 +2473,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosBlockAcquired{}     = Namespace [] ["BlockAcquired"]
   namespaceFor TraceLeiosBlockPointMissing{} = Namespace [] ["BlockPointMissing"]
   namespaceFor TraceLeiosBlockTxsAcquired{}  = Namespace [] ["BlockTxsAcquired"]
+  namespaceFor TraceLeiosTxCacheEbBody{}     = Namespace [] ["TxCacheEbBody"]
   namespaceFor TraceLeiosBlockForged{}       = Namespace [] ["BlockForged"]
   namespaceFor TraceLeiosBlockStored{}       = Namespace [] ["BlockStored"]
   namespaceFor TraceLeiosBlockAnnounced{}    = Namespace [] ["BlockAnnounced"]
