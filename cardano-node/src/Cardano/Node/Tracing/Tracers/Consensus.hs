@@ -2307,7 +2307,9 @@ instance MetaTrace KESAgentClientTrace where
     KESAgentClientTrace t -> nsCast $ namespaceFor t
 
   severityFor (Namespace [] ["KESAgentClientException"]) _ = Just Error
-  severityFor (Namespace [] ["KESAgentClientTrace"]) _ = Just Info
+  severityFor ns (Just (KESAgentClientTrace t)) = severityFor (nsCast ns) (Just t)
+  severityFor ns Nothing =
+    severityFor (nsCast ns :: Namespace Agent.ServiceClientTrace) Nothing
   severityFor _ _ = Nothing
 
   documentFor _ = Nothing
