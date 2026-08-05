@@ -156,7 +156,6 @@ with pkgs.lib; let
                 // {
                   ExperimentalHardForksEnabled = true;
                   ExperimentalProtocolsEnabled = true;
-                  TurnOnLogMetrics = true;
                   ChainSyncIdleTimeout = 0;
                   PeerSharing = false;
 
