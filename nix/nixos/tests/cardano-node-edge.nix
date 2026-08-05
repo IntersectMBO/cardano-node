@@ -38,6 +38,9 @@ in {
         cardano-submit-api = {
           enable = true;
           port = 8101;
+          # Deliberately not submit-api's CLI default of 8081 so the assertion
+          # below proves metricsPort is actually plumbed through.
+          metricsPort = 8102;
           network = environment;
           socketPath = config.services.cardano-node.socketPath 0;
         };
@@ -89,6 +92,13 @@ in {
     machine.wait_for_unit("cardano-submit-api.service", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 8101", timeout=${timeout})
     machine.succeed("systemctl status cardano-submit-api")
+
+    # Assert the default tracing config keeps the EKG backend enabled and that
+    # the metrics prefix is applied.
+    machine.wait_until_succeeds(
+      "${curl}/bin/curl -sf http://localhost:8102/ | grep -qF cardano_submit_api_metrics_tx_submit_counter",
+      timeout=${timeout}
+    )
 
     # Cardano-tracer tests:
     machine.wait_for_unit("cardano-tracer.service", timeout=${timeout})
