@@ -70,9 +70,16 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
+                   (PerasCertDiffusion, TracePerasCertDiffusionInbound,
+                   TracePerasCertDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
+                   (PerasVoteDiffusion, TracePerasVoteDiffusionInbound,
+                   TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM (TraceGsmEvent)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -101,14 +108,18 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                    UnversionedProtocolData (..))
+import           Ouroboros.Network.Protocol.KeepAlive.Type (KeepAlive)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharing)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic,
+                   TxSubmissionCounters)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 import           Ouroboros.Network.Tracing ()
 import           Network.Mux.Tracing ()
@@ -442,6 +453,75 @@ docTracersFirstPhase condConfigFileName = do
     consensusDbfTrDoc <- documentTracer (consensusDbfTr ::
       Logging.Trace IO (Jumping.TraceEventDbf peer))
 
+    consensusKesAgentTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "KESAgent"]
+    configureTracers configReflection trConfig [consensusKesAgentTr]
+    consensusKesAgentTrDoc <- documentTracer (consensusKesAgentTr ::
+      Logging.Trace IO KESAgentClientTrace)
+
+    txLogicTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txLogic", "Remote"]
+    configureTracers configReflection trConfig [txLogicTr]
+    txLogicTrDoc <- documentTracer (txLogicTr ::
+      Logging.Trace IO (TraceTxLogic remotePeer (GenTxId blk) (GenTx blk)))
+
+    txCountersTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txCounters", "Remote"]
+    configureTracers configReflection trConfig [txCountersTr]
+    txCountersTrDoc <- documentTracer (txCountersTr ::
+      Logging.Trace IO TxSubmissionCounters)
+
+    perasCertInboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inbound"]
+    configureTracers configReflection trConfig [perasCertInboundTr]
+    perasCertInboundTrDoc <- documentTracer (perasCertInboundTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer
+        (TracePerasCertDiffusionInbound blk)))
+
+    perasCertOutboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Outbound"]
+    configureTracers configReflection trConfig [perasCertOutboundTr]
+    perasCertOutboundTrDoc <- documentTracer (perasCertOutboundTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer
+        (TracePerasCertDiffusionOutbound blk)))
+
+    perasVoteInboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Inbound"]
+    configureTracers configReflection trConfig [perasVoteInboundTr]
+    perasVoteInboundTrDoc <- documentTracer (perasVoteInboundTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer
+        (TracePerasVoteDiffusionInbound blk)))
+
+    perasVoteOutboundTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Outbound"]
+    configureTracers configReflection trConfig [perasVoteOutboundTr]
+    perasVoteOutboundTrDoc <- documentTracer (perasVoteOutboundTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer
+        (TracePerasVoteDiffusionOutbound blk)))
+
+    perasCertDiffusionTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inbound"]
+    configureTracers configReflection trConfig [perasCertDiffusionTr]
+    perasCertDiffusionTrDoc <- documentTracer (perasCertDiffusionTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (PerasCertDiffusion blk))))
+
+    perasVoteDiffusionTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Inbound"]
+    configureTracers configReflection trConfig [perasVoteDiffusionTr]
+    perasVoteDiffusionTrDoc <- documentTracer (perasVoteDiffusionTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (PerasVoteDiffusion blk))))
+
 
 -- Node to client
 
@@ -545,6 +625,22 @@ docTracersFirstPhase condConfigFileName = do
         (BlockFetch.TraceLabelPeer peer
           (TraceSendRecv
             (TxSubmission2 (GenTxId blk) (GenTx blk)))))
+
+    keepAliveRemoteTr  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["KeepAlive", "Remote"]
+    configureTracers configReflection trConfig [keepAliveRemoteTr]
+    keepAliveRemoteTrDoc <- documentTracer (keepAliveRemoteTr ::
+      Logging.Trace IO
+        (BlockFetch.TraceLabelPeer peer (TraceSendRecv KeepAlive)))
+
+    peerSharingRemoteTr  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["PeerSharing", "Remote"]
+    configureTracers configReflection trConfig [peerSharingRemoteTr]
+    peerSharingRemoteTrDoc <- documentTracer (peerSharingRemoteTr ::
+      Logging.Trace IO
+        (BlockFetch.TraceLabelPeer peer (TraceSendRecv (PeerSharing RemoteAddress))))
 
 -- Diffusion
     dtMuxTr   <-  mkCardanoTracer
@@ -739,6 +835,16 @@ docTracersFirstPhase condConfigFileName = do
             <> consensusGsmTrDoc
             <> consensusCsjTrDoc
             <> consensusDbfTrDoc
+            <> consensusKesAgentTrDoc
+            <> txLogicTrDoc
+            <> txCountersTrDoc
+-- Peras
+            <> perasCertInboundTrDoc
+            <> perasCertOutboundTrDoc
+            <> perasVoteInboundTrDoc
+            <> perasVoteOutboundTrDoc
+            <> perasCertDiffusionTrDoc
+            <> perasVoteDiffusionTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc
@@ -751,6 +857,8 @@ docTracersFirstPhase condConfigFileName = do
             <> blockFetchTrDoc
             <> blockFetchSerialisedTrDoc
             <> txSubmission2TrDoc
+            <> keepAliveRemoteTrDoc
+            <> peerSharingRemoteTrDoc
 -- Diffusion
             <> dtMuxTrDoc
             <> dtLocalMuxTrDoc

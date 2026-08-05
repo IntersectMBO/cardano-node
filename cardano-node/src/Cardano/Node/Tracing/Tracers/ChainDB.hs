@@ -250,6 +250,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   severityFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
@@ -302,6 +306,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   privacyFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
@@ -354,6 +362,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: (Namespace (VolDB.TraceEvent blk))) Nothing
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   detailsFor (Namespace out ("PerasCertDbEvent" : tl)) (Just (ChainDB.TracePerasCertDbEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
@@ -415,6 +427,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     documentFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   documentFor (Namespace out ("VolatileDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
+  documentFor (Namespace out ("PerasVoteDbEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk))
   documentFor (Namespace out ("PerasCertDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk))
   documentFor (Namespace out ("AddPerasCertEvent" : tl)) =
@@ -444,6 +458,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "PerasVoteDbEvent")
+                  (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "PerasCertDbEvent")
                   (allNamespaces :: [Namespace (PerasCertDB.TraceEvent blk)])
           ++ map  (nsPrependInner "AddPerasCertEvent")
@@ -783,7 +799,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   namespaceFor ChainDB.ChainSelectionLoEDebug {} =
     Namespace [] ["ChainSelectionLoEDebug"]
 
-  severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
+  severityFor (Namespace _ ["IgnoreBlockOlderThanImmTip"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreInvalidBlock"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToQueue"]) _ = Just Debug
@@ -894,10 +910,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
         ]
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["IgnoreBlockOlderThanK"]) = Just $ mconcat
-    [ "A block with a 'BlockNo' more than @k@ back than the current tip"
-    , " was ignored."
-    ]
+  documentFor (Namespace _ ["IgnoreBlockOlderThanImmTip"]) = Just
+    "A block with a 'BlockNo' not newer than the immutable tip was ignored."
   documentFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) = Just
     "A block that is already in the Volatile DB was ignored."
   documentFor (Namespace _ ["IgnoreInvalidBlock"]) = Just
@@ -945,7 +959,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
 
 
   allNamespaces =
-    [ Namespace [] ["IgnoreBlockOlderThanK"]
+    [ Namespace [] ["IgnoreBlockOlderThanImmTip"]
     , Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
     , Namespace [] ["IgnoreInvalidBlock"]
     , Namespace [] ["AddedBlockToQueue"]
