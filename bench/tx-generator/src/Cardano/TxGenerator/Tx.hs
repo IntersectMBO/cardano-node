@@ -1,17 +1,19 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
 import           Cardano.Api hiding (txId)
-import           Cardano.Api.Experimental (AnyWitness (..), Era, IsEra, LedgerEra, SignedTx (..),
-                   makeKeyWitness, makeUnsignedTx, obtainCommonConstraints, signTx, useEra)
+import           Cardano.Api.Compatible (CompatibleTxBodyContent (..), CompatibleTxError,
+                   createCompatibleTx, defaultCompatibleTxBodyContent)
+import qualified Cardano.Api.Compatible as Compatible (addWitnesses)
+import           Cardano.Api.Experimental (AnyWitness, SignedTx (..))
 import qualified Cardano.Api.Experimental.Tx as Exp
 
+import qualified Cardano.Ledger.Api as Ledger
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
@@ -20,22 +22,22 @@ import           Cardano.TxGenerator.UTxO (ToUTxOList)
 
 import           Data.Bifunctor (first, second)
 import qualified Data.ByteString as BS (length)
-import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
+import           Lens.Micro ((^.))
 
 
 -- | 'CreateAndStore' is meant to represent building a transaction
 -- from a single number and presenting a function to carry out the
 -- needed side effects.
 -- This type alias is only used in "Cardano.Benchmarking.Wallet".
-type CreateAndStore m era           = L.Coin -> (Exp.TxOut (LedgerEra era), TxIx -> TxId -> m ())
+type CreateAndStore m era           = L.Coin -> (Exp.TxOut (ShelleyLedgerEra era), TxIx -> TxId -> m ())
 
 -- | 'CreateAndStoreList' is meant to represent building a transaction
 -- and presenting a function to carry out the needed side effects.
 -- This type alias is also only used in "Cardano.Benchmarking.Wallet".
 -- The @split@ parameter seems to actually be used for not much more
 -- than lists and records containing lists.
-type CreateAndStoreList m era split = split -> ([Exp.TxOut (LedgerEra era)], TxId -> m ())
+type CreateAndStoreList m era split = split -> ([Exp.TxOut (ShelleyLedgerEra era)], TxId -> m ())
 
 
 -- TODO: 'sourceToStoreTransaction' et al need to be broken up
@@ -150,41 +152,44 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
--- | 'genTx' builds a signed transaction using the experimental API.
+-- | Build and sign a transaction with 'Cardano.Api.Compatible.Tx.createCompatibleTx'.
+-- Rewrapping the resulting 'Tx' as 'Exp.SignedTx' is zero-cost: both wrap
+-- the same ledger 'L.Tx'.
 -- The @txGenerator@ arguments of the rest of the functions in this
 -- module are all partial applications of this to its first 5 arguments.
 -- The 7th argument comes from 'TxGenerator' being a type alias
 -- for a function type -- of two arguments.
-genTx ::
-     Era era
+genTx :: forall era.
+     ShelleyBasedEra era
   -> LedgerProtocolParameters era
   -> ([TxIn], [Fund])
   -> L.Coin
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx era (LedgerProtocolParameters pparams) (collateralIns, collFunds) fee metadata inFunds outputs =
-  obtainCommonConstraints era $ do
+genTx sbe (LedgerProtocolParameters pparams) (collateralIns, collFunds) fee metadata inFunds outputs =
+  shelleyBasedEraConstraints sbe $ do
     let allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-        expInputs = map (\f -> (getFundTxIn f, AnyKeyWitnessPlaceholder)) inFunds
-        expMetadata = case metadata of
-          TxMetadataNone -> mempty
-          TxMetadataInEra _ m -> m
-        txBodyContent =
-          Exp.defaultTxBodyContent
-            & Exp.setTxIns expInputs
-            & Exp.setTxInsCollateral collateralIns
-            & Exp.setTxOuts outputs
-            & Exp.setTxFee fee
-            & Exp.setTxMetadata expMetadata
-            & Exp.setTxProtocolParams pparams
-    unsignedTx <- first (\err -> TxGenError $ "genTx: " ++ show err) $ makeUnsignedTx era txBodyContent
-    let witVKeys = [makeKeyWitness era unsignedTx (WitnessPaymentKey key) | key <- allKeys]
-    let tx = signTx era [] witVKeys unsignedTx
+        expInputs :: [(TxIn, AnyWitness (ShelleyLedgerEra era))]
+        expInputs = map (\f -> (getFundTxIn f, getFundWitness f)) inFunds
+        bodyContent = (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxIns = expInputs
+          , compatibleTxOuts = outputs
+          , compatibleTxFee = fee
+          , compatibleTxInsCollateral = collateralIns
+          , compatibleTxProtocolParams = Just pparams
+          , compatibleTxMetadata = metadata
+          }
+    unsignedTx@(ShelleyTx _ unsignedLedgerTx) <-
+      first (\err -> TxGenError $ "genTx: " ++ show (err :: CompatibleTxError)) $
+        createCompatibleTx sbe bodyContent
+    let ledgerBody = unsignedLedgerTx ^. Ledger.bodyTxL
+        witVKeys = [makeShelleyKeyWitness' sbe ledgerBody (WitnessPaymentKey key) | key <- allKeys]
+        ShelleyTx _ signedLedgerTx = Compatible.addWitnesses witVKeys unsignedTx
+        tx = SignedTx signedLedgerTx
     Right (tx, txIdFromSignedTx tx)
 
-
-txSizeInBytes :: forall era. IsEra era =>
+txSizeInBytes :: forall era. IsShelleyBasedEra era =>
      SignedTx era
   -> Int
-txSizeInBytes tx
-  = obtainCommonConstraints (useEra @era) $ BS.length $ serialiseToRawBytes tx
+txSizeInBytes tx@(SignedTx _)
+  = BS.length $ serialiseToRawBytes tx

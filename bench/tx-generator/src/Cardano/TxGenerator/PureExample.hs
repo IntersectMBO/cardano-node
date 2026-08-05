@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
@@ -7,7 +8,7 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Cardano.Api hiding (txId)
-import           Cardano.Api.Experimental (AnyWitness (..), SignedTx, useEra)
+import           Cardano.Api.Experimental (AnyWitness (..), SignedTx)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
@@ -109,7 +110,7 @@ generateTx TxEnvironment{..}
     generator =
       case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
         Right ledgerParameters ->
-          genTx useEra ledgerParameters collateralFunds fee txEnvMetadata
+          genTx (shelleyBasedEra @DemoEra) ledgerParameters collateralFunds fee txEnvMetadata
         Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
@@ -160,7 +161,7 @@ generateTxPure TxEnvironment{..} inQueue
     generator =
       case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
         Right ledgerParameters ->
-          genTx useEra ledgerParameters collateralFunds fee txEnvMetadata
+          genTx (shelleyBasedEra @DemoEra) ledgerParameters collateralFunds fee txEnvMetadata
         Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions

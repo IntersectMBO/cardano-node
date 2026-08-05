@@ -9,26 +9,18 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-import           Cardano.Api hiding (eraProtVerHigh)
-import           Cardano.Api.Experimental (AnyWitness (..), IsEra (useEra),
-                   PlutusScriptDatum (..), PlutusScriptPurpose (..), SignedTx (..),
-                   eraProtVerHigh, makeKeyWitness, makeUnsignedTx,
-                   obtainCommonConstraints, signTx, toPlutusSLanguage)
-import           Cardano.Api.Experimental.AnyScriptWitness (AnyPlutusScriptWitness (..),
-                   createPlutusSpendingScriptWitness)
-import qualified Cardano.Api.Experimental as Exp (PlutusScriptInEra (..),
-                   PlutusScriptOrReferenceInput (..), PlutusScriptWitness (..),
-                   evaluateTransactionFee)
-import           Cardano.Api.Experimental.Plutus (AnyPlutusScript (..),
-                   plutusScriptInEraSLanguage)
+import           Cardano.Api
+import           Cardano.Api.Experimental (IsEra (useEra), SignedTx (..), makeKeyWitness,
+                   makeUnsignedTx, obtainCommonConstraints, signTx)
+import qualified Cardano.Api.Experimental as Exp (evaluateTransactionFee)
+import           Cardano.Api.Experimental.Plutus (AnyPlutusScript (..))
 import qualified Cardano.Api.Experimental.Tx as Exp
 
 import           Cardano.Ledger.Core (mkCoinTxOut)
-import qualified Cardano.Ledger.Plutus.Language as L (PlutusLanguage, Plutus (..), PlutusBinary (..),
-                   SLanguage (..), decodePlutusRunnable)
 
 import           Cardano.Benchmarking.Compiler (keyBenchmarkInputs)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
@@ -42,7 +34,6 @@ import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils (keyAddress, mkTxIn)
 
 import           Control.Exception
-import           Data.Typeable (Typeable)
 import           Data.Aeson (decodeFileStrict')
 import qualified Data.ByteString.Lazy.Char8 as BSL (writeFile)
 
@@ -176,17 +167,7 @@ runPlutus strategy budgetType protoParamFile plutusDef@PlutusOn{..} scales
   = do
     protocolParameters <- readProtocolParametersOrDie protoParamFile
     (script, resolvedTo) <- either (error . show) pure =<< readPlutusScript plutusScript
-    let era = useEra @ConwayEra
-    anyPlutusScript <- obtainCommonConstraints era $
-      case script of
-        ScriptInAnyLang _lang (PlutusScript version (PlutusScriptSerialised sbs)) -> do
-          let slang = toPlutusSLanguage version
-              decode :: forall l. (L.PlutusLanguage l, Typeable l) => L.SLanguage l -> IO (AnyPlutusScript (ShelleyLedgerEra ConwayEra))
-              decode _ = case L.decodePlutusRunnable @l (eraProtVerHigh era) (L.Plutus (L.PlutusBinary sbs)) of
-                Left err -> throwIO $ userError $ "script decode failed: " ++ show err
-                Right runnable -> pure $ AnyPlutusScript (Exp.PlutusScriptInEra runnable)
-          obtainLangConstraints slang $ decode slang
-        _ -> throwIO $ userError "expected a Plutus script"
+    anyPlutusScript <- either (throwIO . userError . show) pure $ toAnyPlutusScript (shelleyBasedEra @ConwayEra) script
 
     let
       redeemerDef   = Right plutusDef
@@ -515,23 +496,25 @@ writeResultsJSON jsonName summaries = do
 --   uses it to augment the budget summary with txn size and fee.
 --   * If anything fails to evaluate, the summary is returned unchanged.
 --   * This function is currently monomorphic in the ledger era and will resolve era parameters to Conway.
-approximateTxProperties :: AnyPlutusScript (ShelleyLedgerEra ConwayEra) -> LedgerProtocolParameters ConwayEra -> (PlutusBudgetSummary, ScriptRedeemer) -> IO PlutusBudgetSummary
-approximateTxProperties (AnyPlutusScript ps) ledgerProtocolParameters (summary, redeemer) = do
+approximateTxProperties
+  :: forall era
+   . era ~ ConwayEra
+  => AnyPlutusScript (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
+  -> (PlutusBudgetSummary, ScriptRedeemer)
+  -> IO PlutusBudgetSummary
+approximateTxProperties anyPlutusScript ledgerProtocolParameters (summary, redeemer) = do
   putStrLn $ "--> approximating txn size and fee for: " ++ messageId summary
   let
-    era = useEra @ConwayEra
+    era = useEra @era
     pparams = unLedgerProtocolParameters ledgerProtocolParameters
-    slang = plutusScriptInEraSLanguage ps
     dummyDatum = unsafeHashableScriptData $ ScriptDataNumber 0
-    datum = mkSpendingScriptDatum slang dummyDatum
-    anyWitness =
-      let witness = Exp.PlutusScriptWitness slang (Exp.PScript ps) datum redeemer (budgetUsedPerTxInput summary)
-      in AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness (createPlutusSpendingScriptWitness slang witness))
+    anyWitness = mkPlutusSpendingWitness anyPlutusScript dummyDatum redeemer (budgetUsedPerTxInput summary)
   obtainCommonConstraints era (do
     -- Corresponds to the metadata inserted in benchmarking workloads, which is why it's needed for the estimate.
     -- default value taken from: `add_tx_size` in nix/nixos/tx-generator-service.nix
     dummyMetadata <- either (\e -> throwIO $ userError $ "approximateTxProperties: mkMetadata: " ++ e) pure
-                       $ mkMetadata @ConwayEra 100
+                       $ mkMetadata @era 100
     let
       expMetadata = case dummyMetadata of
         TxMetadataNone      -> mempty
@@ -539,8 +522,8 @@ approximateTxProperties (AnyPlutusScript ps) ledgerProtocolParameters (summary, 
 
       -- just placeholders
       dummyTxIn ix = mkTxIn $ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#" <> textShow @Int ix
-      dummyTxOut :: Exp.TxOut (ShelleyLedgerEra ConwayEra)
-      dummyTxOut = Exp.TxOut $ mkCoinTxOut (toShelleyAddr $ keyAddress @ConwayEra (Testnet (NetworkMagic 42)) keyBenchmarkInputs) (Coin 1_000_000)
+      dummyTxOut :: Exp.TxOut (ShelleyLedgerEra era)
+      dummyTxOut = Exp.TxOut $ mkCoinTxOut (toShelleyAddr $ keyAddress @era (Testnet (NetworkMagic 42)) keyBenchmarkInputs) (Coin 1_000_000)
 
       -- build a dummy tx akin to what we'd get in the tx-generator's benchmarking workload;
       -- it just needs to be sufficient to get our approximations.
@@ -558,7 +541,7 @@ approximateTxProperties (AnyPlutusScript ps) ledgerProtocolParameters (summary, 
 
     let
       witVKey = makeKeyWitness era unsignedTx (WitnessPaymentKey keyBenchmarkInputs)
-      dummyTx :: SignedTx ConwayEra
+      dummyTx :: SignedTx era
       dummyTx = signTx era [] [witVKey] unsignedTx
 
     pure summary
@@ -569,20 +552,4 @@ approximateTxProperties (AnyPlutusScript ps) ledgerProtocolParameters (summary, 
       putStrLn $ "approximation failed: " ++ show e
               ++ "\n--> using unmodified summary"
       pure summary
-
--- TODO: remove these vendored functions and import from
--- Cardano.Api.Experimental when the published cardano-api version includes them.
-
-obtainLangConstraints :: L.SLanguage lang -> ((L.PlutusLanguage lang, Typeable lang) => a) -> a
-obtainLangConstraints L.SPlutusV1 f = f
-obtainLangConstraints L.SPlutusV2 f = f
-obtainLangConstraints L.SPlutusV3 f = f
-obtainLangConstraints L.SPlutusV4 f = f
-
-mkSpendingScriptDatum :: L.SLanguage lang -> HashableScriptData -> PlutusScriptDatum lang 'SpendingScript
-mkSpendingScriptDatum = \case
-  L.SPlutusV1 -> SpendingScriptDatum
-  L.SPlutusV2 -> SpendingScriptDatum
-  L.SPlutusV3 -> SpendingScriptDatum . Just
-  L.SPlutusV4 -> SpendingScriptDatum . Just
 

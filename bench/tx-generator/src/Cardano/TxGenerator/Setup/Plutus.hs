@@ -1,8 +1,10 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Cardano.TxGenerator.Setup.Plutus
@@ -11,11 +13,14 @@ Description : Convenience functions for dealing with Plutus scripts
 module Cardano.TxGenerator.Setup.Plutus
        ( readPlutusScript
        , preExecutePlutusScript
+       , toAnyPlutusScript
+       , mkPlutusSpendingWitness
        )
        where
 
 import           Data.Bifunctor
 import           Data.ByteString.Short (ShortByteString)
+import           Data.Functor (void)
 import           Data.Int (Int64)
 import           Data.Map.Strict as Map (lookup)
 
@@ -25,7 +30,16 @@ import           Control.Monad.Writer (runWriter)
 
 import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
-import           Cardano.Api
+import           Cardano.Api hiding (PScript, PlutusScriptInEra, PlutusScriptWitness)
+import           Cardano.Api.Experimental (AnyWitness (..), PlutusScriptOrReferenceInput (..),
+                   PlutusScriptWitness (..), mkSpendingScriptDatum, obtainLangConstraints,
+                   toPlutusSLanguage)
+import           Cardano.Api.Experimental.AnyScriptWitness (AnyPlutusScriptWitness (..),
+                   createPlutusSpendingScriptWitness)
+import           Cardano.Api.Experimental.Plutus (AnyPlutusScript (..), PlutusScriptInEra (..),
+                   plutusScriptInEraSLanguage)
+import qualified Cardano.Ledger.Plutus.Language as L (PlutusBinary (..), PlutusLanguage, Plutus (..),
+                   SLanguage, decodePlutusRunnable, plutusRunnableResult)
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
@@ -41,7 +55,7 @@ import           System.FilePath ((<.>), (</>))
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
 
-import           Paths_tx_generator
+import           Paths_tx_generator hiding (version)
 
 type ProtocolVersion = (Int, Int)
 
@@ -76,6 +90,51 @@ readPlutusScript (Right fp)
     case script of
       ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)
       ScriptInAnyLang lang _ -> throwE $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang
+
+-- | 'toAnyPlutusScript' decodes a 'ScriptInAnyLang' (as returned by 'readPlutusScript')
+-- into the ledger-side runnable representation needed to build a script witness.
+-- Fails for: a non-Plutus script; a Plutus language unsupported in this era
+-- (V1 needs Alonzo onwards, V2 needs Babbage onwards, checked via
+-- 'scriptLanguageSupportedInEra' - the same check
+-- 'Cardano.TxGenerator.UTxO.mkUTxOScript' uses); or a binary payload that
+-- fails to decode against the era's protocol version.
+toAnyPlutusScript :: forall era. ShelleyBasedEra era -> ScriptInAnyLang -> Either TxGenError (AnyPlutusScript (ShelleyLedgerEra era))
+toAnyPlutusScript sbe script
+  = case script of
+      ScriptInAnyLang lang (PlutusScript version (PlutusScriptSerialised sbs)) -> do
+        alonzoOnwards <-
+          forEraMaybeEon (toCardanoEra sbe)
+            ?! TxGenError "toAnyPlutusScript: Plutus scripts are not supported before Alonzo"
+        void $
+          scriptLanguageSupportedInEra sbe lang
+            ?! TxGenError ("toAnyPlutusScript: " ++ show lang ++ " is not supported in " ++ show sbe)
+        alonzoEraOnwardsConstraints alonzoOnwards $ do
+          let
+            slang = toPlutusSLanguage version
+            decode :: forall l. L.PlutusLanguage l => L.SLanguage l -> Either TxGenError (AnyPlutusScript (ShelleyLedgerEra era))
+            decode _ = do
+              let runnable = L.decodePlutusRunnable @l (eraProtVerHigh sbe) (L.Plutus (L.PlutusBinary sbs))
+              AnyPlutusScript (PlutusScriptInEra runnable)
+                <$ L.plutusRunnableResult runnable
+                ?!& \err -> TxGenError $ "toAnyPlutusScript: script decode failed: " ++ show err
+          obtainLangConstraints slang $ decode slang
+      ScriptInAnyLang lang _ ->
+        Left $ TxGenError $ "toAnyPlutusScript: only PlutusScript supported, found: " ++ show lang
+
+-- | 'mkPlutusSpendingWitness' builds the transaction witness for spending a UTxO locked
+-- by a Plutus script, dispatching on the script's Plutus language version.
+mkPlutusSpendingWitness ::
+     AnyPlutusScript ledgerEra
+  -> HashableScriptData
+  -> ScriptRedeemer
+  -> ExecutionUnits
+  -> AnyWitness ledgerEra
+mkPlutusSpendingWitness (AnyPlutusScript plutusScript) datum redeemer executionUnits =
+  AnyPlutusScriptWitness $ AnyPlutusSpendingScriptWitness $
+    createPlutusSpendingScriptWitness slang $
+      PlutusScriptWitness slang (PScript plutusScript) (mkSpendingScriptDatum slang datum) redeemer executionUnits
+  where
+    slang = plutusScriptInEraSLanguage plutusScript
 
 -- | 'preExecutePlutusScript' is a front end for the internal
 -- @preExecutePlutusVn@ functions used to calculate 'ExecutionUnits'

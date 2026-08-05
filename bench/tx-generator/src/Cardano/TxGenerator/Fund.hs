@@ -21,7 +21,7 @@ module Cardano.TxGenerator.Fund
     where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Experimental (AnyWitness (..), IsEra, obtainCommonConstraints, useEra)
+import           Cardano.Api.Experimental (AnyWitness (..))
 
 import qualified Cardano.Ledger.Coin as L
 
@@ -37,7 +37,7 @@ import           Data.Function (on)
 -- use of lenses.
 data FundInEra era = FundInEra {
     _fundTxIn       :: !TxIn
-  , _fundWitness    :: AnyWitness era
+  , _fundWitness    :: AnyWitness (ShelleyLedgerEra era)
   , _fundVal        :: !(TxOutValue era)
   , _fundSigningKey :: !(Maybe (SigningKey PaymentKey))
   }
@@ -77,11 +77,16 @@ getFundCoin (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
 -- | The `Fund` alternative is checked against `cardanoEra`, but
 -- `getFundWitness` otherwise wraps `_fundWitness`.
-getFundWitness :: forall era. IsEra era => Fund -> AnyWitness era
-getFundWitness fund = obtainCommonConstraints (useEra @era) $ case (cardanoEra @era, fund) of
-  (ConwayEra  , Fund (InAnyCardanoEra ConwayEra  a)) -> _fundWitness a
+getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> AnyWitness (ShelleyLedgerEra era)
+getFundWitness fund = case (cardanoEra @era, fund) of
+  (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra  a)) -> _fundWitness a
+  (AllegraEra , Fund (InAnyCardanoEra AllegraEra  a)) -> _fundWitness a
+  (MaryEra    , Fund (InAnyCardanoEra MaryEra     a)) -> _fundWitness a
+  (AlonzoEra  , Fund (InAnyCardanoEra AlonzoEra   a)) -> _fundWitness a
+  (BabbageEra , Fund (InAnyCardanoEra BabbageEra  a)) -> _fundWitness a
+  (ConwayEra  , Fund (InAnyCardanoEra ConwayEra   a)) -> _fundWitness a
   (DijkstraEra, Fund (InAnyCardanoEra DijkstraEra a)) -> _fundWitness a
-  _                                                  -> error "getFundWitness: era mismatch"
+  _                                                   -> error "getFundWitness: era mismatch"
 
 {-
 Note [Era transitions]

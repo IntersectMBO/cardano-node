@@ -82,9 +82,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   ----------
   QueryTipLocalStateOutput{localStateChainTip} <-
     H.noteShowM $ execCliStdoutToJson execConfig [eraName, "query", "tip"]
-  (slot, blockHash', blockNo') <- case localStateChainTip of
+  (slot, blockHash, blockNumber) <- case localStateChainTip of
     ChainTipAtGenesis -> H.failure -- impossible
-    ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNo') -> pure (slot, SBS.fromShort hash, blockNo')
+    ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNumber) -> pure (slot, SBS.fromShort hash, blockNumber)
 
   -----------------------------------
   -- Compute expected tip timestamp
@@ -121,8 +121,8 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- Test readParams response
   ---------------------------
   pparamsResponse ^. U5c.ledgerTip . U5c.slot === slot
-  pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash'
-  pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNo'
+  pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash
+  pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNumber
   H.assertWithinTolerance (pparamsResponse ^. U5c.ledgerTip . U5c.timestamp) expectedTimestampMs 1000
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide

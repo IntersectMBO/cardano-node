@@ -4,7 +4,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -21,7 +20,6 @@ module Cardano.Benchmarking.GeneratorTx
   ) where
 
 import           Cardano.Api hiding (label, txFee)
-import           Cardano.Api.Experimental (IsEra, obtainCommonConstraints, useEra)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
@@ -112,7 +110,7 @@ handleTxSubmissionClientError
       LogErrors   -> traceWith traceSubmit $
         TraceBenchTxSubError (pack errDesc)
 
-walletBenchmark :: forall era. IsEra era
+walletBenchmark :: forall era. IsShelleyBasedEra era
   => Trace IO (TraceBenchTxSubmit TxId)
   -> Trace IO NodeToNodeSubmissionTrace
   -> ConnectClient
@@ -139,7 +137,7 @@ walletBenchmark
   _era
   count
   txSource
-  = obtainCommonConstraints (useEra @era) $ liftIO $ do
+  = liftIO $ do
   traceDebug "******* Tx generator, phase 2: pay to recipients *******"
 
   let numTargets :: Natural = fromIntegral $ NE.length targets

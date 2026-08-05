@@ -24,7 +24,7 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   ) where
 
 import           Cardano.Api hiding (Active, CardanoBlock)
-import           Cardano.Api.Experimental (IsEra, SignedTx (..))
+import           Cardano.Api.Experimental (SignedTx (..))
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
@@ -84,7 +84,7 @@ type EndOfProtocolCallback m = SubmissionThreadStats -> m ()
 txSubmissionClient
   :: forall m era.
      ( MonadIO m, MonadFail m
-     , IsEra era
+     , IsShelleyBasedEra era
      )
   => Trace m NodeToNodeSubmissionTrace
   -> Trace m (TraceBenchTxSubmit TxId)

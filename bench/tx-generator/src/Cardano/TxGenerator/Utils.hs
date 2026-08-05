@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,7 +13,7 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Experimental (IsEra, SignedTx (..), obtainCommonConstraints, useEra)
+import           Cardano.Api.Experimental (SignedTx (..))
 import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
@@ -75,9 +76,9 @@ txIdFromSignedTx (SignedTx tx) =
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: forall era. IsEra era => SignedTx era -> TxInMode
+mkTxInModeCardano :: forall era. IsShelleyBasedEra era => SignedTx era -> TxInMode
 mkTxInModeCardano (SignedTx tx) =
-  obtainCommonConstraints (useEra @era) $ TxInMode shelleyBasedEra (ShelleyTx shelleyBasedEra tx)
+  TxInMode (shelleyBasedEra @era) (ShelleyTx (shelleyBasedEra @era) tx)
 
 -- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
 -- Partial. Useful in tests.

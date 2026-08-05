@@ -1,7 +1,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Cardano.Benchmarking.Script.Ogmios
@@ -62,8 +61,8 @@ module Cardano.Benchmarking.Script.Ogmios
   , withOgmiosTransport
   ) where
 
-import           Cardano.Api (serialiseToRawBytes)
-import           Cardano.Api.Experimental (IsEra (useEra), SignedTx, obtainCommonConstraints)
+import           Cardano.Api (IsShelleyBasedEra, serialiseToRawBytes)
+import           Cardano.Api.Experimental (SignedTx (..))
 
 import           Cardano.Benchmarking.Script.Submission (SubmitTransport (..))
 import           Cardano.TxGenerator.Types (TxGenError (..))
@@ -131,7 +130,7 @@ instance Exception OgmiosProtocolError
 -- surfaced as a 'Left' 'TxGenError'; the connection lifecycle is reported
 -- through the given tracer, so a healthy run leaves evidence too.
 withOgmiosTransport
-  :: forall era a. IsEra era
+  :: forall era a. IsShelleyBasedEra era
   => (String -> IO ())
      -- ^ progress tracer for backend events (connection lifecycle)
   -> URI
@@ -165,7 +164,7 @@ withOgmiosTransport traceProgress uri use =
 -- a rejection as 'Left'. A protocol-level fault throws 'OgmiosProtocolError'
 -- (caught by 'withOgmiosTransport').
 ogmiosSubmitOne
-  :: IsEra era
+  :: IsShelleyBasedEra era
   => WS.Connection -> IORef Int -> SignedTx era -> IO (Either OgmiosRejection Text)
 ogmiosSubmitOne conn reqIdRef tx = do
   reqId <- atomicModifyIORef' reqIdRef $ \n -> (n + 1, n)
@@ -222,8 +221,8 @@ parseOgmiosUrl uri = do
     Just n | n >= 1 && n <= 65_535 -> Right n
     _ -> Left $ "Invalid port in Ogmios URL: " ++ urlStr
 
-mkSubmitRequest :: forall era. IsEra era => SignedTx era -> Int -> Value
-mkSubmitRequest tx reqId = object
+mkSubmitRequest :: forall era. IsShelleyBasedEra era => SignedTx era -> Int -> Value
+mkSubmitRequest tx@(SignedTx _) reqId = object
   [ "jsonrpc" .= ("2.0" :: Text)
   , "method"  .= ("submitTransaction" :: Text)
   , "params"  .= object
@@ -235,7 +234,7 @@ mkSubmitRequest tx reqId = object
   ]
  where
   cbor :: ByteString
-  cbor = obtainCommonConstraints (useEra @era) $ serialiseToRawBytes tx
+  cbor = serialiseToRawBytes tx
 
 -- | Outcome of a single @submitTransaction@ call, as decoded from the
 -- JSON-RPC response.
