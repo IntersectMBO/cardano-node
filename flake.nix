@@ -60,7 +60,7 @@
 
     # Mithril signer is required as a release artifact constitutent.
     # Use explicit ref tag path to ensure we get exactly what we expect.
-    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2617.0";
+    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
   };
 
   outputs = {
