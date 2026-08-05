@@ -61,19 +61,21 @@ DATA="83a40081825820c84dbd7b780ff9be2bcc6990f043030fe649342f9fa7ba1bfa6fb5c00795
 
 fail_if_server_is_not_running $URL
 
+# The endpoint expects raw binary, so anything that is not a CBOR transaction
+# fails to deserialise and comes back as a TxCmdTxReadError.
 echo -e "=== Data is Base16 ==="
 RESULT=$(curl --silent -H "Content-Type: application/cbor" -X POST -d $DATA $URL)
-assert "$RESULT" "Provided data was hex encoded and this webapi expects raw binary"
+assert "$RESULT" 'DeserialiseFailure 0 \"expected list len or indef\"'
 
 echo -e "=== Data is Base64 ==="
 BASE64=$(xxd -r -p <<< $DATA | base64 -w 0)
 RESULT=$(curl --silent -H "Content-Type: application/cbor" -X POST -d $BASE64 $URL)
-assert "$RESULT" "Deserialisation failure while decoding Shelley Tx.\nCBOR failed with error: DeserialiseFailure 0 \\\"expected list len or indef\\\""
+assert "$RESULT" 'DeserialiseFailure 0 \"expected list len or indef\"'
 
 echo -e "=== Data is Empty ==="
 TMP=$(mktemp)
 RESULT=$(curl --silent -H "Content-Type: application/cbor" -X POST --data-binary @$TMP $URL)
-assert "$RESULT" "Provided transaction has zero length"
+assert "$RESULT" 'DeserialiseFailure 0 \"end of input\"'
 
 echo -e "=== Content-Type is not 'application/cbor' ==="
 TMP=$(mktemp)
