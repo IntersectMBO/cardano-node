@@ -286,8 +286,14 @@ in {
 
       # Byron signing/delegation
 
+      # Key and certificate options are `str` rather than `either str path` so a
+      # nix path literal cannot type check here.  Interpolating one copies the
+      # file into /nix/store, which for a key is world readable and travels in any
+      # closure pushed elsewhere, and for a rotating credential pins it at eval
+      # time so a KES rotation needs a redeploy rather than a file swap.  Give a
+      # path as a string, absolute or relative to the node working directory.
       signingKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The signing key.
@@ -295,7 +301,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The delegation certificate.
@@ -305,14 +311,14 @@ in {
       # Shelley kes/vrf keys and operation cert
 
       kesKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The KES or key evolving signature key.
         '';
       };
       vrfKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The VRF or verifable random function key.
@@ -320,7 +326,7 @@ in {
       };
 
       operationalCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The operational certificate.
