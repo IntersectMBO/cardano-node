@@ -98,8 +98,7 @@ LedgerDB:
     SnapshotInterval: 86400
 
     # Slot offset at which snapshot scheduling begins.  The pre-Mithril
-    # default was 0; the Mithril default is now 388800.  Pinning 0 explicitly
-    # is done to avoid confusion over the new default. Both are equivalent.
+    # default was 0; the Mithril default is now 388800.
     SlotOffset: 0
 
     # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
