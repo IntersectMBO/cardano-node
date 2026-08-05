@@ -52,6 +52,21 @@ in {
         description = "Host address submit-api binds to.";
       };
 
+      metricsPort = lib.mkOption {
+        type = lib.types.port;
+        default = 8081;
+        description = ''
+          The port submit-api serves prometheus metrics on.
+
+          The metrics server always binds all interfaces; listenAddress applies
+          only to the web API.  Firewall this port if that is not wanted.
+
+          If this port is already bound, submit-api retries on the next port up
+          rather than aborting startup, so the effective port may differ.  The
+          last Metrics.Started trace reports the port actually bound.
+        '';
+      };
+
       network = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         description = "Network name.";
@@ -108,6 +123,7 @@ in {
         exec ${cfg.package}/bin/cardano-submit-api --socket-path "$CARDANO_NODE_SOCKET_PATH" ${envFlag} \
               --port ${toString cfg.port} \
               --listen-address ${cfg.listenAddress} \
+              --metrics-port ${toString cfg.metricsPort} \
               --config ${builtins.toFile "submit-api.json" (builtins.toJSON cfg.config)}
       '';
       systemd.services.cardano-submit-api = {
