@@ -100,6 +100,11 @@ in {
       timeout=${timeout}
     )
 
+    # Assert Info severity traces still reach the journal.
+    machine.succeed(
+      "journalctl -u cardano-submit-api --no-pager | grep -qF TxSubmitApi.Endpoint.ListeningOnPort"
+    )
+
     # Cardano-tracer tests:
     machine.wait_for_unit("cardano-tracer.service", timeout=${timeout})
     machine.wait_until_succeeds("[ -S /run/cardano-tracer/tracer.socket ]", timeout=${timeout})
