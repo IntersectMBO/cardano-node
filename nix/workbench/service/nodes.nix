@@ -141,23 +141,23 @@ with pkgs.lib; let
         }
         (recursiveUpdate
           (recursiveUpdate
-            (removeAttrs
-              baseNodeConfig
-              [
-                ## Let the genesis hashes be auto-computed by the node:
-                "ByronGenesisHash"
-                "ShelleyGenesisHash"
-                "AlonzoGenesisHash"
-                "ConwayGenesisHash"
-                "DijkstraGenesisHash"
-              ]
-              // {
-                ExperimentalHardForksEnabled = true;
-                ExperimentalProtocolsEnabled = true;
-                TurnOnLogMetrics = true;
-                SnapshotInterval = 4230;
-                ChainSyncIdleTimeout = 0;
-                PeerSharing = false;
+            (
+              recursiveUpdate
+              (removeAttrs
+                baseNodeConfig
+                [
+                  ## Let the genesis hashes be auto-computed by the node:
+                  "ByronGenesisHash"
+                  "ShelleyGenesisHash"
+                  "AlonzoGenesisHash"
+                  "ConwayGenesisHash"
+                  "DijkstraGenesisHash"
+                ]
+                // {
+                  ExperimentalHardForksEnabled = true;
+                  ExperimentalProtocolsEnabled = true;
+                  ChainSyncIdleTimeout = 0;
+                  PeerSharing = false;
 
                 ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                 ## NB. the following inequality must hold: known >= established >= active >= 0

@@ -34,7 +34,9 @@ in {
   # Tests the OCI images (node, tracer, submit-api) under a read-only root, a
   # non-root UID in group 0, and a private /tmp: container startup, the fixed
   # 0700 runtime dir, merged-config path rewriting, the env snapshot/alias, the
-  # fail-fast on a missing writable /tmp, and that cli mode does not require /tmp.
+  # fail-fast on a missing writable /tmp, that cli mode does not require /tmp,
+  # and that a second same-role container sharing one /tmp is refused while a
+  # restart against the same stale runtime dir still succeeds.
   cardanoOciReadonly = callTest ./cardano-oci-readonly.nix {
     dockerImage = pkgs.dockerImage;
     tracerDockerImage = pkgs.tracerDockerImage;
