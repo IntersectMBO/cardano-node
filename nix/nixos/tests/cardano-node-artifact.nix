@@ -78,7 +78,7 @@
     # Cardano-node tests
     machine.succeed("systemctl status cardano-node-${env}.service")
     out = machine.succeed(
-      "${getExe cardano-cli} ping -h 127.0.0.1 -c 1 -m ${getMagic env} -q --json | ${getExe jq} -c"
+      "${getExe cardano-cli} ping -c 1 -m ${getMagic env} -q --json 127.0.0.1:3001 | ${getExe jq} -c"
     )
     print("ping ${env}:", out)
 

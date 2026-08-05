@@ -84,7 +84,7 @@ in {
     machine.wait_until_succeeds("nc -z localhost 3001", timeout=${timeout})
     machine.succeed("systemctl status cardano-node")
     out = machine.succeed(
-      "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
+      "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -c 1 -q --json 127.0.0.1:3001 | ${jq}/bin/jq -c"
     )
     print("ping:", out)
 

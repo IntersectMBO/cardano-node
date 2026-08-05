@@ -169,7 +169,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     let poolVotingThresholds :: L.PoolVotingThresholds =
           conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppPoolVotingThresholdsL
-    ( (Just . L.unboundRational)
+    ( Just . L.unboundRational
         <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
             , poolVotingThresholds ^. L.pvtCommitteeNormalL
             , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
@@ -181,7 +181,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     let drepVotingThresholds :: L.DRepVotingThresholds =
           conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppDRepVotingThresholdsL
-    ( (Just . L.unboundRational)
+    ( Just . L.unboundRational
         <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
             , drepVotingThresholds ^. L.dvtCommitteeNormalL
             , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
