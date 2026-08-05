@@ -83,8 +83,12 @@ in {
     machine.wait_until_succeeds("nc -z localhost 12798", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 3001", timeout=${timeout})
     machine.succeed("systemctl status cardano-node")
+    # Cardano-cli 11.1 takes the target as a positional host:port; --host and
+    # --port are gone and -h is now --help, which exits 0 after printing usage.
+    # Pipefail keeps a cli failure from being masked by jq, and selecting
+    # .sample fails the assertion on empty output or a changed json shape.
     out = machine.succeed(
-      "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -c 1 -q --json 127.0.0.1:3001 | ${jq}/bin/jq -c"
+      "set -o pipefail; ${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -c 1 -q --json 127.0.0.1:3001 | ${jq}/bin/jq -ec .sample"
     )
     print("ping:", out)
 
