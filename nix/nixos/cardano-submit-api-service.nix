@@ -6,7 +6,6 @@
   ...
 }: let
   inherit (builtins) fromJSON readFile;
-  inherit (cfg.cardanoNodePackages) cardanoLib;
 
   cfg = config.services.cardano-submit-api;
 in {
@@ -27,7 +26,7 @@ in {
 
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = cardanoLib.defaultSubmitApiConfig;
+        default = cfg.environment.submitApiConfig;
         description = "Tracing configuration passed to submit-api.";
       };
 
