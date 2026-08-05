@@ -36,6 +36,12 @@ in {
       virtualisation.diskSize = 10240;
       virtualisation.memorySize = 4096;
       virtualisation.docker.enable = true;
+
+      # Keep dhcpcd off docker's ephemeral interfaces. Starting and stopping
+      # containers churns veth pairs, dhcpcd tries to manage each one, and
+      # dhcpcd 10.3.1 segfaults probing one for an IPv4LL address. Harmless to
+      # the assertions but it core dumps and buries real errors in the log.
+      networking.dhcpcd.denyInterfaces = ["veth*" "docker0"];
     };
   };
 
@@ -100,6 +106,39 @@ in {
         "'. /usr/local/bin/env && [ -n \"$CARDANO_CONFIG\" ]'"
     )
     machine.succeed("docker rm -f n1")
+
+    # The runtime dir is a fixed path, so two same-role containers sharing one
+    # /tmp would otherwise both write it and the last writer would win. Both
+    # containers here run as the default root, i.e. the same UID, which is the
+    # case the directory ownership check cannot catch on its own.
+    machine.succeed(
+        "docker run -d --name s1 -v shtmp:/tmp "
+        "-v s1data:/data -v s1ipc:/ipc -v s1logs:/logs "
+        "-e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' "
+        "${imageRef}"
+    )
+    machine.wait_until_succeeds("docker exec s1 test -f ${rt}/env", timeout=60)
+
+    status, out = machine.execute(
+        "docker run --rm -v shtmp:/tmp -e NETWORK=${network} ${imageRef} 2>&1"
+    )
+    assert status != 0, f"expected non-zero exit for a shared /tmp; got: {out}"
+    assert "is in use by another container" in out, f"missing lock error; got: {out}"
+
+    # Once the holder is gone the lock is released, so the same volume, now
+    # carrying a stale runtime dir, must still be usable. This is what separates
+    # the lock from a blanket refusal whenever the directory already exists.
+    machine.succeed("docker rm -f s1")
+    machine.succeed(
+        "docker run -d --name s2 -v shtmp:/tmp "
+        "-v s2data:/data -v s2ipc:/ipc -v s2logs:/logs "
+        "-e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' "
+        "${imageRef}"
+    )
+    machine.wait_until_succeeds("docker exec s2 test -f ${rt}/env", timeout=60)
+    machine.succeed("docker rm -f s2")
 
     # Read-only root WITHOUT a writable /tmp must fail fast with guidance.
     status, out = machine.execute(
