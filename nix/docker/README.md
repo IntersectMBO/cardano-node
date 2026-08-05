@@ -9,6 +9,10 @@ docker load -i result
 # Build and load the cardano-submit-api oci image
 nix build .#dockerImage/submit-api
 docker load -i result
+
+# Build and load the cardano-tracer oci image
+nix build .#dockerImage/tracer
+docker load -i result
 ```
 
 From a bash shell, the following command example for the cardano-node image
@@ -350,15 +354,21 @@ For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardan
 To launch cardano-submit-api with pre-loaded configuration, "scripts" mode,
 use the `NETWORK` env variable to declare an existing cardano network name.
 
-An example using a docker named volume to share ipc socket state:
+An example using a docker named volume to share ipc socket state and publishing
+the api port to the host:
 ```
 docker run \
   -v node-ipc:/ipc \
+  -p 8090:8090 \
   -e NETWORK=mainnet \
   ghcr.io/intersectmbo/cardano-submit-api:dev
 ```
 
-In "scripts" mode, the `node.socket` file is expected at `/ipc`.
+In "scripts" mode, the `node.socket` file is expected at `/ipc`.  The api listen
+address is set to `0.0.0.0` so the published port is reachable from the host.
+
+Unlike the cardano-node and cardano-tracer images, the cardano-submit-api image
+has no merge mode.
 
 
 ## Custom Mode
@@ -366,22 +376,60 @@ To launch cardano-submit-api with a custom configuration, "custom" mode,
 leave the `NETWORK` env variable unset and provide a complete set of
 cardano-submit-api args to the entrypoint.
 
+The cardano-submit-api image ships no network config files under
+`/opt/cardano/config`, so custom mode requires a config supplied from the host.
+Suitable starting points are
+[cardano-submit-api/config/tx-submit-mainnet-config.yaml](../../cardano-submit-api/config/tx-submit-mainnet-config.yaml)
+in this repository, or the per network `share/<network>/submit-api-config.json`
+from a release tarball.  Either YAML or JSON is accepted.
+
 For example:
 ```
 docker run \
   -v node-ipc:/ipc \
   -v $PWD/config.json:/config.json \
+  -p 8090:8090 \
   ghcr.io/intersectmbo/cardano-submit-api:dev \
   --config /config.json \
   --mainnet \
-  --socket-path /ipc/node.socket
+  --socket-path /ipc/node.socket \
+  --listen-address 0.0.0.0
 ```
+
+Note that custom mode does not inherit the image default listen address, so
+`--listen-address 0.0.0.0` is needed for a published port to be reachable.
 
 See the [docker-compose.yml](../../docker-compose.yml) file for a demonstration
 of cardano-node and cardano-submit-api together.
 
 
-## Bind Mounting Considerations:
+## Metrics
+Cardano-submit-api serves prometheus metrics on `/` of its metrics port, which
+defaults to `8081` and is set with `--metrics-port`.  To scrape it from the
+host, publish that port as well:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -p 8090:8090 \
+  -p 8081:8081 \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-submit-api:dev
+
+curl -s http://localhost:8081/
+```
+
+The metrics server always binds all interfaces.  The `--listen-address` arg
+applies only to the api port, not to the metrics port, so firewall the metrics
+port if it should not be reachable.
+
+If the metrics port is already bound, submit-api logs a
+`TxSubmitApi.Metrics.PortOccupied` trace and retries on the next port up,
+repeating until it binds.  Startup is not aborted, so the effective port can
+differ from the one requested.  The last `TxSubmitApi.Metrics.Started` trace
+reports the port actually bound.
+
+
+## Bind Mounting Considerations
 In the cardano-submit-api container a `/node-ipc` directory is symlinked to `/ipc`
 both to align the default ipc socket state directory in both the cardano-node
 and cardano-submit-api images and to remain backwards compatible.
