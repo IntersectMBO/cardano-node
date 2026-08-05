@@ -13,6 +13,13 @@ in {
         ../.
       ];
 
+      # `cardano-cli ping` builds a DNS resolver seed from /etc/resolv.conf
+      # before it looks at its address argument, so it aborts with
+      # `BadConfiguration` in a sandboxed VM with no nameserver even when the
+      # address is a literal IP.  A nameserver only has to be declared, not
+      # reachable, since a literal IP is never resolved.
+      networking.nameservers = ["127.0.0.1"];
+
       services = {
         cardano-node = {
           inherit environment;
