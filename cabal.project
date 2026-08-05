@@ -85,6 +85,31 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 518f5bfc764a08a193fa20c27a883ff2c9350972
+  --sha256: sha256-+02sNpkYSfcrb5dzYHy0FetLeLtQo27NGzm2wVHM0iA=
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: f8f73c94fc1e1dd8388fa1a75996620c057a3a0b
+  --sha256: sha256-1d+5V9JojybF0piwnTJKbm6IkzKds2B3TtYyxb9JoW0=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: b20c7bbf1cb05f6a6b05335c0ab42f4ee23f5613
+  --sha256: sha256-Z317d0DZ/uve/Y53Z6/rhvkTLqDm5krnSpIQ8AH26m0=
+  subdir:
+    cardano-diffusion
+
 constraints:
   , cuddle>=1.1 && <1.1.2
 
