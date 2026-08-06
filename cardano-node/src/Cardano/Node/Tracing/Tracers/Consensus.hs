@@ -92,6 +92,7 @@ import           LeiosDemoTypes (AnnouncementFields (..), FetchArrivalBytes (..)
                    TraceLeiosKernel (..), TraceLeiosPeer (..), traceLeiosKernelToObject,
                    traceLeiosPeerToObject)
 import qualified LeiosDemoTypes as Leios
+import           LeiosDemoDb.Trace (TraceLeiosDb (..), LeiosDbStats (..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -2458,6 +2459,25 @@ instance LogFormatting TraceLeiosKernel where
       , CounterM "leiosFetchTxsGoodBytes" (Just (fromIntegral (fabGood fab)))
       , CounterM "leiosFetchTxsExtraBytes" (Just (fromIntegral (fabExtra fab)))
       ]
+    -- Sampled on a timer, so these exist from node start.
+    TraceLeiosDb (TraceLeiosDbStats (LeiosDbStats { volatileEbs, immutableEbs, walBytes })) ->
+      [ IntM "leiosDbVolatileEbs"    (fromIntegral volatileEbs)
+      , IntM "leiosDbImmutableEbs"   (fromIntegral immutableEbs)
+      , IntM "leiosDbWalBytes"  walBytes
+      ]
+    -- Accumulating counters, bumped per copier commit / GC pass.
+    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
+      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs)
+      , CounterM "leiosDbCopiedTxs" (Just copiedTxs)
+      ]
+    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
+      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs)
+      , CounterM "leiosDbEvictedTxs" (Just evictedTxs)
+      ]
+    TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
+      [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
+    TraceLeiosDb TraceLeiosDbCopyError{} ->
+      [ CounterM "leiosDbCopyErrors" (Just 1) ]
     _ -> []
 
 instance MetaTrace TraceLeiosKernel where
@@ -2478,5 +2498,3 @@ instance MetaTrace TraceLeiosPeer where
   documentFor _ = Nothing
   metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosPeerNSByPath p)
   allNamespaces = Namespace [] <$> Leios.leiosPeerNSPaths
-
-
