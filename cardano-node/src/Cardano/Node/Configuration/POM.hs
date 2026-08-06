@@ -58,7 +58,7 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionIn
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
-import           Control.Monad (unless, void, when)
+import           Control.Monad (filterM, unless, void, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Hashable (Hashable)
@@ -550,17 +550,34 @@ instance FromJSON PartialNodeConfiguration where
                  pure $ V2LSM lsmPath lsmExportPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
 
+             -- Keys consumed by 'parseSnapshotOpts'.  Only one of `o` or the
+             -- `Snapshots` object is ever read, so a key appearing in both
+             -- places is a misconfiguration rather than an override.
+             let snapshotOptionKeys =
+                   [ "SnapshotInterval", "NumOfDiskSnapshots", "SlotOffset"
+                   , "RateLimit", "MinDelay", "MaxDelay" ]
+                 presentIn obj k = isJust <$> (obj .:? k :: Aeson.Parser (Maybe Value))
+
              -- A named policy (e.g. `Snapshots: Mithril`) selects a whole predefined
              -- set of args; an object is parsed field-by-field; absence falls back to
              -- the legacy top-level options for backward compatibility.
              mSnapshotsVal <- o .:? "Snapshots"
              spArgs <- case mSnapshotsVal of
-               Just (String name) -> case name of
-                 "Mithril" -> pure mithrilSnapshotPolicyArgs
-                 _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
-                          <> ". Expected \"Mithril\" or an object with snapshot options."
-               Just sv -> withObject "Snapshots" parseSnapshotOpts sv
                Nothing -> parseSnapshotOpts o
+               Just sv -> do
+                 -- Both a named policy and an object shadow the flat options, so
+                 -- this check has to precede either branch.
+                 shadowed <- filterM (presentIn o) snapshotOptionKeys
+                 unless (null shadowed) $ fail $
+                      "Snapshot options " <> show shadowed <> " are set directly under "
+                   <> "`LedgerDB`, but a `LedgerDB.Snapshots` block is also present. "
+                   <> "Only the latter is read. Move them into `LedgerDB.Snapshots`."
+                 case sv of
+                   String name -> case name of
+                     "Mithril" -> pure mithrilSnapshotPolicyArgs
+                     _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
+                              <> ". Expected \"Mithril\" or an object with snapshot options."
+                   _ -> withObject "Snapshots" parseSnapshotOpts sv
 
              pure $ Just $ LedgerDbConfiguration spArgs qsize selector deprecatedOpts
 
