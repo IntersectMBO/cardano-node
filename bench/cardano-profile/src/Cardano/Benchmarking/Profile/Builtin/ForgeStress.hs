@@ -76,6 +76,19 @@ durationChainM txCount x = let
   g = Types.generator p
   in p {Types.generator = g {Types.tx_count = Just txCount}}
 
+-- Chain fragment creation with large blocks - longer chain.
+-- The extra runtime over durationChainM buys headroom against an unlucky
+-- (sparse) leader schedule, so that ~19 saturated value-tx blocks remain
+-- after the generator's split phase (~10 blocks) even in bad draws.
+durationChainL :: Integer -> Types.Profile -> Types.Profile
+durationChainL txCount x = let
+  p =   timescaleXLBlock
+      . P.shutdownOnSlot 3000
+      . P.generatorEpochs 4
+      $ x
+  g = Types.generator p
+  in p {Types.generator = g {Types.tx_count = Just txCount}}
+
 -- This is timescaleCompressed with a changed slot filling constraint:
 -- fill on avg every 66th slot instead of every 20th.
 -- Goes hand in hand with changed submission pressure to fill large blocks, and bumped tx counts.
@@ -125,7 +138,7 @@ profilesForgeStress =
   , fs & P.name "fschain-768k-xs"               . valueXLBlock  . n1 . V.datasetOct2021 . durationChain  90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
   , fs & P.name "fschain-768k"                  . valueXLBlock  . n1 . V.datasetOct2021 . durationChainM 90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
   , fsXXL & P.name "fschain-6912k-xs"           . valueXXLBlock . n1 . V.datasetOct2021 . durationChain  800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
-  , fsXXL & P.name "fschain-6912k"              . valueXXLBlock . n1 . V.datasetOct2021 . durationChainM 800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
+  , fsXXL & P.name "fschain-6912k"              . valueXXLBlock . n1 . V.datasetOct2021 . durationChainL 800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
   , fs & P.name "fschain-8io"                   . valueInOut 8  . n1 . V.datasetOct2021 . durationXL            . P.traceForwardingOn
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
