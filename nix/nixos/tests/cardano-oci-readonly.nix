@@ -150,6 +150,31 @@ in {
     # Cli mode must NOT require a writable /tmp (read-only, no tmpfs).
     machine.succeed("docker run --rm --read-only ${imageRef} cli version")
 
+    # Operator-supplied RTS flags are appended after the image's baked +RTS
+    # block and merge with it. `-po` covers .prof, .hp and .ticky only, so an
+    # eventlog without its own `-ol` is created in the container cwd (/) and the
+    # RTS aborts before main under a read-only root. /logs must be a writable
+    # mount here or the baked `-t/logs/cardano-node.stats` aborts first, which
+    # would pass the exit-code check for the wrong reason.
+    status, out = machine.execute(
+        "docker run --rm --read-only --tmpfs /tmp -v e0logs:/logs "
+        "-e NETWORK=${network} ${imageRef} +RTS -l -RTS 2>&1"
+    )
+    assert status != 0, f"expected non-zero exit for -l without -ol; got: {out}"
+    assert "initEventLogFileWriter" in out, f"expected an eventlog open failure; got: {out}"
+
+    # Given `-ol` under a writable mount it starts and writes the eventlog there.
+    machine.succeed(
+        "docker run -d --name e1 --read-only --tmpfs /tmp --user 1000:0 "
+        "-v e1data:/data -v e1ipc:/ipc -v e1logs:/logs "
+        "-e NETWORK=${network} "
+        "${imageRef} +RTS -l -ol/logs/cardano-node.eventlog -RTS"
+    )
+    machine.wait_until_succeeds(
+        "docker exec e1 test -s /logs/cardano-node.eventlog", timeout=60
+    )
+    machine.succeed("docker rm -f e1")
+
     # Tracer image: same read-only + non-root + merge-mode behavior as the
     # node, minus the genesis/topology rewrites as tracer config has no
     # relative file references.
