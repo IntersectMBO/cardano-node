@@ -656,7 +656,7 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
 
 ppStartupInfoTrace (MovedTopLevelOption opt) =
   "Option `" <> showT opt
-  <> "` was moved to the `LedgerDB` section. Parsing it at the top level "
+  <> "` was moved to the `LedgerDB.Snapshots` section. Parsing it at the top level "
   <> " will be removed in a future version."
 
 nonP2PWarningMessage :: Text

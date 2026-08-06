@@ -25,8 +25,8 @@ import           Cardano.Rpc.Server.Config (RpcConfigF (..), makeRpcConfig)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (defaultSnapshotPolicyArgs,
-                   mithrilSnapshotPolicyArgs)
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (SnapshotPolicyArgs,
+                   defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
@@ -35,6 +35,7 @@ import           Data.Aeson (eitherDecode)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor.Identity (Identity (..))
+import           Data.List (isInfixOf)
 import           Data.Monoid (Last (..))
 import           Data.String
 import           Data.Text (Text)
@@ -321,6 +322,81 @@ prop_legacySnapshotFormat_POM =
     legacyConfig :: PartialNodeConfiguration <- evalEither $ eitherDecode legacyJson
     newConfig    :: PartialNodeConfiguration <- evalEither $ eitherDecode newJson
     pncLedgerDbConfig legacyConfig === pncLedgerDbConfig newConfig
+
+-- | Snapshot options set directly under @LedgerDB@ are never read when a
+-- @LedgerDB.Snapshots@ block is also present, so the combination must be
+-- rejected rather than silently resolved.  Before this was checked, each of
+-- the configurations below parsed cleanly and quietly used the defaults (or
+-- the @Snapshots@ value), discarding what the operator wrote.
+prop_flatSnapshotOptsShadowedBySnapshots_POM :: Property
+prop_flatSnapshotOptsShadowedBySnapshots_POM =
+  withTests 1 . Hedgehog.property $
+    mapM_ expectShadowingFailure
+      [ ("SnapshotInterval",   "\"SnapshotInterval\": 111, \"Snapshots\": {}")
+      , ("SnapshotInterval",   "\"SnapshotInterval\": 111, \"Snapshots\": {\"SnapshotInterval\": 999}")
+      , ("NumOfDiskSnapshots", "\"NumOfDiskSnapshots\": 7, \"Snapshots\": {}")
+      , ("SlotOffset",         "\"SlotOffset\": 12345, \"RateLimit\": 42, \"Snapshots\": {}")
+      , ("RateLimit",          "\"SlotOffset\": 12345, \"RateLimit\": 42, \"Snapshots\": {}")
+      , ("SnapshotInterval",   "\"SnapshotInterval\": 111, \"Snapshots\": \"Mithril\"")
+        -- A shadowed option is not even validated: this one is rejected
+        -- outright when no `Snapshots` block is present.
+      , ("SnapshotInterval",   "\"SnapshotInterval\": -5, \"Snapshots\": {}")
+      ]
+  where
+    expectShadowingFailure (key, ledgerDbBody) = do
+      let json = "{ " <> dummyRequiredValues <> ", \"LedgerDB\": {" <> ledgerDbBody <> "} }"
+      case eitherDecode json :: Either String PartialNodeConfiguration of
+        Right _ -> failWith Nothing $
+          "expected a parse failure for shadowed LedgerDB option " <> show key
+            <> ", but got a successful parse of: " <> show json
+        Left err -> do
+          Hedgehog.annotate err
+          Hedgehog.assert (key `isInfixOf` err)
+
+-- | The deprecated top-level @SnapshotInterval@ still applies when the
+-- @Snapshots@ block does not set it, and is still reported as a moved option.
+-- This is the compatibility path the shadowing check above must not disturb.
+prop_topLevelSnapshotIntervalFallback_POM :: Property
+prop_topLevelSnapshotIntervalFallback_POM =
+  withTests 1 . Hedgehog.property $ do
+    let topLevelJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"SnapshotInterval\": 111, "
+          <> "\"LedgerDB\": {\"Snapshots\": {}} }"
+        referenceJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"LedgerDB\": {\"Snapshots\": {\"SnapshotInterval\": 111}} }"
+    topLevelConfig  :: PartialNodeConfiguration <- evalEither $ eitherDecode topLevelJson
+    referenceConfig :: PartialNodeConfiguration <- evalEither $ eitherDecode referenceJson
+    fmap fst (ledgerDbPolicyAndDeprecated topLevelConfig)
+      === fmap fst (ledgerDbPolicyAndDeprecated referenceConfig)
+    fmap snd (ledgerDbPolicyAndDeprecated topLevelConfig)
+      === Just (DeprecatedOptions ["SnapshotInterval"])
+
+-- | When the @Snapshots@ block does set @SnapshotInterval@, it wins over the
+-- deprecated top-level one -- which is still reported as a moved option even
+-- though its value was discarded.
+prop_snapshotsOverridesTopLevel_POM :: Property
+prop_snapshotsOverridesTopLevel_POM =
+  withTests 1 . Hedgehog.property $ do
+    let overriddenJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"SnapshotInterval\": 111, "
+          <> "\"LedgerDB\": {\"Snapshots\": {\"SnapshotInterval\": 999}} }"
+        referenceJson = "{ " <> dummyRequiredValues <> ", "
+          <> "\"LedgerDB\": {\"Snapshots\": {\"SnapshotInterval\": 999}} }"
+    overriddenConfig :: PartialNodeConfiguration <- evalEither $ eitherDecode overriddenJson
+    referenceConfig  :: PartialNodeConfiguration <- evalEither $ eitherDecode referenceJson
+    fmap fst (ledgerDbPolicyAndDeprecated overriddenConfig)
+      === fmap fst (ledgerDbPolicyAndDeprecated referenceConfig)
+    fmap snd (ledgerDbPolicyAndDeprecated overriddenConfig)
+      === Just (DeprecatedOptions ["SnapshotInterval"])
+
+-- | Project the snapshot policy and the deprecated-option list out of a parsed
+-- config, so the two can be asserted on independently.
+ledgerDbPolicyAndDeprecated
+  :: PartialNodeConfiguration -> Maybe (SnapshotPolicyArgs, DeprecatedOptions)
+ledgerDbPolicyAndDeprecated pnc =
+  case getLast (pncLedgerDbConfig pnc) of
+    Just (LedgerDbConfiguration spArgs _ _ depOpts) -> Just (spArgs, depOpts)
+    Nothing -> Nothing
 
 -- | Test that the named \"Mithril\" snapshot policy selects
 -- 'mithrilSnapshotPolicyArgs' as a whole.

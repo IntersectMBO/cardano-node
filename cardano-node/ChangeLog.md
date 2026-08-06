@@ -2,6 +2,24 @@
 
 ## Next version
 
+- **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
+  `LedgerDB.Snapshots` block are now a configuration error instead of being silently
+  ignored.
+
+  Only one of the two locations is ever read. Previously, a config such as
+
+  ```json
+  "LedgerDB": { "SnapshotInterval": 43200, "Snapshots": { "SlotOffset": 0 } }
+  ```
+
+  parsed cleanly and quietly used the default interval, discarding the value the
+  operator wrote. This affected `SnapshotInterval`, `NumOfDiskSnapshots`, `SlotOffset`,
+  `RateLimit`, `MinDelay` and `MaxDelay`.
+
+  Such a config will now fail to start with an error naming the offending keys; move
+  them into the `LedgerDB.Snapshots` block. Setting them directly under `LedgerDB`
+  remains supported when there is no `Snapshots` block.
+
 * Added txsSyncDurationTotal counter for tracking the total time spent syncing the mempool.
 
 * Added EKG metrics for soft and hard timeouts and included defensive mempool
