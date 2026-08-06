@@ -22,10 +22,15 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 --------------------------------------------------------------------------------
 
 base :: Types.Profile -> Types.Profile
-base =
+base = baseNoFunds . V.fundsDefault
+
+-- Common scaffold without the generator funds; the chain-creation profiles
+-- with very large blocks need more than `fundsDefault` to cover the
+-- tx-generator's split tree (~21.3M lovelace per submitted tx).
+baseNoFunds :: Types.Profile -> Types.Profile
+baseNoFunds =
     P.fixedLoaded
   . P.uniCircle . P.loopback
-  . V.fundsDefault
   . P.initCooldown 5
   . P.analysisStandard
 
@@ -51,25 +56,25 @@ durationXL = V.timescaleCompressed . P.shutdownOnSlot 4800
 -- Overall tx count for submission needs adjustment,
 -- however, duplicating some values allows for modding this
 -- without interfering with regular forge-stres-* profiles.
-durationChain :: Types.Profile -> Types.Profile
-durationChain x = let 
+durationChain :: Integer -> Types.Profile -> Types.Profile
+durationChain txCount x = let
   p =   timescaleXLBlock
       . P.shutdownOnSlot 1200
       . P.generatorEpochs 1
       $ x
   g = Types.generator p
-  in p {Types.generator = g {Types.tx_count = Just 90000}}
+  in p {Types.generator = g {Types.tx_count = Just txCount}}
 
 -- Chain fragment creation with large blocks - medium length chain.
 -- Rest, see above.
-durationChainM :: Types.Profile -> Types.Profile
-durationChainM x = let 
+durationChainM :: Integer -> Types.Profile -> Types.Profile
+durationChainM txCount x = let
   p =   timescaleXLBlock
       . P.shutdownOnSlot 2400
       . P.generatorEpochs 3
       $ x
   g = Types.generator p
-  in p {Types.generator = g {Types.tx_count = Just 90000}}
+  in p {Types.generator = g {Types.tx_count = Just txCount}}
 
 -- This is timescaleCompressed with a changed slot filling constraint:
 -- fill on avg every 66th slot instead of every 20th.
@@ -83,6 +88,11 @@ timescaleXLBlock =
 valueXLBlock :: Types.Profile -> Types.Profile
 valueXLBlock = V.valueBase . P.tps 100
 
+-- 6912k blocks hold ~18770 value txs each, i.e. one block consumes ~282 tx/s
+-- at 1/66.7 blocks per slot; submission pressure must stay well above that.
+valueXXLBlock :: Types.Profile -> Types.Profile
+valueXXLBlock = V.valueBase . P.tps 900
+
 -- Chain framegment creation with varying tx in and out counts.
 -- This duplicates valueLocal, parametrizing ins and outs.
 valueInOut :: Integer -> Types.Profile -> Types.Profile
@@ -93,6 +103,7 @@ valueInOut x = P.txIn x . P.txOut x . P.txFee 1000000 . P.tps 15
 profilesForgeStress :: [Types.Profile]
 profilesForgeStress =
   let fs = P.empty & base
+      fsXXL = P.empty & baseNoFunds . V.fundsQuadruple
       -- Helpers by composition size:
       -- Except for the solo profiles (which serve double-use to create chain fragments),
       -- forge-stress works better with a smaller block size (64k) for comparative benchmarks.
@@ -111,9 +122,11 @@ profilesForgeStress =
   , fs & P.name "forge-stress-pre-solo-xl"      . V.valueLocal . n1 . V.datasetOct2021 . durationXL . P.traceForwardingOn
   , fs & P.name "forge-stress-pre-plutus-solo"  . V.plutusLoop . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- chain creation
-  , fs & P.name "fschain-768k-xs"               . valueXLBlock . n1 . V.datasetOct2021 . durationChain  . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
-  , fs & P.name "fschain-768k"                  . valueXLBlock . n1 . V.datasetOct2021 . durationChainM . P.traceForwardingOn                                     . P.analysisUnitary  . P.blocksize768k
-  , fs & P.name "fschain-8io"                   . valueInOut 8 . n1 . V.datasetOct2021 . durationXL     . P.traceForwardingOn
+  , fs & P.name "fschain-768k-xs"               . valueXLBlock  . n1 . V.datasetOct2021 . durationChain  90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
+  , fs & P.name "fschain-768k"                  . valueXLBlock  . n1 . V.datasetOct2021 . durationChainM 90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
+  , fsXXL & P.name "fschain-6912k-xs"           . valueXXLBlock . n1 . V.datasetOct2021 . durationChain  800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
+  , fsXXL & P.name "fschain-6912k"              . valueXXLBlock . n1 . V.datasetOct2021 . durationChainM 800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
+  , fs & P.name "fschain-8io"                   . valueInOut 8  . n1 . V.datasetOct2021 . durationXL            . P.traceForwardingOn
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"         . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
