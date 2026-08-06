@@ -216,16 +216,29 @@ as the node was actually launched with. "Scripts" mode does not write the
 snapshot.
 
 In "scripts" mode GHC RTS output is directed to `/logs/` so the image keeps
-working under a read-only root. The lightweight machine-readable RTS summary
-(`/logs/cardano-node.stats`, written at process exit) is always produced; the
-heavier profiling/eventlog outputs are produced only when profiling or eventlog
-is enabled. In "custom" mode the operator chooses the RTS flags, so any such
-output must similarly be directed to a writable mount, for example:
+working under a read-only root, provided `/logs` is a writable mount. The
+lightweight machine-readable RTS summary `/logs/cardano-node.stats` is always
+produced and the RTS opens it at startup, so without that mount the node aborts
+at startup rather than degrading. The heavier profiling/eventlog outputs are
+produced only when profiling or eventlog is enabled. In "custom" mode the
+operator chooses the RTS flags, so any such output must similarly be directed to
+a writable mount, for example:
 ```
 ... run \
   --config /opt/cardano/config/mainnet/config.json \
   ... \
   +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -p -RTS
+```
+Note that `-po` only covers `.prof`, `.hp` and `.ticky`. The eventlog needs its
+own `-ol` with a full filename, otherwise it is created in the process working
+directory and the RTS aborts at startup under a read-only root. This applies in
+"scripts" mode too: RTS flags given as entrypoint args are appended after the
+baked `+RTS` block and merge with it, so the baked `-po` will not redirect an
+operator-enabled eventlog:
+```
+... run \
+  ... \
+  +RTS -l -ol/logs/cardano-node.eventlog -RTS
 ```
 
 The read-only, non-root and private-`/tmp` behaviors of all three images are
