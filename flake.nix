@@ -58,8 +58,11 @@
 
     utils.url = "github:numtide/flake-utils";
 
-    # Mithril signer is required as a release artifact constitutent.
-    # Use explicit ref tag path to ensure we get exactly what we expect.
+    # Mithril signer is required as a release artifact constitutent. Use
+    # explicit ref tag path to ensure we get exactly what we expect. There is
+    # deliberately no follows here so that the signer we ship is bit identical
+    # to the upstream release binary at the expense of mithril's own transitive
+    # inputs.
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
   };
 
