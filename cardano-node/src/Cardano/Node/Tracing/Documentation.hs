@@ -508,7 +508,7 @@ docTracersFirstPhase condConfigFileName = do
 
     perasCertDiffusionTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Peras", "Cert", "Inbound"]
+                ["Peras", "Cert", "Remote"]
     configureTracers configReflection trConfig [perasCertDiffusionTr]
     perasCertDiffusionTrDoc <- documentTracer (perasCertDiffusionTr ::
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
@@ -516,7 +516,7 @@ docTracersFirstPhase condConfigFileName = do
 
     perasVoteDiffusionTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Peras", "Vote", "Inbound"]
+                ["Peras", "Vote", "Remote"]
     configureTracers configReflection trConfig [perasVoteDiffusionTr]
     perasVoteDiffusionTrDoc <- documentTracer (perasVoteDiffusionTr ::
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer

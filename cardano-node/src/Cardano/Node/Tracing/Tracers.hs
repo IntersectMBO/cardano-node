@@ -352,14 +352,27 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !txCountersTracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["txCounters", "Remote"]
-
-    !txPerasCertIn <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Inbound"]
-    !txPerasCertOut <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Outbound"]
-    !txPerasVoteIn <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Inbound"]
-    !txPerasVoteOut <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Outbound"]
-
-
     configureTracers configReflection trConfig [txCountersTracer]
+
+    !txPerasCertIn  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inbound"]
+    configureTracers configReflection trConfig [txPerasCertIn]
+
+    !txPerasCertOut  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Outbound"]
+    configureTracers configReflection trConfig [txPerasCertOut]
+
+    !txPerasVoteIn  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Inbound"]
+    configureTracers configReflection trConfig [txPerasVoteIn]
+
+    !txPerasVoteOut  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Outbound"]
+    configureTracers configReflection trConfig [txPerasVoteOut]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = mkTracer $
@@ -511,8 +524,15 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
-    !txPerasCertDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Cert", "Inbound"]
-    !txPerasVoteDiffusion <- mkCardanoTracer trBase trForward mbTrEKG ["Peras", "Vote", "Inbound"]
+    !txPerasCertDiffusion  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Remote"]
+    configureTracers configReflection trConfig [txPerasCertDiffusion]
+
+    !txPerasVoteDiffusion  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Remote"]
+    configureTracers configReflection trConfig [txPerasVoteDiffusion]
 
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = mkTracer $

@@ -216,10 +216,10 @@ getAllNamespaces =
         perasVoteOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Outbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                           remotePeer (TracePerasVoteDiffusionOutbound blk))])
-        perasCertDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inbound"])
+        perasCertDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (PerasCertDiffusion blk)))])
-        perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Inbound"])
+        perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (PerasVoteDiffusion blk)))])
         localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
