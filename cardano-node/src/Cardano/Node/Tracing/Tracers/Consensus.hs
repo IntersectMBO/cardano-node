@@ -72,6 +72,7 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Control.Exception (displayException)
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
@@ -1046,13 +1047,20 @@ instance ( HasHeader blk
 
 instance MetaTrace SanityCheckIssue where
 
-  namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
   namespaceFor _ = Namespace [] ["SanityCheckIssue"]
 
   severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ["SanityCheckIssue"]) = Nothing
+  documentFor (Namespace _ ["SanityCheckIssue"]) = Just $ mconcat
+    [ "A sanity check on the node configuration found a suspicious setting at"
+    , " startup. The `kind` field names the check that fired:"
+    , " `InconsistentSecurityParam`, `SnapshotDelayRangeInverted`,"
+    , " `SnapshotDelayRangeNegativeMinimum`, `SnapshotRateLimitDisabled`,"
+    , " `SnapshotRateLimitSuspiciouslyLarge`, `SnapshotNumZero` or"
+    , " `SnapshotIntervalNotDivisorOfEpoch`. These flag configurations that are"
+    , " legal but almost certainly unintended; the node continues to run."
+    ]
   documentFor _ = Nothing
 
   allNamespaces = [Namespace [] ["SanityCheckIssue"]]
@@ -1062,12 +1070,30 @@ instance LogFormatting SanityCheckIssue where
     mconcat [ "kind" .= String "InconsistentSecurityParam"
             , "error" .= String (Text.pack $ show e)
             ]
-  forMachine _ _ =
-    mconcat [ "kind" .= String "SnapshotIssue"
+  forMachine _dtal (SnapshotDelayRangeInverted mn mx) =
+    mconcat [ "kind" .= String "SnapshotDelayRangeInverted"
+            , "minimumDelay" .= show mn
+            , "maximumDelay" .= show mx
             ]
-  forHuman (InconsistentSecurityParam e) =
-    "Configuration contains multiple security parameters: " <> Text.pack (show e)
-  forHuman _ = "SnapshotIssue"
+  forMachine _dtal (SnapshotDelayRangeNegativeMinimum mn) =
+    mconcat [ "kind" .= String "SnapshotDelayRangeNegativeMinimum"
+            , "minimumDelay" .= show mn
+            ]
+  forMachine _dtal SnapshotRateLimitDisabled =
+    mconcat [ "kind" .= String "SnapshotRateLimitDisabled"
+            ]
+  forMachine _dtal (SnapshotRateLimitSuspiciouslyLarge rl) =
+    mconcat [ "kind" .= String "SnapshotRateLimitSuspiciouslyLarge"
+            , "rateLimit" .= show rl
+            ]
+  forMachine _dtal SnapshotNumZero =
+    mconcat [ "kind" .= String "SnapshotNumZero"
+            ]
+  forMachine _dtal (SnapshotIntervalNotDivisorOfEpoch interval) =
+    mconcat [ "kind" .= String "SnapshotIntervalNotDivisorOfEpoch"
+            , "interval" .= toJSON interval
+            ]
+  forHuman = Text.pack . displayException
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
