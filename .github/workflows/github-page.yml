@@ -26,8 +26,9 @@ jobs:
         extra_nix_config: |
           experimental-features = nix-command flakes
           allow-import-from-derivation = true
-          extra-substituters = https://cache.iog.io/
-          extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+          # The substituters (cache.iog.io) come from the flake's nixConfig:
+          accept-flake-config = true
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
@@ -35,20 +36,18 @@ jobs:
 
     # The `.#haddock` shell (see flake.nix) provides a GHC whose haddock does not
     # panic on `type data` declarations (GHC issue #25739): GHC 9.6.7's does.
-    - name: Fetch nix cache and update cabal indices
-      run: |
-        nix develop .#haddock --command \
-          cabal update
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1
+      with:
+        devShell: .#haddock
+
+    - name: Update cabal indices
+      run: cabal update
 
     - name: Build whole project
-      run: |
-        nix develop .#haddock --command \
-          cabal build all
+      run: cabal build all
 
     - name: Build documentation
-      run: |
-        nix develop .#haddock --command \
-          cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
+      run: cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
 
     - name: Compress haddocks
       run: |
@@ -61,6 +60,16 @@ jobs:
       with:
         name: haddocks
         path: ./haddocks.tgz
+
+    # cabal only prints a summary line when building docs for a dependency
+    # fails; the actual haddock error is hidden in these logs.
+    - name: Upload cabal logs
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      if: ${{ failure() }}
+      continue-on-error: true
+      with:
+        name: cabal-haddock-logs
+        path: ~/.cache/cabal/logs/
 
     - name: Deploy documentation to gh-pages 🚀
       if: github.ref == 'refs/heads/master'
