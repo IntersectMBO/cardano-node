@@ -90,7 +90,7 @@
 # change (renamed files, new split, ...) bumps this and orphans the old entries
 # automatically.
 # Bump on any change to what/how the ripper caches.
-genesis_ripper_layout_version="v0.0"
+genesis_ripper_layout_version="v0.1"
 
 # The cache-key input combines protocol hash, dataset hash and layout version.
 # (The profile name is prepended by profile-cache-key-ripper below.)

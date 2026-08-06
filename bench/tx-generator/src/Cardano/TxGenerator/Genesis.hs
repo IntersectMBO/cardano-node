@@ -78,17 +78,22 @@ genesisInitialFunds networkId g = do
     | (Addr _ pcr stref, coin) <- funds
     ]
 
+-- | 'embeddedInitialFunds' resolves the genesis initial funds, accepting both the
+-- legacy top-level @initialFunds@ and the newer @extraConfig.initialFunds@
+-- injection that @cardano-cli genesis create-testnet-data@ emits.
 embeddedInitialFunds :: ShelleyGenesis -> Either TxGenError [(Addr, L.Coin)]
 embeddedInitialFunds g =
   case sgExtraConfig g of
+    SNothing -> Right legacy
     SJust extraConfig -> case secInitialFunds extraConfig of
+      NoInjection          -> Right legacy
+      _ | not (null legacy) ->
+          Left $ TxGenError "genesisInitialFunds: both initialFunds and extraConfig.initialFunds are populated; please use only one source"
       EmbeddedInjection lm -> Right (ListMap.toList lm)
-      NoInjection ->
-        Left $ TxGenError "genesisInitialFunds: extraConfig.secInitialFunds is NoInjection; expected embedded initial funds"
-      InjectionFromFile{} ->
-        Left $ TxGenError "genesisInitialFunds: file-based initial-funds injection is unsupported; expected embedded funds in extraConfig.secInitialFunds"
-    SNothing ->
-      Left $ TxGenError "genesisInitialFunds: genesis has no extraConfig; expected embedded initial funds in extraConfig.secInitialFunds"
+      InjectionFromFile{}  ->
+        Left $ TxGenError "genesisInitialFunds: file-based initial-funds injection is unsupported; expected embedded funds in extraConfig.initialFunds or initialFunds"
+ where
+  legacy = ListMap.toList $ sgInitialFunds g
 
 genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
   => NetworkId
