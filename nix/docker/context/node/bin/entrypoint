@@ -50,9 +50,14 @@ if [[ ${1:-} != "cli" ]]; then
   fi
 fi
 
+# Cli mode is dispatched before the NETWORK modes.
+if [[ ${1:-} == "cli" ]]; then
+  # Run cardano-cli with the provided entrypoint args
+  exec /usr/local/bin/run-client "$@"
+
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
-if [[ -n ${NETWORK:-} ]]; then
+elif [[ -n ${NETWORK:-} ]]; then
 
   # If either CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env vars are set, iohk-nix
   # pre-defined NETWORK configuration will be used as a starting point and
@@ -156,10 +161,6 @@ if [[ -n ${NETWORK:-} ]]; then
 elif [[ ${1:-} == "run" ]]; then
   # Run cardano-node using "custom" mode.
   exec /usr/local/bin/run-node "$@"
-
-elif [[ ${1:-} == "cli" ]]; then
-  # Run cardano-cli with the provided entrypoint args
-  exec /usr/local/bin/run-client "$@"
 
 else
   echo "Nothing to do!  Available modes of operation are:"
