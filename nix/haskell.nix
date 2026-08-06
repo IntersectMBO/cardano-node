@@ -142,9 +142,9 @@ let
           # TopTx type family or AllLedgerPeers ("tyConStupidTheta" panic, GHC issue
           # #25739, fixed in GHC 9.12.3). Disable haddock of the affected dependencies
           # for those compilers only, so that shells with a fixed compiler (e.g. the
-          # `.#ghc9124` one used by github-page.yml) still provide dependencies with
+          # `.#haddock` one used by github-page.yml) still provide dependencies with
           # documentation.
-          ({ config, lib, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.12.3" < 0) {
+          ({ config, lib, ... }: lib.mkIf (lib.versionOlder config.compiler.version "9.12.3") {
             packages.cardano-api.components.library.doHaddock = false;
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
@@ -423,6 +423,15 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           ]
             (name: { flags.asserts = true; });
         }];
+      };
+      # Used by the "Haddock documentation" workflow through devShells.haddock
+      # (see flake.nix): a compiler recent enough to avoid the `type data`
+      # haddock panic worked around above. Hoogle is not needed there and would
+      # be built with the alternative compiler.
+      haddocked = final.appendModule {
+        compiler-nix-name = "ghc9124";
+        shell.withHoogle = lib.mkForce false;
+        shell.tools = lib.mkForce {};
       };
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))

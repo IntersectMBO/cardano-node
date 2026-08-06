@@ -85,9 +85,6 @@
 
     windowsCompilerNixName = "ghc9122";
 
-    # Used by the "Haddock documentation" workflow (github-page.yml)
-    haddockCompilerNixName = "ghc9124";
-
     supportedSystems = import ./nix/supported-systems.nix;
     defaultSystem = head supportedSystems;
     customConfig =
@@ -199,14 +196,7 @@
         }
         # Shell used by the "Haddock documentation" workflow (github-page.yml)
         // optionalAttrs (hostPlatform.system == "x86_64-linux") {
-          ghc9124 =
-            (project.appendModule {
-              compiler-nix-name = haddockCompilerNixName;
-              # hoogle would be built with the alternative compiler; the haddock
-              # workflow doesn't need it.
-              shell.withHoogle = lib.mkForce false;
-              shell.tools = lib.mkForce {};
-            }).shell;
+          haddock = project.haddocked.shell;
         };
 
       # NixOS tests a sandboxed mainnet edge node with submit-api, ensuring
