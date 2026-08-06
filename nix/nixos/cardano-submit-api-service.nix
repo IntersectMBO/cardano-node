@@ -132,12 +132,11 @@ in {
             ExecStart = config.services.cardano-submit-api.script;
             DynamicUser = true;
 
-            # The api connects to the node over a UNIX socket that only becomes
-            # available once the node has started; `after` orders startup but does
-            # not wait for the socket. Default to restarting until it is reachable
-            # rather than failing permanently on a fresh boot. These are mkDefault
-            # so a consumer can impose a bounded restart + start-limit policy that
-            # lets persistent failures surface as a failed unit for alerting.
+            # The api starts and listens whether or not the node is up and
+            # needs no restart loop to wait for it. The node socket is opened
+            # per submission.  This policy serves to restart a transient
+            # failure or otherwise create an alertable condition on a
+            # persistent failure.
             Restart = lib.mkDefault "always";
             RestartSec = lib.mkDefault 1;
           }
