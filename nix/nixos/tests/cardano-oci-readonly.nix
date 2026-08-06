@@ -150,6 +150,17 @@ in {
     # Cli mode must NOT require a writable /tmp (read-only, no tmpfs).
     machine.succeed("docker run --rm --read-only ${imageRef} cli version")
 
+    # Cli mode is dispatched before the NETWORK modes, so a NETWORK left in the
+    # environment, with or without a merge var, must neither start a node nor
+    # reach the merge block, which writes to the runtime dir cli mode skips.
+    machine.succeed(
+        "docker run --rm --read-only -e NETWORK=${network} ${imageRef} cli version"
+    )
+    machine.succeed(
+        "docker run --rm --read-only -e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' ${imageRef} cli version"
+    )
+
     # Operator-supplied RTS flags are appended after the image's baked +RTS
     # block and merge with it. `-po` covers .prof, .hp and .ticky only, so an
     # eventlog without its own `-ol` is created in the container cwd (/) and the
