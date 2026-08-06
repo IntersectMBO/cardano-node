@@ -135,7 +135,7 @@ library
                       , text
                       , time
                       , trace-dispatcher ^>= 2.13.0
-                      , trace-forward ^>= 2.4.0
+                      , trace-forward ^>= 2.5.0
                       , trace-resources ^>= 0.2.4
                       , vector
                       , wai ^>= 3.2
