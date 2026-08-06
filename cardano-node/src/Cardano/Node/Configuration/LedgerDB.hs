@@ -5,9 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module Cardano.Node.Configuration.LedgerDB (
     DeprecatedOptions (..),
     LedgerDbConfiguration (..),
@@ -27,22 +24,20 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 import qualified Data.Aeson.Types as Aeson (FromJSON)
 import           Data.Maybe (fromMaybe)
 import           Data.Proxy
-import           System.FilePath
 import           System.Random (StdGen)
 
 import Ouroboros.Consensus.Ledger.Basics (LedgerState)
 
 -- | Choose the LedgerDB Backend
 --
--- As of UTxO-HD, the LedgerDB now uses either an in-memory backend or LMDB to
--- keep track of differences in the UTxO set.
+-- As of UTxO-HD, the LedgerDB uses either an in-memory backend or an LSM-tree
+-- backend to keep track of differences in the UTxO set.
 --
 -- - 'V2InMemory': uses more memory than the minimum requirements but is somewhat
 --   faster.
 --
--- - 'V1LMDB': uses less memory but is somewhat slower.
---
--- - 'V2LSM': Uses the LSM backend.
+-- - 'V2LSM': keeps the UTxO set on disk in an LSM tree, which uses less memory
+--   but is somewhat slower.
 data LedgerDbSelectorFlag =
     V2InMemory
   | V2LSM
@@ -77,13 +72,6 @@ data LedgerDbConfiguration =
 newtype Gigabytes = Gigabytes Int
   deriving stock (Eq, Show)
   deriving newtype (Read, Aeson.FromJSON)
-
--- | Convert a number of Gigabytes to the equivalent number of bytes.
-toBytes :: Gigabytes -> Int
-toBytes (Gigabytes x) = x * 1024 * 1024 * 1024
-
-defaultLMDBPath :: FilePath -> FilePath
-defaultLMDBPath = (</> "lmdb")
 
 selectorToArgs ::
     forall blk.
