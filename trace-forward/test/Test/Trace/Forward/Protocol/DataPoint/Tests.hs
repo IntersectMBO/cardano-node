@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
@@ -37,7 +38,7 @@ tests :: TestTree
 tests = testGroup "Trace.Forward.Protocol.DataPoint"
   [ testProperty "codec"          prop_codec_DataPointForward
   , testProperty "codec 2-splits" prop_codec_splits2_DataPointForward
-  , testProperty "codec 3-splits" (withMaxSuccess 33 prop_codec_splits3_DataPointForward)
+  , testProperty "codec 3-splits" (withNumTests 33 prop_codec_splits3_DataPointForward)
   , testProperty "direct"         prop_direct_DataPointForward
   , testProperty "connect"        prop_connect_DataPointForward
   , testProperty "channel ST"     prop_channel_ST_DataPointForward
@@ -145,3 +146,8 @@ prop_channel_IO_DataPointForward
   -> Property
 prop_channel_IO_DataPointForward f (NonNegative n) =
   ioProperty (prop_channel f n)
+
+#if ! MIN_VERSION_QuickCheck(2,18,0)
+withNumTests :: Testable prop => Int -> prop -> Property
+withNumTests = withMaxSuccess
+#endif
