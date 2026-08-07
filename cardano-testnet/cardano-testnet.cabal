@@ -41,7 +41,7 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 11.3
+                      , cardano-api ^>= 11.4
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.1
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
@@ -57,7 +57,7 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-diffusion:ping ^>= 1.1
+                      , cardano-diffusion:ping ^>= 1.1.1
                       , cardano-prelude
                       , cardano-rpc
                       , contra-tracer
@@ -85,7 +85,7 @@ library
                       , optparse-applicative-fork
                       , parsec
                       , ouroboros-network:{api, framework, ouroboros-network} ^>= 1.2
-                      , cardano-diffusion:{api, cardano-diffusion} ^>= 1.1
+                      , cardano-diffusion:{api, cardano-diffusion} ^>= 1.1.1
                       , prettyprinter
                       , process
                       , resourcet

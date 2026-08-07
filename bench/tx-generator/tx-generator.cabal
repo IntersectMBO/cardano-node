@@ -111,12 +111,12 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.3
+                      , cardano-api ^>= 11.4
                       , cardano-binary
                       , cardano-cli ^>= 11.1
                       , cardano-crypto-class
                       , cardano-data
-                      , cardano-diffusion ^>= 1.1
+                      , cardano-diffusion ^>= 1.1.1
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-api
                       , cardano-ledger-core

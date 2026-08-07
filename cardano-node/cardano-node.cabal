@@ -123,7 +123,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.3
+                      , cardano-api ^>= 11.4
                       , cardano-data
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
@@ -168,7 +168,7 @@ library
                       , optparse-applicative
                       , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 4.0
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.2
-                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1
+                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1.1
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
