@@ -22,6 +22,7 @@ import           Cardano.Network.NodeToClient (LocalAddress)
 import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Network.NodeToNode.Version ()
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
@@ -59,7 +60,6 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
-import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))

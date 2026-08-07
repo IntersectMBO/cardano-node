@@ -56,6 +56,14 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpIn
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (NumObjectsProcessed (..),
+                   TraceObjectDiffusionInbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound
+                   (TraceObjectDiffusionOutbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
+                   (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
+                   (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -65,11 +73,11 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
-import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Exception (displayException)
@@ -85,13 +93,6 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound
-                   (NumObjectsProcessed (..), TraceObjectDiffusionInbound (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound (TraceObjectDiffusionOutbound (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
-                   (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
-                   (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
 enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]

@@ -57,16 +57,14 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
-                   (PerasCertDiffusion, TracePerasCertDiffusionInbound,
-                   TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
-                   (PerasVoteDiffusion, TracePerasVoteDiffusionInbound,
-                   TracePerasVoteDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion,
+                   TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
+                   TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
-import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch

@@ -24,8 +24,8 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (HandshakeArguments (..))
-import           Ouroboros.Network.Protocol.Handshake.Codec (mkVersionedCodecCBORTerm,
-                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
+                   mkVersionedCodecCBORTerm, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
