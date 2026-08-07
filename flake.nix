@@ -187,12 +187,17 @@
       # This is used by `nix develop .` to open a devShell
       devShells = let
         shell = import ./shell.nix {inherit pkgs customConfig;};
-      in {
-        inherit (shell) devops workbench-shell;
-        default = shell.dev;
-        cluster = shell;
-        profiled = project.profiled.shell;
-      };
+      in
+        {
+          inherit (shell) devops workbench-shell;
+          default = shell.dev;
+          cluster = shell;
+          profiled = project.profiled.shell;
+        }
+        # Shell used by the "Haddock documentation" workflow (github-page.yml)
+        // optionalAttrs (hostPlatform.system == "x86_64-linux") {
+          haddock = project.haddocked.shell;
+        };
 
       # NixOS tests a sandboxed mainnet edge node with submit-api, ensuring
       # startup and port listening functionality using the nixos service. It
