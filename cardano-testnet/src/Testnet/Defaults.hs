@@ -88,6 +88,7 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Testnet.Paths
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -113,8 +114,8 @@ import           Data.Time (UTCTime)
 import           Data.Word (Word32, Word64)
 import           Lens.Micro
 import           Numeric.Natural
+
 import           Test.Cardano.Ledger.Core.Rational
-import           Cardano.Node.Testnet.Paths
 import           Testnet.Start.Types
 import           Testnet.Types
 

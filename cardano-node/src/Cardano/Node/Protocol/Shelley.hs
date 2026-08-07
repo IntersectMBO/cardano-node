@@ -52,10 +52,10 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import           System.Directory (getFileSize)
+import           System.FilePath (takeDirectory)
 import           System.FS.API (SomeHasFS (..))
 import           System.FS.API.Types (MountPoint (MountPoint))
 import           System.FS.IO (ioHasFS)
-import           System.FilePath (takeDirectory)
 import qualified System.IO.MMap as MMap
 
 

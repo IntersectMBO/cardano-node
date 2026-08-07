@@ -63,14 +63,12 @@ import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import qualified Ouroboros.Consensus.Shelley.Protocol.EnvelopeChecks as Praos
-                   (EnvelopeError (..))
+import qualified Ouroboros.Consensus.Shelley.Protocol.EnvelopeChecks as Praos (EnvelopeError (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Control.DeepSeq (NFData)
-
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson

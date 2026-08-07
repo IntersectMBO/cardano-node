@@ -30,8 +30,8 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
 import qualified Ouroboros.Network.Protocol.Handshake as Handshake
-import           Ouroboros.Network.Protocol.Handshake.Codec (mkVersionedCodecCBORTerm,
-                   codecHandshake, noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
+                   mkVersionedCodecCBORTerm, noTimeLimitsHandshake)
 import qualified Ouroboros.Network.Server.Simple as Server
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer, makeSocketBearer, socketSnocket)

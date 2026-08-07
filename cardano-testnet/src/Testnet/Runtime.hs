@@ -28,6 +28,7 @@ import qualified Cardano.Api as Api
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.Shelley.State as L
+import           Cardano.Node.Testnet.Paths (defaultSocketName)
 
 import           Prelude
 
@@ -56,11 +57,10 @@ import           System.Process (waitForProcess)
 import           System.Timeout (timeout)
 
 import           Testnet.Filepath
-import           Cardano.Node.Testnet.Paths (defaultSocketName)
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run (ProcessError (..), initiateProcess)
-import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated,
-                   procCustom, procKesAgent, procNode)
+import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated, procCustom,
+                   procKesAgent, procNode)
 import           Testnet.Types (TestnetKesAgent (..), TestnetNode (..),
                    TestnetRuntime (configurationFile), showIpv4Address, testnetSprockets)
 

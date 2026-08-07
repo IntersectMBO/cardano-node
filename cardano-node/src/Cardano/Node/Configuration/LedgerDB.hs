@@ -14,6 +14,7 @@ module Cardano.Node.Configuration.LedgerDB (
     selectorToArgs,
 ) where
 
+import           Ouroboros.Consensus.Ledger.Basics (LedgerState)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Storage.LedgerDB.API
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
@@ -25,8 +26,6 @@ import qualified Data.Aeson.Types as Aeson (FromJSON)
 import           Data.Maybe (fromMaybe)
 import           Data.Proxy
 import           System.Random (StdGen)
-
-import Ouroboros.Consensus.Ledger.Basics (LedgerState)
 
 -- | Choose the LedgerDB Backend
 --

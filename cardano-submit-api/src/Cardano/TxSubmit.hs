@@ -9,11 +9,10 @@ module Cardano.TxSubmit
   ) where
 
 import           Cardano.Logging (BackendConfig (..), ConfigOption (ConfBackend, ConfSeverity),
-                   ConfigSource (FromFile),
-                   FormatLogging (HumanFormatColoured), SeverityF (SeverityF), SeverityS (Info),
-                   Trace, TraceConfig, configureTracers, ekgTracer, emptyConfigReflection,
-                   emptyTraceConfig, mkCardanoTracer, readConfigurationWithDefault, standardTracer,
-                   tcOptions, traceWith)
+                   ConfigSource (FromFile), FormatLogging (HumanFormatColoured),
+                   SeverityF (SeverityF), SeverityS (Info), Trace, TraceConfig, configureTracers,
+                   ekgTracer, emptyConfigReflection, emptyTraceConfig, mkCardanoTracer,
+                   readConfigurationWithDefault, standardTracer, tcOptions, traceWith)
 import           Cardano.TxSubmit.CLI.Parsers (opts)
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitCommand (..),
                    TxSubmitNodeParams (..))
