@@ -13,10 +13,14 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-06-29T22:49:53Z
-  , cardano-haskell-packages 2026-06-29T12:05:19Z
+  , hackage.haskell.org 2026-07-15T21:58:35Z
+  , cardano-haskell-packages 2026-07-27T20:44:57Z
 
 constraints:
+  -- cardano-crypto-class is pinned back to crypton ^>=1.0 (the memory line) in the SRP; a
+  -- code-free ^>=1.1 refresh had swapped memory→ram and dragged the crypto closure off the
+  -- still-`memory` CHAP packages. Keep this global cap so nothing else pulls crypton 1.1 (ram).
+  , any.crypton < 1.1
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
   -- haskell.nix tries to use 0.7.1.5 for some reason
@@ -79,6 +83,8 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
+  -- TODO: bump packages instead of this
+  , cardano-crypto-class
 
 -- ekg-forward requires ouroboros-network ^>=1.2 but the SRP is still 1.1.0.0
 allow-older:
@@ -88,12 +94,12 @@ allow-older:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to patch on top of ouroboros-consensus/leios-prototype
+-- Points to ouroboros-consensus/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 1c01d7ee86f814369b631a94426b77f633cee3ec
-  --sha256: sha256-kwmR3z/yw47pfWkNyX912mkFN5FSC3k2wpyvBq2RnrU=
+  tag: 6dc84b8fead9226dada19ca26d8eb59e0000c388
+  --sha256: sha256-tfeIsZvdBPitheKmmq4HDvybzDKHTKXukS4lz8vODiE=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -108,8 +114,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: fb8d6f8a83b0efb86281e0b80e7ffba160dad8b1
-  --sha256: sha256-U/vpyZNerL1YXiQg1TIAOL5L438NNE3XkuIYD0HPTJw=
+  tag: f3104f00f9819ba94de119c38bc3e0109982821f
+  --sha256: sha256-PESnjqXXQTD5C9tvE6AfADSkymvj+edu3BhX3sQYjRk=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -117,6 +123,7 @@ source-repository-package
     libs/cardano-ledger-binary
     libs/cardano-ledger-core
     libs/cardano-protocol-tpraos
+    eras/byron/crypto
     eras/shelley/impl
     eras/shelley/test-suite
     eras/shelley-ma/test-suite
@@ -143,8 +150,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 947645ea9c912da13feadc16bef44a7550c3c55b
-  --sha256: sha256-+fIsJuJV4YBSPdVe3wpIxq9lf6nAI5yB7qdzH0iKmrc=
+  tag: f5ee53d4c26bd0d36540a2a6d06899ff9376aa9b
+  --sha256: sha256-WuG/SgFleW4NtCUzTvfJWRplW/ssrJ2uX5hUD1gN7/c=
   subdir:
     cardano-api
     cardano-api-gen
@@ -154,8 +161,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 2377354ca8d49cd86f63b7f095cfa340b514789d
-  --sha256: sha256-5c3FjK6Yi8hQEzvTIZ4Ri1wJNTReuKT1rX5+B3BonM4=
+  tag: de786557757db816af2dcf56b0a667cecfced011
+  --sha256: sha256-RLGPz/MFjUQQgigv4OQGyzRCAOYf8m/2rooe7ZoyiaM=
   subdir:
     cardano-cli
 
@@ -168,28 +175,20 @@ source-repository-package
     kes-agent
     kes-agent-crypto
 
--- source-repository-package
---   type: git
---   location: https://github.com/f-f/dmq-node.git
---   tag: b7d59834e52d46229bb3ff6e5595509eede730dd
---   --sha256: sha256-8GKAaNPRZkKsk10Emokrlnc0sQOx1aHUnggqlMdY0nw=
---   subdir:
---     dmq-node
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/plutus.git
-  tag: b1db04cc425fab303ac3b79d7140dc2a17f29e6d
-  --sha256: sha256-XtYzjNVx4+IGWpgm+p/YTf56DrJtK0I98umZCTE3U80=
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
-    plutus-metatheory
-
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
   tag: 85470ae7e8fac9711682234ed39a36eec3d45a9b
   --sha256: sha256-yk67GraJUsFi5mSETnaeuKNSnNRLOri6FK5yzmRLzxU=
+
+-- Points to ch1bo/mk-committee
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: 9c6078d9c39c542abcb5912d0d7c222b7ba8a03d
+  --sha256: sha256-FfzoMXitbX/pzEJDQExQikGef6FcantzGWvqu2g19ho=
+  subdir:
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-leios
+    cardano-crypto-praos
