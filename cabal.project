@@ -104,3 +104,9 @@ source-repository-package
   --sha256: sha256-4pJAlQ4PYGuah64gaDdSAOyBPYd1prJM6NIT+ZVu5+k=
   subdir:
     cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: ab78bd7d1159cda24c55658574ccb71b66895d83
+  --sha256: sha256-c9VS4TkTiI5Tc+pyHenB93iyONWUH3X4lUDBpZ81TeE=
