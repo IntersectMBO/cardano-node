@@ -55,9 +55,6 @@ packages:
 -- Needed when cross compiling
 extra-packages: alex
 
-program-options
-  ghc-options: -Werror
-
 test-show-details: direct
 
 -- Always write GHC env files, because they are needed for ghci.

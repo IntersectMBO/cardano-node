@@ -337,6 +337,13 @@ let
             # Musl builds are same-arch cross-compiles so GHC can run TH in-process (glibc) instead.
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
+          ({ lib, ... }: {
+            # leios-prototype: the cardano-base fork deprecates the KES/DSIGN
+            # codecs kes-agent still uses. Its .cabal bakes in -Werror, so exempt
+            # deprecations here (the release/musl job compiles it strict).
+            packages.kes-agent.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.kes-agent-crypto.components.library.ghcOptions = [ "-Wno-deprecations" ];
+          })
           ({ config, lib, ... }@args: {
             options.packages = lib.genAttrs config.package-keys (_:
               lib.mkOption {
