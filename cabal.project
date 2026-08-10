@@ -22,7 +22,9 @@ active-repositories:
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
+  -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
+  , any.crypton-x509-system < 1.6.8 || >= 1.7
+
   -- haskell.nix tries to use 0.7.1.5 for some reason
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
