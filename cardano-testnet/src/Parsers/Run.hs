@@ -17,6 +17,8 @@ import           Control.Monad (void)
 import           Data.Maybe (fromMaybe)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help.Pretty as PP
+import qualified Prettyprinter.Internal as PPI
 import           System.Directory (doesDirectoryExist)
 
 import           Testnet.Filepath (unTmpAbsPath)
@@ -31,7 +33,25 @@ import           UnliftIO.Resource (runResourceT)
 import           Cardano.Prelude (unlessM)
 
 pref :: ParserPrefs
-pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
+pref =
+  Opt.prefs $
+    mconcat
+      [ showHelpOnEmpty
+      , showHelpOnError
+      , helpEmbedBriefDesc compactBriefDesc
+      ]
+
+-- | Undo the 'PP.align' that optparse-applicative-fork >= 0.19 wraps around
+-- the usage's brief description, restoring the pre-0.19 layout: overflow
+-- hangs at a two-space indent instead of aligning with the command name.
+compactBriefDesc :: PP.Doc -> PP.Doc
+compactBriefDesc d
+  | PPI.Column f <- d
+  , PPI.Nesting g <- f 0 =
+      -- 'align' is @column (\k -> nesting (\i -> nest (k - i) doc))@, so
+      -- evaluating both closures at 0 recovers the unaligned doc.
+      g 0
+  | otherwise = d
 
 opts :: EnvCli -> ParserInfo CardanoTestnetCommands
 opts envCli = Opt.info (commands envCli <**> helper) idm
