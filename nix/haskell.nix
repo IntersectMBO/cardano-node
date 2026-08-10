@@ -338,11 +338,16 @@ let
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
           ({ lib, ... }: {
-            # leios-prototype: the cardano-base fork deprecates the KES/DSIGN
-            # codecs kes-agent still uses. Its .cabal bakes in -Werror, so exempt
-            # deprecations here (the release/musl job compiles it strict).
+            # TODO: leios-prototype has deprecations
             packages.kes-agent.components.library.ghcOptions = [ "-Wno-deprecations" ];
             packages.kes-agent-crypto.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.kes-agent.components.exes.kes-agent-control.ghcOptions = [ "-Wno-deprecations" ];
+            packages.cardano-ledger-binary.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.cardano-ledger-core.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.cardano-ledger-core.components.sublibs.testlib.ghcOptions = [ "-Wno-deprecations" ];
+            packages.ouroboros-consensus.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.cardano-protocol-tpraos.components.library.ghcOptions = [ "-Wno-deprecations" ];
+            packages.cardano-api.components.library.ghcOptions = [ "-Wno-deprecations" ];
           })
           ({ config, lib, ... }@args: {
             options.packages = lib.genAttrs config.package-keys (_:
