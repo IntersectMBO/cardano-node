@@ -1,4 +1,4 @@
-Usage: cardano-testnet (cardano | create-env | version | help)
+Usage: cardano-testnet (cardano | create-env | version | help) 
 
 Usage: cardano-testnet cardano 
   [ --node-env FILEPATH [--preserve-timestamps]
@@ -16,6 +16,7 @@ Usage: cardano-testnet cardano
   [--enable-grpc]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
+  
 
   Start a testnet and keep it running until stopped
 
@@ -29,6 +30,7 @@ Usage: cardano-testnet create-env
   [--active-slots-coeff DOUBLE]
   [--params-file FILEPATH | --params-mainnet]
   --output DIRECTORY
+  
 
   Create a sandbox for Cardano testnet
 

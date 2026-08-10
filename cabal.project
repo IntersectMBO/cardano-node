@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-04-17T09:20:55Z
-  , cardano-haskell-packages 2026-05-27T09:43:46Z
+  , hackage.haskell.org 2026-08-09T23:27:58Z
+  , cardano-haskell-packages 2026-08-07T15:03:01Z
 
 active-repositories:
   , :rest
@@ -22,7 +22,9 @@ active-repositories:
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
+  -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
+  , any.crypton-x509-system < 1.6.8 || >= 1.7
+
   -- haskell.nix tries to use 0.7.1.5 for some reason
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
