@@ -108,5 +108,5 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: e396775b46514bc601b1cea154524193cbd2526b
-  --sha256: sha256-ZR+pPyNzOatjKC3CgjK8rhGJvCUBEiPKWPJ/4+4m/j8=
+  tag: 6204191e9aa49de91d56396271a8f818388da79b
+  --sha256: sha256-dMJsXjB5TtlR2ibCemvveiFoRQ7G+Gwa7Q6+5QgDltY=
