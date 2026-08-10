@@ -337,18 +337,6 @@ let
             # Musl builds are same-arch cross-compiles so GHC can run TH in-process (glibc) instead.
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
-          ({ lib, ... }: {
-            # TODO: leios-prototype has deprecations
-            packages.kes-agent.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.kes-agent-crypto.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.kes-agent.components.exes.kes-agent-control.ghcOptions = [ "-Wno-deprecations" ];
-            packages.cardano-ledger-binary.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.cardano-ledger-core.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.cardano-ledger-core.components.sublibs.testlib.ghcOptions = [ "-Wno-deprecations" ];
-            packages.ouroboros-consensus.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.cardano-protocol-tpraos.components.library.ghcOptions = [ "-Wno-deprecations" ];
-            packages.cardano-api.components.library.ghcOptions = [ "-Wno-deprecations" ];
-          })
           ({ config, lib, ... }@args: {
             options.packages = lib.genAttrs config.package-keys (_:
               lib.mkOption {
@@ -356,8 +344,10 @@ let
                   { config, lib, ... }:
                   lib.mkIf config.package.isLocal
                   {
-                    configureFlags = [ "--ghc-option=-Werror"]
-                      ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
+                    configureFlags =
+                      # TODO: allow warnings in leios-prototype
+                      # [ "--ghc-option=-Werror"] ++
+                      lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
                   }
                 );
               });
