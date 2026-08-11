@@ -115,6 +115,7 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+        "${concatMapStringsSep " " (k: "--shelley-bls-key ${k}") cfg.blsKeys}"
         "${optionalString (cfg.shelleyKesAgentSocket != null)
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
@@ -332,6 +333,17 @@ in {
         default = null;
         description = ''
           The operational certificate.
+        '';
+      };
+
+      blsKeys = mkOption {
+        type = listOf str;
+        default = [];
+        description = ''
+          Leios BLS signing key files. Optional and repeatable; used alongside
+          the KES and VRF keys on a producer that participates in Leios. During
+          a BLS key rotation both the active and the incoming key may be
+          supplied and node uses whichever is active per the on-chain schedule.
         '';
       };
 
