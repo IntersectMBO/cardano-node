@@ -86,20 +86,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -1270,7 +1256,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "10-notracer": {
     "analysis": {
@@ -1359,20 +1367,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -2543,7 +2537,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "10-plutus": {
     "analysis": {
@@ -2634,23 +2650,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -3821,7 +3820,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "6-dense": {
     "analysis": {
@@ -3913,20 +3937,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, dense topology on local cluster, 64k blocks",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -4752,7 +4762,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "6-dense-1h": {
     "analysis": {
@@ -4844,20 +4876,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, dense topology on local cluster, 64k blocks",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 6,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 43200,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -5683,7 +5701,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 6,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 43200,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "6-dense-1h-timeseries": {
     "analysis": {
@@ -5775,20 +5815,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, dense topology on local cluster, 64k blocks",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 6,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 43200,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -6614,7 +6640,29 @@
       "timeseries": true,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 6,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 43200,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "6-dense-4h": {
     "analysis": {
@@ -6706,20 +6754,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, dense topology on local cluster, 64k blocks",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 24,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 172800,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -7545,7 +7579,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 24,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 172800,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "chainsync-early-alonzo": {
     "analysis": {
@@ -7637,20 +7693,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Mainnet chain syncing benchmark",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 466819068,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -8822,7 +8864,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 466819068,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "chainsync-early-alonzo-notracer": {
     "analysis": {
@@ -8914,20 +8978,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Mainnet chain syncing benchmark",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 466819068,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -10099,7 +10149,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 466819068,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "chainsync-early-byron": {
     "analysis": {
@@ -10191,20 +10263,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Mainnet chain syncing benchmark",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 2851188,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -11376,7 +11434,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 2851188,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "chainsync-early-byron-notracer": {
     "analysis": {
@@ -11468,20 +11548,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Mainnet chain syncing benchmark",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 2851188,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -12653,7 +12719,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 2851188,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench": {
     "analysis": {
@@ -12742,20 +12830,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -13926,7 +14000,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-drep": {
     "analysis": {
@@ -14015,20 +14111,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -15199,7 +15281,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-lsmt": {
     "analysis": {
@@ -15288,20 +15392,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -16472,7 +16562,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-nomadperf": {
     "analysis": {
@@ -16595,20 +16707,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -17779,7 +17877,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-notracer": {
     "analysis": {
@@ -17868,20 +17988,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -19052,7 +19158,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutus": {
     "analysis": {
@@ -19143,23 +19271,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -19729,7 +19840,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutus-secp-ecdsa": {
     "analysis": {
@@ -19820,37 +19956,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 288,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -20420,7 +20525,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 288,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutus-secp-schnorr": {
     "analysis": {
@@ -20511,37 +20655,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
-            },
-            {
-              "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
-            }
-          ]
-        },
-        "script": "SchnorrSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 288,
-      "tx_fee": 1004000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -21111,7 +21224,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
+                },
+                {
+                  "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+                }
+              ]
+            },
+            "script": "SchnorrSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 288,
+          "tx_fee": 1004000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutus24": {
     "analysis": {
@@ -21202,23 +21354,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop2024",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1412000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -21788,7 +21923,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop2024",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1412000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutusv3-blst": {
     "analysis": {
@@ -21879,44 +22039,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "list": [
-                {
-                  "bytes": "714805c6"
-                },
-                {
-                  "bytes": "c413111e"
-                },
-                {
-                  "bytes": "2d7eb870"
-                },
-                {
-                  "bytes": "4ecbd6a1"
-                }
-              ]
-            }
-          ]
-        },
-        "script": "HashOntoG2AndAdd",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 288,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -23085,7 +23207,53 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "list": [
+                    {
+                      "bytes": "714805c6"
+                    },
+                    {
+                      "bytes": "c413111e"
+                    },
+                    {
+                      "bytes": "2d7eb870"
+                    },
+                    {
+                      "bytes": "4ecbd6a1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "script": "HashOntoG2AndAdd",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 288,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutusv3-ripemd": {
     "analysis": {
@@ -23176,31 +23344,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 288,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -24369,7 +24512,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 288,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-bench-plutusv3-ripemd-step2x": {
     "analysis": {
@@ -24460,31 +24636,6 @@
       "utxo_stuffed": 500000
     },
     "desc": "Miniature dataset, CI-friendly duration, bench scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 288,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -25655,7 +25806,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 288,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test": {
     "analysis": {
@@ -25744,20 +25928,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -26928,7 +27098,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test-dense10": {
     "analysis": {
@@ -27017,20 +27209,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -28201,7 +28379,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test-hydra": {
     "analysis": {
@@ -28292,23 +28492,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1380000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -28879,7 +29062,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1380000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test-nomadperf": {
     "analysis": {
@@ -29002,20 +29210,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -30186,7 +30380,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test-notracer": {
     "analysis": {
@@ -30275,20 +30491,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -31459,7 +31661,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "ci-test-plutus": {
     "analysis": {
@@ -31550,23 +31774,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 2,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -32737,7 +32944,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 2,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "default": {
     "analysis": {
@@ -32826,20 +33058,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 43200,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -34011,7 +34229,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "default-nomadperf": {
     "analysis": {
@@ -34134,20 +34374,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 43200,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -35319,7 +35545,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "devops": {
     "analysis": {
@@ -35408,20 +35656,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 14400,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 7200,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.1,
@@ -36593,7 +36827,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 7200,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "dish": {
     "analysis": {
@@ -36682,20 +36938,6 @@
       "utxo_delegated": 0,
       "utxo_generated": 666668,
       "utxo_stuffed": 30000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 138.88888888888889,
-      "tx_count": 333334,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -37867,7 +38109,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 138.88888888888889,
+          "tx_count": 333334,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "dish-10M": {
     "analysis": {
@@ -37956,20 +38220,6 @@
       "utxo_delegated": 0,
       "utxo_generated": 666668,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 138.88888888888889,
-      "tx_count": 333334,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -39141,7 +39391,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 138.88888888888889,
+          "tx_count": 333334,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "dish-10M-plutus": {
     "analysis": {
@@ -39230,23 +39502,6 @@
       "utxo_delegated": 0,
       "utxo_generated": 480,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -40418,7 +40673,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "dish-plutus": {
     "analysis": {
@@ -40507,23 +40787,6 @@
       "utxo_delegated": 0,
       "utxo_generated": 480,
       "utxo_stuffed": 30000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -41695,7 +41958,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "epoch-transition": {
     "analysis": {
@@ -41784,20 +42072,6 @@
       "utxo_stuffed": 0
     },
     "desc": "2 low-footprint nodes, 15 minutes runtime",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 13500,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -42968,7 +43242,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 13500,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast": {
     "analysis": {
@@ -43057,20 +43353,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -44241,7 +44523,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast-nomadperf": {
     "analysis": {
@@ -44364,20 +44668,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -44947,7 +45237,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast-nomadperfssd": {
     "analysis": {
@@ -45092,20 +45404,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -45675,7 +45973,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast-notracer": {
     "analysis": {
@@ -45764,20 +46084,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -46948,7 +47254,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast-plutus": {
     "analysis": {
@@ -47039,23 +47367,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 120,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -48226,7 +48537,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 120,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fast-solo": {
     "analysis": {
@@ -48315,20 +48651,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -49499,7 +49821,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "faststartup-24M": {
     "analysis": {
@@ -49588,20 +49932,6 @@
       "utxo_stuffed": 24000000
     },
     "desc": "Stop as soon as we've seen a single block",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -50772,7 +51102,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress": {
     "analysis": {
@@ -50861,20 +51213,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 72000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -52046,7 +52384,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-large": {
     "analysis": {
@@ -52135,20 +52495,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 144000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -53320,7 +53666,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-notracer": {
     "analysis": {
@@ -53409,20 +53777,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 72000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -54594,7 +54948,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-plutus": {
     "analysis": {
@@ -54683,23 +55059,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 480,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -55871,7 +56230,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-plutus-solo": {
     "analysis": {
@@ -55960,23 +56344,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 480,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -57146,7 +57513,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-plutusv3-solo": {
     "analysis": {
@@ -57235,23 +57627,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 720,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "LoopV3",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.3,
-      "tx_count": 720,
-      "tx_fee": 1412000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -58421,7 +58796,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "LoopV3",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.3,
+          "tx_count": 720,
+          "tx_fee": 1412000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre": {
     "analysis": {
@@ -58510,20 +58910,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -59695,7 +60081,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-large": {
     "analysis": {
@@ -59784,20 +60192,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 144000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -60969,7 +61363,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-large-rtsN3": {
     "analysis": {
@@ -61058,20 +61474,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 144000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -62245,7 +62647,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-large-rtsN4": {
     "analysis": {
@@ -62334,20 +62758,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 144000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -63521,7 +63931,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-notracer": {
     "analysis": {
@@ -63610,20 +64042,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -64795,7 +65213,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-plutus": {
     "analysis": {
@@ -64884,23 +65324,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 480,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -66072,7 +66495,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-plutus-solo": {
     "analysis": {
@@ -66161,23 +66609,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 480,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 480,
-      "tx_fee": 1360000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -67347,7 +67778,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 480,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsA4m": {
     "analysis": {
@@ -67436,20 +67892,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -68623,7 +69065,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsA4mN3": {
     "analysis": {
@@ -68712,20 +69176,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -69900,7 +70350,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsA64m": {
     "analysis": {
@@ -69989,20 +70461,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -71176,7 +71634,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsA64mN3": {
     "analysis": {
@@ -71265,20 +71745,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -72453,7 +72919,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsN3": {
     "analysis": {
@@ -72542,20 +73030,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -73729,7 +74203,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-rtsxn": {
     "analysis": {
@@ -73818,20 +74314,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -75005,7 +75487,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-solo": {
     "analysis": {
@@ -75094,20 +75598,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 72000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -76277,7 +76767,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-solo-xl": {
     "analysis": {
@@ -76366,20 +76878,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 144000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -77549,7 +78047,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-pre-solo-xs": {
     "analysis": {
@@ -77638,20 +78158,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 36000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 1,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 18000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -78821,7 +79327,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 1,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 18000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-solo": {
     "analysis": {
@@ -78910,20 +79438,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 72000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 36000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -80093,7 +80607,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 36000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "forge-stress-solo-xs": {
     "analysis": {
@@ -80182,20 +80718,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 36000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 1,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 18000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -81365,7 +81887,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 1,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 18000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fschain-768k": {
     "analysis": {
@@ -81454,20 +81998,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 180000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 100,
-      "tx_count": 90000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.015,
@@ -82639,7 +83169,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 100,
+          "tx_count": 90000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fschain-768k-xs": {
     "analysis": {
@@ -82728,20 +83280,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 180000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 1,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 100,
-      "tx_count": 90000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.015,
@@ -83913,7 +84451,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 1,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 100,
+          "tx_count": 90000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "fschain-8io": {
     "analysis": {
@@ -84002,20 +84562,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 576000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 5,
-      "inputs_per_tx": 8,
-      "outputs_per_tx": 8,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 72000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -85185,7 +85731,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 5,
+          "inputs_per_tx": 8,
+          "outputs_per_tx": 8,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 72000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "idle": {
     "analysis": {
@@ -85276,20 +85844,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Idle scenario:  start nodes & detach from tty;  no cluster termination",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -86460,7 +87014,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "k3-3ep-18kTx-10000kU-1300kD-64kbs-10tps-fixed-loaded": {
     "analysis": {
@@ -86549,20 +87125,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 36000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 10,
-      "tx_count": 18000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -87734,7 +88296,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 10,
+          "tx_count": 18000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "k3-3ep-5kTx-10000kU-1300kD-64kbs-fixed-loaded": {
     "analysis": {
@@ -87823,20 +88407,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 8640,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 4320,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -89008,7 +89578,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 4320,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "k3-3ep-9kTx-10000kU-1300kD-64kbs-5tps-fixed-loaded": {
     "analysis": {
@@ -89097,20 +89689,6 @@
       "utxo_delegated": 1300000,
       "utxo_generated": 18000,
       "utxo_stuffed": 10000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 5,
-      "tx_count": 9000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -90282,7 +90860,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 5,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "latency-nomadperf": {
     "analysis": {
@@ -90405,20 +91005,6 @@
       "utxo_stuffed": 0
     },
     "desc": "AWS perf class cluster, stop when all latency services stop",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -90990,13 +91576,32 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": null,
-          "producers": "latency"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "latency",
         "name": "latency",
         "parameters": {},
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": false
       }
     ]
@@ -91144,20 +91749,6 @@
       "utxo_stuffed": 0
     },
     "desc": "AWS perf-ssd class cluster, stop when all latency services stop",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -91729,13 +92320,32 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": null,
-          "producers": "latency"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "latency",
         "name": "latency",
         "parameters": {},
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": false
       }
     ]
@@ -91830,37 +92440,6 @@
       "utxo_stuffed": 10000000
     },
     "desc": "Status-quo dataset, 7 epochs",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 22400,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -93029,7 +93608,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 22400,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "model-secp-ecdsa-stepx2": {
     "analysis": {
@@ -93121,37 +93739,6 @@
       "utxo_stuffed": 10000000
     },
     "desc": "Status-quo dataset, 7 epochs",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 22400,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -94322,7 +94909,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 22400,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "model-value": {
     "analysis": {
@@ -94414,20 +95040,6 @@
       "utxo_stuffed": 10000000
     },
     "desc": "Status-quo dataset, 7 epochs",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 9,
-      "tx_count": 504000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -95596,7 +96208,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 9,
+          "tx_count": 504000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "model-value-test": {
     "analysis": {
@@ -95688,20 +96322,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Status-quo dataset, 7 epochs",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 7,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 9,
-      "tx_count": 504000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -96870,7 +97490,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 7,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 9,
+          "tx_count": 504000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus": {
     "analysis": {
@@ -96959,23 +97601,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 360,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.2,
-      "tx_count": 360,
-      "tx_fee": 1380000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -97546,7 +98171,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.2,
+          "tx_count": 360,
+          "tx_fee": 1380000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-drep100k-nomadperf": {
     "analysis": {
@@ -97672,23 +98322,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -98258,7 +98891,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-drep10k-nomadperf": {
     "analysis": {
@@ -98384,23 +99042,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -98970,7 +99611,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-drep1k-nomadperf": {
     "analysis": {
@@ -99096,23 +99762,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -99682,7 +100331,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-nomadperf": {
     "analysis": {
@@ -99808,23 +100482,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -100394,7 +101051,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-secp-ecdsa": {
     "analysis": {
@@ -100483,37 +101165,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 360,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.2,
-      "tx_count": 360,
-      "tx_fee": 1008000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -101084,7 +101735,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.2,
+          "tx_count": 360,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-secp-ecdsa-nomadperf": {
     "analysis": {
@@ -101210,37 +101900,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -101810,7 +102469,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-secp-schnorr": {
     "analysis": {
@@ -101899,37 +102597,6 @@
       "utxo_delegated": 6,
       "utxo_generated": 360,
       "utxo_stuffed": 0
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
-            },
-            {
-              "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
-            }
-          ]
-        },
-        "script": "SchnorrSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.2,
-      "tx_count": 360,
-      "tx_fee": 1004000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -102500,7 +103167,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
+                },
+                {
+                  "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+                }
+              ]
+            },
+            "script": "SchnorrSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.2,
+          "tx_count": 360,
+          "tx_fee": 1004000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-secp-schnorr-nomadperf": {
     "analysis": {
@@ -102626,37 +103332,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
-            },
-            {
-              "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
-            }
-          ]
-        },
-        "script": "SchnorrSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 1004000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -103226,7 +103901,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
+                },
+                {
+                  "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+                }
+              ]
+            },
+            "script": "SchnorrSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 1004000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-volt-lsmt-nomadperf": {
     "analysis": {
@@ -103361,23 +104075,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -104546,7 +105243,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-volt-memx15-nomadperf": {
     "analysis": {
@@ -104672,23 +105394,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1892175
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -105873,7 +106578,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-volt-memx2-nomadperf": {
     "analysis": {
@@ -105999,23 +106729,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 2463246
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -107200,7 +107913,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-volt-nomadperf": {
     "analysis": {
@@ -107326,23 +108064,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -108511,7 +109232,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutus-voting-double-volt-nomadperf": {
     "analysis": {
@@ -108637,23 +109383,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -109815,17 +110544,51 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": true,
+          "votes_per_tx": 2
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": true,
           "votes_per_tx": 2
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -109954,23 +110717,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -111132,16 +111878,49 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": false
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": false
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -111270,23 +112049,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -112448,17 +113210,51 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1360000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": true,
+          "votes_per_tx": 1
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": true,
           "votes_per_tx": 1
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -112587,23 +113383,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop2024",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1412000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -113173,7 +113952,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop2024",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1412000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-loop": {
     "analysis": {
@@ -113265,23 +114069,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -114450,7 +115237,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-loop-memx2": {
     "analysis": {
@@ -114542,23 +115354,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 2463246
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -115743,7 +116538,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-secp-ecdsa": {
     "analysis": {
@@ -115835,37 +116655,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -117034,7 +117823,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-secp-ecdsa-stepx2": {
     "analysis": {
@@ -117126,37 +117954,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-            },
-            {
-              "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-            },
-            {
-              "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-            }
-          ]
-        },
-        "script": "EcdsaSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 1008000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -118327,7 +119124,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+                },
+                {
+                  "bytes": "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+                },
+                {
+                  "bytes": "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+                }
+              ]
+            },
+            "script": "EcdsaSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1008000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-secp-schnorr": {
     "analysis": {
@@ -118419,37 +119255,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
-            },
-            {
-              "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
-            }
-          ]
-        },
-        "script": "SchnorrSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 1004000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -119618,7 +120423,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
+                },
+                {
+                  "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+                }
+              ]
+            },
+            "script": "SchnorrSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1004000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-secp-schnorr-stepx2": {
     "analysis": {
@@ -119710,37 +120554,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
-            },
-            {
-              "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
-            }
-          ]
-        },
-        "script": "SchnorrSecp256k1Loop",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.4,
-      "tx_count": 3600,
-      "tx_fee": 1004000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -120911,7 +121724,46 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b"
+                },
+                {
+                  "bytes": "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030"
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b"
+                }
+              ]
+            },
+            "script": "SchnorrSecp256k1Loop",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.4,
+          "tx_count": 3600,
+          "tx_fee": 1004000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-volt-blst": {
     "analysis": {
@@ -121002,44 +121854,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "list": [
-                {
-                  "bytes": "714805c6"
-                },
-                {
-                  "bytes": "c413111e"
-                },
-                {
-                  "bytes": "2d7eb870"
-                },
-                {
-                  "bytes": "4ecbd6a1"
-                }
-              ]
-            }
-          ]
-        },
-        "script": "HashOntoG2AndAdd",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 4320,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -122208,7 +123022,53 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "list": [
+                    {
+                      "bytes": "714805c6"
+                    },
+                    {
+                      "bytes": "c413111e"
+                    },
+                    {
+                      "bytes": "2d7eb870"
+                    },
+                    {
+                      "bytes": "4ecbd6a1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "script": "HashOntoG2AndAdd",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 4320,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-volt-loop": {
     "analysis": {
@@ -122299,23 +123159,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "Loop",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.48,
-      "tx_count": 4320,
-      "tx_fee": 1360000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -123484,7 +124327,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "Loop",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.48,
+          "tx_count": 4320,
+          "tx_fee": 1360000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutuscall-volt-ripemd": {
     "analysis": {
@@ -123575,31 +124443,6 @@
       "utxo_stuffed": 1000000
     },
     "desc": "Small dataset, honest 15 epochs duration",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 15,
-      "init_cooldown": 5,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 0.48,
-      "tx_count": 4320,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -124768,7 +125611,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 15,
+          "init_cooldown": 5,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 0.48,
+          "tx_count": 4320,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-blst-nomadperf": {
     "analysis": {
@@ -124894,44 +125770,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "list": [
-                {
-                  "bytes": "714805c6"
-                },
-                {
-                  "bytes": "c413111e"
-                },
-                {
-                  "bytes": "2d7eb870"
-                },
-                {
-                  "bytes": "4ecbd6a1"
-                }
-              ]
-            }
-          ]
-        },
-        "script": "HashOntoG2AndAdd",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -126100,7 +126938,53 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "list": [
+                    {
+                      "bytes": "714805c6"
+                    },
+                    {
+                      "bytes": "c413111e"
+                    },
+                    {
+                      "bytes": "2d7eb870"
+                    },
+                    {
+                      "bytes": "4ecbd6a1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "script": "HashOntoG2AndAdd",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-blst-stepx15-nomadperf": {
     "analysis": {
@@ -126226,44 +127110,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "list": [
-                {
-                  "bytes": "714805c6"
-                },
-                {
-                  "bytes": "c413111e"
-                },
-                {
-                  "bytes": "2d7eb870"
-                },
-                {
-                  "bytes": "4ecbd6a1"
-                }
-              ]
-            }
-          ]
-        },
-        "script": "HashOntoG2AndAdd",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -127434,7 +128280,53 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "list": [
+                    {
+                      "bytes": "714805c6"
+                    },
+                    {
+                      "bytes": "c413111e"
+                    },
+                    {
+                      "bytes": "2d7eb870"
+                    },
+                    {
+                      "bytes": "4ecbd6a1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "script": "HashOntoG2AndAdd",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-blst-stepx2-nomadperf": {
     "analysis": {
@@ -127560,44 +128452,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "list": [
-                {
-                  "bytes": "714805c6"
-                },
-                {
-                  "bytes": "c413111e"
-                },
-                {
-                  "bytes": "2d7eb870"
-                },
-                {
-                  "bytes": "4ecbd6a1"
-                }
-              ]
-            }
-          ]
-        },
-        "script": "HashOntoG2AndAdd",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -128768,7 +129622,53 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "list": [
+                    {
+                      "bytes": "714805c6"
+                    },
+                    {
+                      "bytes": "c413111e"
+                    },
+                    {
+                      "bytes": "2d7eb870"
+                    },
+                    {
+                      "bytes": "4ecbd6a1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "script": "HashOntoG2AndAdd",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-ripemd-nomadperf": {
     "analysis": {
@@ -128894,31 +129794,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -130087,7 +130962,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-ripemd-stepx15-nomadperf": {
     "analysis": {
@@ -130213,31 +131121,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -131408,7 +132291,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-ripemd-stepx2-nomadperf": {
     "analysis": {
@@ -131534,31 +132450,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "constructor": 0,
-          "fields": [
-            {
-              "int": 1000000
-            },
-            {
-              "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
-            }
-          ]
-        },
-        "script": "Ripemd160",
-        "type": "LimitTxPerBlock_8"
-      },
-      "tps": 2,
-      "tx_count": 144000,
-      "tx_fee": 940000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -132729,7 +133620,40 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "constructor": 0,
+              "fields": [
+                {
+                  "int": 1000000
+                },
+                {
+                  "bytes": "5a56da88e6fd8419181dec4d3dd6997bab953d2f"
+                }
+              ]
+            },
+            "script": "Ripemd160",
+            "type": "LimitTxPerBlock_8"
+          },
+          "tps": 2,
+          "tx_count": 144000,
+          "tx_fee": 940000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "plutusv3-volt-nomadperf": {
     "analysis": {
@@ -132855,23 +133779,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 9 ep, Plutus workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 9,
-      "init_cooldown": 45,
-      "inputs_per_tx": 1,
-      "outputs_per_tx": 1,
-      "plutus": {
-        "redeemer": {
-          "int": 1000000
-        },
-        "script": "LoopV3",
-        "type": "LimitSaturationLoop"
-      },
-      "tps": 0.85,
-      "tx_count": 61200,
-      "tx_fee": 1412000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -134040,7 +134947,32 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 9,
+          "init_cooldown": 45,
+          "inputs_per_tx": 1,
+          "outputs_per_tx": 1,
+          "plutus": {
+            "redeemer": {
+              "int": 1000000
+            },
+            "script": "LoopV3",
+            "type": "LimitSaturationLoop"
+          },
+          "tps": 0.85,
+          "tx_count": 61200,
+          "tx_fee": 1412000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "trace-bench": {
     "analysis": {
@@ -134129,20 +135061,6 @@
       "utxo_stuffed": 0
     },
     "desc": "6 low-footprint nodes in a torus topology, 5 minutes runtime",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -135313,7 +136231,29 @@
       "timeseries": false,
       "withresources": true
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "trace-bench-notracer": {
     "analysis": {
@@ -135402,20 +136342,6 @@
       "utxo_stuffed": 0
     },
     "desc": "6 low-footprint nodes in a torus topology, 5 minutes runtime",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 9000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -136586,7 +137512,29 @@
       "timeseries": false,
       "withresources": true
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 9000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "trace-full": {
     "analysis": {
@@ -136675,20 +137623,6 @@
       "utxo_stuffed": 0
     },
     "desc": "6 low-footprint nodes in a torus topology, 20 minutes runtime",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 15,
-      "tx_count": 18000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -137859,7 +138793,29 @@
       "timeseries": false,
       "withresources": true
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 15,
+          "tx_count": 18000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "tracer-only": {
     "analysis": {
@@ -137950,20 +138906,6 @@
       "utxo_stuffed": 0
     },
     "desc": "Idle scenario:  start only the tracer & detach from tty;  no termination",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 3,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 21600,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -139134,7 +140076,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 3,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 21600,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "utxoscale-solo-12M16G-nomadperfssd": {
     "analysis": {
@@ -139278,20 +140242,6 @@
       "utxo_delegated": 1200000,
       "utxo_generated": 172800,
       "utxo_stuffed": 12000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 6,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 86400,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -139864,7 +140814,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 6,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 86400,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "utxoscale-solo-12M64G-nomadperfssd": {
     "analysis": {
@@ -140008,20 +140980,6 @@
       "utxo_delegated": 1200000,
       "utxo_generated": 172800,
       "utxo_stuffed": 12000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 6,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 86400,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -140592,7 +141550,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 6,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 86400,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "utxoscale-solo-24M64G-nomadperfssd": {
     "analysis": {
@@ -140736,20 +141716,6 @@
       "utxo_delegated": 1200000,
       "utxo_generated": 172800,
       "utxo_stuffed": 24000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 6,
-      "init_cooldown": 5,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 86400,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -141320,7 +142286,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 6,
+          "init_cooldown": 5,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 86400,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-drep100k-nomadperf": {
     "analysis": {
@@ -141446,20 +142434,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -142029,7 +143003,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-drep10k-nomadperf": {
     "analysis": {
@@ -142155,20 +143151,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -142738,7 +143720,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-drep1k-nomadperf": {
     "analysis": {
@@ -142864,20 +143868,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -143447,7 +144437,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-nomadperf": {
     "analysis": {
@@ -143573,20 +144585,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -144156,7 +145154,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-nomadperfssd": {
     "analysis": {
@@ -144302,20 +145322,6 @@
       "utxo_delegated": 1000000,
       "utxo_generated": 1536000,
       "utxo_stuffed": 4000000
-    },
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
     },
     "genesis": {
       "active_slots_coeff": 0.050,
@@ -144886,7 +145892,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-volt-cgmem-nomadperf": {
     "analysis": {
@@ -145021,20 +146049,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -146205,13 +147219,32 @@
     },
     "workloads": [
       {
-        "before_nodes": true,
-        "entrypoints": {
-          "pre_generator": null,
-          "producers": "cgroup_memory"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "cgroup_memory",
         "name": "cgroup_memory",
         "parameters": {},
+        "phase": "before-nodes",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -146349,20 +147382,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -147531,7 +148550,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-volt-nomadperf": {
     "analysis": {
@@ -147657,20 +148698,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -148839,7 +149866,29 @@
       "timeseries": false,
       "withresources": false
     },
-    "workloads": []
+    "workloads": [
+      {
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
+        },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      }
+    ]
   },
   "value-voting-double-volt-nomadperf": {
     "analysis": {
@@ -148965,20 +150014,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -150140,17 +151175,48 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": true,
+          "votes_per_tx": 2
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": true,
           "votes_per_tx": 2
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -150279,20 +151345,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -151454,16 +152506,46 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": false
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": false
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]
@@ -151592,20 +152674,6 @@
       "utxo_stuffed": 4000000
     },
     "desc": "AWS c5-2xlarge cluster dataset, 7 ep, value workload+ voting",
-    "generator": {
-      "add_tx_size": 100,
-      "epochs": 8,
-      "init_cooldown": 45,
-      "inputs_per_tx": 2,
-      "outputs_per_tx": 2,
-      "plutus": {
-        "script": null,
-        "type": null
-      },
-      "tps": 12,
-      "tx_count": 768000,
-      "tx_fee": 1000000
-    },
     "genesis": {
       "active_slots_coeff": 0.050,
       "alonzo": {
@@ -152767,17 +153835,48 @@
     },
     "workloads": [
       {
-        "before_nodes": false,
-        "entrypoints": {
-          "pre_generator": "workflow_generator",
-          "producers": "workflow_producer"
+        "entrypoint": "tx_generator",
+        "name": "tx-generator",
+        "parameters": {
+          "add_tx_size": 100,
+          "epochs": 8,
+          "init_cooldown": 45,
+          "inputs_per_tx": 2,
+          "outputs_per_tx": 2,
+          "plutus": {
+            "script": null,
+            "type": null
+          },
+          "tps": 12,
+          "tx_count": 768000,
+          "tx_fee": 1000000
         },
+        "phase": "load",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_setup",
+        "name": "voting-setup",
+        "parameters": {
+          "outs_per_split_transaction": 193,
+          "submit_vote": true,
+          "votes_per_tx": 1
+        },
+        "phase": "setup",
+        "placement": "explorer",
+        "wait_pools": true
+      },
+      {
+        "entrypoint": "workflow_producer",
         "name": "voting",
         "parameters": {
           "outs_per_split_transaction": 193,
           "submit_vote": true,
           "votes_per_tx": 1
         },
+        "phase": "load",
+        "placement": "producers",
         "wait_pools": true
       }
     ]

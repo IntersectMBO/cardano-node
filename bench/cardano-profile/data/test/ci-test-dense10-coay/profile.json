@@ -263,21 +263,29 @@
     "pool_coin": 1000000000000000,
     "delegator_coin": 0
   },
-  "generator": {
-    "add_tx_size": 100,
-    "init_cooldown": 5,
-    "inputs_per_tx": 2,
-    "outputs_per_tx": 2,
-    "tx_fee": 1000000,
-    "epochs": 3,
-    "tps": 15,
-    "plutus": {
-      "type": null,
-      "script": null
-    },
-    "tx_count": 9000
-  },
-  "workloads": [],
+  "workloads": [
+    {
+      "name": "tx-generator",
+      "parameters": {
+        "add_tx_size": 100,
+        "init_cooldown": 5,
+        "inputs_per_tx": 2,
+        "outputs_per_tx": 2,
+        "tx_fee": 1000000,
+        "epochs": 3,
+        "tps": 15,
+        "plutus": {
+          "type": null,
+          "script": null
+        },
+        "tx_count": 9000
+      },
+      "entrypoint": "tx_generator",
+      "phase": "load",
+      "placement": "explorer",
+      "wait_pools": true
+    }
+  ],
   "node": {
     "rts_flags_override": [],
     "heap_limit": null,
@@ -323,7 +331,7 @@
   "name": "ci-test-dense10-coay",
   "overlay": {},
   "derived": {
-    "supply_delegated": 1e+16,
+    "supply_delegated": 1E+16,
     "supply_total": 10010000000000000,
     "utxo_delegated": 0,
     "utxo_generated": 18000,

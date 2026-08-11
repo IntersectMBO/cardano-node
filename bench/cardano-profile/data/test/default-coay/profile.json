@@ -263,21 +263,29 @@
     "pool_coin": 1000000000000000,
     "delegator_coin": 1000000000000000
   },
-  "generator": {
-    "add_tx_size": 100,
-    "init_cooldown": 5,
-    "inputs_per_tx": 2,
-    "outputs_per_tx": 2,
-    "tx_fee": 1000000,
-    "epochs": 3,
-    "tps": 12,
-    "plutus": {
-      "type": null,
-      "script": null
-    },
-    "tx_count": 21600
-  },
-  "workloads": [],
+  "workloads": [
+    {
+      "name": "tx-generator",
+      "parameters": {
+        "add_tx_size": 100,
+        "init_cooldown": 5,
+        "inputs_per_tx": 2,
+        "outputs_per_tx": 2,
+        "tx_fee": 1000000,
+        "epochs": 3,
+        "tps": 12,
+        "plutus": {
+          "type": null,
+          "script": null
+        },
+        "tx_count": 21600
+      },
+      "entrypoint": "tx_generator",
+      "phase": "load",
+      "placement": "explorer",
+      "wait_pools": true
+    }
+  ],
   "node": {
     "rts_flags_override": [],
     "heap_limit": null,

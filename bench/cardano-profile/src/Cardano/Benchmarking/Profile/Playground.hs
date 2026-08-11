@@ -107,6 +107,6 @@ profilesPlayground =
   -- Voting profiles.
   , voting & P.name "development-voting"
            . P.dreps 1000
-           . P.workloadAppend W.votingWorkloadx2
+           . P.workloadsAppend W.votingWorkloadx2
            . P.traceForwardingOn
   ]

@@ -90,6 +90,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Workload params.
   , workloadAppend
+  , workloadsAppend
 
   -- Tracer's params.
   , tracerWithresources, tracerTimeseries
@@ -762,7 +763,10 @@ generatorEpochs i = generator
 --------------------------------------------------------------------------------
 
 workloadAppend :: Types.Workload -> Types.Profile -> Types.Profile
-workloadAppend w p = p {Types.workloads = Types.workloads p ++ [w]}
+workloadAppend w = workloadsAppend [w]
+
+workloadsAppend :: [Types.Workload] -> Types.Profile -> Types.Profile
+workloadsAppend ws p = p {Types.workloads = Types.workloads p ++ ws}
 
 -- Tracer.
 --------------------------------------------------------------------------------

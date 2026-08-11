@@ -25,7 +25,9 @@ module Cardano.Benchmarking.Profile.Types (
 , Plutus (..), Redeemer (..)
 
 , Workload (..)
-, Entrypoints (..)
+, WorkloadPhase (..)
+, WorkloadPlacement (..)
+, generatorWorkload
 
 , Tracer (..)
 
@@ -49,6 +51,7 @@ module Cardano.Benchmarking.Profile.Types (
 --------------------------------------------------------------------------------
 
 import           Prelude
+import           Data.List (partition)
 import           Data.Maybe (isJust)
 import           GHC.Generics
 -- Package: aeson.
@@ -101,16 +104,40 @@ data Profile = Profile
   }
   deriving (Eq, Show, Generic)
 
+-- The generator has no dedicated top-level JSON property: it's exposed as a
+-- "tx-generator" entry of the "workloads" list, like any other workload. The
+-- typed `Generator` record is kept internally (derived properties need it),
+-- so the translation happens here, at the JSON boundary.
 instance Aeson.ToJSON Profile where
-  toJSON = Aeson.genericToJSON
-    -- TODO: Remove after removing `jq` profiles.
-    -- To compare JSONs without "desc", "chaindb" and "preset" properties.
-    (Aeson.defaultOptions {Aeson.omitNothingFields = True})
+  toJSON p =
+    case Aeson.genericToJSON
+           -- TODO: Remove after removing `jq` profiles.
+           -- To compare JSONs without "desc", "chaindb" and "preset" properties.
+           (Aeson.defaultOptions {Aeson.omitNothingFields = True})
+           p
+    of
+      (Aeson.Object obj) -> Aeson.Object $
+        KM.insert
+          "workloads"
+          (Aeson.toJSON $ generatorWorkload (generator p) : workloads p)
+          (KM.delete "generator" obj)
+      _ -> error "ToJSON Profile: not encoded as an Aeson.Object"
 
 instance Aeson.FromJSON Profile where
-  parseJSON = Aeson.genericParseJSON
-    -- TODO: Change to `True` after removing `jq` profiles.
-    (Aeson.defaultOptions {Aeson.rejectUnknownFields = False})
+  parseJSON = Aeson.withObject "Profile" $ \obj -> do
+    wls <- obj Aeson..:? "workloads" Aeson..!= ([] :: [Workload])
+    (gen, wls') <- case partition ((== "tx-generator") . workloadName) wls of
+      ([g], rest) -> return (parameters g, rest)
+      ([] , _   ) -> fail "Profile: no \"tx-generator\" workload"
+      _           -> fail "Profile: multiple \"tx-generator\" workloads"
+    Aeson.genericParseJSON
+      -- TODO: Change to `True` after removing `jq` profiles.
+      (Aeson.defaultOptions {Aeson.rejectUnknownFields = False})
+      (Aeson.Object $
+        KM.insert "generator" (Aeson.Object gen) $
+        KM.insert "workloads" (Aeson.toJSON wls')
+          obj
+      )
 
 profileProtocolVersion :: Profile -> Maybe (Int, Int)
 profileProtocolVersion Profile{genesis = Genesis{shelley = shey}} = do
@@ -500,26 +527,47 @@ instance Aeson.FromJSON Redeemer where
 data Workload = Workload
   { workloadName :: String
   , parameters :: Aeson.Object
-  , entrypoints :: Entrypoints
-  , before_nodes :: Bool
+  -- Name of the workload script's function to call, without arguments, after
+  -- the workload script is sourced (the script is built from the Nix template
+  -- of the same name in "nix/workbench/workload/").
+  , entrypoint :: String
+  , phase :: WorkloadPhase
+  , placement :: WorkloadPlacement
+  -- True if the workload does not bound the run: the scenario waits for the
+  -- pools to finish instead of waiting for this workload's exit.
   , wait_pools :: Bool
   }
   deriving (Eq, Show, Generic)
 
-data Entrypoints = Entrypoints
-  { pre_generator :: Maybe String
-  , producers :: String
-  }
+-- | When the workload runs relative to the nodes and the load window.
+data WorkloadPhase
+  -- Started before the nodes are up.
+  = BeforeNodes
+  -- Runs to completion after the nodes are up and before the load starts.
+  | Setup
+  -- Started after the nodes are up and the setup workloads have finished.
+  | Load
+  deriving (Eq, Show, Generic)
+
+-- | On which machines of the cluster the workload runs (only meaningful for
+-- distributed backends like Nomad, local backends run every workload once).
+data WorkloadPlacement
+  -- One instance next to each producer node.
+  = Producers
+  -- One instance next to the "explorer" node ("node-0" if there is none),
+  -- the machine the tx-generator runs on.
+  | Explorer
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Workload where
   toJSON p =
     Aeson.object
-      [ "name"         Aeson..= workloadName p
-      , "parameters"   Aeson..= parameters   p
-      , "entrypoints"  Aeson..= entrypoints  p
-      , "before_nodes" Aeson..= before_nodes p
-      , "wait_pools"   Aeson..= wait_pools   p
+      [ "name"       Aeson..= workloadName p
+      , "parameters" Aeson..= parameters   p
+      , "entrypoint" Aeson..= entrypoint   p
+      , "phase"      Aeson..= phase        p
+      , "placement"  Aeson..= placement    p
+      , "wait_pools" Aeson..= wait_pools   p
       ]
 
 instance Aeson.FromJSON Workload where
@@ -528,15 +576,45 @@ instance Aeson.FromJSON Workload where
       Workload
         <$> o Aeson..: "name"
         <*> o Aeson..: "parameters"
-        <*> o Aeson..: "entrypoints"
-        <*> o Aeson..: "before_nodes"
+        <*> o Aeson..: "entrypoint"
+        <*> o Aeson..: "phase"
+        <*> o Aeson..: "placement"
         <*> o Aeson..: "wait_pools"
 
-instance Aeson.ToJSON Entrypoints
+instance Aeson.ToJSON WorkloadPhase where
+  toJSON BeforeNodes = Aeson.toJSON ("before-nodes" :: Text.Text)
+  toJSON Setup       = Aeson.toJSON ("setup"        :: Text.Text)
+  toJSON Load        = Aeson.toJSON ("load"         :: Text.Text)
 
-instance Aeson.FromJSON Entrypoints where
-  parseJSON = Aeson.genericParseJSON
-    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+instance Aeson.FromJSON WorkloadPhase where
+  parseJSON = Aeson.withText "WorkloadPhase" $ \t -> case t of
+    "before-nodes" -> return BeforeNodes
+    "setup"        -> return Setup
+    "load"         -> return Load
+    _ -> fail $ "Unknown WorkloadPhase: \"" ++ Text.unpack t ++ "\""
+
+instance Aeson.ToJSON WorkloadPlacement where
+  toJSON Producers = Aeson.toJSON ("producers" :: Text.Text)
+  toJSON Explorer  = Aeson.toJSON ("explorer"  :: Text.Text)
+
+instance Aeson.FromJSON WorkloadPlacement where
+  parseJSON = Aeson.withText "WorkloadPlacement" $ \t -> case t of
+    "producers" -> return Producers
+    "explorer"  -> return Explorer
+    _ -> fail $ "Unknown WorkloadPlacement: \"" ++ Text.unpack t ++ "\""
+
+-- | The tx-generator as a "workloads" list entry.
+generatorWorkload :: Generator -> Workload
+generatorWorkload gen = Workload
+  { workloadName = "tx-generator"
+  , parameters = case Aeson.toJSON gen of
+      (Aeson.Object obj) -> obj
+      _ -> error "generatorWorkload: Generator not encoded as an Aeson.Object"
+  , entrypoint = "tx_generator"
+  , phase = Load
+  , placement = Explorer
+  , wait_pools = True
+  }
 
 --------------------------------------------------------------------------------
 

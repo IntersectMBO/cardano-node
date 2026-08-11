@@ -3,6 +3,7 @@
 , profile
 , nodeSpecs
 , workload
+, ...
 }:
 
 let
@@ -30,6 +31,14 @@ let
   genesis_funds_skey = "../../genesis/utxo-keys/utxo2/utxo.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
+
+  # The node next to which the setup phase (fund-splitting / proposal-creation)
+  # runs: the same machine as the tx-generator.
+  gen_node_name =
+    if profile.composition.with_explorer
+    then "explorer"
+    else "node-0"
+  ;
 
   # Filter producers from "node-specs.json".
   producers =
@@ -1345,10 +1354,19 @@ function workflow_generator {
   ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   #- Log ----------------------------------------------------------------------#
   # Keep a job that periodically stores the proposals from the gov-state.
+  # A background job: the workload script exits (the end of the "setup" phase)
+  # and the orphaned logger keeps running until the cluster is stopped.
   workflow_generator_log_proposals "''${node_str}" &
 
 }
 
+# Entrypoint of the "voting-setup" workload (phase "setup", runs to completion
+# before the load workloads are started, placement "explorer").
+function workflow_setup {
+  workflow_generator "${gen_node_name}"
+}
+
+# Entrypoint of the "voting" workload (phase "load", placement "producers").
 function workflow_producer {
   # Run the producer workflow for each deployed producer.
   local producers=${toString producers_bash_array}

@@ -7,6 +7,7 @@ import Cardano.Prelude
 
 import Data.Aeson qualified as Aeson
 import Data.Aeson ((.=))
+import Data.Aeson.Types (parseFail)
 
 import Cardano.Util
 import Cardano.Analysis.API.ChainFilter
@@ -38,7 +39,21 @@ type Run        = ARunWith Genesis
 instance FromJSON RunPartial where
   parseJSON = withObject "Run" $ \v -> do
     metadata         <- v .: "meta"
-    generator        <- profile_content metadata .: "generator"
+    -- The generator's configuration: a "tx-generator" entry of the
+    -- "workloads" list, or a top-level "generator" property on legacy runs.
+    mbGenerator      <- profile_content metadata .:? "generator"
+    generator        <- case mbGenerator of
+      Just gen -> pure gen
+      Nothing  -> do
+        workloads <- profile_content metadata .: "workloads"
+        let findGenerator [] =
+              parseFail "Neither a \"generator\" property nor a \"tx-generator\" workload in \"profile_content\""
+            findGenerator (w:ws) = do
+              name <- w .: "name"
+              if name == ("tx-generator" :: Text)
+              then w .: "parameters"
+              else findGenerator ws
+        findGenerator workloads
     --
     genesisSpec      <- profile_content metadata .: "genesis"
     generatorProfile <- parseJSON $ Aeson.Object generator

@@ -61,6 +61,15 @@ backend_nomadexec() {
       backend_nomad wait-pools-stopped      1 "$@"
     ;;
 
+    wait-workload-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecessary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-workload-stopped   1 "$@"
+    ;;
+
     wait-workloads-stopped )
       # It passes the sleep time (in seconds) required argument.
       # This time is different between local and cloud backends to avoid
@@ -101,10 +110,6 @@ backend_nomadexec() {
 
     start-nodes )
       backend_nomad start-nodes             "$@"
-    ;;
-
-    start-generator )
-      backend_nomad start-generator         "$@"
     ;;
 
     start-workload-by-name )

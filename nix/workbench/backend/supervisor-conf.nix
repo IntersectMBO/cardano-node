@@ -3,7 +3,6 @@
 , profile
 , profiling
 , nodeSpecs
-, withGenerator
 , withTracer
 , withSsh
 , unixHttpServerPort ? null
@@ -155,29 +154,6 @@ let
         ;
       })
     nodeSpecs))
-    //
-    lib.attrsets.optionalAttrs withGenerator
-    {
-      "program:generator" = {
-        # "command" below assumes "directory" is set accordingly.
-        directory      = "${stateDir}/generator";
-        command        = "${command}";
-        stdout_logfile = "${stateDir}/generator/stdout";
-        stderr_logfile = "${stateDir}/generator/stderr";
-        # Set these values to 0 to indicate an unlimited log size / no rotation.
-        stdout_logfile_maxbytes = 0;
-        stderr_logfile_maxbytes = 0;
-        # Send stop and kill signals to the whole process group.
-        stopasgroup    = true;
-        killasgroup    = true;
-        autostart      = false;
-        autorestart    = false;
-        # Don't attempt any restart!
-        startretries   = 0;
-        # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
-      };
-    }
     //
     {
       "program:healthcheck" = {

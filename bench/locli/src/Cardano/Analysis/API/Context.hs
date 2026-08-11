@@ -226,7 +226,10 @@ instance FromJSON Metadata where
                          <|> compatParseManifest v
       profile          <- v .: "profile"
       profile_content  <- v .: "profile_content"
-      generator        <- profile_content .: "generator"
+      -- Only a top-level "profile_content" property on legacy runs, later
+      -- moved into the "workloads" list (only "era" is used as a fallback,
+      -- see `eraGenerator`, so no need to look into "workloads").
+      generator        <- profile_content .:? "generator" .!= mempty
 
       ident            <- (v .:? "ident")
                          <&> fromMaybe (unVersion . ciVersion $

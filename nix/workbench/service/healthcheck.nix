@@ -106,7 +106,7 @@ in {
       ########################
 
     generator=0
-    if test -d "../generator"
+    if test -d "../workloads/tx-generator"
     then
       generator=1
       ${coreutils}/bin/echo "Found deployed generator"
@@ -277,7 +277,7 @@ in {
 
     function healthcheck_generator() {
       # Checks if the generator has not exited with errors
-      assert_program_running "generator" || true
+      assert_program_running "workloads/tx-generator" || true
     }
 
     # Error if program exits with a non-zero exit code, else returns

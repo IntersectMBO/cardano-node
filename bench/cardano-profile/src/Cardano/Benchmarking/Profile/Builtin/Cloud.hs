@@ -203,12 +203,12 @@ profilesCloud =
       loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop . P.analysisSizeSmall
   in [
   -- Voting
-    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.workloadAppend W.votingWorkloadUtxo
-  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.workloadAppend W.votingWorkloadx1
-  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.workloadAppend W.votingWorkloadx2
-  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.workloadAppend W.votingWorkloadUtxo
-  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.workloadAppend W.votingWorkloadx1
-  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.workloadAppend W.votingWorkloadx2
+    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.workloadsAppend W.votingWorkloadUtxo
+  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx1
+  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx2
+  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.workloadsAppend W.votingWorkloadUtxo
+  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx1
+  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx2
   ]
   -----------
   -- Latency.

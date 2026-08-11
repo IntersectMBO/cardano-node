@@ -19,13 +19,12 @@ usage_backend() {
     get-node-socket-path RUNDIR [NODE]
                      Given a run directory, print a given node's node socket path
                        for 'cardano-cli'
-    start-generator RUNDIR
-                     Start generator
-
     wait-pools-stopped RUNDIR
                      Wait until all pools are stopped
+    wait-workload-stopped RUNDIR WORKLOAD-NAME
+                     Wait until the workload is stopped, fail if it failed
     wait-workloads-stopped RUNDIR
-                     Wait until all workloads are stopped
+                     Wait until all run-bounding workloads are stopped
     stop-cluster RUNDIR
     cleanup-cluster RUNDIR
                      Wipe cluster state to pristine
@@ -51,7 +50,6 @@ case "${op}" in
     # Sceneario functions
     start-tracers )              backend_$WB_BACKEND_NAME "$@";;
     start-nodes )                backend_$WB_BACKEND_NAME "$@";;
-    start-generator )            backend_$WB_BACKEND_NAME "$@";;
     start-workload-by-name )     backend_$WB_BACKEND_NAME "$@";;
     start-healthchecks )         backend_$WB_BACKEND_NAME "$@";;
     # Fine grained
@@ -61,6 +59,7 @@ case "${op}" in
     wait-node-stopped )          backend_$WB_BACKEND_NAME "$@";;
     get-node-socket-path )       backend_$WB_BACKEND_NAME "$@";;
     wait-pools-stopped )         backend_$WB_BACKEND_NAME "$@";;
+    wait-workload-stopped )      backend_$WB_BACKEND_NAME "$@";;
     wait-workloads-stopped )     backend_$WB_BACKEND_NAME "$@";;
     # Stop functions
     stop-all )                   backend_$WB_BACKEND_NAME "$@";;
