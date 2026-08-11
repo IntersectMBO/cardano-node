@@ -5,7 +5,9 @@
 
 module Cardano.Benchmarking.Profile.Playground (
     calibrateLoopBlockMemx15
+  , calibrateLoopBlockMemx15TxFee
   , calibrateLoopBlockMemx2
+  , calibrateLoopBlockMemx2TxFee
   , profilesPlayground
 ) where
 
@@ -39,11 +41,14 @@ calibrateLoopBlockMemx15 =
         ])
       ])
     ])
-  , ("generator", Aeson.Object $ KeyMap.fromList [
-      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":1892175}
-      ("tx_fee", Aeson.Number 1892175)
-    ])
   ]
+
+-- The `tx_fee` that goes with `calibrateLoopBlockMemx15`, applied with
+-- `txFeeOverwrite` because the generator is not part of the profile's JSON
+-- encoding that the overlay above is merged with.
+-- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":1892175}
+calibrateLoopBlockMemx15TxFee :: Integer
+calibrateLoopBlockMemx15TxFee = 1892175
 
 -- Corrections to fill the block memory budget with 4 txs per block.
 calibrateLoopBlockMemx2 :: Aeson.Object
@@ -59,11 +64,14 @@ calibrateLoopBlockMemx2 =
         ])
       ])
     ])
-  , ("generator", Aeson.Object $ KeyMap.fromList [
-      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":2463246}
-      ("tx_fee", Aeson.Number 2463246)
-    ])
   ]
+
+-- The `tx_fee` that goes with `calibrateLoopBlockMemx2`, applied with
+-- `txFeeOverwrite` because the generator is not part of the profile's JSON
+-- encoding that the overlay above is merged with.
+-- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":2463246}
+calibrateLoopBlockMemx2TxFee :: Integer
+calibrateLoopBlockMemx2TxFee = 2463246
 
 compressedFor3Epochs :: Types.Profile -> Types.Profile
 compressedFor3Epochs =
@@ -101,9 +109,9 @@ profilesPlayground =
   -- Budget profiles.
     ciBenchLike & P.name "calibrate-volt"
   , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt"      . mem15x
-  , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt-fill" . mem15x . P.overlay calibrateLoopBlockMemx15
+  , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt-fill" . mem15x . P.overlay calibrateLoopBlockMemx15 . P.txFeeOverwrite calibrateLoopBlockMemx15TxFee
   , ciBenchLike & P.name "calibrate-blockmem-x2-volt"        . mem2x
-  , ciBenchLike & P.name "calibrate-blockmem-x2-volt-fill"   . mem2x  . P.overlay calibrateLoopBlockMemx2
+  , ciBenchLike & P.name "calibrate-blockmem-x2-volt-fill"   . mem2x  . P.overlay calibrateLoopBlockMemx2  . P.txFeeOverwrite calibrateLoopBlockMemx2TxFee
   -- Voting profiles.
   , voting & P.name "development-voting"
            . P.dreps 1000

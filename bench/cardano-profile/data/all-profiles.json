@@ -106558,9 +106558,6 @@
       }
     },
     "overlay": {
-      "generator": {
-        "tx_fee": 1892175
-      },
       "genesis": {
         "alonzo": {
           "maxBlockExUnits": {
@@ -106597,7 +106594,7 @@
           },
           "tps": 0.85,
           "tx_count": 61200,
-          "tx_fee": 1360000
+          "tx_fee": 1892175
         },
         "phase": "load",
         "placement": "explorer",
@@ -107893,9 +107890,6 @@
       }
     },
     "overlay": {
-      "generator": {
-        "tx_fee": 2463246
-      },
       "genesis": {
         "alonzo": {
           "maxBlockExUnits": {
@@ -107932,7 +107926,7 @@
           },
           "tps": 0.85,
           "tx_count": 61200,
-          "tx_fee": 1360000
+          "tx_fee": 2463246
         },
         "phase": "load",
         "placement": "explorer",
@@ -116518,9 +116512,6 @@
       }
     },
     "overlay": {
-      "generator": {
-        "tx_fee": 2463246
-      },
       "genesis": {
         "alonzo": {
           "maxBlockExUnits": {
@@ -116557,7 +116548,7 @@
           },
           "tps": 0.4,
           "tx_count": 3600,
-          "tx_fee": 1360000
+          "tx_fee": 2463246
         },
         "phase": "load",
         "placement": "explorer",
