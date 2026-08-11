@@ -40,6 +40,10 @@ let
   # the full commit hash doesn't fit.
   cips_commit = "0ed8837a02ed";
 
+  # The document the constitution proposal points to. Content-addressed, so
+  # unlike the anchors above it cannot change under us.
+  constitution_url = "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto";
+
   # The node next to which the setup phase (fund-splitting / proposal-creation)
   # runs: the same machine as the tx-generator.
   gen_node_name =
@@ -945,12 +949,13 @@ function governance_create_constitution {
   | ${jq}/bin/jq -r                                                  \
       '.nextRatifyState.nextEnactState.prevGovActionIds'
 
-  # Create dummy constitution.
-    ${coreutils}/bin/echo "My Constitution: free mate and asado"     \
-  > ./constitution.txt
-  # Calculate constitution hash.
+  # Calculate the constitution's hash from the document the proposal points to:
+  # `cardano-cli` downloads "--constitution-url" when building the transaction
+  # and refuses to build if it does not hash to "--constitution-hash". It used
+  # to be the hash of a dummy text file created here, which never was the hash
+  # of that document.
   ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
-    --file-text ./constitution.txt                                   \
+    --url       "${constitution_url}"                                \
     --out-file  ./constitution.hash
   # Copy guardrails-script.
   ${coreutils}/bin/cp                                                \
@@ -970,7 +975,7 @@ function governance_create_constitution {
     --testnet \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/${cips_commit}/CIP-0100/cip-0100.common.schema.json" \
     --anchor-data-hash "c407dda548dbbbfb4dc89b5a980f75fe0b7b6721d33d8f151ea3e711bede3cda" \
-    --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
+    --constitution-url "${constitution_url}" \
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
