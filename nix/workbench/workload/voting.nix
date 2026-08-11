@@ -32,6 +32,14 @@ let
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 
+  # The commit of "github.com/cardano-foundation/CIPs" the proposals' anchor
+  # URLs point to. `cardano-cli` downloads them to check "--anchor-data-hash",
+  # so a mutable reference like "master" breaks proposal creation as soon as
+  # the file changes upstream. Bump together with the hashes below.
+  # Abbreviated: the ledger rejects an anchor URL of more than 128 bytes and
+  # the full commit hash doesn't fit.
+  cips_commit = "0ed8837a02ed";
+
   # The node next to which the setup phase (fund-splitting / proposal-creation)
   # runs: the same machine as the tx-generator.
   gen_node_name =
@@ -954,11 +962,14 @@ function governance_create_constitution {
     --out-file    ./guardrails-script.hash
 
   # Create action.
+  # The anchor URL is pinned to a commit of the CIPs repository: `cardano-cli`
+  # fetches it to check "--anchor-data-hash" and the contents of a branch like
+  # "master" change without notice, breaking every voting run when they do.
   local tx_filename=./create-constitution
   ${cardano-cli}/bin/cardano-cli conway governance action create-constitution \
     --testnet \
-    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json" \
-    --anchor-data-hash "9d99fbca260b2d77e6d3012204e1a8658f872637ae94cdb1d8a53f4369400aa9" \
+    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/${cips_commit}/CIP-0100/cip-0100.common.schema.json" \
+    --anchor-data-hash "c407dda548dbbbfb4dc89b5a980f75fe0b7b6721d33d8f151ea3e711bede3cda" \
     --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
@@ -1032,7 +1043,7 @@ function governance_create_withdrawal {
   # Create action.
   ${cardano-cli}/bin/cardano-cli conway governance action create-treasury-withdrawal \
     --testnet                                                                                                                    \
-    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld" \
+    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/${cips_commit}/CIP-0108/examples/treasury-withdrawal.jsonld" \
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
