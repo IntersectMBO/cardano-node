@@ -179,10 +179,11 @@ function calculate_next_utxo {
   local addr=''${2:-null}
 
   local tx_id
-  # Prints a transaction identifier.
+  # Prints a transaction identifier (a JSON object with a "txhash" property).
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file "''${tx_signed}"                            \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
   # View transaction as JSON and get index of FIRST output containing "$addr".
     ${cardano-cli}/bin/cardano-cli debug transaction view \
@@ -280,8 +281,9 @@ function is_tx_in_mempool {
 
   local tx_id
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file "''${tx_signed}"                            \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
     ${cardano-cli}/bin/cardano-cli conway query tx-mempool           \
         tx-exists         "''${tx_id}"                               \
@@ -579,8 +581,9 @@ function wait_proposal_id {
   # Get proposal's "txId" from the "--tx-file".
   local tx_id
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid    \
-      --tx-file     "''${tx_signed}"                          \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file   "''${tx_signed}"                          \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
 
   local contains_proposal="false"
