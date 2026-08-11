@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: [&ghc-stable "9.6", &ghc-latest "9.12"]
+        ghc: [&ghc-stable "9.6", &ghc-latest "9.12", "9.14"]
         cabal: [&cabal-version "3.16"]
         sys:
           - { os: ubuntu-latest, shell: bash }

@@ -49,12 +49,17 @@ library
                         -Wno-prepositive-qualified-module
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
-                        -Wredundant-constraints
                         -fno-warn-safe
                         -fno-warn-unsafe
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
 
   exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler

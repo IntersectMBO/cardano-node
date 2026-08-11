@@ -36,8 +36,18 @@ common project-config
                         -Wincomplete-uni-patterns
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
-                        -Wredundant-constraints
                         -Wunused-packages
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+
 common maybe-Win32
   if os(windows)
     build-depends:      Win32
@@ -154,7 +164,7 @@ library
                       , generic-data
                       , hashable
                       , hostname
-                      , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8
+                      , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8 || ^>= 1.9
                       , kes-agent ^>=1.2
                       , microlens
                       , mmap
