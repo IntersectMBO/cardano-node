@@ -13,6 +13,7 @@ module Cardano.Tracer.Handlers.Alarms.Registry
   , rejectEvent
   , checkTraceObjectsForAlarms
   , readHistoryFiltered
+  , traceHistoryRead
   , lookupProducerCredential
   , lookupReaderCredential
   ) where
@@ -97,6 +98,17 @@ checkTraceObjectsForAlarms registry nodeName traceObjects =
 
 readHistoryFiltered :: AlarmRegistry -> Maybe AlarmCursor -> Int -> AlarmFilter -> IO [(AlarmCursor, AlarmEvent)]
 readHistoryFiltered registry = readHistory (arStore registry)
+
+-- | Emit a meta-trace recording a successful history read: which reader
+--   credential fired it and how many events the response carried. Consumers
+--   of the ingress path have 'TracerAlarmAccepted'/'TracerAlarmDuplicate';
+--   this is the corresponding observability hook for the read path.
+traceHistoryRead :: AlarmRegistry -> Text -> Int -> IO ()
+traceHistoryRead registry readerName resultCount =
+  traceWith (arTracer registry) TracerAlarmHistoryRead
+    { ttAlarmHistoryReader      = readerName
+    , ttAlarmHistoryResultCount = resultCount
+    }
 
 lookupProducerCredential :: AlarmRegistry -> Text -> Maybe ProducerCredential
 lookupProducerCredential registry = lookupProducer (arAuth registry)
