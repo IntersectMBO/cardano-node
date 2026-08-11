@@ -198,8 +198,14 @@ let
         autorestart    = false;
         # Don't attempt any restart!
         startretries   = 0;
-        # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
+        # Seconds it needs to stay running to consider the start successful.
+        # A "setup" phase workload is expected to run to completion, and a
+        # short one must not be reported as a failed start: the scenario waits
+        # for it and fails the run using its "exit_code" file instead (see
+        # `wait-workload-stopped`). The other phases are long running, where
+        # these seconds are what makes an immediate crash a start failure with
+        # its logs dumped.
+        startsecs      = if workload.phase == "setup" then 0 else 5;
       };
     }) profile.workloads))
 
