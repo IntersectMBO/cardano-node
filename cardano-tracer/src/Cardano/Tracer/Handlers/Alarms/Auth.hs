@@ -38,7 +38,8 @@ data ProducerCredential = ProducerCredential
   deriving stock (Eq, Show)
 
 data ReaderCredential = ReaderCredential
-  { rcrAllowHistory :: !Bool
+  { rcrName         :: !Text
+  , rcrAllowHistory :: !Bool
   , rcrFilter       :: !AlarmFilter
   }
   deriving stock (Eq, Show)
@@ -65,11 +66,12 @@ loadCredentials AlarmsAuthConfig{aacProducers, aacReaders} = do
     token <- readTokenFile pcTokenFile
     pure (token, ProducerCredential (AlarmSource pcSource))
 
-  loadReader ReaderCredentialConfig{rcTokenFile, rcAllowHistory, rcFilter} = do
+  loadReader ReaderCredentialConfig{rcName, rcTokenFile, rcAllowHistory, rcFilter} = do
     token <- readTokenFile rcTokenFile
     pure ( token
          , ReaderCredential
-             { rcrAllowHistory = fromMaybe False rcAllowHistory
+             { rcrName         = rcName
+             , rcrAllowHistory = fromMaybe False rcAllowHistory
              , rcrFilter       = maybe emptyAlarmFilter filterFromConfig rcFilter
              }
          )

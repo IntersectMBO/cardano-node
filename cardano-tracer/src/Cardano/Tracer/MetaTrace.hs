@@ -101,6 +101,14 @@ data TracerTrace
     }
   | TracerAlarmDispatched
     { ttAlarmDispatchedConsumer :: Text
+    , ttAlarmDispatchedSource   :: Text
+    , ttAlarmDispatchedRuleId   :: Text
+    , ttAlarmDispatchedSeverity :: SeverityS
+    , ttAlarmDispatchedSummary  :: Text
+    }
+  | TracerAlarmHistoryRead
+    { ttAlarmHistoryReader      :: Text
+    , ttAlarmHistoryResultCount :: Int
     }
   deriving Show
 
@@ -224,6 +232,15 @@ instance LogFormatting TracerTrace where
     TracerAlarmDispatched{..} -> mconcat
       [ "kind"     .= AE.String "TracerAlarmDispatched"
       , "consumer" .= ttAlarmDispatchedConsumer
+      , "source"   .= ttAlarmDispatchedSource
+      , "ruleId"   .= ttAlarmDispatchedRuleId
+      , "severity" .= ttAlarmDispatchedSeverity
+      , "summary"  .= ttAlarmDispatchedSummary
+      ]
+    TracerAlarmHistoryRead{..} -> mconcat
+      [ "kind"        .= AE.String "TracerAlarmHistoryRead"
+      , "reader"      .= ttAlarmHistoryReader
+      , "resultCount" .= ttAlarmHistoryResultCount
       ]
 
 instance MetaTrace TracerTrace where
@@ -254,6 +271,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerAlarmDuplicate {} = Namespace [] ["AlarmDuplicate"]
     namespaceFor TracerAlarmRejected {} = Namespace [] ["AlarmRejected"]
     namespaceFor TracerAlarmDispatched {} = Namespace [] ["AlarmDispatched"]
+    namespaceFor TracerAlarmHistoryRead {} = Namespace [] ["AlarmHistoryRead"]
 
     severityFor (Namespace _ ["BuildInfo"]) _ = Just Info
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
@@ -281,7 +299,8 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["AlarmAccepted"]) _ = Just Info
     severityFor (Namespace _ ["AlarmDuplicate"]) _ = Just Debug
     severityFor (Namespace _ ["AlarmRejected"]) _ = Just Warning
-    severityFor (Namespace _ ["AlarmDispatched"]) _ = Just Debug
+    severityFor (Namespace _ ["AlarmDispatched"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmHistoryRead"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor _ = Just ""
@@ -314,6 +333,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["AlarmDuplicate"]
       , Namespace [] ["AlarmRejected"]
       , Namespace [] ["AlarmDispatched"]
+      , Namespace [] ["AlarmHistoryRead"]
       ]
 
 stderrShowTracer :: Show a => Trace IO a

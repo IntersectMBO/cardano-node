@@ -36,5 +36,11 @@ consumerFromConfig AlarmsConsumerLog{aclName, aclEnabled, aclFilter} = ConsumerL
 dispatch :: Trace IO TracerTrace -> AlarmConsumer -> AlarmEvent -> IO ()
 dispatch tracer consumer@ConsumerLog{clEnabled, clFilter} ev
   | clEnabled && matchesFilter clFilter ev =
-      traceWith tracer TracerAlarmDispatched { ttAlarmDispatchedConsumer = clName consumer }
+      traceWith tracer TracerAlarmDispatched
+        { ttAlarmDispatchedConsumer = clName consumer
+        , ttAlarmDispatchedSource   = unAlarmSource (source ev)
+        , ttAlarmDispatchedRuleId   = unRuleId (ruleId ev)
+        , ttAlarmDispatchedSeverity = severity ev
+        , ttAlarmDispatchedSummary  = summary ev
+        }
   | otherwise = pure ()

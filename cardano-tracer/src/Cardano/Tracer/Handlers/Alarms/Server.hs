@@ -164,6 +164,7 @@ handleHistory registry request send =
                then send (forbidden "requested filter is not permitted by this credential")
                else do
                  events <- readHistoryFiltered registry after limit requested
+                 traceHistoryRead registry (rcrName credential) (length events)
                  send $ okResponse $ object
                    [ "events"     .= map (Aeson.toJSON . snd) events
                    , "nextCursor" .= case events of
