@@ -1352,8 +1352,12 @@ function workflow_generator {
   ''
   }
   #- Waiting ------------------------------------------------------------------#
+  # Only the proposals this workload creates: the withdrawal ones are created
+  # by the "voting" workload of the "load" phase, which is not started until
+  # this one exits, and which waits for the full `proposals_count` itself
+  # before voting.
   ${coreutils}/bin/echo "wait_proposals_count:            Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
-  wait_proposals_count "''${node_str}" ${toString proposals_count}
+  wait_proposals_count "''${node_str}" ${toString constitutions_from_genesis}
   ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   #- Log ----------------------------------------------------------------------#
   # Keep a job that periodically stores the proposals from the gov-state.
