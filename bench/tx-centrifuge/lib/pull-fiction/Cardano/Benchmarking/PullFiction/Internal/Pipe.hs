@@ -9,14 +9,17 @@
 -- four caller-supplied event handlers (e.g. for tracing).
 --
 -- Work flows input queue → builder → payload queue → worker. The 'Pipe' knows
--- /nothing/ about recycling: the recycle strategy, its bookkeeping and the
--- recycle loop that closes inputs back onto the input queue all live in
--- 'Cardano.Benchmarking.PullFiction.Internal.Recycler', which drives this pipe
--- from the outside (it calls 'addInputs' to recycle). 'Config.Runtime' wraps
--- 'payloadFetcher' and calls the recycler's 'onDequeue' hook to observe pulls.
+-- /nothing/ about recycling: the bookkeeping and the recycle loop that closes
+-- inputs back onto the input queue live in
+-- 'Cardano.Benchmarking.PullFiction.Internal.Recycler' (the strategy wiring
+-- lives in 'Config.Runtime'), which drives this pipe from the outside (it
+-- calls 'addInputs' to recycle). 'Config.Runtime' wraps 'payloadFetcher' and
+-- fires the workload's dequeue wiring on each pull.
 --
 -- The input queue has 'addInputs' \/ 'takeInputs'. The payload queue has
--- 'addPayload' (in) and 'payloadFetcher' (out, rate-limited). Every payload
+-- 'addPayload' (in) and 'payloadFetcher' (out, rate-limited). Each queue also
+-- has a drop ('dropInputs' \/ 'dropPayloads'), the reset primitives that
+-- empty it. Every payload
 -- carries a @key@ that identifies it (e.g. its txId). The key rides through the
 -- pipe untouched so that the fetcher's caller can correlate a pulled payload
 -- with its own recycle bookkeeping, and so the enqueue \/ dequeue handlers can
@@ -30,7 +33,7 @@
 --
 -- The data constructor is hidden, build a 'Pipe' with 'mkPipe'.
 module Cardano.Benchmarking.PullFiction.Internal.Pipe
-  ( -- * Pipe.
+  ( -- * Pipe (content is kept private).
     Pipe, mkPipe
     -- * Event handlers.
   , OnPayloadEvent
@@ -38,8 +41,10 @@ module Cardano.Benchmarking.PullFiction.Internal.Pipe
     -- * Input queue operations (the queue itself is private).
   , takeInputs
   , addInputs
+  , dropInputs
     -- * Payload queue operations (the queue itself is private).
   , addPayload
+  , dropPayloads
   , QueueStarved (..), PayloadFetcher (..), payloadFetcher
   ) where
 
@@ -165,7 +170,7 @@ addInputs pipe inputs = when (not (null inputs)) $ do
     STM.modifyTVar' (pipeInputDepth pipe) (+ fromIntegral (length inputs))
     STM.readTVar (pipeInputDepth pipe)
     ---------- STM ENDED ----------
-  -- Fire event and return nothing.
+  -- Caller event: InputsEnqueued.
   pipeOnInputsEnqueued pipe inputs inputDepth
 
 -- | Take @n@ inputs for the builder: block until @n@ are available, remove them
@@ -183,8 +188,31 @@ takeInputs pipe n = do
     depth <- STM.readTVar (pipeInputDepth pipe)
     pure (is, depth)
     ---------- STM ENDED ----------
-  -- Fire event and return the inputs.
+  -- Caller event: InputsDequeued.
   pipeOnInputsDequeued pipe inputs inputDepth
+  pure inputs
+
+-- | Drop every input currently in the input queue: atomically empty it
+-- and reset the depth counter to zero, returning the removed inputs so the
+-- caller can trace what it discarded. Fires the input-dequeued handler with the
+-- removed inputs and the resulting depth (@0@). An empty queue is a no-op.
+--
+-- Unlike 'takeInputs' (which removes a fixed @n@ and blocks until they are
+-- available), 'dropInputs' removes whatever is present and never blocks. It is
+-- the reset primitive: a caller that has learned its queued inputs are stale
+-- (e.g. a rollback invalidated them) drops them here, then reseeds the queue
+-- with 'addInputs'.
+dropInputs :: Pipe key input payload -> IO [input]
+dropInputs pipe = do
+  inputs <- STM.atomically $ do
+    ---------- STM START ----------
+    is <- STM.flushTQueue (pipeInputQueue pipe)
+    STM.writeTVar (pipeInputDepth pipe) 0
+    pure is
+    ---------- STM ENDED ----------
+  -- Caller event: InputsDequeued (the emptied queue's inputs, depth 0).
+  when (not (null inputs)) $
+    pipeOnInputsDequeued pipe inputs 0
   pure inputs
 
 --------------------------------------------------------------------------------
@@ -208,7 +236,23 @@ addPayload pipe key payload = do
     STM.writeTBQueue (pipePayloadQueue pipe) (key, payload)
     STM.lengthTBQueue (pipePayloadQueue pipe)
     ---------- STM ENDED ----------
+  -- Caller event: PayloadEnqueued.
   pipeOnPayloadEnqueued pipe key payloadDepth
+
+-- | Drop every payload currently in the payload queue: atomically empty it,
+-- returning the removed @(key, payload)@ pairs so the caller can count or
+-- trace what it discarded. An empty queue is a no-op.
+--
+-- The payload-side counterpart of 'dropInputs' and the other half of the
+-- reset primitive: payloads built from dropped inputs are as stale as the
+-- inputs themselves, so a caller resetting the input queue drops them too
+-- instead of delivering transactions that no longer apply. No queue event
+-- fires here: the payload-dequeued handler carries a single key, so a full
+-- queue would emit thousands of events on one reset. The caller reports the
+-- drop instead (see the Reset event in 'Internal.Recycler').
+dropPayloads :: Pipe key input payload -> IO [(key, payload)]
+dropPayloads pipe =
+  STM.atomically $ STM.flushTBQueue (pipePayloadQueue pipe)
 
 --------------------------------------------------------------------------------
 -- Payload fetch (rate-limited).
@@ -230,8 +274,8 @@ instance Exception QueueStarved
 -- The payload queue itself is never exposed, so a payload can only leave the
 -- pipe through one of these, always paced by the rate limiter and always firing
 -- the payload-dequeued handler. Parameterised over the pulled element @a@
--- (here @(key, payload)@) so a caller can wrap it (e.g. 'Internal.Recycler'
--- strips the key after observing the pull).
+-- (here @(key, payload)@) so a caller can wrap it (e.g. 'Config.Runtime'
+-- strips the key after firing the dequeue wiring with it).
 data PayloadFetcher a = PayloadFetcher
   { -- | Claim a rate-limit slot, sleep for the computed delay, and return one
     -- element. On an empty queue it either parks until a payload arrives
@@ -252,8 +296,8 @@ data PayloadFetcher a = PayloadFetcher
 -- for the computed delay /outside/ STM, then fires the payload-dequeued handler.
 -- Because the payload queue is not exported, this is the only way out of the
 -- pipe: a payload can never be delivered unpaced. Recycling is /not/ done here.
--- 'Config.Runtime' wraps this fetcher, calling the recycler's 'onDequeue' hook
--- to observe each pull.
+-- 'Config.Runtime' wraps this fetcher, firing the workload's dequeue wiring
+-- on each pull.
 payloadFetcher
   :: Pipe key input payload
   -> RL.RateLimiter   -- ^ Paces every pull (shared limiters allowed).
@@ -270,7 +314,8 @@ payloadFetcher pipe rateLimiter onExhaustion = PayloadFetcher
     afterDequeue key = do
       -- Length of the payload queue is fetched in a different STM, not in sync.
       payloadDepth <- STM.atomically $ STM.lengthTBQueue queue
-      pipeOnPayloadDequeued pipe key payloadDepth -- Dispatch event.
+      -- Caller event: PayloadDequeued.
+      pipeOnPayloadDequeued pipe key payloadDepth
     ---------------
     -- Blocking. --
     ---------------

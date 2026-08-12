@@ -35,7 +35,7 @@ module Cardano.Benchmarking.PullFiction.Config.Validated
   (
     -- * Config.
     Config
-  , initialInputs, observers, workloads, startupDelaySeconds
+  , initialInputs, inputSources, observers, workloads, startupDelaySeconds
 
     -- * Workload.
   , Workload
@@ -110,6 +110,9 @@ defaultStartupDelaySeconds = 0
 data Config input = Config
   { -- | Initial inputs provided by the caller and stored by 'validate'.
     initialInputs :: !(NonEmpty input)
+    -- | Input sources (keyed by name).
+    -- Opaque; interpretation is the caller's responsibility.
+  , inputSources  :: !(Map String Raw.InputSource)
     -- | Observers (keyed by name).
     -- Opaque; interpretation is the caller's responsibility.
   , observers     :: !(Map String Raw.Observer)
@@ -201,11 +204,22 @@ validate
   -> NonEmpty input
   -> Either String (Config input)
 validate raw inputs = do
+  -- Input sources. Always top-level and by name.
+  -- (opaque; passed through without interpretation).
+  let resolvedSources = fromMaybe
+                          Map.empty -- Default value.
+                          (Raw.maybeInputSources raw)
   -- Observers. Always top-level and by name.
   -- (opaque; passed through without interpretation).
   let resolvedObservers = fromMaybe
-                            Map.empty
+                            Map.empty -- Default value.
                             (Raw.maybeObservers raw)
+  -- Names. Workload and target names are validated in their validators.
+  -- Observer and input source names are the Map keys, validated here: observer
+  -- names end up inside the forwarder pool's wiring-path keys (see
+  -- Config.Runtime), input source names follow the same rule for uniformity.
+  mapM_ (validateName "Observer")    (Map.keys resolvedObservers)
+  mapM_ (validateName "InputSource") (Map.keys resolvedSources)
   -- Top level builder. Future iterations will have builders by name.
   -- (opaque; passed through without interpretation).
   let maybeTopBuilder = Raw.maybeTopLevelBuilder raw
@@ -215,21 +229,21 @@ validate raw inputs = do
       Nothing                     -> pure Nothing
       Just (maybeTopScope, rawRL) -> do
         let topScope = fromMaybe
-                         defaultTopLevelScope
+                         defaultTopLevelScope -- Default value.
                          maybeTopScope
         validatedRL <- validateRateLimit rawRL
         pure (Just (topScope, validatedRL))
   -- Max batch size.
   let topMaxBatchSize = fromMaybe
-                          defaultMaxBatchSize
+                          defaultMaxBatchSize -- Default value.
                           (Raw.maybeTopLevelMaxBatchSize raw)
   -- On-exhaustion behaviour.
   let topOnExhaustion = fromMaybe
-                          defaultOnExhaustion
+                          defaultOnExhaustion -- Default value.
                           (Raw.maybeTopLevelOnExhaustion raw)
   -- Workloads.
   let rawWorkloads = fromMaybe
-                       Map.empty
+                       Map.empty -- Default value.
                        (Raw.maybeWorkloads raw)
   when (Map.null rawWorkloads) $
     Left "Config: at least one workload is required"
@@ -250,44 +264,24 @@ validate raw inputs = do
   when (inputCount < Map.size workloadsMap) $
     Left $ "Config: not enough initial inputs (" ++ show inputCount
         ++ ") for " ++ show (Map.size workloadsMap) ++ " workload(s)"
-  -- Referential integrity between builders and observers. 'referencedObservers'
-  -- are the observers named by some builder's RecycleOnConfirm.
-  let referencedObservers =
-        [ obsName
-        | wl <- Map.elems workloadsMap
-        , Just (Raw.RecycleOnConfirm obsName) <- [Raw.builderRecycle (builder wl)]
-        ]
-      unknownObservers = filter
-                           (`Map.notMember` resolvedObservers)
-                           referencedObservers
-      unusedObservers  = filter
-                           (`notElem` referencedObservers)
-                           (Map.keys resolvedObservers)
-  -- A builder's RecycleOnConfirm must name a defined observer, else its
-  -- confirm/orphan stream has no source. Runtime relies on this: it looks the
-  -- observer up by name (a total 'Map.!'), never re-checking.
-  case unknownObservers of
-    [] -> pure ()
-    _  -> Left $
-      "builder(s) reference undefined observer(s): "
-      ++ show unknownObservers
-  -- Conversely, an observer defined but referenced by no builder runs for
-  -- nothing and the generator silently drains funds. The most common cause is
-  -- placing the "recycle" key inside "params" instead of at the builder level.
-  case unusedObservers of
-    [] -> pure ()
-    _  -> Left $
-      "observer(s) defined but not referenced by any builder: "
-      ++ show unusedObservers
-      ++ ".\nHint: \"recycle\" must be a sibling of \"type\" and"
-      ++ " \"params\" in the builder object, not nested inside \"params\"."
+  -- Referential integrity of the input source and observers pools: every
+  -- referenced name defined, every defined name referenced. The two pools are
+  -- independent namespaces: every reference field is typed ("source" fields
+  -- resolve against input sources, "observer" fields against observers), so an
+  -- observer and an input source may share a name.
+  validateInputSourceReferences
+    resolvedSources
+    (Raw.initialInputsSource (Raw.initialInputs raw))
+    workloadsMap
+  validateObserverReferences resolvedObservers workloadsMap
   -- Startup delay (top-level scalar, no cascade). Default 0 (no delay).
   let startupDelay = fromMaybe
-                       defaultStartupDelaySeconds
+                       defaultStartupDelaySeconds -- Default value.
                        (Raw.maybeStartupDelaySeconds raw)
   -- Final validated config.
   pure Config
     { initialInputs       = inputs
+    , inputSources        = resolvedSources
     , observers           = resolvedObservers
     , workloads           = workloadsMap
     , startupDelaySeconds = startupDelay
@@ -335,6 +329,25 @@ validateWorkload name
           Nothing -> Left $
             "Workload " ++ show name
               ++ ": builder is required (no workload or top level default)"
+  -- Recovery rules. A recovery reseeds the recycling loop, so it requires a
+  -- recycle strategy. And a recovery without an explicit observer defaults to
+  -- the confirm observer, which only on_confirm has.
+  case Raw.builderRecovery resolvedBuilder of
+    Nothing -> pure ()
+    Just recovery ->
+      case Raw.builderRecycle resolvedBuilder of
+        Nothing -> Left $
+          "Workload " ++ show name
+            ++ ": \"recovery\" requires a \"recycle\" strategy"
+        Just strategy ->
+          case (Raw.recoveryObserver recovery, strategy) of
+            (Just _, _)                       -> pure ()
+            (Nothing, Raw.RecycleOnConfirm _) -> pure ()
+            (Nothing, _)                      -> Left $
+              "Workload " ++ show name
+                ++ ": \"recovery\" without an \"observer\" is only valid with"
+                ++ " the \"on_confirm\" recycle strategy (the default is the"
+                ++ " confirm observer)"
   -- Rate-limit conflict: setting at both levels is ambiguous.
   case (maybeTopRateLimit, Raw.maybeRateLimit rawWorkload) of
     (Just _, Just _) ->
@@ -350,7 +363,7 @@ validateWorkload name
       Just (maybeWlScope, rawRL) -> do
         validatedRL <- validateRateLimit rawRL
         let wlScope = fromMaybe
-                        defaultWorkloadScope
+                        defaultWorkloadScope -- Default value.
                         maybeWlScope
         -- `Right` workload scope.
         pure (Just (Right wlScope, validatedRL))
@@ -365,11 +378,11 @@ validateWorkload name
   -- Cascade max_batch_size: workload > top-level (always concrete).
   -- The per-target override is applied inside validateTarget.
   let workloadBatchSize = fromMaybe
-                            topMaxBatchSize
+                            topMaxBatchSize -- Default value.
                             (Raw.maybeMaxBatchSize rawWorkload)
   -- Cascade on_exhaustion: workload > top-level.
   let workloadOnExhaustion = fromMaybe
-                               topOnExhaustion
+                               topOnExhaustion -- Default value.
                                (Raw.maybeOnExhaustion rawWorkload)
   -- Targets.
   when (Map.null (Raw.targets rawWorkload)) $
@@ -422,11 +435,11 @@ validateTarget wlName tgtName effectiveRateLimit workloadBatchSize workloadOnExh
             Right Raw.WorkloadPerTarget -> RateLimitSource (wlName++"."++tgtName) rl
   -- Cascade max_batch_size: target > workload (always concrete).
   let resolvedMaxBatchSize = fromMaybe
-                               workloadBatchSize
+                               workloadBatchSize -- Default value.
                                (Raw.maybeTargetMaxBatchSize rawTarget)
   -- Cascade on_exhaustion: target > workload (always concrete).
   let resolvedOnExhaustion = fromMaybe
-                               workloadOnExhaustion
+                               workloadOnExhaustion -- Default value.
                                (Raw.maybeTargetOnExhaustion rawTarget)
   -- Final validated target.
   pure Target
@@ -437,6 +450,98 @@ validateTarget wlName tgtName effectiveRateLimit workloadBatchSize workloadOnExh
     , addr            = Raw.addr rawTarget
     , port            = Raw.port rawTarget
     }
+
+--------------------------------------------------------------------------------
+
+-- | Referential integrity between input sources and their two reference sites,
+-- @initial_inputs@ and builder recoveries: every referenced source must be
+-- defined and every defined source must be referenced. Runtime and the caller
+-- rely on this: they look the source up by name, never re-checking.
+--
+-- Returns 'Left' with a descriptive error message on the first violation.
+validateInputSourceReferences
+  -- | Defined input sources (keyed by name).
+  :: Map String Raw.InputSource
+  -- | The @initial_inputs@ source reference.
+  -> String
+  -- | Validated workloads (their builders' recoveries name the sources).
+  -> Map String Workload
+  -> Either String ()
+validateInputSourceReferences definedSources initialSource workloadsMap = do
+  let referencedSources =
+        initialSource
+        : [ Raw.recoverySource recovery
+          | wl <- Map.elems workloadsMap
+          , Just recovery <- [Raw.builderRecovery (builder wl)]
+          ]
+      unknownSources = filter
+                         (`Map.notMember` definedSources)
+                         referencedSources
+      unusedSources  = filter
+                         (`notElem` referencedSources)
+                         (Map.keys definedSources)
+  case unknownSources of
+    [] -> pure ()
+    _  -> Left $
+      "undefined input source(s) referenced: "
+      ++ show unknownSources
+  case unusedSources of
+    [] -> pure ()
+    _  -> Left $
+      "input source(s) defined but never referenced: "
+      ++ show unusedSources
+
+-- | Referential integrity between builders and observers: every observer named
+-- by some builder's 'Raw.RecycleOnConfirm' or 'Raw.Recovery' must be defined,
+-- and every defined observer must be referenced by some builder.
+-- Same rules as 'validateInputSourceReferences'.
+--
+-- Returns 'Left' with a descriptive error message on the first violation.
+validateObserverReferences
+  -- | Defined observers (keyed by name).
+  :: Map String Raw.Observer
+  -- | Validated workloads (their builders name the observers).
+  -> Map String Workload
+  -> Either String ()
+validateObserverReferences definedObservers workloadsMap = do
+  let builderObservers wl =
+        [ obsName
+        | Just (Raw.RecycleOnConfirm obsName) <-
+            [Raw.builderRecycle (builder wl)]
+        ]
+        ++ [ obsName
+           | Just recovery <- [Raw.builderRecovery (builder wl)]
+           , Just obsName  <- [Raw.recoveryObserver recovery]
+           ]
+      referencedObservers =
+        [ obsName
+        | wl <- Map.elems workloadsMap
+        , obsName <- builderObservers wl
+        ]
+      unknownObservers = filter
+                           (`Map.notMember` definedObservers)
+                           referencedObservers
+      unusedObservers  = filter
+                           (`notElem` referencedObservers)
+                           (Map.keys definedObservers)
+  -- A builder's RecycleOnConfirm or recovery must name a defined observer, else
+  -- its confirm/orphan stream has no source. Runtime relies on this: it looks
+  -- the observer up by name (a total 'Map.!'), never re-checking.
+  case unknownObservers of
+    [] -> pure ()
+    _  -> Left $
+      "builder(s) reference undefined observer(s): "
+      ++ show unknownObservers
+  -- Conversely, an observer defined but referenced by no builder runs for
+  -- nothing and the generator silently drains funds. The most common cause is
+  -- placing the "recycle" key inside "params" instead of at the builder level.
+  case unusedObservers of
+    [] -> pure ()
+    _  -> Left $
+      "observer(s) defined but not referenced by any builder: "
+      ++ show unusedObservers
+      ++ ".\nHint: \"recycle\" must be a sibling of \"type\" and"
+      ++ " \"params\" in the builder object, not nested inside \"params\"."
 
 --------------------------------------------------------------------------------
 
@@ -458,10 +563,14 @@ validateRateLimit rl@(Raw.TokenBucket rawTps) = do
     Left "RateLimit: tps is too large (nanosPerToken rounds to 0)"
   pure rl
 
--- | Validate that a name does not start with @\'@\'@ or contain @\'.\'@.
+-- | Validate that a name does not start with @\'@\'@ and contains neither
+-- @\'.\'@ nor @\'/\'@.
 --
--- These characters are reserved for the rate-limit cache key scheme
--- (see 'RateLimitSource').
+-- @\'@\'@ and @\'.\'@ are reserved for the rate-limit cache key scheme (see
+-- 'RateLimitSource'). @\'/\'@ is reserved for the forwarder pool's
+-- wiring-path keys, @workload\/site\/observer@ (see @Config.Runtime@): a name
+-- containing @\'/\'@ could make two paths collide, silently losing a pool
+-- entry.
 validateName :: String -> String -> Either String ()
 validateName context name = do
   case name of
@@ -472,4 +581,6 @@ validateName context name = do
     _ -> pure ()
   when ('.' `elem` name) $
     Left $ context ++ ": name must not contain '.', got " ++ show name
+  when ('/' `elem` name) $
+    Left $ context ++ ": name must not contain '/', got " ++ show name
 

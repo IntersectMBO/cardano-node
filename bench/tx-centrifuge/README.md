@@ -10,10 +10,13 @@ A basic configuration defines how to load initial resources, how to build payloa
 
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "signing_keys_file": "funds.json"
+  "initial_inputs": { "source": "genesis-funds" },
+  "input_sources": {
+    "genesis-funds": {
+      "type": "genesis_utxo_keys",
+      "params": {
+        "signing_keys_file": "funds.json"
+      }
     }
   },
   "builder": {
@@ -124,7 +127,7 @@ The engine operates as a decoupled production pipeline using generic `input` and
 ### Resource Recycling
 To enable indefinite-duration runs with finite resources, inputs must be returned to the `Input Queue`. The `recycle` field on the `builder` selects when this happens. There are three strategies:
 
-1.  **`on_build`** — The builder immediately returns resources to the `Input Queue` as soon as the payload is constructed, before it even enters the payload queue. This is the highest-throughput mode but assumes the payload will be successfully processed downstream.
+1.  **`on_build`** — Resources return to the `Input Queue` as soon as the payload is constructed: the build itself counts as the confirmation, so the recycler releases the outputs right away (an `AddToBacklog` and an `AddToPipe` trace per payload). This is the highest-throughput mode but assumes the payload will be successfully processed downstream.
     ```json
     "recycle": { "type": "on_build" }
     ```
@@ -135,20 +138,43 @@ To enable indefinite-duration runs with finite resources, inputs must be returne
     ```json
     "recycle": { "type": "on_pull" }
     ```
-3.  **`on_confirm`** — Resources stay in a pending map until an **observer** confirms the transaction on-chain at the configured confirmation depth. The builder enqueues the payload without any inputs; a background recycler async reads confirmations from the observer's broadcast channel and recycles matching inputs. This is the safest mode for long-running benchmarks where mempool eviction is a concern.
+3.  **`on_confirm`** — Resources stay in the recycler's backlog until an **observer** confirms the transaction on-chain at the configured confirmation depth. The builder enqueues the payload without any inputs; a background recycler async reads confirmations from the observer's broadcast channel and recycles matching inputs. This is the safest mode for long-running benchmarks where mempool eviction is a concern.
     ```json
     "recycle": { "type": "on_confirm", "params": "my-observer" }
     ```
+#### Rollback recovery (`recovery`)
+
+Any builder with a `recycle` strategy may additionally carry a **`recovery`**, a sibling of `recycle` in the builder object, naming the observer whose orphan events trigger it and the input source that rebuilds the queued inputs:
+```json
+"recycle": { "type": "on_build" },
+"recovery": { "observer": "my-observer", "source": "my-node-utxo" }
+```
+For `on_confirm`, `observer` may be omitted and defaults to the confirm observer; `on_build` and `on_pull` require it (they have no observer to default to):
+```json
+"recycle": { "type": "on_confirm", "params": "my-observer" },
+"recovery": { "source": "my-node-utxo" }
+```
+The `source` must name a `utxo_query` entry in the top-level [`input_sources`](#input-sources-input_sources) pool (a static file source cannot reflect the chain after a rollback):
+```json
+"input_sources": {
+  "my-node-utxo": { "type": "utxo_query", "params": { "socket_path": "node.socket" } }
+}
+```
+With a `recovery`, an orphan event from the named observer no longer recovers just that transaction's consumed inputs: the recycler drops every queued input (potentially poisoned by the rollback), drops every queued payload built from those inputs (equally stale: they either descend from orphaned transactions or double-spend the lineage the reseed restarts), and reseeds the input queue from chain truth, querying the UTxOs currently at the builder's destination address through the source's NodeToClient `socket_path`. The observer and the source are independent: any observer type works, and the source's socket may point at a different node than the one the observer follows. The observer stays an independent shared entity: builders with and without a `recovery` can name the same observer, each with its own pipeline, and every observer connection runs once no matter how many builders or purposes reference it. A subscription delivers the observer's full stream, and the workload takes what applies to its strategy (for `on_confirm`, a different `recovery` observer's confirms also count as confirmations). An explicitly named observer is always subscribed, so explicitly repeating the confirm observer creates a second subscription with each event delivered twice: duplicate orphans are ignored or rerun an idempotent reseed, and duplicate confirms are ignored (the payload is no longer held). The socket is probed once at startup, so a wrong `socket_path` fails immediately rather than at the first rollback. At runtime a failed query is reported and retried every second until it succeeds; the builder keeps building from the stale queue meanwhile (payloads delivered in that window fail harmlessly downstream, the rest are flushed by the reset) and the reset replaces the queue once the query lands, traced as `TxCentrifuge.Recycler.Reset`. One rollback triggers one recovery. Under `on_confirm` the reset is additionally **keyed**: the recycler applies it only while the orphaned transaction is still held awaiting its confirm, so an orphan of a *foreign* transaction (the observer stream is unfiltered) or a duplicate delivery is ignored and no reset happens — foreign traffic cannot reset an `on_confirm` recovery, and a rollback's orphan burst collapses at that gate (at one recovery query per orphan event). Under `on_build` and `on_pull` the orphaned transaction was already released at build or dequeue, so the reset cannot be gated: it applies on any settled orphan, foreign or not, and the orphan events that accumulate while the recovery runs are discarded.
+
+This is what makes the optimistic strategies (`on_build`, `on_pull`) safe to run with few funds (down to a single one): transactions are allowed to fail in the window between submission and confirmation, and the recovery resets the input queue to chain truth when a rollback invalidates them, instead of provisioning enough funds to keep every in-flight transaction valid.
+
+**Topology note**: an optimistic builder's transactions form dependency chains (each spends the previous one's output), so point each optimistic workload at a **single node**, one workload per node, each with its own signing key, observer and socket. Spreading one optimistic builder across many targets both races transaction diffusion between nodes (a child can reach a node before its parent) and lets a fork on a non-observed node go undetected.
 
 ## Configuration
 
 ### Node Configuration (`nodeConfig`)
 The top-level `nodeConfig` field is the path to the Cardano node's configuration file (e.g., `node-config.json`). The generator reads the consensus protocol from it and derives the network it runs against (mainnet or a testnet magic) from that protocol. This is the single source of the network: it is used to build addresses, submit transactions, and query the node for UTxOs, so no network magic is configured anywhere else.
 
-### Initial Inputs (`initial_inputs`)
-The generator requires a set of initial UTxOs, configured in the `initial_inputs` section of the main configuration file.
+### Input Sources (`input_sources`)
+The top-level `input_sources` pool defines named ways to obtain UTxO funds, as `type` + `params` entries like observers. Sources are referenced by name from [`initial_inputs`](#initial-inputs-initial_inputs) (the startup load) and from builder [`recovery`](#rollback-recovery-recovery) entries (rebuilding a builder's queued inputs after a rollback). Validation enforces that every referenced source is defined and that every defined source is referenced. Observer and input source names live in independent namespaces (every reference field is typed: `source` resolves against `input_sources`, `observer` against `observers`), so an observer and a source may share a name.
 
-The `type` field selects the loader. Two variants are available:
+The `type` field selects the source. Two variants are available:
 
 **`genesis_utxo_keys`** — load funds from a JSON file. `params`:
 - **`signing_keys_file`**: Path to a JSON file (e.g., `funds.json`) containing the actual fund data.
@@ -174,24 +200,47 @@ When `tx_in` is **omitted**, the fund is treated as a genesis UTxO: the `TxId` i
 
 **Design Note**: The `funds.json` format is designed to be compatible with the output of `cardano-cli conway create-testnet-data --utxo-keys`. This allows you to immediately use an arbitrary large set of Shelley genesis keys created during testnet bootstrapping as the initial fund pool for the generator, without needing to manually create UTxOs once the network is live.
 
-#### `local_utxo_query`
-Discover the starting funds **on chain** at startup instead of from a file. The generator queries the local node (over its NodeToClient socket) for the UTxOs at one or more signing keys' addresses. This makes restarts **stateless**: each builder recycles its outputs back to its `destination_signing_key` address, so pointing this at those same keys re-discovers whatever a previous run left on chain.
+#### `utxo_query`
+Discover funds **on chain** instead of from a file. The generator queries a node (over its NodeToClient socket) for the UTxOs currently at one or more addresses. The addresses come from the use site: `initial_inputs` supplies signing keys in its `params`, a builder `recovery` queries the builder's own destination address.
 
 `params`:
 - **`socket_path`**: Path to the local node's NodeToClient socket.
-- **`signing_keys`**: Array of `.skey` file paths. Each key's address is queried, and every UTxO found there becomes an initial fund tagged with that key (so it can be spent).
 
-The query era is detected from the node at runtime, so it follows the chain across the Shelley-based eras cardano-api supports (Shelley through Conway today). If no UTxOs are found at any queried address, the generator exits with an error rather than starting. Fund the address of at least one configured `signing_keys` entry and restart.
+The query era is detected from the node at runtime, so it follows the chain across the Shelley-based eras cardano-api supports (Shelley through Conway today).
+
+### Initial Inputs (`initial_inputs`)
+The generator requires a set of initial UTxOs, loaded through a named input source at startup. `initial_inputs` always has a **`source`** (the name of the `input_sources` entry to load from); whether it also has a **`params`** depends on that source's type. There are exactly two combinations:
+
+**With a `genesis_utxo_keys` source** — the source is self-contained (its file holds everything), so `initial_inputs` is just the reference. Adding `params` here is a startup error:
 
 ```json
-"initial_inputs": {
-  "type": "local_utxo_query",
-  "params": {
-    "socket_path": "/run/node/node.sock",
-    "signing_keys": ["dest.skey"]
+"initial_inputs": { "source": "genesis-funds" },
+"input_sources": {
+  "genesis-funds": {
+    "type": "genesis_utxo_keys",
+    "params": { "signing_keys_file": "funds.json" }
   }
 }
 ```
+
+**With a `utxo_query` source** — the source only knows *how* to query (the socket); this use site must say *which addresses*, so `params` with **`signing_keys`** is required (omitting it is a startup error). Each listed `.skey`'s derived address is queried, and every UTxO found there becomes an initial fund tagged with that key (so it can be spent):
+
+```json
+"initial_inputs": {
+  "source": "node-utxo",
+  "params": { "signing_keys": ["dest.skey"] }
+},
+"input_sources": {
+  "node-utxo": {
+    "type": "utxo_query",
+    "params": { "socket_path": "/run/node/node.sock" }
+  }
+}
+```
+
+(A builder `recovery` using the same `utxo_query` source carries no such params: it always queries the builder's own destination address.)
+
+Loading through a `utxo_query` source makes restarts **stateless**: each builder recycles its outputs back to its `destination_signing_key` address, so pointing the `signing_keys` at those same keys re-discovers whatever a previous run left on chain. If no UTxOs are found at any queried address, the generator exits with an error rather than starting. Fund the address of at least one configured `signing_keys` entry and restart.
 
 ### Rate Limiting (`rate_limit`)
 The `rate_limit` field can be set at the **top level** or at the **workload level** (but not both — setting it at both levels is a validation error). If omitted entirely, targets run **unlimited** (no rate ceiling).
@@ -216,7 +265,7 @@ Most configuration fields can be set at multiple levels. The most specific value
 - **`max_batch_size`**: target > workload > top-level > **0 (unlimited)**.
 - **`on_exhaustion`**: target > workload > top-level > **`block`**.
 
-Workload and target names must be non-empty and must not contain `.` or start with `@` (reserved for internal rate-limiter cache keys).
+Workload, target, observer, and input source names must be non-empty, must not start with `@`, and must not contain `.` or `/` (`@` and `.` are reserved for internal rate-limiter cache keys, `/` for the forwarder pool's wiring-path keys).
 
 ### Batching and Flow Control
 - **`max_batch_size`**: Limits the number of items (e.g., transactions) the generator will announce to a target in a single protocol request. **0 means unlimited** (use whatever the node requests). Defaults to 0.
@@ -276,7 +325,7 @@ Per namespace you can set `severity` (the minimum level to emit, or `Silence` to
 drop it), `detail` (`DMinimal`, `DNormal`, `DDetailed`, `DMaximum`), `backends`
 (such as `Stdout MachineFormat`, `Stdout HumanFormatColoured`, or `Forwarder`),
 and `maxFrequency` (a cap in messages per second). The application-level traces
-(severity `Info`) are:
+(severity `Info` unless noted) are:
 
 | Namespace | What it reports | Detail levels |
 | :--- | :--- | :--- |
@@ -285,8 +334,9 @@ and `maxFrequency` (a cap in messages per second). The application-level traces
 | `TxCentrifuge.Pipe.InputsDequeued` | Inputs were taken off the input queue for the builder. Carries the pipe name and the resulting queue `depth`. | `DDetailed` adds a `count` of the inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
 | `TxCentrifuge.Pipe.PayloadEnqueued` | A payload was added to the bounded payload queue. Carries the pipe name and the resulting queue `depth`. | `DMaximum` adds the payload's `txId` (payload events carry no `count`). |
 | `TxCentrifuge.Pipe.PayloadDequeued` | A payload was pulled off the payload queue by a worker. Carries the pipe name and the observed queue `depth`. | `DMaximum` adds the payload's `txId` (payload events carry no `count`). |
-| `TxCentrifuge.Recycler.Pending` | A payload entered the recycler's pending backlog (built or released first), its recyclable inputs held until its confirm, dequeue, or orphan signal matches it. Carries the recycler name and the resulting `pending` (the number of payloads held but not yet matched). | `DDetailed` adds a `count` of the held inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
-| `TxCentrifuge.Recycler.AddToPipe` | The recycler added a held payload's inputs back onto a pipe's input queue (via `Pipe.addInputs`), closing the loop. Carries the recycler name, the pipe name, and the resulting `pending`. | `DDetailed` adds a `count` of the recycled inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Recycler.AddToBacklog` | A payload's entry was added to the recycler's backlog: its key and its two input sets, held until a release (a confirm or an orphan) picks one. Carries the recycler name and the resulting `backlog` (the number of payloads held but not yet released). | `DDetailed` adds a `consumed_count` and an `outputs_count`. `DMaximum` adds the payload's `txId` and the `consumed` and `outputs` arrays, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Recycler.AddToPipe` | The recycler added a held payload's inputs back onto a pipe's input queue (via `Pipe.addInputs`), closing the loop. Carries the recycler name, the pipe name, and the resulting `backlog`. | `DDetailed` adds a `count` of the recycled inputs. `DMaximum` adds the `inputs` array, each fund with its `utxo` reference and `lovelace` value. |
+| `TxCentrifuge.Recycler.Reset` | The recycler reset a pipe for a builder's `recovery`: the queued inputs and the queued payloads built from them were dropped, and the input queue was reseeded from chain truth. Carries the recycler name, the pipe name, and the resulting `backlog` (always 0, a reset clears the backlog). Severity `Warning`. | `DDetailed` adds a `count` of the fresh inputs, a `dropped_inputs_count` and a `dropped_payloads_count`. `DMaximum` adds the `inputs` (fresh) and `dropped_inputs` arrays (each fund with its `utxo` reference and `lovelace` value) and the `dropped_payloads` array of txIds. |
 | `TxCentrifuge.Observer.Announce` | The observer saw a transaction confirmed or orphaned (rolled back), carrying the observer name, the TxId, and an `isOrphan` flag. Fires only for confirmation-based workloads, but there it is currently **unfiltered**: it reports every transaction in the confirmed blocks its node sees, not just this generator's, so its volume is roughly the whole chain's throughput. | All fields are shown at every level. |
 | `TxCentrifuge.TxSubmission.RequestTxIds` | The node requested TxId announcements (blocking or non-blocking). Carries the `target` node and the ACK and REQ counts. | `DDetailed` and up add the list of currently unacked TxIds. |
 | `TxCentrifuge.TxSubmission.ReplyTxIds` | We replied with TxId announcements and their sizes. Carries the `target`. | `DDetailed` and up add the ACK and REQ counts, the announced TxIds with sizes, and the updated unacked list. |
@@ -296,11 +346,11 @@ and `maxFrequency` (a cap in messages per second). The application-level traces
 Every `TxSubmission` trace carries a `target` field naming the remote node, so
 submission activity can be attributed per target. The `Pipe`, `Recycler`, and
 `Observer` traces fire on roughly every transaction. Each `Pipe` event carries
-its queue `depth` and each `Recycler` event its `pending` count (the number of
-payloads held but not yet matched) on every event and at every detail level.
-Raising `detail` to `DDetailed` adds a `count` of the items involved (input and
-recycler events only, since payload events carry no count), and `DMaximum` adds
-the items themselves (the `inputs` funds, or a payload's `txId`). At
+its queue `depth` and each `Recycler` event its `backlog` count (the number of
+payloads held but not yet released) on every event and at every detail level.
+Raising `detail` to `DDetailed` adds counts of the items involved (input and
+recycler events only, since pipe payload events carry no count), and `DMaximum`
+adds the items themselves (the funds, or a payload's `txId`). At
 high TPS that is a firehose, so you will usually want to silence them or cap them
 with `maxFrequency`. Because a `maxFrequency` cap samples a namespace at a fixed
 rate, setting it on these depth-carrying traces gives a periodic depth readout
@@ -319,6 +369,7 @@ These parameters define the **transaction profile** for a workload:
 - `fee`: Fixed Lovelace fee per transaction.
 - `destination_signing_key` (optional): Path to a `.skey` file (a payment or genesis UTxO key, like the `signing_key` entries in funds.json) whose address receives every output this builder produces and which spends the recycled UTxOs. When omitted, a built-in per-builder key is derived instead. Supplying your own key lets you fund and inspect a known address, which is printed to stderr at startup.
 - `recycle` (optional): Controls when output UTxOs are returned to the input queue. See [Resource Recycling](#resource-recycling) for the three strategies (`on_build`, `on_pull`, `on_confirm`). When omitted, outputs are **not recycled** — the generator consumes initial funds and eventually exhausts them.
+- `recovery` (optional): Rollback recovery for this builder, resetting its input queue from an input source when an observer reports one of its transactions orphaned. Requires `recycle`. See [Rollback recovery](#rollback-recovery-recovery).
 
 ## Usage
 
@@ -337,10 +388,13 @@ Optimized for maximum TPS using simple 1-in/1-out transactions. Outputs are recy
 **`config.json` snippet:**
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "signing_keys_file": "funds.1.json"
+  "initial_inputs": { "source": "genesis-funds" },
+  "input_sources": {
+    "genesis-funds": {
+      "type": "genesis_utxo_keys",
+      "params": {
+        "signing_keys_file": "funds.1.json"
+      }
     }
   },
   "builder": {
@@ -382,10 +436,13 @@ Uses complex transactions with independent rate limits for each target connectio
 **`config.json` snippet:**
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "signing_keys_file": "funds.2.json"
+  "initial_inputs": { "source": "genesis-funds" },
+  "input_sources": {
+    "genesis-funds": {
+      "type": "genesis_utxo_keys",
+      "params": {
+        "signing_keys_file": "funds.2.json"
+      }
     }
   },
   "builder": {
@@ -492,10 +549,13 @@ Both emit the same `BlockTx` events on the same broadcast channel type, so the d
 
 ```json
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "signing_keys_file": "funds.3.json"
+  "initial_inputs": { "source": "genesis-funds" },
+  "input_sources": {
+    "genesis-funds": {
+      "type": "genesis_utxo_keys",
+      "params": {
+        "signing_keys_file": "funds.3.json"
+      }
     }
   },
   "observers": {
@@ -566,7 +626,7 @@ tx-centrifuge/
 │   │       └── Internal/
 │   │           ├── Pipe.hs          # Generic input + payload queue pair
 │   │           ├── RateLimiter.hs   # GCRA token bucket
-│   │           └── Recycler.hs      # Closed-loop input recycling (worker + strategy)
+│   │           └── Recycler.hs      # Closed-loop input recycling (worker, strategy-free)
 │   │
 │   └── tx-centrifuge/           # Cardano-specific library
 │       └── Cardano/Benchmarking/TxCentrifuge/
@@ -575,7 +635,8 @@ tx-centrifuge/
 │           ├── NodeToClient.hs      # Multiplexed N2C connection (local socket)
 │           ├── NodeToClient/
 │           │   ├── TxIdSync.hs      # LocalChainSync tx confirmation (full blocks)
-│           │   └── TxSubmission.hs  # LocalTxSubmission client
+│           │   ├── TxSubmission.hs  # LocalTxSubmission client
+│           │   └── UTxOQuery.hs     # LocalStateQuery UTxO discovery
 │           ├── NodeToNode.hs        # Multiplexed N2N connection (TCP)
 │           ├── NodeToNode/
 │           │   ├── KeepAlive.hs     # KeepAlive mini-protocol client
