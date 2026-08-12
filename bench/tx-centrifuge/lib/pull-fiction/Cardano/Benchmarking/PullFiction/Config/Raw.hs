@@ -24,11 +24,16 @@ module Cardano.Benchmarking.PullFiction.Config.Raw
     -- * Config.
     Config (..)
 
+    -- * Inputs.
+  , InitialInputs (..)
+  , InputSource (..)
+
     -- * Observer.
   , Observer (..)
 
     -- * Builder.
   , Builder (..)
+  , Recovery (..)
 
     -- * Recycle strategy.
   , RecycleStrategy (..)
@@ -90,9 +95,14 @@ noUnknownFields name obj known =
 -- "Cardano.Benchmarking.PullFiction.Config.Validated" to apply business
 -- rules and cascading defaults.
 data Config = Config
-  { -- | Raw JSON value describing how to load initial inputs.
-    -- Interpretation is left to the caller (e.g. @Main.hs@).
-    initialInputs :: !Aeson.Value
+  { -- | Which 'InputSource' loads the initial inputs, plus optional opaque
+    -- use-site params. Interpretation of the params is the caller's
+    -- responsibility (e.g. @Main.hs@).
+    initialInputs :: !InitialInputs
+    -- | Optional @\"input_sources\"@ map (keyed by name).
+    -- Because Aeson decodes JSON objects into a 'Map', duplicate source names
+    -- are silently discarded (last value wins).
+  , maybeInputSources :: !(Maybe (Map String InputSource))
     -- | Optional @\"observers\"@ map (keyed by name).
     -- Because Aeson decodes JSON objects into a 'Map', duplicate observer names
     -- are silently discarded (last value wins).
@@ -120,6 +130,7 @@ instance Aeson.FromJSON Config where
   parseJSON = Aeson.withObject "Config" $ \o ->
     Config
       <$> o .:  "initial_inputs"
+      <*> o .:? "input_sources"
       <*> o .:? "observers"
       <*> o .:? "builder"
       <*> Aeson.Types.explicitParseFieldMaybe parseTopLevelRateLimit o
@@ -128,6 +139,50 @@ instance Aeson.FromJSON Config where
       <*> o .:? "on_exhaustion"
       <*> o .:? "startup_delay_seconds"
       <*> o .:? "workloads"
+
+--------------------------------------------------------------------------------
+
+-- | The @initial_inputs@ reference: which 'InputSource' loads the initial
+-- inputs, plus optional use-site params. The params are opaque like
+-- 'builderParams', their shape depends on the source's type and interpretation
+-- is the caller's responsibility.
+data InitialInputs = InitialInputs
+  { -- | Name of the 'InputSource' to load from.
+    initialInputsSource :: !String
+    -- | Optional opaque params for the load (e.g. which signing keys).
+  , initialInputsParams :: !(Maybe Aeson.Value)
+  }
+  deriving (Show, Eq)
+
+instance Aeson.FromJSON InitialInputs where
+  parseJSON = Aeson.withObject "InitialInputs" $ \o -> do
+    noUnknownFields "InitialInputs" o ["source", "params"]
+    InitialInputs
+      <$> o .:  "source"
+      <*> o .:? "params"
+
+-- | Opaque input source configuration: a way to obtain inputs, referenced by
+-- @initial_inputs@ (the startup load) and by builder recoveries (rebuilding
+-- the queued inputs after a reset).
+--
+-- Carries a @\"type\"@ discriminator and an opaque @\"params\"@ object.
+-- Interpretation of the params is the caller's responsibility (see @Main.hs@),
+-- like 'Observer' and 'Builder'.
+data InputSource = InputSource
+  { -- | Source variant (e.g. @\"utxo_query\"@ @\"genesis_utxo_keys\"@).
+    -- Non-empty.
+    inputSourceType :: !String
+    -- | Opaque params object for the variant.
+  , inputSourceParams :: !Aeson.Value
+  }
+  deriving (Show, Eq)
+
+instance Aeson.FromJSON InputSource where
+  parseJSON = Aeson.withObject "InputSource" $ \o -> do
+    noUnknownFields "InputSource" o ["type", "params"]
+    ty <- o .: "type" :: Aeson.Types.Parser String
+    when (null ty) $ fail "InputSource: \"type\" must be non-empty"
+    InputSource ty <$> o .: "params"
 
 --------------------------------------------------------------------------------
 
@@ -165,16 +220,42 @@ data Builder = Builder
   , builderParams :: !Aeson.Value
     -- | Optional recycle strategy. 'Nothing' means no recycling.
   , builderRecycle :: !(Maybe RecycleStrategy)
+    -- | Optional rollback recovery. 'Nothing' means no recovery.
+  , builderRecovery :: !(Maybe Recovery)
   }
   deriving (Show, Eq)
 
 instance Aeson.FromJSON Builder where
   parseJSON = Aeson.withObject "Builder" $ \o -> do
-    noUnknownFields "Builder" o ["type", "params", "recycle"]
+    noUnknownFields "Builder" o ["type", "params", "recycle", "recovery"]
     ty <- o .: "type" :: Aeson.Types.Parser String
     when (null ty) $ fail "Builder: \"type\" must be non-empty"
     Builder ty <$> o .:  "params"
                <*> o .:? "recycle"
+               <*> o .:? "recovery"
+
+--------------------------------------------------------------------------------
+
+-- | A builder's rollback recovery: when one of its payloads is orphaned,
+-- discard the workload's queued inputs and reseed them from the named
+-- 'InputSource'. Observers are independent entities: several builders may name
+-- the same observer, each choosing its own recovery.
+data Recovery = Recovery
+  { -- | Observer whose orphan events trigger the recovery. Optional for
+    -- @on_confirm@ (defaults to the confirm observer), required for @on_build@
+    -- and @on_pull@.
+    recoveryObserver :: !(Maybe String)
+    -- | Name of the 'InputSource' that rebuilds the queued inputs.
+  , recoverySource :: !String
+  }
+  deriving (Show, Eq)
+
+instance Aeson.FromJSON Recovery where
+  parseJSON = Aeson.withObject "Recovery" $ \o -> do
+    noUnknownFields "Recovery" o ["observer", "source"]
+    Recovery
+      <$> o .:? "observer"
+      <*> o .:  "source"
 
 --------------------------------------------------------------------------------
 
@@ -184,7 +265,8 @@ data RecycleStrategy
   = RecycleOnBuild
   -- | Recycle when a worker dequeues the payload from the queue.
   | RecycleOnDequeue
-  -- | Recycle when an observer confirms the payload. Carries the observer name.
+  -- | Recycle when an observer confirms the payload. Carries the observer
+  -- name.
   | RecycleOnConfirm !String
   deriving (Show, Eq)
 
@@ -192,15 +274,24 @@ instance Aeson.FromJSON RecycleStrategy where
   parseJSON = Aeson.withObject "RecycleStrategy" $ \o -> do
     noUnknownFields "RecycleStrategy" o ["type", "params"]
     ty <- o .: "type" :: Aeson.Types.Parser String
-    case ty of
-      "on_build"   -> pure RecycleOnBuild
+    mParams <- o .:? "params" :: Aeson.Types.Parser (Maybe Aeson.Value)
+    case (ty, mParams) of
+      -- on_build and on_pull take no params, fail instead of silently
+      -- ignoring them.
+      ("on_build",   Nothing) -> pure RecycleOnBuild
+      ("on_build",   Just _)  ->
+        fail "RecycleStrategy on_build: takes no \"params\""
       -- TODO: rename the JSON value "on_pull" to "on_dequeue", the strategy
       -- recycles when the payload is DEQUEUED from the pipe, not on a
       -- TxSubmission "pull".
       -- Kept as "on_pull" for backward compatibility with existing configs.
-      "on_pull"    -> pure RecycleOnDequeue
-      "on_confirm" ->
-        RecycleOnConfirm <$> o .: "params"
+      ("on_pull",    Nothing) -> pure RecycleOnDequeue
+      ("on_pull",    Just _)  ->
+        fail "RecycleStrategy on_pull: takes no \"params\""
+      -- on_confirm params: the observer name.
+      ("on_confirm", Just v)  -> RecycleOnConfirm <$> Aeson.Types.parseJSON v
+      ("on_confirm", Nothing) ->
+        fail "RecycleStrategy on_confirm: missing \"params\""
       _ -> fail $ "RecycleStrategy: unknown \"type\" " ++ show ty
                 ++ ", expected \"on_build\", \"on_pull\", or \"on_confirm\""
 

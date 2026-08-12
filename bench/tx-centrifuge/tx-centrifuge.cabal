@@ -99,7 +99,9 @@ library pull-fiction
                     , async
                     , clock
                     , containers
-                    , stm
+                    -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
+                    -- (Pipe.dropPayloads uses the affected flushTBQueue)
+                    , stm <2.5.2 || >=2.5.3
                     , text
 
 -- Sub-library with node functionality decoupled from the core library above.

@@ -47,11 +47,11 @@ import Cardano.Benchmarking.PullFiction.Internal.Pipe qualified as Pipe
 --    @fetchPayload@.
 --
 -- The fetch actions come from 'Runtime.targetFetcher', which 'Config.Runtime'
--- built by wrapping the pipe's fetcher through the workload's recycler: the rate
--- limit, on-exhaustion policy and recycle-on-dequeue all happen inside it. This
--- module holds no fetch, rate-limit or recycle logic, and knows nothing about
--- the pipe's queues or the recycler. The callback's only responsibilities are
--- delivering the payload and application-level bookkeeping.
+-- built by wrapping the pipe's fetcher through the workload's dequeue wiring:
+-- the rate limit, on-exhaustion policy and dequeue confirms happen inside it.
+-- This module holds no fetch, rate-limit or recycle logic, and knows nothing
+-- about the pipe's queues or the recycler. The callback's only responsibilities
+-- are delivering the payload and application-level bookkeeping.
 --
 -- The thread is already labeled @workloadName\/targetName@ by 'runWorkload'.
 -- The callback body runs for the lifetime of the generator. It should not

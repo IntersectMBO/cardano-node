@@ -11,6 +11,7 @@ module Cardano.Benchmarking.TxCentrifuge.Fund
     -- * Creating funds.
   , loadFunds
   , discoverFunds
+  , discoverFundsAtAddresses
     -- * Utils.
   , genesisTxIn
   , deriveAddress
@@ -173,8 +174,8 @@ entryToFund networkId cacheRef entry = do
 --
 -- Point the keys at each builder's destination address (see
 -- 'destination_signing_key'): the recycling loop keeps a builder's outputs
--- there, so discovery re-picks-up exactly the funds a previous run left,
--- making restart stateless.
+-- there, so discovery re-picks-up exactly the funds a previous run left, making
+-- restart stateless.
 discoverFunds
   :: Api.NetworkId
   -> FilePath   -- ^ NodeToClient socket path of the local node to query.
@@ -192,21 +193,42 @@ discoverFunds networkId socketPath keyPaths = do
       let keyAddrs =
             Map.elems $ Map.fromList
               [ (addr, (skey, addr)) | (skey, addr) <- keyAddrs0 ]
-      eUtxos <-
-        UTxOQuery.queryUTxOsAtAddresses socketPath networkId (map snd keyAddrs)
-      pure $ case eUtxos of
-        Left err          -> Left err
-        Right utxosByAddr -> Right
-          [ Fund { fundTxIn = txin, fundValue = val, fundSignKey = skey }
-          | (skey, addr) <- keyAddrs
-          , (txin, val)  <- Map.findWithDefault [] addr utxosByAddr
-          ]
+      discoverFundsAtAddresses networkId socketPath keyAddrs
   where
     readKeyAddr path = do
       eKey <- readSigningKey path
       pure $ case eKey of
         Left e     -> Left $ "signing key (" ++ path ++ "): " ++ e
         Right skey -> Right (skey, deriveAddress networkId skey)
+
+-- | Discover the funds currently at the given addresses, each paired with the
+-- signing key that can spend there (both already in memory, unlike
+-- 'discoverFunds', which reads keys from disk and dedupes before delegating
+-- here). Queries the local node for the UTxOs at the addresses and returns
+-- one 'Fund' per UTxO, tagged with its address's key so the spending
+-- transaction can be signed. 'Right' with the (possibly empty) funds, or
+-- 'Left' if the query fails.
+--
+-- Also the recovery counterpart to 'discoverFunds': after a chain rollback
+-- invalidates a builder's queued inputs, reseed from ground truth by
+-- re-querying the builder's own destination address.
+discoverFundsAtAddresses
+  :: Api.NetworkId
+  -- | NodeToClient socket path of the local node to query.
+  -> FilePath
+  -- | Keys paired with the address each controls.
+  -> [(Api.SigningKey Api.PaymentKey, Api.AddressInEra Api.ConwayEra)]
+  -> IO (Either String [Fund])
+discoverFundsAtAddresses networkId socketPath keyAddrs = do
+  eUtxos <-
+    UTxOQuery.queryUTxOsAtAddresses socketPath networkId (map snd keyAddrs)
+  pure $ case eUtxos of
+    Left err          -> Left err
+    Right utxosByAddr -> Right
+      [ Fund { fundTxIn = txin, fundValue = val, fundSignKey = skey }
+      | (skey, addr) <- keyAddrs
+      , (txin, val)  <- Map.findWithDefault [] addr utxosByAddr
+      ]
 
 --------------------------------------------------------------------------------
 -- Utils.

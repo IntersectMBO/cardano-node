@@ -1,9 +1,11 @@
 {
-  "initial_inputs": {
-    "type": "genesis_utxo_keys",
-    "params": {
-      "network_magic": 0,
-      "signing_keys_file": "/dev/null"
+  "initial_inputs": { "source": "test-funds" },
+  "input_sources": {
+    "test-funds": {
+      "type": "genesis_utxo_keys",
+      "params": {
+        "signing_keys_file": "/dev/null"
+      }
     }
   },
   "builder": {

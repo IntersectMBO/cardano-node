@@ -9,8 +9,8 @@
 --
 -- Given the local node's socket and a set of addresses, this asks the node for
 -- the UTxOs currently sitting at those addresses. The generator uses it at
--- startup to find its live funds on chain (see @discoverInitialFunds@ in
--- @Main@), which makes a restart stateless: point it at the builders'
+-- startup to find its live funds on chain (see @discoverFunds@ in
+-- @Fund@), which makes a restart stateless: point it at the builders'
 -- destination addresses and it recovers whatever the recycling loop left there.
 --
 -- The query era is detected at runtime ('Api.QueryCurrentEra') rather than

@@ -107,9 +107,10 @@ resolveConfig :: FilePath -> NE.NonEmpty input -> IO (Runtime.Runtime Int input 
 resolveConfig path inputs = do
   raw <- Aeson.eitherDecodeFileStrict path >>= either fail pure
   validated <- either fail pure $ Validated.validate raw inputs
-  -- Unique per-payload key (a plain counter). The recycler keys its pending map
-  -- by it, so each in-flight payload must have a distinct key (see the INVARIANT
-  -- on 'Internal.Recycler'); one shared atomic counter keeps them unique.
+  -- Unique per-payload key (a plain counter). The recycler keys its backlog
+  -- by it, so each in-flight payload must have a distinct key (see the
+  -- INVARIANT on 'Internal.Recycler'); one shared atomic counter keeps them
+  -- unique.
   keyCounter <- IORef.newIORef (0 :: Int)
   Runtime.resolve
     -- mkBuilder: 1 input per batch; input IS the payload; recycle the same
@@ -127,8 +128,10 @@ resolveConfig path inputs = do
       })
     -- mkRecyclerHandle: no-op recycle handler.
     (\_ _ -> pure Runtime.RecyclerHandle
-      { Runtime.rhOnPending   = \_ _ -> pure ()
-      , Runtime.rhOnAddToPipe = \_ _ -> pure ()
+      { Runtime.rhOnAddToBacklog = \_ _ _ _ -> pure ()
+      , Runtime.rhOnAddToPipe    = \_ _ -> pure ()
+      , Runtime.rhOnReset        = \_ _ _ _ -> pure ()
+      , Runtime.rhRecover        = Nothing
       })
     -- mkObserver: no test config uses observers.
     (\_ name _ -> fail $ "resolveConfig: unexpected observer: " ++ name)

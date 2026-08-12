@@ -261,20 +261,102 @@ main = do
                 (Tracing.PipePayloadDequeued builderName depth key)
           }
 
+  -- Recovery factory used by 'mkRecyclerHandle'. When the workload's builder
+  -- configured a "recovery" (carrying the observer whose orphan events trigger
+  -- it and the input source that rebuilds the queued inputs), build the
+  -- recovery action the forwarder runs on an orphan: query the UTxOs currently
+  -- at the builder's destination address through the source's socket, whose
+  -- result reseeds the builder's input queue (the recycler applies it via its
+  -- reset, which drops the stale queued inputs and the stale queued payloads
+  -- first). The source is independent of the observer, which stays a shared
+  -- entity the recovery never modifies: the orphan signal can come from any
+  -- observer type or node while the recovery queries a (typically local)
+  -- socket, and builders with and without a recovery can name the same
+  -- observer. Only a "utxo_query" source can rebuild inputs (a static file
+  -- cannot reflect the chain after a rollback). The socket is probed once here
+  -- so a wrong "socket_path" dies at startup, not at the first rollback. At
+  -- runtime a failed query reports and retries after a delay until it succeeds:
+  -- the orphan event that triggered it is already consumed, so giving up would
+  -- swallow this rollback's recovery and leave the queue poisoned until the
+  -- next one. The query returns failures as 'Left' and never throws (see
+  -- 'UTxOQuery.queryUTxOsAtAddresses'), so the retry loop swallows no
+  -- exceptions and a genuine exception still ends the run as everywhere.
+  let mkRecover builderIndex builderName =
+        case Map.lookup builderName (Validated.workloads validated) of
+          Nothing -> pure Nothing
+          Just wl ->
+            case Raw.builderRecovery (Validated.builder wl) of
+              Nothing -> pure Nothing
+              Just recovery -> do
+                -- The source reference is validated, the lookup is total.
+                let sourceName = Raw.recoverySource recovery
+                    rawSource  =
+                      Validated.inputSources validated Map.! sourceName
+                socketPath <- case interpretInputSource rawSource of
+                  Left err -> die $
+                    "input_sources." ++ sourceName ++ ": " ++ err
+                  Right (UTxOQuerySource path) -> pure path
+                  Right (GenesisKeysSource _)  -> die $
+                    "Builder " ++ builderName ++ ": recovery source "
+                    ++ show sourceName ++ " is a static file and cannot"
+                    ++ " rebuild inputs after a reset, use a \"utxo_query\""
+                    ++ " source"
+                builder <- interpretBuilder
+                             networkId builderIndex (Validated.builder wl)
+                -- Startup probe: only connectivity matters, an empty result
+                -- is fine (the address fills up as this builder's
+                -- transactions confirm).
+                eProbe <- Fund.discoverFundsAtAddresses
+                            networkId socketPath
+                            [ ( destinationSigningKey builder
+                              , destinationAddress builder ) ]
+                case eProbe of
+                  Left err -> die $
+                    "Builder " ++ builderName ++ ": recovery socket ("
+                    ++ socketPath ++ "): " ++ err
+                  Right _ -> pure ()
+                pure $ Just $
+                  let attempt = do
+                        eFunds <- Fund.discoverFundsAtAddresses
+                                    networkId socketPath
+                                    [ ( destinationSigningKey builder
+                                      , destinationAddress builder ) ]
+                        case eFunds of
+                          Left err -> do
+                            hPutStrLn stderr $
+                              "Builder " ++ builderName
+                              ++ ": recovery query failed"
+                              ++ " (retrying in 1s): " ++ err
+                            threadDelay 1_000_000
+                            attempt
+                          Right funds -> pure funds
+                  in attempt
+
   -- Recycler-events factory passed to 'Runtime.resolve'. Returns a
-  -- 'RecyclerHandle'. Given the builder's zero-based index and name, creates the
-  -- handlers that trace when a payload enters the pending backlog
-  -- (TxCentrifuge.Recycler.Pending) and when its inputs are added to the pipe
-  -- (TxCentrifuge.Recycler.AddToPipe). The pipe and recycler are both named by
-  -- the workload here (one of each per workload).
-  let mkRecyclerHandle _recyclerIndex builderName =
+  -- 'RecyclerHandle'. Given the builder's zero-based index and name, creates
+  -- the handlers that trace when a payload enters the backlog
+  -- (TxCentrifuge.Recycler.AddToBacklog), when its inputs are added to the
+  -- pipe (TxCentrifuge.Recycler.AddToPipe), and the optional recovery action
+  -- (see 'mkRecover'). The pipe and recycler are both named by the workload
+  -- here (one of each per workload).
+  let mkRecyclerHandle recyclerIndex builderName = do
+        recover <- mkRecover recyclerIndex builderName
         pure Runtime.RecyclerHandle
-          { Runtime.rhOnPending = \inputs pending ->
+          { Runtime.rhOnAddToBacklog = \key consumed outputs backlog ->
               Tracing.traceWith (Tracing.trRecycler tracers)
-                (Tracing.RecyclerPending builderName pending inputs)
-          , Runtime.rhOnAddToPipe = \inputs pending ->
+                (Tracing.RecyclerAddToBacklog
+                  builderName backlog key consumed outputs)
+          , Runtime.rhOnAddToPipe = \inputs backlog ->
               Tracing.traceWith (Tracing.trRecycler tracers)
-                (Tracing.RecyclerAddToPipe builderName builderName pending inputs)
+                (Tracing.RecyclerAddToPipe builderName builderName backlog inputs)
+            -- The trace keeps the dropped payloads by txId (their key), not
+            -- the full transactions.
+          , Runtime.rhOnReset = \droppedInputs droppedPayloads fresh backlog ->
+              Tracing.traceWith (Tracing.trRecycler tracers)
+                (Tracing.RecyclerReset
+                  builderName builderName
+                  backlog (map fst droppedPayloads) droppedInputs fresh)
+          , Runtime.rhRecover = recover
           }
 
   -- Observer factory passed to 'Runtime.resolve'. Returns an 'ObserverHandle'.
@@ -337,6 +419,15 @@ main = do
                   chan <- STM.atomically $
                     STM.dupTChan (TxIdSyncN2N.stateBroadcast syncState)
                   -- Reduce each broadcast BlockTx to its TxId (the recycle key).
+                  -- TODO: own-traffic filter. This adapter is where a future
+                  -- filter should drop foreign events (txIds this generator
+                  -- never built) before any forwarder, recovery query or reset
+                  -- sees them: an in-flight txId set filled at build time and
+                  -- pruned at confirm/orphan. Whether it lives here or as a
+                  -- generic facility in pull-fiction is an open decision. Until
+                  -- then, keyed resets (on_confirm) are gated by the recycler's
+                  -- backlog and the optimistic strategies reset on any settled
+                  -- orphan.
                   pure $ do
                     eitherBlockTx <- STM.readTChan chan
                     pure $ case eitherBlockTx of
@@ -371,6 +462,8 @@ main = do
                   chan <- STM.atomically $
                     STM.dupTChan (TxIdSyncN2C.stateBroadcast syncState)
                   -- Reduce each broadcast BlockTx to its TxId (the recycle key).
+                  -- TODO: own-traffic filter, same spot as the N2N adapter
+                  -- above (see the note there).
                   pure $ do
                     eitherBlockTx <- STM.readTChan chan
                     pure $ case eitherBlockTx of
@@ -458,36 +551,50 @@ main = do
         die "async terminated unexpectedly"
 
 --------------------------------------------------------------------------------
--- Initial funds.
+-- Input source interpretation.
 --------------------------------------------------------------------------------
 
--- | How to load initial funds for the generator.
+-- | Interpreted input source: how to obtain UTxO funds. Referenced by
+-- @initial_inputs@ (the startup load) and by builder recoveries (rebuilding the
+-- queued inputs after a reset).
 --
--- This type is node-specific (it references signing keys),
--- so it lives here rather than in the @pull-fiction@ sub-library. The raw JSON
--- config stores this as an opaque 'Aeson.Value'; @Main@ parses it into this ADT
--- and loads funds before passing them to 'Validated.validate'.
-data InitialFunds
-  = GenesisUTxOKeys
-      !FilePath -- ^ Signing keys (to sign and derive address) and lovelace.
-  | LocalUTxOQuery
-      !FilePath   -- ^ NodeToClient socket path of the local node to query.
-      ![FilePath] -- ^ Signing key files. Each key's derived address is
-                  --   queried, and every UTxO found there is tagged with that
-                  --   key so the spending transaction can be signed.
+-- This type is node-specific (it references signing keys and sockets), so it
+-- lives here rather than in the @pull-fiction@ sub-library, which stores the
+-- source params as an opaque 'Aeson.Value' (see 'Raw.InputSource').
+data FundSource
+  -- | Query the UTxOs at addresses through a NodeToClient socket.
+  = UTxOQuerySource !FilePath
+  -- | Load funds from a genesis signing-keys file.
+  | GenesisKeysSource !FilePath
 
-instance Aeson.FromJSON InitialFunds where
-  parseJSON = Aeson.withObject "InitialFunds" $ \o -> do
-    ty <- o .: "type" :: Aeson.Types.Parser String
-    case ty of
-      "genesis_utxo_keys" -> do
-        p <- o .: "params"
-        GenesisUTxOKeys <$> p .: "signing_keys_file"
-      "local_utxo_query" -> do
-        p <- o .: "params"
-        LocalUTxOQuery <$> p .: "socket_path" <*> p .: "signing_keys"
-      _ -> fail $ "InitialFunds: unknown type " ++ show ty
-                ++ ", expected \"genesis_utxo_keys\" or \"local_utxo_query\""
+-- | Interpret a 'Raw.InputSource' (opaque type + params) into a concrete
+-- 'FundSource'.
+interpretInputSource :: Raw.InputSource -> Either String FundSource
+interpretInputSource raw = case Raw.inputSourceType raw of
+  "utxo_query" ->
+    case Aeson.Types.parseEither parseQuery (Raw.inputSourceParams raw) of
+      Left  err -> Left $ "InputSource params error: " ++ err
+      Right s   -> Right s
+  "genesis_utxo_keys" ->
+    case Aeson.Types.parseEither parseGenesis (Raw.inputSourceParams raw) of
+      Left  err -> Left $ "InputSource params error: " ++ err
+      Right s   -> Right s
+  other -> Left $
+    "InputSource: unknown \"type\" " ++ show other
+    ++ ", expected \"utxo_query\" or \"genesis_utxo_keys\""
+  where
+    parseQuery = Aeson.withObject "UTxOQuery InputSourceParams" $ \o ->
+      UTxOQuerySource <$> o .: "socket_path"
+    parseGenesis = Aeson.withObject "GenesisKeys InputSourceParams" $ \o ->
+      GenesisKeysSource <$> o .: "signing_keys_file"
+
+-- | Interpret the opaque use-site @params@ of @initial_inputs@ for a
+-- @utxo_query@ source: the signing key files. Each key's derived address is
+-- queried, and every UTxO found there is tagged with that key so the spending
+-- transaction can be signed.
+parseInitialKeys :: Aeson.Value -> Aeson.Types.Parser [FilePath]
+parseInitialKeys = Aeson.withObject "initial_inputs params" $ \o ->
+  o .: "signing_keys"
 
 --------------------------------------------------------------------------------
 -- Builder interpretation.
@@ -688,24 +795,49 @@ loadConfig = do
       networkId    = protocolToNetworkId protocol
       networkMagic = protocolToNetworkMagic protocol
 
-  -- Load initial funds. Parse the opaque initialInputs JSON into the node-level
-  -- InitialFunds ADT, then obtain actual UTxO funds before validation: either
-  -- from a genesis signing-keys file, or by querying the node on chain.
-  -- Each variant announces itself and returns its loader's result. Handling
-  -- that result (fail on error or empty, report the count, build the non-empty
-  -- list) is shared below.
+  -- Load initial funds. Look the initial_inputs source up in the raw config
+  -- (validate also checks the reference, but funds are loaded first, so a
+  -- missing name dies here), interpret it into the node-level FundSource ADT,
+  -- then obtain actual UTxO funds before validation: either from a genesis
+  -- signing-keys file, or by querying the node on chain. Each variant announces
+  -- itself and returns its loader's result. Handling that result (fail on error
+  -- or empty, report the count, build the non-empty list) is shared below.
   funds <- do
-    result <- case Aeson.fromJSON (Raw.initialInputs raw) of
-      Aeson.Error err -> die $ "initialInputs: " ++ err
-      Aeson.Success (GenesisUTxOKeys path) -> do
+    let sourceName  = Raw.initialInputsSource (Raw.initialInputs raw)
+        maybeParams = Raw.initialInputsParams (Raw.initialInputs raw)
+    rawSource <-
+      case Map.lookup sourceName =<< Raw.maybeInputSources raw of
+        Nothing  -> die $
+          "initial_inputs: undefined input source " ++ show sourceName
+        Just src -> pure src
+    fundSource <- case interpretInputSource rawSource of
+      Left err  -> die $ "input_sources." ++ sourceName ++ ": " ++ err
+      Right src -> pure src
+    result <- case fundSource of
+      GenesisKeysSource path -> do
+        -- The source is self-contained, reject use-site params instead of
+        -- silently ignoring them.
+        case maybeParams of
+          Just _  -> die $
+            "initial_inputs: a \"genesis_utxo_keys\" source takes no"
+            ++ " \"params\""
+          Nothing -> pure ()
         hPutStrLn stderr $ "Loading funds from: " ++ path
         Fund.loadFunds networkId path
-      Aeson.Success (LocalUTxOQuery socketPath keyPaths) -> do
+      UTxOQuerySource socketPath -> do
+        keyPaths <- case maybeParams of
+          Nothing -> die $
+            "initial_inputs: a \"utxo_query\" source needs \"params\" with"
+            ++ " the \"signing_keys\" to query under"
+          Just params ->
+            case Aeson.Types.parseEither parseInitialKeys params of
+              Left err    -> die $ "initial_inputs params: " ++ err
+              Right paths -> pure paths
         hPutStrLn stderr $ "Querying UTxOs via N2C socket: " ++ socketPath
         Fund.discoverFunds networkId socketPath keyPaths
     case result of
-      Left err     -> die $ "initialInputs: " ++ err
-      Right []     -> die "initialInputs: no funds loaded"
+      Left err     -> die $ "initial_inputs: " ++ err
+      Right []     -> die "initial_inputs: no funds loaded"
       Right (f:fs) -> do
         let allFunds = f NE.:| fs
         hPutStrLn stderr $ "  Loaded " ++ show (NE.length allFunds) ++ " funds"

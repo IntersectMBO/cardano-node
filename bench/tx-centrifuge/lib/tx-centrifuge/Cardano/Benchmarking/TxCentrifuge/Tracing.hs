@@ -100,10 +100,11 @@ data Tracers = Tracers
     -- | Pipe trace: payload/input queue add and remove events, with the
     -- relevant queue depth. Purely about queue mechanics.
   , trPipe :: !(Tracer IO PipeTrace)
-    -- | Recycler trace: payloads entering the pending backlog ('Pending') and
-    -- recycled inputs added back onto a pipe's input queue ('AddToPipe'). Both
-    -- events always emit the pending backlog size ('pending'), add a "count" at
-    -- DDetailed and above, and the full inputs at DMaximum.
+    -- | Recycler trace: payloads added to the backlog ('AddToBacklog'),
+    -- recycled inputs added back onto a pipe's input queue ('AddToPipe') and
+    -- input queue resets ('Reset'). Every event emits the backlog size
+    -- ('backlog'), adds counts at DDetailed and above, and the full inputs at
+    -- DMaximum.
   , trRecycler :: !(Tracer IO RecyclerTrace)
     -- | Observer trace: on-chain transaction confirmation/rollback events.
   , trObserver :: !(Tracer IO ObserverTrace)
@@ -521,68 +522,104 @@ instance Logging.LogFormatting PipeTrace where
 --------------------------------------------------------------------------------
 
 -- | Recycler events. The recycler holds a payload's recyclable input UTxOs
--- pending its confirm/dequeue/orphan match, then adds them back onto a pipe's
--- input queue (closing the loop). It reports both when a payload enters the
--- pending backlog ('RecyclerPending') and each add of inputs to a pipe
--- ('RecyclerAddToPipe': which inputs were added, by which recycler, into which
--- pipe). The 'String' names are the recycler and (on 'RecyclerAddToPipe') the
--- pipe (currently both the workload name, but recorded separately as that
--- mapping is not guaranteed to stay one-to-one). The 'Natural' is the resulting
--- pending backlog size.
+-- until a release picks a set, then adds it back onto a pipe's input queue
+-- (closing the loop). It reports each add of a payload's entry to its
+-- backlog ('RecyclerAddToBacklog': the key and both input sets), each add of
+-- inputs to a pipe ('RecyclerAddToPipe': which inputs were added, by which
+-- recycler, into which pipe) and each reset of a pipe ('RecyclerReset'). The
+-- 'String' names are the recycler and (on 'RecyclerAddToPipe' and
+-- 'RecyclerReset') the pipe (currently both the workload name, but recorded
+-- separately as that mapping is not guaranteed to stay one-to-one). The
+-- 'Natural' is the resulting backlog size.
 data RecyclerTrace
-  = -- | A payload entered the pending backlog (built or released first, waiting
-    -- for its confirm/dequeue/orphan match). 'String' is the recycler name,
-    -- 'Natural' the pending backlog size, and @[Fund.Fund]@ the inputs now held
-    -- (empty when none are held yet). Count at 'Logging.DDetailed' and above,
-    -- full inputs at 'Logging.DMaximum'.
-    RecyclerPending   !String !Natural [Fund.Fund]
+  = -- | A payload's entry was added to the backlog: its key and its two
+    -- input sets, held until a release picks one. 'String' is the recycler
+    -- name, 'Natural' the resulting backlog size, 'Api.TxId' the payload's
+    -- key, first @[Fund.Fund]@ the consumed inputs, second the produced
+    -- outputs (counts at 'Logging.DDetailed' and above, txId and full data
+    -- at 'Logging.DMaximum').
+    RecyclerAddToBacklog !String !Natural !Api.TxId [Fund.Fund] [Fund.Fund]
     -- | Recycled inputs were added back onto a pipe's input queue. First
     -- 'String' is the recycler name, second 'String' the pipe name, 'Natural'
-    -- the pending backlog size, @[Fund.Fund]@ the added inputs (count at
+    -- the resulting backlog size, @[Fund.Fund]@ the added inputs (count at
     -- 'Logging.DDetailed' and above, full data at 'Logging.DMaximum').
   | RecyclerAddToPipe !String !String !Natural [Fund.Fund]
+    -- | The recycler reset a pipe's input queue: the queued inputs were
+    -- discarded, the payloads built from them were dropped from the payload
+    -- queue, and the input queue was reseeded with fresh inputs (a builder's
+    -- recovery). First 'String' is the recycler name, second 'String' the
+    -- pipe name, 'Natural' the resulting backlog size (always @0@,
+    -- a reset clears the backlog), @[Api.TxId]@ the dropped queued payloads
+    -- by txId, first @[Fund.Fund]@ the dropped inputs, second the fresh ones
+    -- added to the queue (counts at 'Logging.DDetailed' and above, full data
+    -- at 'Logging.DMaximum').
+  | RecyclerReset     !String !String !Natural [Api.TxId] [Fund.Fund] [Fund.Fund]
 
--- | Namespaces: @TxCentrifuge.Recycler.{Pending, AddToPipe}@. Outer prefix
--- @[\"TxCentrifuge\", \"Recycler\"]@ is set in 'setupTracers'.
+-- | Namespaces: @TxCentrifuge.Recycler.{AddToBacklog, AddToPipe, Reset}@.
+-- Outer prefix @[\"TxCentrifuge\", \"Recycler\"]@ is set in 'setupTracers'.
 instance Logging.MetaTrace RecyclerTrace where
-  namespaceFor RecyclerPending{}   = Logging.Namespace [] ["Pending"]
-  namespaceFor RecyclerAddToPipe{} = Logging.Namespace [] ["AddToPipe"]
-  severityFor (Logging.Namespace _ ["Pending"])   _ = Just Logging.Info
-  severityFor (Logging.Namespace _ ["AddToPipe"]) _ = Just Logging.Info
+  namespaceFor RecyclerAddToBacklog{} = Logging.Namespace [] ["AddToBacklog"]
+  namespaceFor RecyclerAddToPipe{}    = Logging.Namespace [] ["AddToPipe"]
+  namespaceFor RecyclerReset{}        = Logging.Namespace [] ["Reset"]
+  severityFor (Logging.Namespace _ ["AddToBacklog"]) _ = Just Logging.Info
+  severityFor (Logging.Namespace _ ["AddToPipe"])    _ = Just Logging.Info
+  severityFor (Logging.Namespace _ ["Reset"])        _ = Just Logging.Warning
   severityFor _ _ = Nothing
-  documentFor (Logging.Namespace _ ["Pending"]) = Just $
-    "A payload entered the recycler's pending backlog: one of its two "
-    <> "lifecycle signals (build, or a dequeue/confirm/orphan release) "
-    <> "has arrived and it awaits the other. The pending count is the "
-    <> "current backlog size, not a pipe queue depth."
+  documentFor (Logging.Namespace _ ["AddToBacklog"]) = Just $
+    "The recycler added a payload's entry to its backlog: the key and both "
+    <> "input sets, held until a release picks one. The backlog count is "
+    <> "the number of held payloads, not a pipe queue depth."
   documentFor (Logging.Namespace _ ["AddToPipe"]) = Just
     "The recycler added a payload's recycled inputs back onto a pipe's input queue (count at DDetailed, full inputs at DMaximum)."
+  documentFor (Logging.Namespace _ ["Reset"]) = Just $
+    "The recycler reset a pipe for a builder's recovery: the queued inputs "
+    <> "and the queued payloads built from them were dropped, and the input "
+    <> "queue was reseeded with fresh inputs (counts at DDetailed, full "
+    <> "inputs at DMaximum)."
   documentFor _ = Nothing
   allNamespaces =
-    [ Logging.Namespace [] ["Pending"]
+    [ Logging.Namespace [] ["AddToBacklog"]
     , Logging.Namespace [] ["AddToPipe"]
+    , Logging.Namespace [] ["Reset"]
     ]
 
--- | Machine format: both events always emit @recycler@ + @pending@ (the pending
--- backlog size, not a queue depth), and 'RecyclerAddToPipe' also emits @pipe@.
--- Both add @count@ at 'Logging.DDetailed' and above and an @inputs@ array of
--- rendered funds at 'Logging.DMaximum' (see 'renderFund'). Human format shows
--- the pending backlog size and the count.
+-- | Machine format: every event emits @recycler@ and @backlog@ (the
+-- resulting backlog size, not a queue depth). 'RecyclerAddToBacklog'
+-- carries the added entry: @consumed_count@ and @outputs_count@ at
+-- 'Logging.DDetailed', the payload's @txId@ and the @consumed@ and
+-- @outputs@ fund arrays (see 'renderFund') at 'Logging.DMaximum'.
+-- 'RecyclerAddToPipe' (which also emits @pipe@) adds a @count@ at
+-- 'Logging.DDetailed' and an @inputs@ array of the recycled funds at
+-- 'Logging.DMaximum'. 'RecyclerReset' (also with @pipe@) adds @count@ for
+-- the fresh inputs, @dropped_inputs_count@ and @dropped_payloads_count@ at
+-- 'Logging.DDetailed', plus the @inputs@ (fresh), @dropped_inputs@ and
+-- @dropped_payloads@ (txIds) arrays at 'Logging.DMaximum'.
+-- Human format shows the backlog size and the counts.
 instance Logging.LogFormatting RecyclerTrace where
-  forMachine dtal (RecyclerPending recyclerName pending inputs) = mconcat $
+  forMachine dtal (RecyclerAddToBacklog recyclerName backlog txId consumed outputs) =
+    mconcat $
        [ "recycler" .= recyclerName
-       , "pending"  .= pending
+       , "backlog"  .= backlog
        ]
-    ++ [ "count"  .= length inputs
+    ++ [ "consumed_count" .= length consumed
        | dtal >= Logging.DDetailed
        ]
-    ++ [ "inputs" .= map (renderFund dtal) inputs
+    ++ [ "outputs_count" .= length outputs
+       | dtal >= Logging.DDetailed
+       ]
+    ++ [ "txId" .= String (Api.serialiseToRawBytesHexText txId)
        | dtal >= Logging.DMaximum
        ]
-  forMachine dtal (RecyclerAddToPipe recyclerName pipeName pending inputs) = mconcat $
+    ++ [ "consumed" .= map (renderFund dtal) consumed
+       | dtal >= Logging.DMaximum
+       ]
+    ++ [ "outputs" .= map (renderFund dtal) outputs
+       | dtal >= Logging.DMaximum
+       ]
+  forMachine dtal (RecyclerAddToPipe recyclerName pipeName backlog inputs) = mconcat $
        [ "recycler" .= recyclerName
        , "pipe"     .= pipeName
-       , "pending"  .= pending
+       , "backlog"  .= backlog
        ]
     ++ [ "count"  .= length inputs
        | dtal >= Logging.DDetailed
@@ -590,15 +627,48 @@ instance Logging.LogFormatting RecyclerTrace where
     ++ [ "inputs" .= map (renderFund dtal) inputs
        | dtal >= Logging.DMaximum
        ]
-  forHuman (RecyclerPending recyclerName pending inputs) =
-       "Pending [" <> Text.pack recyclerName <> "]"
-    <> " pending=" <> Text.pack (show pending)
-    <> " count=" <> Text.pack (show (length inputs))
-  forHuman (RecyclerAddToPipe recyclerName pipeName pending inputs) =
+  forMachine dtal (RecyclerReset recyclerName pipeName backlog droppedPayloads droppedInputs fresh) =
+    mconcat $
+       [ "recycler" .= recyclerName
+       , "pipe"     .= pipeName
+       , "backlog"  .= backlog
+       ]
+    ++ [ "count" .= length fresh
+       | dtal >= Logging.DDetailed
+       ]
+    ++ [ "dropped_inputs_count" .= length droppedInputs
+       | dtal >= Logging.DDetailed
+       ]
+    ++ [ "dropped_payloads_count" .= length droppedPayloads
+       | dtal >= Logging.DDetailed
+       ]
+    ++ [ "inputs" .= map (renderFund dtal) fresh
+       | dtal >= Logging.DMaximum
+       ]
+    ++ [ "dropped_inputs" .= map (renderFund dtal) droppedInputs
+       | dtal >= Logging.DMaximum
+       ]
+    ++ [ "dropped_payloads" .=
+           map (String . Api.serialiseToRawBytesHexText) droppedPayloads
+       | dtal >= Logging.DMaximum
+       ]
+  forHuman (RecyclerAddToBacklog recyclerName backlog _txId consumed outputs) =
+       "AddToBacklog [" <> Text.pack recyclerName <> "]"
+    <> " backlog=" <> Text.pack (show backlog)
+    <> " consumed_count=" <> Text.pack (show (length consumed))
+    <> " outputs_count=" <> Text.pack (show (length outputs))
+  forHuman (RecyclerAddToPipe recyclerName pipeName backlog inputs) =
        "AddToPipe [" <> Text.pack recyclerName <> "]"
     <> " pipe=" <> Text.pack pipeName
-    <> " pending=" <> Text.pack (show pending)
+    <> " backlog=" <> Text.pack (show backlog)
     <> " count=" <> Text.pack (show (length inputs))
+  forHuman (RecyclerReset recyclerName pipeName backlog droppedPayloads droppedInputs fresh) =
+       "Reset [" <> Text.pack recyclerName <> "]"
+    <> " pipe=" <> Text.pack pipeName
+    <> " backlog=" <> Text.pack (show backlog)
+    <> " count=" <> Text.pack (show (length fresh))
+    <> " dropped_inputs_count=" <> Text.pack (show (length droppedInputs))
+    <> " dropped_payloads_count=" <> Text.pack (show (length droppedPayloads))
 
 --------------------------------------------------------------------------------
 -- Observer trace messages
