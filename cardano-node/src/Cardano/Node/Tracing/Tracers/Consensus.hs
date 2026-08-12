@@ -88,8 +88,9 @@ import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-import           LeiosDemoTypes (AnnouncementFields (..), TraceLeiosKernel (..), TraceLeiosPeer (..),
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           LeiosDemoTypes (AnnouncementFields (..), FetchArrivalBytes (..),
+                   TraceLeiosKernel (..), TraceLeiosPeer (..), traceLeiosKernelToObject,
+                   traceLeiosPeerToObject)
 import qualified LeiosDemoTypes as Leios
 import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
@@ -2437,6 +2438,14 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosBlockAcquired pt      -> "EB body acquired: "        <> Text.pack (show pt)
     TraceLeiosBlockPointMissing pt  -> "EB point missing on body acquisition: " <> Text.pack (show pt)
     TraceLeiosBlockTxsAcquired pt   -> "EB txs acquired: "         <> Text.pack (show pt)
+    TraceLeiosFetchBodyArrival fab ->
+      "LeiosFetch EB body arrival (bytes): invalid=" <> showT (fabInvalid fab)
+        <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
+        <> " extra=" <> showT (fabExtra fab)
+    TraceLeiosFetchTxsArrival fab ->
+      "LeiosFetch tx batch arrival (bytes): invalid=" <> showT (fabInvalid fab)
+        <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
+        <> " extra=" <> showT (fabExtra fab)
     TraceLeiosTxCacheEbBody pt ibs ->
       "EB body added to TxCache " <> Text.pack (show pt)
         <> ": " <> showT (Leios.ibsTxsInEb ibs) <> " txs"
@@ -2466,13 +2475,30 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosAnnouncementAccepted src equiv fields mbAge ->
       "EB announcement accepted from " <> Text.pack (show src)
         <> " (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields) <> " age=" <> showT mbAge
-  asMetrics _ = []
+  asMetrics = \case
+    -- LeiosFetch arrival bytes, partitioned by prior LeiosTxCache state; each an
+    -- accumulating counter. The four per message sum to its size.
+    TraceLeiosFetchBodyArrival fab ->
+      [ CounterM "leiosFetchBodyInvalidBytes" (Just (fromIntegral (fabInvalid fab)))
+      , CounterM "leiosFetchBodyEvictedBytes" (Just (fromIntegral (fabEvicted fab)))
+      , CounterM "leiosFetchBodyGoodBytes" (Just (fromIntegral (fabGood fab)))
+      , CounterM "leiosFetchBodyExtraBytes" (Just (fromIntegral (fabExtra fab)))
+      ]
+    TraceLeiosFetchTxsArrival fab ->
+      [ CounterM "leiosFetchTxsInvalidBytes" (Just (fromIntegral (fabInvalid fab)))
+      , CounterM "leiosFetchTxsEvictedBytes" (Just (fromIntegral (fabEvicted fab)))
+      , CounterM "leiosFetchTxsGoodBytes" (Just (fromIntegral (fabGood fab)))
+      , CounterM "leiosFetchTxsExtraBytes" (Just (fromIntegral (fabExtra fab)))
+      ]
+    _ -> []
 
 instance MetaTrace TraceLeiosKernel where
   namespaceFor MkTraceLeiosKernel{}          = Namespace [] ["Msg"]
   namespaceFor TraceLeiosBlockAcquired{}     = Namespace [] ["BlockAcquired"]
   namespaceFor TraceLeiosBlockPointMissing{} = Namespace [] ["BlockPointMissing"]
   namespaceFor TraceLeiosBlockTxsAcquired{}  = Namespace [] ["BlockTxsAcquired"]
+  namespaceFor TraceLeiosFetchBodyArrival{}  = Namespace [] ["FetchBodyArrival"]
+  namespaceFor TraceLeiosFetchTxsArrival{}   = Namespace [] ["FetchTxsArrival"]
   namespaceFor TraceLeiosTxCacheEbBody{}     = Namespace [] ["TxCacheEbBody"]
   namespaceFor TraceLeiosBlockForged{}       = Namespace [] ["BlockForged"]
   namespaceFor TraceLeiosBlockStored{}       = Namespace [] ["BlockStored"]
@@ -2489,15 +2515,35 @@ instance MetaTrace TraceLeiosKernel where
 
   severityFor (Namespace _ ["DbException"])        _ = Just Error
   severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
+  -- High-frequency (once per received response); Debug keeps it out of logs
+  -- under the default Notice threshold while its metric still flows to EKG.
+  severityFor (Namespace _ ["FetchBodyArrival"])   _ = Just Debug
+  severityFor (Namespace _ ["FetchTxsArrival"])    _ = Just Debug
   severityFor _                                    _ = Just Info
 
   documentFor _ = Nothing
+
+  metricsDocFor (Namespace _ ["FetchBodyArrival"]) =
+    [ ("leiosFetchBodyInvalidBytes", "EB-body bytes received in a failed-validation MsgLeiosBlock.")
+    , ("leiosFetchBodyEvictedBytes", "EB-body bytes whose announcement was absent from the LeiosTxCache (assumed since evicted).")
+    , ("leiosFetchBodyGoodBytes", "EB-body bytes filling an announced-but-not-yet-held EB (the expected case).")
+    , ("leiosFetchBodyExtraBytes", "EB-body bytes for an EB already held (redundant).")
+    ]
+  metricsDocFor (Namespace _ ["FetchTxsArrival"]) =
+    [ ("leiosFetchTxsInvalidBytes", "Tx bytes received in a failed-validation MsgLeiosBlockTxs.")
+    , ("leiosFetchTxsEvictedBytes", "Tx bytes no cached body expected (prior state absent, assumed since evicted).")
+    , ("leiosFetchTxsGoodBytes", "Tx bytes a cached body expected and had not yet held (the expected case).")
+    , ("leiosFetchTxsExtraBytes", "Tx bytes already held (redundant).")
+    ]
+  metricsDocFor _ = []
 
   allNamespaces =
     [ Namespace [] ["Msg"]
     , Namespace [] ["BlockAcquired"]
     , Namespace [] ["BlockPointMissing"]
     , Namespace [] ["BlockTxsAcquired"]
+    , Namespace [] ["FetchBodyArrival"]
+    , Namespace [] ["FetchTxsArrival"]
     , Namespace [] ["BlockForged"]
     , Namespace [] ["BlockStored"]
     , Namespace [] ["BlockAnnounced"]
