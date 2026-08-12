@@ -53,6 +53,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Others
   , blocksize64k
   , blocksize768k
+  , blocksize6912k
   , voting
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
@@ -443,6 +444,9 @@ blocksize64k = helper_addOverlayOrDie "blocksize64k"
 
 blocksize768k :: HasCallStack => Types.Profile -> Types.Profile
 blocksize768k = helper_addOverlayOrDie "blocksize768k"
+
+blocksize6912k :: HasCallStack => Types.Profile -> Types.Profile
+blocksize6912k = helper_addOverlayOrDie "blocksize6912k"
 
 voting :: HasCallStack => Types.Profile -> Types.Profile
 voting = helper_addOverlayOrDie "voting"

@@ -11,7 +11,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleMainnet, timescaleDevops
 
 , genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
-, fundsDefault, fundsDouble, fundsVoting
+, fundsDefault, fundsDouble, fundsVoting, fundsQuadruple
 
 , hosts
 
@@ -125,6 +125,10 @@ fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoK
 
 fundsVoting :: Types.Profile -> Types.Profile
 fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
+
+-- For chain creation with very large blocks (~800k submitted value txs).
+fundsQuadruple :: Types.Profile -> Types.Profile
+fundsQuadruple = P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 1
 
 
 -- Definition vocabulary: composition.
