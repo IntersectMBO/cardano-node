@@ -78,6 +78,11 @@ package cardano-diffusion
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
 
+-- new Cardano.Api re-exports blockNo, shadowed by local bindings in cardano-rpc
+-- TODO remove after cardano-rpc upgrade
+package cardano-rpc
+  ghc-options: -Wno-name-shadowing
+
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
 allow-newer:
@@ -165,4 +170,26 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api.git
+  tag: 26aaf4a878a46bf398a2e88e8bd88f307dd20587
+  --sha256: sha256-yiKKAY4Uru3nAJBeZy/c3kES8vwcq/vU3xSPx2Z4+i8=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli.git
+  tag: 92790ca0733aa942d0977ebb91d361d0b8fd30e3
+  --sha256: sha256-EBBP8luu1Q72hiTJ5suuKZKKHBLGv3I8bdQce/2j68E=
+  subdir:
+    cardano-cli
+
+constraints:
+  -- TODO: remove once cardano-api (SRP pin) is past fa0d44832 ("Remove redundant orphan
+  -- typeclass instances"): cardano-data 1.3.1.0 added its own ToJSON instances for
+  -- Data.Map.NonEmpty/Data.Set.NonEmpty, which clash with cardano-api 11.3's orphans.
+  , cardano-data <1.3.1
 
