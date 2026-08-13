@@ -48,7 +48,8 @@ import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigF
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
-                   SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
+                   SnapshotInterval (..), SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs,
+                   mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
@@ -493,7 +494,7 @@ instance FromJSON PartialNodeConfiguration where
         let snapInterval x = do
               si <- x .:? "SnapshotInterval"
               when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
-              pure $ si >>= nonZero
+              pure $ fmap (RequestedSnapshotInterval . fromJust . nonZero) si
             snapNum x      = fmap NumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
 
         mTopLevelSnapInterval <- snapInterval v

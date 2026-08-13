@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-
 {- HLINT ignore "Use map with tuple-section" -}
 
 -- | This module provides means to secure funds that are given in genesis.
@@ -24,8 +23,6 @@ import           Cardano.Api hiding (ShelleyGenesis)
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey))
 import           Cardano.Ledger.Shelley.API (Addr (..))
 import           Cardano.Ledger.Shelley.Genesis (InjectionData (..), ShelleyExtraConfig (..))
 import           Cardano.TxGenerator.Fund
@@ -33,12 +30,10 @@ import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
-import           Data.Bifunctor (second)
+import           Data.Bifunctor (bimap, second)
 import           Data.Function ((&))
 import           Data.List (find)
 import qualified Data.ListMap as ListMap (toList)
-import qualified Data.Set as Set
-import           Lens.Micro ((.~), (^.))
 
 
 genesisValidate ::  ShelleyGenesis -> Either String ()
@@ -133,15 +128,11 @@ genesisExpenditure networkId inputKey addr value fee ttl outputKey
   pseudoTxIn  = genesisTxInput networkId inputKey
 
   fund tx = FundInEra {
-    _fundTxIn = TxIn (txIdFromTx tx) (TxIx 0)
+    _fundTxIn = TxIn (getTxId $ getTxBody tx) (TxIx 0)
   , _fundWitness = KeyWitness KeyWitnessForSpending
   , _fundVal  = value
   , _fundSigningKey = Just outputKey
   }
-
-  txIdFromTx :: Tx era -> TxId
-  txIdFromTx (ShelleyTx sbe' tx') =
-    shelleyBasedEraConstraints sbe' $ fromShelleyTxId $ Ledger.txIdTxBody (tx' ^. Ledger.bodyTxL)
 
 mkGenesisTransaction :: forall era .
      IsShelleyBasedEra era
@@ -151,24 +142,18 @@ mkGenesisTransaction :: forall era .
   -> [TxIn]
   -> [TxOut CtxTx era]
   -> Either TxGenError (Tx era)
-mkGenesisTransaction key ttl fee txins txouts =
-  shelleyBasedEraConstraints sbe $
-    let txInputs = zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending
-        ledgerTxBody =
-          mkCommonTxBody sbe txInputs txouts (mkTxFee fee) TxWithdrawalsNone Nothing
-            & invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (mkTxValidityUpperBound ttl)
-        rawBody = ledgerTxBody ^. txBodyL
-        unsignedLedgerTx = Ledger.mkBasicTx rawBody
-        txHash = Ledger.extractHash $ Ledger.hashAnnotated rawBody
-        shelleySigningKey = toShelleySigningKey (WitnessGenesisUTxOKey key)
-        witVKey = WitVKey
-          (getShelleyKeyWitnessVerificationKey shelleySigningKey)
-          (makeShelleySignature txHash shelleySigningKey)
-        signedLedgerTx = unsignedLedgerTx
-          & Ledger.witsTxL .~ (Ledger.mkBasicTxWits & Ledger.addrTxWitsL .~ Set.singleton witVKey)
-    in Right $ ShelleyTx sbe signedLedgerTx
+mkGenesisTransaction key ttl fee txins txouts
+  = bimap
+      ApiError
+      (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
+      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
-  sbe = shelleyBasedEra @era
+  txBodyContent = defaultTxBodyContent shelleyBasedEra
+    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
+    & setTxOuts txouts
+    & setTxFee (mkTxFee fee)
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (mkTxValidityUpperBound ttl)
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey

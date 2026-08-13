@@ -40,7 +40,6 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Tools (estimateMinFeeTx)
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -363,12 +362,10 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             Right tx -> do
               let
                 txSize = txSizeInBytes tx
-                txFeeEstimate = case tx of
-                  ShelleyTx sbe ledgerTx -> shelleyBasedEraConstraints sbe $
-                    case toLedgerPParams sbe protocolParameters of
-                      Left{}              -> Nothing
-                      Right ledgerPParams -> Just $
-                        estimateMinFeeTx ledgerPParams ledgerTx (inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
+                  Left{}              -> Nothing
+                  Right ledgerPParams -> Just $
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
               traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
               -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee

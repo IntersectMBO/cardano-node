@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-08-09T23:27:58Z
-  , cardano-haskell-packages 2026-08-07T15:03:01Z
+  , cardano-haskell-packages 2026-08-11T14:53:43Z
 
 active-repositories:
   , :rest
@@ -97,6 +97,14 @@ allow-newer:
 
 source-repository-package
   type: git
+  location: https://github.com/koslambrou/dmq-node.git
+  tag: c9312a66a445648c4ce07dca307a77a92e232ac6
+  --sha256: sha256-0XdlGUDP/rOJLIjb5C4Ynd2mk8SHGj61QskiFDZg9Po=
+  subdir:
+    dmq-node
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/cardano-api.git
   tag: 73272cd54d6199cbf08f987079212188ab28667d
   --sha256: sha256-eE+FDXzutKgf8CV0DUY4T4SNMtby+xiDqJYKppxGtuQ=
@@ -106,13 +114,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 1d89009944cf3abc8c94b2632d923317127119d0
-  --sha256: sha256-4pJAlQ4PYGuah64gaDdSAOyBPYd1prJM6NIT+ZVu5+k=
+  tag: 27b5bf379d35c6fe4bf16e01954bf84850c27b71
+  --sha256: sha256-Xj9EpJdQ8SAe+XvS2yJo35zVcPQLew6RxqY3V7Tquj4=
   subdir:
     cardano-cli
-
-constraints:
-  , cuddle>=1.1 && <1.1.2
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
