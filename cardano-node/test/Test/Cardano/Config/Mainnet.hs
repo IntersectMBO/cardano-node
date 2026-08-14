@@ -15,6 +15,9 @@ import qualified Data.Yaml as Y
 import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -24,7 +27,8 @@ import qualified Hedgehog.Extras.Test.Process as H
 hprop_configMainnetHash :: Property
 hprop_configMainnetHash = H.propertyOnce $ do
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  result <- H.evalIO $ runExceptT $ initialLedgerState $ File $ base </> "configuration/cardano/mainnet-config.json"
+  let fs = SomeHasFS (ioHasFS (MountPoint (base </> "configuration/cardano")))
+  result <- H.evalIO $ runExceptT $ initialLedgerState fs $ File $ base </> "configuration/cardano/mainnet-config.json"
   case result of
     Right (_, _) -> return ()
     Left e -> H.failWithCustom GHC.callStack Nothing (displayError e)

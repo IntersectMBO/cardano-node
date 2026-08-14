@@ -56,6 +56,14 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpIn
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (NumObjectsProcessed (..),
+                   TraceObjectDiffusionInbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound
+                   (TraceObjectDiffusionOutbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
+                   (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
+                   (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -65,13 +73,14 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
-import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
+import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Control.Exception (displayException)
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
@@ -1039,12 +1048,20 @@ instance ( HasHeader blk
 
 instance MetaTrace SanityCheckIssue where
 
-  namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
+  namespaceFor _ = Namespace [] ["SanityCheckIssue"]
 
   severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ["SanityCheckIssue"]) = Nothing
+  documentFor (Namespace _ ["SanityCheckIssue"]) = Just $ mconcat
+    [ "A sanity check on the node configuration found a suspicious setting at"
+    , " startup. The `kind` field names the check that fired:"
+    , " `InconsistentSecurityParam`, `SnapshotDelayRangeInverted`,"
+    , " `SnapshotDelayRangeNegativeMinimum`, `SnapshotRateLimitDisabled`,"
+    , " `SnapshotRateLimitSuspiciouslyLarge`, `SnapshotNumZero` or"
+    , " `SnapshotIntervalNotDivisorOfEpoch`. These flag configurations that are"
+    , " legal but almost certainly unintended; the node continues to run."
+    ]
   documentFor _ = Nothing
 
   allNamespaces = [Namespace [] ["SanityCheckIssue"]]
@@ -1054,8 +1071,30 @@ instance LogFormatting SanityCheckIssue where
     mconcat [ "kind" .= String "InconsistentSecurityParam"
             , "error" .= String (Text.pack $ show e)
             ]
-  forHuman (InconsistentSecurityParam e) =
-    "Configuration contains multiple security parameters: " <> Text.pack (show e)
+  forMachine _dtal (SnapshotDelayRangeInverted mn mx) =
+    mconcat [ "kind" .= String "SnapshotDelayRangeInverted"
+            , "minimumDelay" .= show mn
+            , "maximumDelay" .= show mx
+            ]
+  forMachine _dtal (SnapshotDelayRangeNegativeMinimum mn) =
+    mconcat [ "kind" .= String "SnapshotDelayRangeNegativeMinimum"
+            , "minimumDelay" .= show mn
+            ]
+  forMachine _dtal SnapshotRateLimitDisabled =
+    mconcat [ "kind" .= String "SnapshotRateLimitDisabled"
+            ]
+  forMachine _dtal (SnapshotRateLimitSuspiciouslyLarge rl) =
+    mconcat [ "kind" .= String "SnapshotRateLimitSuspiciouslyLarge"
+            , "rateLimit" .= show rl
+            ]
+  forMachine _dtal SnapshotNumZero =
+    mconcat [ "kind" .= String "SnapshotNumZero"
+            ]
+  forMachine _dtal (SnapshotIntervalNotDivisorOfEpoch interval) =
+    mconcat [ "kind" .= String "SnapshotIntervalNotDivisorOfEpoch"
+            , "interval" .= toJSON interval
+            ]
+  forHuman = Text.pack . displayException
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
@@ -2300,7 +2339,9 @@ instance MetaTrace KESAgentClientTrace where
     KESAgentClientTrace t -> nsCast $ namespaceFor t
 
   severityFor (Namespace [] ["KESAgentClientException"]) _ = Just Error
-  severityFor (Namespace [] ["KESAgentClientTrace"]) _ = Just Info
+  severityFor ns (Just (KESAgentClientTrace t)) = severityFor (nsCast ns) (Just t)
+  severityFor ns Nothing =
+    severityFor (nsCast ns :: Namespace Agent.ServiceClientTrace) Nothing
   severityFor _ _ = Nothing
 
   documentFor _ = Nothing
@@ -2308,3 +2349,236 @@ instance MetaTrace KESAgentClientTrace where
   allNamespaces =
     Namespace [] ["KESAgentClientException"] :
     fmap nsCast (allNamespaces :: [Namespace Agent.ServiceClientTrace])
+
+--------------------------------------------------------------------------------
+-- Peras
+--------------------------------------------------------------------------------
+
+-- TODO: Move this to a proper place. A lot of this is duplicated in the
+--       ToObject instance. This is likely in an incorrect place. Fix
+--       duplication.
+
+-- | Object diffusion is instantiated once per diffused object kind: Peras
+-- certificates and Peras votes. EKG metric names don't carry the tracer
+-- namespace, so each kind supplies its own prefix here; sharing one would
+-- make cert and vote metrics overwrite each other.
+perasCertMetricsPrefix, perasVoteMetricsPrefix :: Text.Text
+perasCertMetricsPrefix = "perasCert"
+perasVoteMetricsPrefix = "perasVote"
+
+forMachineObjectDiffusionInbound ::
+     TraceObjectDiffusionInbound objectId object
+  -> Aeson.Object
+forMachineObjectDiffusionInbound = \case
+  TraceObjectDiffusionInboundCollectedObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCollectedObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionInboundAddedObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundAddedObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionInboundRecvControlMessage payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundRecvControlMessage"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionInboundCanRequestMoreObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCanRequestMoreObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionInboundCannotRequestMoreObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionInboundCannotRequestMoreObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+
+asMetricsObjectDiffusionInbound ::
+     Text.Text
+  -> TraceObjectDiffusionInbound objectId object
+  -> [Metric]
+asMetricsObjectDiffusionInbound prefix = \case
+  TraceObjectDiffusionInboundCollectedObjects collected ->
+    [IntM (prefix <> "ObjectsCollected") (fromIntegral collected)]
+  TraceObjectDiffusionInboundAddedObjects (NumObjectsProcessed added) ->
+    [CounterM (prefix <> "ObjectsAdded") (Just (fromIntegral added))]
+  _ -> []
+
+metricsDocForObjectDiffusionInbound ::
+     Text.Text
+  -> Namespace a
+  -> [(Text.Text, Text.Text)]
+metricsDocForObjectDiffusionInbound prefix = \case
+  Namespace _ ["TraceObjectDiffusionInboundCollectedObjects"] ->
+    [( prefix <> "ObjectsCollected"
+     , "number of objects about to be inserted into the pool")]
+  Namespace _ ["TraceObjectDiffusionInboundAddedObjects"] ->
+    [( prefix <> "ObjectsAdded"
+     , "total number of objects accepted into the pool")]
+  _ -> []
+
+namespaceForObjectDiffusionInbound ::
+     TraceObjectDiffusionInbound objectId object
+  -> Namespace a
+namespaceForObjectDiffusionInbound = \case
+  TraceObjectDiffusionInboundCollectedObjects _ ->
+    Namespace [] ["TraceObjectDiffusionInboundCollectedObjects"]
+  TraceObjectDiffusionInboundAddedObjects _ ->
+    Namespace [] ["TraceObjectDiffusionInboundAddedObjects"]
+  TraceObjectDiffusionInboundRecvControlMessage _ ->
+    Namespace [] ["TraceObjectDiffusionInboundRecvControlMessage"]
+  TraceObjectDiffusionInboundCanRequestMoreObjects _ ->
+    Namespace [] ["TraceObjectDiffusionInboundCanRequestMoreObjects"]
+  TraceObjectDiffusionInboundCannotRequestMoreObjects _ ->
+    Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
+
+severityForObjectDiffusionInbound :: Namespace a -> Maybe SeverityS
+severityForObjectDiffusionInbound = \case
+  Namespace _ ["TraceObjectDiffusionInboundCollectedObjects"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionInboundAddedObjects"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionInboundRecvControlMessage"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionInboundCanRequestMoreObjects"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionInboundCannotRequestMoreObjects"] -> Just Info
+  _ -> Nothing
+
+allNamespacesObjectDiffusionInbound :: [Namespace a]
+allNamespacesObjectDiffusionInbound =
+  [ Namespace [] ["TraceObjectDiffusionInboundCollectedObjects"]
+  , Namespace [] ["TraceObjectDiffusionInboundAddedObjects"]
+  , Namespace [] ["TraceObjectDiffusionInboundRecvControlMessage"]
+  , Namespace [] ["TraceObjectDiffusionInboundCanRequestMoreObjects"]
+  , Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
+  ]
+
+instance LogFormatting (TracePerasCertDiffusionInbound blk) where
+  forMachine _ = forMachineObjectDiffusionInbound
+  asMetrics = asMetricsObjectDiffusionInbound perasCertMetricsPrefix
+
+instance MetaTrace (TracePerasCertDiffusionInbound blk) where
+  namespaceFor = namespaceForObjectDiffusionInbound
+  severityFor ns _ = severityForObjectDiffusionInbound ns
+  documentFor _ = Nothing
+  metricsDocFor = metricsDocForObjectDiffusionInbound perasCertMetricsPrefix
+  allNamespaces = allNamespacesObjectDiffusionInbound
+
+instance LogFormatting (TracePerasVoteDiffusionInbound blk) where
+  forMachine _ = forMachineObjectDiffusionInbound
+  asMetrics = asMetricsObjectDiffusionInbound perasVoteMetricsPrefix
+
+instance MetaTrace (TracePerasVoteDiffusionInbound blk) where
+  namespaceFor = namespaceForObjectDiffusionInbound
+  severityFor ns _ = severityForObjectDiffusionInbound ns
+  documentFor _ = Nothing
+  metricsDocFor = metricsDocForObjectDiffusionInbound perasVoteMetricsPrefix
+  allNamespaces = allNamespacesObjectDiffusionInbound
+
+forMachineObjectDiffusionOutbound ::
+     ( Show objectId
+     , Show object
+     )
+  => TraceObjectDiffusionOutbound objectId object
+  -> Aeson.Object
+forMachineObjectDiffusionOutbound = \case
+  TraceObjectDiffusionOutboundRecvMsgRequestObjectIds payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionOutboundSendMsgReplyObjectIds payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjectIds"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionOutboundRecvMsgRequestObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundRecvMsgRequestObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionOutboundSendMsgReplyObjects payload ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundSendMsgReplyObjects"
+      , "payload" .= String (Text.pack . show $ payload)
+      ]
+  TraceObjectDiffusionOutboundTerminated ->
+    mconcat
+      [ "kind" .= String "TraceObjectDiffusionOutboundTerminated"
+      ]
+
+asMetricsObjectDiffusionOutbound ::
+     Text.Text
+  -> TraceObjectDiffusionOutbound objectId object
+  -> [Metric]
+asMetricsObjectDiffusionOutbound prefix = \case
+  TraceObjectDiffusionOutboundSendMsgReplyObjects objects ->
+    [CounterM (prefix <> "ObjectsSent") (Just (length objects))]
+  _ -> []
+
+metricsDocForObjectDiffusionOutbound ::
+     Text.Text
+  -> Namespace a
+  -> [(Text.Text, Text.Text)]
+metricsDocForObjectDiffusionOutbound prefix = \case
+  Namespace _ ["TraceObjectDiffusionOutboundSendMsgReplyObjects"] ->
+    [( prefix <> "ObjectsSent"
+     , "total number of objects served to peers")]
+  _ -> []
+
+namespaceForObjectDiffusionOutbound ::
+     TraceObjectDiffusionOutbound objectId object
+  -> Namespace a
+namespaceForObjectDiffusionOutbound = \case
+  TraceObjectDiffusionOutboundRecvMsgRequestObjectIds _ ->
+    Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"]
+  TraceObjectDiffusionOutboundSendMsgReplyObjectIds _ ->
+    Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"]
+  TraceObjectDiffusionOutboundRecvMsgRequestObjects _ ->
+    Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"]
+  TraceObjectDiffusionOutboundSendMsgReplyObjects _ ->
+    Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjects"]
+  TraceObjectDiffusionOutboundTerminated ->
+    Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
+
+severityForObjectDiffusionOutbound :: Namespace a -> Maybe SeverityS
+severityForObjectDiffusionOutbound = \case
+  Namespace _ ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionOutboundSendMsgReplyObjects"] -> Just Info
+  Namespace _ ["TraceObjectDiffusionOutboundTerminated"] -> Just Info
+  _ -> Nothing
+
+allNamespacesObjectDiffusionOutbound :: [Namespace a]
+allNamespacesObjectDiffusionOutbound =
+  [ Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjectIds"]
+  , Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjectIds"]
+  , Namespace [] ["TraceObjectDiffusionOutboundRecvMsgRequestObjects"]
+  , Namespace [] ["TraceObjectDiffusionOutboundSendMsgReplyObjects"]
+  , Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
+  ]
+
+instance Show (PerasCert blk)
+      => LogFormatting (TracePerasCertDiffusionOutbound blk) where
+  forMachine _ = forMachineObjectDiffusionOutbound
+  asMetrics = asMetricsObjectDiffusionOutbound perasCertMetricsPrefix
+
+instance MetaTrace (TracePerasCertDiffusionOutbound blk) where
+  namespaceFor = namespaceForObjectDiffusionOutbound
+  severityFor ns _ = severityForObjectDiffusionOutbound ns
+  documentFor _ = Nothing
+  metricsDocFor = metricsDocForObjectDiffusionOutbound perasCertMetricsPrefix
+  allNamespaces = allNamespacesObjectDiffusionOutbound
+
+instance Show (PerasVote blk)
+      => LogFormatting (TracePerasVoteDiffusionOutbound blk) where
+  forMachine _ = forMachineObjectDiffusionOutbound
+  asMetrics = asMetricsObjectDiffusionOutbound perasVoteMetricsPrefix
+
+instance MetaTrace (TracePerasVoteDiffusionOutbound blk) where
+  namespaceFor = namespaceForObjectDiffusionOutbound
+  severityFor ns _ = severityForObjectDiffusionOutbound ns
+  documentFor _ = Nothing
+  metricsDocFor = metricsDocForObjectDiffusionOutbound perasVoteMetricsPrefix
+  allNamespaces = allNamespacesObjectDiffusionOutbound

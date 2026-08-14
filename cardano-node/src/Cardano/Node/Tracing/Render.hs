@@ -218,9 +218,10 @@ renderScriptPurpose :: ()
   => Api.ShelleyBasedEra era
   -> PlutusPurpose AsItem (Api.ShelleyLedgerEra era)
   -> Aeson.Value
-renderScriptPurpose =
-  Api.caseShelleyToMaryOrAlonzoEraOnwards
-    (const (const Aeson.Null))
+renderScriptPurpose sbe =
+  Api.forEraInEon
+    (Api.toCardanoEra sbe)
+    (const Aeson.Null)
     (\case
       Api.AlonzoEraOnwardsAlonzo -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsBabbage -> renderAlonzoPlutusPurpose
@@ -238,7 +239,7 @@ renderAlonzoPlutusPurpose = \case
     Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
   AlonzoMinting pid ->
     Aeson.object ["minting" .= Aeson.toJSON pid]
-  AlonzoRewarding (AsItem rwdAcct) ->
+  AlonzoWithdrawing (AsItem rwdAcct) ->
     Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
   AlonzoCertifying cert ->
     Aeson.object ["certifying" .= Aeson.toJSON cert]
@@ -252,7 +253,7 @@ renderConwayPlutusPurpose = \case
     Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
   ConwayMinting pid ->
     Aeson.object ["minting" .= Aeson.toJSON pid]
-  ConwayRewarding (AsItem rwdAcct) ->
+  ConwayWithdrawing (AsItem rwdAcct) ->
     Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
   ConwayCertifying cert ->
     Aeson.object ["certifying" .= Aeson.toJSON cert]

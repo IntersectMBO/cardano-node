@@ -427,7 +427,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
       # haddock panic worked around above. Hoogle is not needed there and would
       # be built with the alternative compiler.
       haddocked = final.appendModule {
-        compiler-nix-name = "ghc9124";
+        compiler-nix-name = "ghc9122";
         shell.withHoogle = lib.mkForce false;
         shell.tools = lib.mkForce {};
       };
