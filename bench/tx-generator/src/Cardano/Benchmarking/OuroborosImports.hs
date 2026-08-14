@@ -1,6 +1,5 @@
 {- HLINT ignore "Eta reduce" -}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.OuroborosImports
@@ -38,21 +37,19 @@ import           Prelude
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
-toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo CardanoBlock
-toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst $ protocolInfo @IO info
+toProtocolInfo :: SomeConsensusProtocol -> IO (ProtocolInfo CardanoBlock)
+toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst <$> protocolInfo @IO info
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
-protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
-protocolToTopLevelConfig ptcl = pInfoConfig
- where
-   ProtocolInfo {pInfoConfig} = toProtocolInfo ptcl
+protocolToTopLevelConfig :: SomeConsensusProtocol -> IO (TopLevelConfig CardanoBlock)
+protocolToTopLevelConfig ptcl = pInfoConfig <$> toProtocolInfo ptcl
 
-protocolToCodecConfig :: SomeConsensusProtocol -> CodecConfig CardanoBlock
-protocolToCodecConfig = configCodec . protocolToTopLevelConfig
+protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig CardanoBlock)
+protocolToCodecConfig = fmap configCodec . protocolToTopLevelConfig
 
-protocolToNetworkId :: SomeConsensusProtocol -> NetworkId
+protocolToNetworkId :: SomeConsensusProtocol -> IO NetworkId
 protocolToNetworkId ptcl
-  = Testnet $ getNetworkMagic $ configBlock $ protocolToTopLevelConfig ptcl
+  = Testnet . getNetworkMagic . configBlock <$> protocolToTopLevelConfig ptcl
 
 makeLocalConnectInfo :: NetworkId -> SocketPath -> LocalNodeConnectInfo
 makeLocalConnectInfo networkId socketPath

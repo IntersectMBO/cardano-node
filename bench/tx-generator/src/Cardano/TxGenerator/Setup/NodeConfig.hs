@@ -34,7 +34,7 @@ getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
 getGenesis (SomeConsensusProtocol CardanoBlockType proto)
     = getConst $ Ledger.tcShelleyGenesisL Const transCfg
   where
-    ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
+    ProtocolInfoArgsCardano _ Consensus.CardanoProtocolParams
       { Consensus.cardanoLedgerTransitionConfig = transCfg
       } = proto
 

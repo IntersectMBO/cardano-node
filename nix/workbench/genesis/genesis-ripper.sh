@@ -654,7 +654,7 @@ protocol-cache-key-input() {
                  | del(.bootStakeholders, .heavyDelegation, .nonAvvmBalances,   .startTime  )
                  )
      , shelley:  ( .genesis.shelley  // {}
-                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart)
+                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart, .extraConfig)
                  )
      , alonzo:   ( .genesis.alonzo   // {} )
      , conway:   ( .genesis.conway   // {}
@@ -721,7 +721,8 @@ protocol-cache-ensure() {
                , .initialFunds
                , .staking
                , .maxLovelaceSupply
-               , .systemStart)'          \
+               , .systemStart
+               , .extraConfig)'          \
           "$profile_json"                \
       > "$tmpdir/protocol.shelley.json"
     else

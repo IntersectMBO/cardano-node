@@ -58,7 +58,7 @@ import           Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
-import           Data.Word (Word16)
+import           Data.Word (Word16, Word32)
 import           GHC.Generics
 import           Lens.Micro ((&), (.~), (^.))
 import           Numeric.Natural (Natural)
@@ -83,7 +83,7 @@ convertToLedgerProtocolParameters sbe pp =
 
 data ProtocolParameters
   = ProtocolParameters
-  { protocolParamProtocolVersion :: (Natural, Natural)
+  { protocolParamProtocolVersion :: (Natural, Word32)
   -- ^ Protocol version, major and minor. Updating the major version is
   -- used to trigger hard forks.
   --                              (Major  , Minor  )
@@ -323,7 +323,7 @@ requireParam
 requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
 
 -- Duplicated from "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
-mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
+mkProtVer :: (Natural, Word32) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   maybeToRight (PpceVersionInvalid majorProtVer) $
     (`Ledger.ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer

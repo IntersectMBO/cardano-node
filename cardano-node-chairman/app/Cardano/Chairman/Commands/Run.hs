@@ -19,12 +19,11 @@ import           Cardano.Node.Protocol
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 import           Ouroboros.Consensus.Config.SupportsNode
 import           Ouroboros.Consensus.Node.ProtocolInfo
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
-import           Control.Tracer (Tracer (..), stdoutTracer)
+import           Control.Tracer (Tracer, mkTracer, stdoutTracer, traceWith)
 import           Data.Monoid (Last (..))
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
@@ -113,14 +112,16 @@ run RunOpts
       Left err -> putStrLn (docToString $ prettyError err) >> exitFailure
       Right p  -> pure p
 
-  let (k , nId) = case p of
-            SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = fst $ Api.protocolInfo @IO runP
-              in ( Consensus.configSecurityParam pInfoConfig
-                 , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
-                 )
+  (k , nId) <-
+    case p of
+      SomeConsensusProtocol _ runP -> do
+        ProtocolInfo { pInfoConfig } <- fst <$> Api.protocolInfo @IO runP
+        pure
+          ( Consensus.configSecurityParam pInfoConfig
+          , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
+          )
 
-      consensusModeParams = getConsensusMode k ptclConfig
+  let consensusModeParams = getConsensusMode k ptclConfig
 
   chairmanTest
     (timed stdoutTracer)
@@ -146,10 +147,10 @@ run RunOpts
     getLast pncProtocolConfig
 
 timed :: Tracer IO a -> Tracer IO a
-timed (Tracer runTracer) = Tracer $ \a -> do
+timed tr = mkTracer $ \a -> do
   ts <- DTC.getCurrentTime
   IO.putStr ("[" <> show ts <> "] ")
-  runTracer a
+  traceWith tr a
 
 cmdRun :: Mod CommandFields (IO ())
 cmdRun = command "run"  $ flip info idm $ run <$> parseRunOpts
