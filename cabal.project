@@ -108,8 +108,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 547baecd35b475a292d7b3a3299339c61f26f592
-  --sha256: sha256-vDQ7VDiLyMPGOKbELedu/mhuW+E0td3p4ho0/y4YcPs=
+  tag: 81d6f4ed7025c5eef86ff298311b96dbd37f9954
+  --sha256: sha256-pTlIBx3CNnzOWzKgV9olW8npfKFOn9XfnpArsPMTLso=
   subdir:
     ouroboros-network
 
