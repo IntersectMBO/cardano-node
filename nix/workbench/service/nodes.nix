@@ -95,16 +95,6 @@ with pkgs.lib; let
     then folded.acc
     else throw "configHardforksIntoEra: unknown era '${era}'";
 
-  ## Number of slots between two ledger snapshots.
-  ##
-  ## Before node 11.x the workbench requested a snapshot every 4230 seconds of
-  ## wall clock time via the top level SnapshotInterval option. The option now
-  ## counts slots, so the 4230 second cadence is converted using the profile
-  ## slot duration. Adding 0.5 before flooring rounds to the nearest slot,
-  ## avoiding float division artifacts when slot_duration is fractional.
-  snapshotIntervalSlots =
-    builtins.floor (4230 / profile.genesis.slot_duration + 0.5);
-
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
     then "${profile.node.ssd_directory}/node-${toString i}"
@@ -187,24 +177,44 @@ with pkgs.lib; let
                 ConwayGenesisFile = "../genesis/genesis.conway.json";
                 DijkstraGenesisFile = "../genesis/genesis.dijkstra.json";
 
-                ## The Snapshots section applies regardless of backend
-                ## choice. The Backend key, when absent, defaults to
-                ## "V2InMemory".
+                ## The Snapshots section applies regardless of backend choice
+                ## The Backend key, when absent, defaults to "V2InMemory".
                 LedgerDB =
                   {
                     Snapshots = {
+                      ## Number of slots between two ledger snapshots:
                       ## SnapshotInterval counts slots on the fixed schedule
                       ## SlotOffset + n * SnapshotInterval, the node snapshots
                       ## the last immutable ledger state before each point.
-                      SnapshotInterval = snapshotIntervalSlots;
-                      ## The default SlotOffset is Mithril's 388800. A local
-                      ## cluster starts at slot 0 and would never reach the
-                      ## first snapshot point of that schedule, so anchor the
-                      ## schedule at slot 0 instead.
-                      SlotOffset = 0;
+                      ##
+                      ## Before node 11.1.X the workbench requested a snapshot
+                      ## every 4230 seconds of wall clock time via the top level
+                      ## SnapshotInterval option. The option now counts slots,
+                      ## so the 4230 second cadence is converted using the
+                      ## profile slot duration. Adding 0.5 before flooring
+                      ## rounds to the nearest slot, avoiding float division
+                      ## artifacts when slot_duration is fractional.
+                      SnapshotInterval =
+                        builtins.floor
+                          (4230 / profile.genesis.slot_duration + 0.5)
+                      ;
+                      ## First point of the schedule: later points follow every
+                      ## SnapshotInterval slots after it.
+                      ##
+                      ## A point fires only once a block earlier than it is
+                      ## immutable, and a missed point is never retried: for the
+                      ## first point to fire, the offset must exceed the slot
+                      ## where the cluster actually starts forging, plus margin
+                      ## for the first block to appear.
+                      ##
+                      ## Deliberately set at 1000 based on pre 11.1.0 "value"
+                      ## runs.
+                      ## Never leave it unset, the default is Mithril's 388800,
+                      ## unreachable on most clusters.
+                      SlotOffset = 1000;
                       ## Disable the minimum wall clock period between two
-                      ## written snapshots, the policy replaced by this
-                      ## section had no such check.
+                      ## written snapshots, the policy replaced by this section
+                      ## had no such check.
                       RateLimit = 0;
                       # Disable the randomised delay for kicking off snapshots:
                       # For benchmarks, exact timing needs to be reproducible,
