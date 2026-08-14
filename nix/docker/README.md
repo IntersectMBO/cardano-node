@@ -227,7 +227,7 @@ a writable mount, for example:
 ... run \
   --config /opt/cardano/config/mainnet/config.json \
   ... \
-  +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -p -RTS
+  +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -hT -RTS
 ```
 Note that `-po` only covers `.prof`, `.hp` and `.ticky`. The eventlog needs its
 own `-ol` with a full filename, otherwise it is created in the process working
@@ -350,22 +350,14 @@ The snapshot-converter utility is included in the cardano-node image at path
 state types as needed, without relying on host level tooling or full
 chain ledger replays.
 
-An example follows to convert preprod ledger state in a named docker volume
-from a memory based ledger snapshot to an LSM snapshot when node is not
-already running:
+Consult snapshot-converter help for detailed usage:
 ```
-docker run -v preprod-data:/data --rm -it --entrypoint=bash ghcr.io/intersectmbo/cardano-node:dev -c '
-  mv /data/db/ledger /data/db/ledger-old \
-    && mkdir -p /data/db/ledger /data/db/lsm \
-    && snapshot-converter --input-mem /data/db/ledger-old/20807240 --output-lsm-snapshot /data/db/ledger/20807240 --output-lsm-database /data/db/lsm --config /opt/cardano/config/preprod/config.json
-'
+docker run --rm -it --entrypoint=snapshot-converter ghcr.io/intersectmbo/cardano-node:dev --help
 ```
 
 Note that once ledger state is converted, the cardano-node container will need
 to be run with a node configuration aligned with the new ledger state type,
 otherwise ledger replay from genesis will re-occur.
-
-For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardano.intersectmbo.org/docs/references/miscellaneous/utxo-hd/migrating/).
 
 
 # Cardano Submit API Image Operation

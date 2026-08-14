@@ -2,11 +2,64 @@
 
 ## Next version
 
+## 11.1.0 -- August 2026
+
+- **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
+  `LedgerDB.Snapshots` block are now a configuration error instead of being silently
+  ignored.
+
+  Only one of the two locations is ever read. Previously, a config such as
+
+  ```json
+  "LedgerDB": { "SnapshotInterval": 43200, "Snapshots": { "SlotOffset": 0 } }
+  ```
+
+  parsed cleanly and quietly used the default interval, discarding the value the
+  operator wrote. This affected `SnapshotInterval`, `NumOfDiskSnapshots`, `SlotOffset`,
+  `RateLimit`, `MinDelay` and `MaxDelay`.
+
+  Such a config will now fail to start with an error naming the offending keys; move
+  them into the `LedgerDB.Snapshots` block. Setting them directly under `LedgerDB`
+  remains supported when there is no `Snapshots` block.
+
+- **Behaviour change:** the legacy tracing system was removed, along with the
+  `iohk-monitoring-framework` dependency and the legacy tracing configuration.
+  New tracing is now the only tracing system.
+
+- **Behaviour change:** the NixOS service options `useNewTopology`,
+  `lmdbDatabasePath` and `withUtxoHdLmdb` were removed. P2P is the only
+  networking mode, so `useNewTopology` no longer had an effect, and the LMDB
+  UTxO-HD backend was dropped. Configurations still setting any of these will
+  fail to evaluate.
+
+- NixOS service: added `blsKeys` for optional Leios BLS key support, and
+  `profilingOutputDir` to place GHC RTS profiling output on a writable path.
+  RTS stats stay enabled by default, while the heavier profiling and eventlog
+  outputs are now gated, for both the node and tracer services.
+
+- NixOS submit-api service: added a `metricsPort` option, passed through to the
+  OCI image. The service definition was updated for the new tracing
+  configuration and now uses a group-accessible node socket.
+
+- The node, tracer and submit-api OCI images now support a read-only root
+  filesystem and non-root execution. See `nix/docker/README.md` for the full
+  details.
+
+- OCI entrypoint fixes: `cli` mode is dispatched ahead of the `NETWORK` modes,
+  and the tracer image no longer aborts under `set -e` when
+  `CARDANO_MIN_LOG_SEVERITY` is unset.
+
+## 10.7.1 -- April 2026
+
 * Added txsSyncDurationTotal counter for tracking the total time spent syncing the mempool.
+
+## 10.6.2 -- February 2026
 
 * Added EKG metrics for soft and hard timeouts and included defensive mempool
 
 * Improved `cardano-node --help` output by making it the same as the one shown when calling `cardano-node` without arguments.
+
+## 10.5.0 -- June 2025
 
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
   (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
@@ -16,6 +69,13 @@
 - Lower the log severity from Error to Info for TracePromoteWarmBigLedgerPeerAborted and ResponderStartFailure
 
 - Change to exit with 0 rather than 1 when a SIGTERM is caught.
+
+## 10.4.1 -- April 2025
+
+- KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
+  `AddSample` messages in the legacy tracing system.
+
+## 10.3.1 -- April 2025
 
 - Add a new configuration field for fork-policy.
 
@@ -41,9 +101,6 @@
     ]
   }
   ```
-
-- KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
-  `AddSample` messages in the legacy tracing system.
 
 ## 10.2 -- January 2025
 

@@ -97,8 +97,7 @@ LedgerDB:
     # spec constrained machines during snapshot write.
     SnapshotInterval: 86400
 
-    # Slot offset at which snapshot scheduling begins.  The pre-Mithril
-    # default was 0; the Mithril default is now 388800.
+    # Slot offset at which snapshot scheduling begins.
     SlotOffset: 0
 
     # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
