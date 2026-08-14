@@ -54,7 +54,7 @@ prop_mapCostsMary      = measureMapCosts AsMaryEra     == assumeMapCosts AsMaryE
 prop_mapCostsAlonzo    = measureMapCosts AsAlonzoEra   == assumeMapCosts AsAlonzoEra
 prop_mapCostsBabbage   = measureMapCosts AsBabbageEra  == assumeMapCosts AsBabbageEra
 prop_mapCostsConway    = measureMapCosts AsConwayEra   == assumeMapCosts AsConwayEra
-prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijkstraEra
+prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijkstraEra 
 
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [

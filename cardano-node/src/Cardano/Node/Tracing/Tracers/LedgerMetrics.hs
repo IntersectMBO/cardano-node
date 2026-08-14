@@ -40,7 +40,7 @@ import           GHC.Conc (labelThread, myThreadId)
 
 startLedgerMetricsTracer
   :: forall blk
-   . IsLedger (LedgerState blk)
+   . IsLedger LedgerState blk
   => LedgerQueries blk
   => AF.HasHeader (Header blk)
   => AF.HasHeader blk
@@ -93,7 +93,7 @@ data LedgerMetrics =
     }
 
 traceLedgerMetrics ::
-  (  IsLedger (LedgerState blk)
+  (  IsLedger LedgerState blk
   ,  LedgerQueries blk
   , AF.HasHeader blk
   ,  AF.HasHeader (Header blk))

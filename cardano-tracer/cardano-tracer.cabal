@@ -112,7 +112,7 @@ library
                       , bimap
                       , blaze-html
                       , bytestring
-                      , cardano-diffusion ^>= 1.0
+                      , cardano-diffusion ^>= 1.1.1
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -127,15 +127,15 @@ library
                       , network
                       , network-mux >= 0.8
                       , optparse-applicative
-                      , ouroboros-network:{api, framework} ^>= 1.1
+                      , ouroboros-network:{api, framework} ^>= 1.2
                       , signal
                       , slugify
                       , smtp-mail ^>= 0.5
                       , stm <2.5.2 || >=2.5.3
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.12.0
-                      , trace-forward ^>= 2.4.0
+                      , trace-dispatcher ^>= 2.13.0
+                      , trace-forward ^>= 2.5.0
                       , trace-resources ^>= 0.2.4
                       , vector
                       , wai ^>= 3.2

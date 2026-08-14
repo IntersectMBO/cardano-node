@@ -51,7 +51,7 @@ instance Error RawCborDecodeError where
 deriving anyclass instance ToJSON RawCborDecodeError
 
 -- | An error that can occur in the transaction submission web API.
-data TxSubmitWebApiError
+newtype TxSubmitWebApiError
   = TxSubmitFail TxCmdError
 
 deriving instance Generic TxSubmitWebApiError
