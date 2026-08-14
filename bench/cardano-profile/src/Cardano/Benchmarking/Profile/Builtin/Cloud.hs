@@ -18,6 +18,9 @@ module Cardano.Benchmarking.Profile.Builtin.Cloud (
 
 import           Prelude
 import           Data.Function ((&))
+-- Package: aeson.
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
 import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
@@ -179,6 +182,12 @@ profilesCloud =
   , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000
   -- Value (post-Voltaire profiles)
   , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000
+  , valueVolt & P.name "value-voltv11-nomadperf"                           . P.dreps  10000
+              . P.shelley (KeyMap.insert "protocolParams"
+                            (Aeson.Object $ KeyMap.singleton "protocolVersion"
+                              (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 11))
+                            )
+                          )
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
   -- Plutus (pre-Voltaire profiles)
@@ -191,6 +200,12 @@ profilesCloud =
   , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0
   -- Plutus (post-Voltaire profiles)
   , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000
+  , loopVolt    & P.name "plutus-voltv11-nomadperf"                        . P.dreps  10000
+                . P.shelley (KeyMap.insert "protocolParams"
+                              (Aeson.Object $ KeyMap.singleton "protocolVersion"
+                                (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 11))
+                              )
+                            )
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
   , loopV3Volt  & P.name "plutusv3-voltv11-nomadperf"                      . P.dreps  10000 . P.v11Preview
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
