@@ -58,11 +58,14 @@
 
     utils.url = "github:numtide/flake-utils";
 
-    # Mithril signer is required as a release artifact constitutent. Use
-    # explicit ref tag path to ensure we get exactly what we expect. There is
-    # deliberately no follows here so that the signer we ship is bit identical
-    # to the upstream release binary at the expense of mithril's own transitive
-    # inputs.
+    # Mithril signer ships as a release artifact so pin an explicit release tag.
+    # There is no follows so that mithril builds against its own declared
+    # inputs rather than ours at the cost of a duplicate dep subtree in the
+    # lock. This does not reproduce the upstream release binary bit for bit as
+    # upstream release builds with cargo and musl in CI rather than with nix.
+    # Bump the tag and then run: nix flake lock --update-input mithril.
+    # Changing the tag alone only relocks mithril itself, leaving its
+    # transitive pins on an old release.
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
   };
 
