@@ -12,8 +12,8 @@ module Cardano.Node.Tracing.Tracers.Rpc () where
 import           Cardano.Api.Pretty
 
 import           Cardano.Logging hiding (nsInner)
-import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcQuery (..), TraceRpcSubmit (..),
-                   TraceRpcSync (..), TraceSpanEvent (..))
+import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcNodeKernelAccess (..),
+                   TraceRpcQuery (..), TraceRpcSubmit (..), TraceRpcSync (..), TraceSpanEvent (..))
 
 import           Data.Aeson (Object, Value (..), (.=))
 
@@ -39,6 +39,10 @@ instance LogFormatting TraceRpc where
                   [ "queryName" .= String "SearchUtxos"
                   , spanToObject s
                   ]
+                TraceRpcQueryReadGenesisSpan s ->
+                  [ "queryName" .= String "ReadGenesis"
+                  , spanToObject s
+                  ]
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
@@ -56,6 +60,10 @@ instance LogFormatting TraceRpc where
                 TraceRpcNodeKernelAccessUnavailable -> []
                 TraceRpcReadTipSpan s -> [spanToObject s]
                 TraceRpcFollowTipSpan s -> [spanToObject s]
+          TraceRpcNodeKernelAccess nodeKernelAccessTrace ->
+            ["kind" .= String "NodeKernelAccess"]
+              <> case nodeKernelAccessTrace of
+                TraceRpcUnsupportedBlockType blockType -> ["blockType" .= String blockType]
 
   forHuman = docToText . pretty
 
@@ -65,6 +73,7 @@ instance LogFormatting TraceRpc where
     TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" Nothing]
     TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
     TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" Nothing]
+    TraceRpcQuery (TraceRpcQueryReadGenesisSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadGenesis" Nothing]
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
     TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
@@ -83,6 +92,7 @@ instance MetaTrace TraceRpc where
             TraceRpcQueryParamsSpan _ -> ["ReadParams", "Span"]
             TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
             TraceRpcQuerySearchUtxosSpan _ -> ["SearchUtxos", "Span"]
+            TraceRpcQueryReadGenesisSpan _ -> ["ReadGenesis", "Span"]
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of
@@ -100,6 +110,10 @@ instance MetaTrace TraceRpc where
             TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
             TraceRpcReadTipSpan _ -> ["ReadTip", "Span"]
             TraceRpcFollowTipSpan _ -> ["FollowTip", "Span"]
+      TraceRpcNodeKernelAccess nodeKernelAccessTrace ->
+        "NodeKernelAccess"
+          : case nodeKernelAccessTrace of
+            TraceRpcUnsupportedBlockType _ -> ["UnsupportedBlockType"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
@@ -107,6 +121,7 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadParams", "Span"] -> Just Debug
     ["QueryService", "ReadUtxos", "Span"] -> Just Debug
     ["QueryService", "SearchUtxos", "Span"] -> Just Debug
+    ["QueryService", "ReadGenesis", "Span"] -> Just Debug
     ["SubmitService", "SubmitTx", "Span"] -> Just Debug
     ["SubmitService", "EvalTx", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
@@ -118,6 +133,7 @@ instance MetaTrace TraceRpc where
     ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
     ["SyncService", "ReadTip", "Span"] -> Just Debug
     ["SyncService", "FollowTip", "Span"] -> Just Debug
+    ["NodeKernelAccess", "UnsupportedBlockType"] -> Just Warning
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -126,6 +142,7 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadParams", "Span"] -> Just "Span for the ReadParams UTXORPC method."
     ["QueryService", "ReadUtxos", "Span"] -> Just "Span for the ReadUtxos UTXORPC method."
     ["QueryService", "SearchUtxos", "Span"] -> Just "Span for the SearchUtxos UTXORPC method."
+    ["QueryService", "ReadGenesis", "Span"] -> Just "Span for the ReadGenesis UTXORPC method."
     ["SubmitService", "SubmitTx", "Span"] -> Just "Span for the SubmitTx UTXORPC method."
     ["SubmitService", "EvalTx", "Span"] -> Just "Span for the EvalTx UTXORPC method."
     ["SubmitService", "N2cConnectionError"] ->
@@ -139,6 +156,7 @@ instance MetaTrace TraceRpc where
     ["SyncService", "NodeKernelAccessUnavailable"] -> Just "Node kernel access not yet initialised. The node is still starting up."
     ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip SyncService method."
     ["SyncService", "FollowTip", "Span"] -> Just "Span for the FollowTip SyncService method."
+    ["NodeKernelAccess", "UnsupportedBlockType"] -> Just "The block type is not supported by the RPC server."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -148,6 +166,8 @@ instance MetaTrace TraceRpc where
       [("rpc.request.QueryService.ReadUtxos", "Span for the ReadUtxos UTXORPC method.")]
     ["QueryService", "SearchUtxos", "Span"] ->
       [("rpc.request.QueryService.SearchUtxos", "Span for the SearchUtxos UTXORPC method.")]
+    ["QueryService", "ReadGenesis", "Span"] ->
+      [("rpc.request.QueryService.ReadGenesis", "Span for the ReadGenesis UTXORPC method.")]
     ["SubmitService", "SubmitTx", "Span"] ->
       [("rpc.request.SubmitService.SubmitTx", "Span for the SubmitTx UTXORPC method.")]
     ["SubmitService", "EvalTx", "Span"] ->
@@ -178,6 +198,8 @@ instance MetaTrace TraceRpc where
           , ["SyncService", "NodeKernelAccessUnavailable"]
           , ["SyncService", "ReadTip", "Span"]
           , ["SyncService", "FollowTip", "Span"]
+          , ["QueryService", "ReadGenesis", "Span"]
+          , ["NodeKernelAccess", "UnsupportedBlockType"]
           ]
 
 -- helper functions

@@ -22,7 +22,7 @@ import           Control.Exception
 mkConsensusProtocol
   :: NodeProtocolConfiguration
   -> Maybe ProtocolFilepaths
-  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+  -> ExceptT ProtocolInstantiationError IO (SomeConsensusProtocol, GenesisHashShelley)
 mkConsensusProtocol ncProtocolConfig mProtocolFiles =
   case ncProtocolConfig of
     NodeProtocolConfigurationCardano

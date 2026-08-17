@@ -191,7 +191,7 @@ runNode cmdPc = do
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-  consensusProtocol <-
+  (consensusProtocol, shelleyGenesisHash) <-
     runThrowExceptT $
       mkConsensusProtocol
        ncProtocolConfig
@@ -199,7 +199,7 @@ runNode cmdPc = do
        -- don't need these.
        (Just ncProtocolFiles)
 
-  handleNodeWithTracers cmdPc nc consensusProtocol
+  handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
@@ -219,8 +219,9 @@ handleNodeWithTracers
   :: PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
+  -> Api.GenesisHashShelley
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
+handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
   (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
@@ -248,7 +249,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType runP tracers nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -285,6 +286,7 @@ handleSimpleNode
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
+  -> Api.GenesisHashShelley
   -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
@@ -297,7 +299,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -477,7 +479,12 @@ handleSimpleNode blockType runP tracers nc cmdPc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
-                mkNodeKernelAccess (contramap RpcUnsupportedBlockType (startupTracer tracers)) blockType (pInfoConfig pInfo) nodeKernel
+                mkNodeKernelAccess
+                  (rpcTracer tracers)
+                  shelleyGenesisHash
+                  runP
+                  blockType
+                  nodeKernel
                   >>= writeIORef nodeKernelAccessRef
           }
           StdRunNodeArgs
@@ -622,7 +629,7 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
           setBlockForging nodeKernel []
         _NothingOrOtherFileError ->
           traceWith startupTracer (BlockForgingUpdateError err)
-    Right (SomeConsensusProtocol blockType' runP') ->
+    Right (SomeConsensusProtocol blockType' runP', _) ->
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
