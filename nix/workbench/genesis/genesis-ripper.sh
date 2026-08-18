@@ -16,10 +16,24 @@
 #     Can be expensive to create, which is the main reason the cache exists.
 #     Stores:
 #     - dataset.byron.json   {bootStakeholders, heavyDelegation, nonAvvmBalances}
-#     - dataset.shelley.json {genDelegs, initialFunds, staking, maxLovelaceSupply}
-#                            (with our profiles it can be 500MB+)
-#     - dataset.conway.json  {initialDReps, delegs}
-#                            (with our profiles it can be 200MB+)
+#     - dataset.shelley.genDelegs.json          .genDelegs
+#     - dataset.shelley.initialFunds.json       .initialFunds  (can be 500MB+)
+#     - dataset.shelley.maxLovelaceSupply.json  .maxLovelaceSupply
+#     - dataset.shelley.stakePools.json         .staking.pools
+#     - dataset.shelley.stakeCredentials.json   .staking.stake
+#     - dataset.conway.delegs.json              .delegs        (can be 200MB+)
+#     - dataset.conway.initialDReps.json        .initialDReps
+#                            One file per shelley/conway dataset field, each
+#                            holding just the field's value with no wrapper
+#                            around it. The five payload files (initialFunds,
+#                            stakePools, stakeCredentials, delegs and
+#                            initialDReps) each contain a plain JSON object of
+#                            key value pairs, and those bytes are valid in every
+#                            genesis loading strategy: as the top level
+#                            field's value, as the "data" of an inline
+#                            extraConfig injection and as the content of an
+#                            injection file ({"file": ..}). The strategy is
+#                            picked at assembly time (derive-from-cache).
 #     - spec.{shelley,alonzo,conway}.json
 #                            the exact specs fed to create-testnet-data (zero
 #                            specs + injected minUTxOValue / dRepDeposit), kept
@@ -90,7 +104,7 @@
 # change (renamed files, new split, ...) bumps this and orphans the old entries
 # automatically.
 # Bump on any change to what/how the ripper caches.
-genesis_ripper_layout_version="v0.0"
+genesis_ripper_layout_version="v1.0"
 
 # The cache-key input combines protocol hash, dataset hash and layout version.
 # (The profile name is prepended by profile-cache-key-ripper below.)
@@ -191,7 +205,11 @@ derive-from-cache-ripper() {
 
   # Byron and Shelley change per run (startTime / systemStart).
   # Assembled from protocol + dataset + per-run timing using cat/sed/printf.
-  # Each protocol.*/dataset.* file is a non-empty compact JSON object, so the splice yields valid JSON.
+  # Each protocol.*.json and dataset.byron.json is a NON-EMPTY compact JSON
+  # object: their splices insert a comma between the two objects' fields,
+  # which an empty {} on either side would break. The per-field
+  # dataset.shelley.* / dataset.conway.* files are complete single-line JSON
+  # values pasted after a '"field":' and may be empty maps.
   local system_start_epoch system_start
   system_start_epoch=$(jq -r '.start' <<<"$timing")
   system_start=$(jq -r '.systemStart' <<<"$timing")
@@ -203,22 +221,38 @@ derive-from-cache-ripper() {
     tail -c +2 "$cache_entry/dataset/dataset.byron.json"
   } > "$outdir/genesis.byron.json"
   # Shelley (can be 500MB+).
+  # Assembled in the top level form (the node's current, eager loading
+  # mechanism): each per-field dataset file is spliced into its historical
+  # top level position. A future assembly strategy can emit extraConfig
+  # injections from the same cache files instead.
   {
     sed 's/}$//' "$cache_entry/protocol/protocol.shelley.json"
     printf ',"systemStart":"%s"' "$system_start"
-    printf ','
-    tail -c +2 "$cache_entry/dataset/dataset.shelley.json"
+    printf ',"genDelegs":'
+    cat "$cache_entry/dataset/dataset.shelley.genDelegs.json"
+    printf ',"initialFunds":'
+    cat "$cache_entry/dataset/dataset.shelley.initialFunds.json"
+    printf ',"maxLovelaceSupply":'
+    cat "$cache_entry/dataset/dataset.shelley.maxLovelaceSupply.json"
+    printf ',"staking":{"pools":'
+    cat "$cache_entry/dataset/dataset.shelley.stakePools.json"
+    printf ',"stake":'
+    cat "$cache_entry/dataset/dataset.shelley.stakeCredentials.json"
+    printf '}}\n'
   } > "$outdir/genesis.shelley.json"
 
   # Conway (can be 200MB+).
   # Only tied to a dataset + protocol. No timing.
   # When the profile leaves .genesis.conway null, protocol/protocol.conway.json
-  # is the zero stub but we still need to merge the dataset side (initialDReps
-  # and delegs) to produce a parseable file for the node config.
+  # is the zero stub but we still need to merge the dataset side (delegs and
+  # initialDReps) to produce a parseable file for the node config.
   {
     sed 's/}$//' "$cache_entry/protocol/protocol.conway.json"
-    printf ','
-    tail -c +2 "$cache_entry/dataset/dataset.conway.json"
+    printf ',"delegs":'
+    cat "$cache_entry/dataset/dataset.conway.delegs.json"
+    printf ',"initialDReps":'
+    cat "$cache_entry/dataset/dataset.conway.initialDReps.json"
+    printf '}\n'
   } > "$outdir/genesis.conway.json"
 }
 
@@ -375,27 +409,172 @@ dataset-cache-ensure() {
       --total-supply     "$supply_t"               \
       --delegated-supply "$supply_d"               \
       --testnet-magic    "$magic"
-    # Extract dataset fields as compact JSON and in only one jq pass per file.
-    # MUST be compact JSON (-c) because the merge step uses `tail -c +2` which
-    # only works on single-line JSON.
+    # Extract dataset fields as compact JSON.
+    # MUST be compact JSON (-c): the byron merge step uses `tail -c +2` and
+    # the shelley/conway assembly splices single-line values with cat/printf.
     # - Byron:
       jq -c                                                     \
         '{bootStakeholders, heavyDelegation, nonAvvmBalances}'  \
         "$tmpdir/byron-genesis.json"                            \
     > "$tmpdir/dataset.byron.json"
-    # - Shelley:
-      jq -c                                                     \
-        '{genDelegs, initialFunds, staking, maxLovelaceSupply}' \
-        "$tmpdir/shelley-genesis.json"                          \
-    > "$tmpdir/dataset.shelley.json"
-    # - Conway: Default to "{}" if cardano-cli omits initialDReps or delegs:
+    # - Shelley: one file per dataset field, so the assembly step can choose a
+    #   loading strategy (top level fields vs extraConfig injections) without
+    #   regenerating the cache. The genesis' optional "extraConfig" object can
+    #   relocate the big dataset payloads as "injections", either inline
+    #   ({"data": {..}}) or in an external file ({"file": .., "hash": ..}).
+    #   Each payload file below holds just the field's value, a JSON object of
+    #   key value pairs with no wrapper around it, so the same bytes are valid
+    #   as the top level field's value, as an inline injection's "data" and as
+    #   the whole content of an injection file.
+    #   The three injection payloads (initialFunds, stakePools and
+    #   stakeCredentials) are INDEPENDENT: each one is taken from extraConfig
+    #   when its injection embeds data and from its top level field otherwise,
+    #   NOT all or nothing (cardano-cli could relocate only the biggest
+    #   payload). A payload populated on both sides fails, the node itself
+    #   rejects such a genesis for having conflicting injection sources. File
+    #   injections fail: carrying the referenced blob into the run directory
+    #   is not implemented yet.
+    #   TODO: normalizing assumes inline injections and top level fields
+    #   produce identical ledger state (the mechanism is a relocation).
+    #   Re-verify when cardano-node implements injection resolution.
+    local shelley_genesis="$tmpdir/shelley-genesis.json"
+    # genDelegs: no injection counterpart, must be top level (-e fails on null).
+      jq -ce '.genDelegs'                      \
+        "$shelley_genesis"                     \
+    > "$tmpdir/dataset.shelley.genDelegs.json" \
+    || fatal "shelley-genesis.json: missing genDelegs"
+    # initialFunds: top level field or extraConfig.initialFunds injection.
+    if   test "$(jq '(.extraConfig.initialFunds // {}) | has("file")' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: initialFunds is a file injection, not supported yet"
+    elif test "$(jq '(.extraConfig.initialFunds.data != null)
+                     and ((.initialFunds // {}) != {})' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: initialFunds both top level and in extraConfig"
+    elif test "$(jq '.extraConfig.initialFunds.data != null' \
+                    "$shelley_genesis")" = "true"
+    then
+        jq -c '.extraConfig.initialFunds.data' \
+          "$shelley_genesis"                   \
+      > "$tmpdir/dataset.shelley.initialFunds.json"
+    elif test "$(jq '.initialFunds != null' "$shelley_genesis")" = "true"
+    then
+        jq -c '.initialFunds' \
+          "$shelley_genesis"  \
+      > "$tmpdir/dataset.shelley.initialFunds.json"
+    else
+      fatal "shelley-genesis.json: missing initialFunds"
+    fi
+    # maxLovelaceSupply: no injection counterpart, must be top level.
+      jq -ce '.maxLovelaceSupply'                       \
+        "$shelley_genesis"                              \
+    > "$tmpdir/dataset.shelley.maxLovelaceSupply.json"  \
+    || fatal "shelley-genesis.json: missing maxLovelaceSupply"
+    # stakePools: top level staking.pools or extraConfig.stakePools injection.
+    if   test "$(jq '(.extraConfig.stakePools // {}) | has("file")' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: stakePools is a file injection, not supported yet"
+    elif test "$(jq '(.extraConfig.stakePools.data != null)
+                     and ((.staking.pools // {}) != {})' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: stakePools both top level and in extraConfig"
+    elif test "$(jq '.extraConfig.stakePools.data != null' \
+                    "$shelley_genesis")" = "true"
+    then
+        jq -c '.extraConfig.stakePools.data' \
+          "$shelley_genesis"                 \
+      > "$tmpdir/dataset.shelley.stakePools.json"
+    elif test "$(jq '.staking.pools != null' "$shelley_genesis")" = "true"
+    then
+        jq -c '.staking.pools' \
+          "$shelley_genesis"   \
+      > "$tmpdir/dataset.shelley.stakePools.json"
+    else
+      fatal "shelley-genesis.json: missing staking.pools"
+    fi
+    # stakeCredentials: top level staking.stake or extraConfig.stakeCredentials
+    # injection.
+    if   test "$(jq '(.extraConfig.stakeCredentials // {}) | has("file")' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: stakeCredentials is a file injection, not supported yet"
+    elif test "$(jq '(.extraConfig.stakeCredentials.data != null)
+                     and ((.staking.stake // {}) != {})' \
+                    "$shelley_genesis")" = "true"
+    then
+      fatal "shelley-genesis.json: stakeCredentials both top level and in extraConfig"
+    elif test "$(jq '.extraConfig.stakeCredentials.data != null' \
+                    "$shelley_genesis")" = "true"
+    then
+        jq -c '.extraConfig.stakeCredentials.data' \
+          "$shelley_genesis"                       \
+      > "$tmpdir/dataset.shelley.stakeCredentials.json"
+    elif test "$(jq '.staking.stake != null' "$shelley_genesis")" = "true"
+    then
+        jq -c '.staking.stake' \
+          "$shelley_genesis"   \
+      > "$tmpdir/dataset.shelley.stakeCredentials.json"
+    else
+      fatal "shelley-genesis.json: missing staking.stake"
+    fi
+    # - Conway: same per-field treatment and extraConfig rules as shelley
+    #   above (the conway genesis' extraConfig can carry delegs and initialDReps
+    #   as injections, same JSON names as the top level fields).
+    #   Default to "{}" when cardano-cli omits a payload or the whole file:
     #   cardano-node's parser accepts {} but rejects null.
-      jq -c                                                     \
-        '{ initialDReps: (.initialDReps // {})
-         , delegs:       (.delegs       // {})
-         }'                                                     \
-        "$tmpdir/conway-genesis.json"                           \
-    > "$tmpdir/dataset.conway.json"
+    local conway_genesis="$tmpdir/conway-genesis.json"
+    if ! test -f "$conway_genesis"
+    then
+      printf '{}' > "$tmpdir/dataset.conway.initialDReps.json"
+      printf '{}' > "$tmpdir/dataset.conway.delegs.json"
+    else
+      # delegs: top level field or extraConfig.delegs injection.
+      if   test "$(jq '(.extraConfig.delegs // {}) | has("file")' \
+                      "$conway_genesis")" = "true"
+      then
+        fatal "conway-genesis.json: delegs is a file injection, not supported yet"
+      elif test "$(jq '(.extraConfig.delegs.data != null)
+                       and ((.delegs // {}) != {})' \
+                      "$conway_genesis")" = "true"
+      then
+        fatal "conway-genesis.json: delegs both top level and in extraConfig"
+      elif test "$(jq '.extraConfig.delegs.data != null' \
+                      "$conway_genesis")" = "true"
+      then
+          jq -c '.extraConfig.delegs.data' \
+            "$conway_genesis"              \
+        > "$tmpdir/dataset.conway.delegs.json"
+      else
+          jq -c '.delegs // {}' \
+            "$conway_genesis"   \
+        > "$tmpdir/dataset.conway.delegs.json"
+      fi
+      # initialDReps: top level field or extraConfig.initialDReps injection.
+      if   test "$(jq '(.extraConfig.initialDReps // {}) | has("file")' \
+                      "$conway_genesis")" = "true"
+      then
+        fatal "conway-genesis.json: initialDReps is a file injection, not supported yet"
+      elif test "$(jq '(.extraConfig.initialDReps.data != null)
+                       and ((.initialDReps // {}) != {})' \
+                      "$conway_genesis")" = "true"
+      then
+        fatal "conway-genesis.json: initialDReps both top level and in extraConfig"
+      elif test "$(jq '.extraConfig.initialDReps.data != null' \
+                      "$conway_genesis")" = "true"
+      then
+          jq -c '.extraConfig.initialDReps.data' \
+            "$conway_genesis"                    \
+        > "$tmpdir/dataset.conway.initialDReps.json"
+      else
+          jq -c '.initialDReps // {}' \
+            "$conway_genesis"         \
+        > "$tmpdir/dataset.conway.initialDReps.json"
+      fi
+    fi
     # Remove the not needed files produced by create-testnet-data.
     rm "$tmpdir/byron-genesis.json"
     rm "$tmpdir/byron.genesis.spec.json"
@@ -475,7 +654,7 @@ protocol-cache-key-input() {
                  | del(.bootStakeholders, .heavyDelegation, .nonAvvmBalances,   .startTime  )
                  )
      , shelley:  ( .genesis.shelley  // {}
-                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart)
+                 | del(.genDelegs, .initialFunds, .staking, .maxLovelaceSupply, .systemStart, .extraConfig)
                  )
      , alonzo:   ( .genesis.alonzo   // {} )
      , conway:   ( .genesis.conway   // {}
@@ -542,7 +721,8 @@ protocol-cache-ensure() {
                , .initialFunds
                , .staking
                , .maxLovelaceSupply
-               , .systemStart)'          \
+               , .systemStart
+               , .extraConfig)'          \
           "$profile_json"                \
       > "$tmpdir/protocol.shelley.json"
     else

@@ -51,31 +51,13 @@ instance Error RawCborDecodeError where
 deriving anyclass instance ToJSON RawCborDecodeError
 
 -- | An error that can occur in the transaction submission web API.
-data TxSubmitWebApiError
-  = TxSubmitDecodeHex
-  | TxSubmitEmpty
-  | TxSubmitDecodeFail !DecoderError
-  | TxSubmitBadTx !Text
-  | TxSubmitFail TxCmdError
+newtype TxSubmitWebApiError
+  = TxSubmitFail TxCmdError
 
 deriving instance Generic TxSubmitWebApiError
 
 instance ToJSON TxSubmitWebApiError where
   toJSON = \case
-    TxSubmitDecodeHex -> Aeson.object
-      [ "tag" .= String "TxSubmitDecodeHex"
-      ]
-    TxSubmitEmpty -> Aeson.object
-      [ "tag" .= String "TxSubmitEmpty"
-      ]
-    TxSubmitDecodeFail err -> Aeson.object
-      [ "tag" .= String "TxSubmitDecodeFail"
-      , "contents" .= toJSON err
-      ]
-    TxSubmitBadTx err -> Aeson.object
-      [ "tag" .= String "TxSubmitBadTx"
-      , "contents" .= toJSON err
-      ]
     TxSubmitFail err -> Aeson.object
       [ "tag" .= String "TxSubmitFail"
       , "contents" .= toJSON err

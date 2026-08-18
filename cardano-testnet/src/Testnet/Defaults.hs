@@ -88,6 +88,7 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Testnet.Paths
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -110,11 +111,11 @@ import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
-import           Data.Word (Word64)
+import           Data.Word (Word32, Word64)
 import           Lens.Micro
 import           Numeric.Natural
+
 import           Test.Cardano.Ledger.Core.Rational
-import           Cardano.Node.Testnet.Paths
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -190,6 +191,7 @@ defaultConwayGenesis = do
       , cgCommittee = DefaultClass.def
       , cgDelegs = mempty
       , cgInitialDReps = mempty
+      , cgExtraConfig = SNothing
       }
 
 -- | The only era supported by cardano-testnet for the moment.
@@ -417,7 +419,7 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (12, 0)
 
 -- TODO: Expose from cardano-api
-mkProtVer :: (Natural, Natural) -> ProtVer
+mkProtVer :: (Natural, Word32) -> ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
     Just pVer -> pVer

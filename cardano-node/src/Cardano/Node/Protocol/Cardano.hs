@@ -16,7 +16,7 @@ module Cardano.Node.Protocol.Cardano
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Byron as Byron
+import           Cardano.Api.Byron as Byron hiding (GenesisHash)
 
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Api.Transition as Ledger
@@ -39,6 +39,10 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Prelude
 
 import           Data.Function ((&))
+import           System.FilePath (takeDirectory)
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
@@ -65,7 +69,7 @@ mkSomeConsensusProtocolCardano
   -> NodeHardForkProtocolConfiguration
   -> NodeCheckpointsConfiguration
   -> Maybe ProtocolFilepaths
-  -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
+  -> ExceptT CardanoProtocolInstantiationError IO (SomeConsensusProtocol, GenesisHashShelley)
 mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,
                              npcByronGenesisFileHash,
@@ -147,8 +151,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationCheckpointsReadError $
         readCheckpointsMap checkpointsConfiguration
 
-    return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
+    -- Filesystem rooted at the Shelley genesis directory, used by the ledger to
+    -- read initial funds/staking injected from genesis (testnets only).
+    let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
+
+    let GenesisHash rawShelleyGenesisHash = shelleyGenesisHash
+        genesisHashShelley = GenesisHashShelley rawShelleyGenesisHash
+
+    return
+      ( SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano shelleyGenesisFS $ Consensus.CardanoProtocolParams {
         Consensus.byronProtocolParams =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
@@ -250,6 +261,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
       , Consensus.cardanoCheckpoints = checkpointsMap
       }
+      , genesisHashShelley
+      )
 
         ----------------------------------------------------------------------
         -- WARNING When adding new entries above, be aware that if there is an

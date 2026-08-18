@@ -20,8 +20,8 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    MiniProtocolNum (..), OuroborosApplication (..),
                    OuroborosApplicationWithMinimalCtx, RunMiniProtocol (..), miniProtocolLimits,
                    miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
+                   mkVersionedCodecCBORTerm, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
@@ -140,7 +140,7 @@ doConnectToForwarderLocal snocket address netMagic timeLimits app = do
     args = ConnectToArgs {
       ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
       ctaHandshakeTimeLimits = timeLimits,
-      ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+      ctaVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
       ctaConnectTracers = nullNetworkConnectTracers,
       ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
 
@@ -174,7 +174,7 @@ doConnectToForwarderSocket snocket address netMagic timeLimits app = do
     args = ConnectToArgs {
       ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
       ctaHandshakeTimeLimits = timeLimits,
-      ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+      ctaVersionDataCodec = mkVersionedCodecCBORTerm forwardingCodecCBORTerm,
       ctaConnectTracers = nullNetworkConnectTracers,
       ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
 

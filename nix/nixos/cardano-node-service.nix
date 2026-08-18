@@ -5,7 +5,7 @@
 
 with lib; with builtins;
 let
-  inherit (types) attrs attrsOf bool either enum functionTo int listOf package nullOr str;
+  inherit (types) attrs attrsOf bool either enum functionTo int listOf package path nullOr str;
 
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
@@ -32,16 +32,6 @@ let
     peerSnapshotFile = cfg.peerSnapshotFile i;
   };
 
-  oldTopology = i: {
-    Producers = concatMap (g: map (a: {
-        addr = a.address;
-        inherit (a) port;
-        valency = a.valency or 1;
-      }) g.accessPoints) (
-      cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
-    );
-  };
-
   assertNewTopology = i:
     let
       checkEval = tryEval (
@@ -58,7 +48,7 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.json" (toJSON (if (cfg.useNewTopology != false) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (assertNewTopology i));
 
   topology = i:
     if cfg.useSystemdReload
@@ -72,43 +62,27 @@ let
               // (mapAttrs' (era: epoch:
                 nameValuePair "Test${era}HardForkAtEpoch" epoch
               ) cfg.forceHardForks)
-              // (optionalAttrs (cfg.useNewTopology != false) (
-                {
-                  MaxConcurrencyBulkSync = 2;
-                } // optionalAttrs (cfg.useNewTopology == true) {
-                  # Starting with node 10.6.0, p2p is the only network
-                  # operating mode and EnableP2P becomes a no-op and is not
-                  # declared by default.
-                  #
-                  # Older node versions which still require an explicit
-                  # declaration can set useNewTopology true.
-                  EnableP2P = true;
-                } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
-                  TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-                } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
-                  TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-                } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
-                  TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-                } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
-                  TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-                })
-              )
+              // {
+                MaxConcurrencyBulkSync = 2;
+              } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
+                TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+              } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
+                TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+              } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
+                TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+              } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
+                TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+              }
             ) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
-          baseConfig
-            // optionalAttrs (cfg.withUtxoHdLsmt i){
-              LedgerDB = {
-                Backend = "V2LSM";
-                LSMDatabasePath = cfg.lsmDatabasePath i;
-              };
-            }
-            // optionalAttrs (cfg.withUtxoHdLmdb i){
-              LedgerDB = {
-                Backend = "V1LMDB";
-                LiveTablesPath = cfg.lmdbDatabasePath i;
-              };
+          recursiveUpdate
+          baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
+            LedgerDB = {
+              Backend = "V2LSM";
+              LSMDatabasePath = cfg.lsmDatabasePath i;
             };
+          });
     in i: let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
@@ -141,6 +115,7 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+        "${concatMapStringsSep " " (k: "--shelley-bls-key ${k}") cfg.blsKeys}"
         "${optionalString (cfg.shelleyKesAgentSocket != null)
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
@@ -228,6 +203,14 @@ in {
         description = ''
           Haskell profiling types which are available and will be applied to
           the cardano-node binary if declared.
+
+          Note: the default `profilingArgs` always include the lightweight
+          `--machine-readable -t...cardano-node.stats` RTS summary (written at
+          exit, useful in any build). The cost-centre/heap profiling flags are
+          only added when this is not "none". The `-po` output stem is added
+          whenever `profilingOutputDir` is set, so a profiling flag passed by
+          hand through `rtsArgs` is redirected too. Enabling `eventlog` adds
+          `-l` with its own `-ol` path, since `-po` does not cover the eventlog.
         '';
       };
 
@@ -306,8 +289,14 @@ in {
 
       # Byron signing/delegation
 
+      # Key and certificate options are `str` rather than `either str path` so a
+      # nix path literal cannot type check here.  Interpolating one copies the
+      # file into /nix/store, which for a key is world readable and travels in any
+      # closure pushed elsewhere, and for a rotating credential pins it at eval
+      # time so a KES rotation needs a redeploy rather than a file swap.  Give a
+      # path as a string, absolute or relative to the node working directory.
       signingKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The signing key.
@@ -315,7 +304,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The delegation certificate.
@@ -325,14 +314,14 @@ in {
       # Shelley kes/vrf keys and operation cert
 
       kesKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The KES or key evolving signature key.
         '';
       };
       vrfKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The VRF or verifable random function key.
@@ -340,10 +329,21 @@ in {
       };
 
       operationalCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The operational certificate.
+        '';
+      };
+
+      blsKeys = mkOption {
+        type = listOf str;
+        default = [];
+        description = ''
+          Leios BLS signing key files. Optional and repeatable; used alongside
+          the KES and VRF keys on a producer that participates in Leios. During
+          a BLS key rotation both the active and the incoming key may be
+          supplied and node uses whichever is active per the on-chain schedule.
         '';
       };
 
@@ -411,16 +411,6 @@ in {
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''The node database path, for each instance.'';
-      };
-
-      lmdbDatabasePath = mkOption {
-        type = funcToOr nullOrStr;
-        default = null;
-        apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
-        description = ''
-          A node UTxO-HD on-disk LMDB path for performant disk I/O, for each instance.
-          This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
-        '';
       };
 
       lsmDatabasePath = mkOption {
@@ -635,31 +625,6 @@ in {
         '';
       };
 
-      useNewTopology = mkOption {
-        type = nullOr bool;
-        default = cfg.nodeConfig.EnableP2P or null;
-        description = ''
-          Use new, p2p and ledger peers compatible topology.
-
-          The useNewTopology option is deprecated and will be removed in the
-          future. As of cardano-node 10.6.0, this option should remain null.
-          For older node versions, a bool value can be set, but this will only
-          be supported until the Dijkstra hard fork at which point all
-          cardano-node versions will be compelled to upgrade and the
-          useNewTopology option will be removed.
-
-          For node version < 10.6.0, useNewTopology will need to be explicitly
-          declared true or false to behave accordingly.  If left null while
-          also using the auto-generated p2p topology, node will fail to start.
-
-          For node version >= 10.6.0, useNewTopology should be left as null
-          until the option is removed after the Dijkstra hard fork.  If
-          explicitly declared true, node will continue to work, but if declared
-          false while using the auto-generated legacy topology, node will fail to
-          start.
-        '';
-      };
-
       useLegacyTracing = mkOption {
         type = bool;
         default = false;
@@ -802,16 +767,6 @@ in {
         '';
       };
 
-      withUtxoHdLmdb = mkOption {
-        type = funcToOr bool;
-        default = false;
-        apply = x: if lib.isFunction x then x else _: x;
-        description = ''
-          On a UTxO-HD enabled node, the in-memory backend is the default.
-          This activates the on-disk backend (LMDB) instead.
-        '';
-      };
-
       withUtxoHdLsmt = mkOption {
         type = funcToOr bool;
         default = false;
@@ -843,14 +798,40 @@ in {
         description = ''Extra CLI args for cardano-node, to be surrounded by "+RTS"/"-RTS"'';
       };
 
+      profilingOutputDir = mkOption {
+        type = nullOrStr;
+        default = null;
+        description = ''
+          Optional directory prefix for GHC RTS profiling output files
+          (cardano-node.stats, cardano-node.prof, cardano-node.hp, etc.).
+          When null, files are written relative to the working directory
+          (the systemd unit's WorkingDirectory for NixOS deployments, which
+          is cfg.stateDir).
+        '';
+      };
+
       profilingArgs = mkOption {
         type = listOf str;
-        default =
-             [ "--machine-readable"
-               "-tcardano-node.stats"
-               "-pocardano-node"
-             ]
-          ++ optional (cfg.eventlog) "-l"
+        default = let
+          prefix = if cfg.profilingOutputDir == null then "" else "${cfg.profilingOutputDir}/";
+        in
+             # Always emit the lightweight machine-readable RTS/GC summary at
+             # exit. It works in any build, costs nothing, and is useful
+             # telemetry. The OCI images use the profilingOutputDir option to
+             # ensure it lands on a writable mount under a read-only-root OCI
+             # image.
+             [ "--machine-readable" "-t${prefix}cardano-node.stats" ]
+             # Set the output stem whenever an output dir is declared, not just
+             # when this module adds a profiling flag: `-po` costs nothing when
+             # nothing writes those files, and this way a profiling flag passed
+             # by hand through rtsArgs still lands on a writable OCI image mount.
+          ++ optionals (cfg.profilingOutputDir != null) [ "-po${prefix}cardano-node" ]
+             # `-po` sets the stem for .prof, .hp and .ticky only; the eventlog
+             # needs its own `-ol`, and takes a full filename rather than a stem.
+             # Without it the eventlog is created in the process cwd, which is /
+             # for the OCI images, and the RTS aborts at startup under a
+             # read-only root rather than degrading.
+          ++ optionals cfg.eventlog [ "-l" "-ol${prefix}cardano-node.eventlog" ]
           ++ (
                     if cfg.profiling == "time"           then ["-p"]
                else if cfg.profiling == "time-detail"    then ["-P"]
@@ -877,12 +858,9 @@ in {
           #
           # Mainnet does not yet require it, but declaring it will also
           # facilitate testing.
-          if (cfg.useNewTopology != false)
-          then
-            if cfg.useSystemdReload
-            then "peer-snapshot-${toString i}.json"
-            else toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot))
-          else null;
+          if cfg.useSystemdReload
+          then "peer-snapshot-${toString i}.json"
+          else toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
@@ -906,7 +884,6 @@ in {
   };
 
   config = mkIf cfg.enable ( let
-    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (genList trivial.id cfg.instances));
     lsmPaths = filter (x: x != null) (map (e: cfg.lsmDatabasePath e) (genList trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
@@ -926,7 +903,7 @@ in {
             (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
-        (mkIf ((cfg.useNewTopology != false) && cfg.useSystemdReload)
+        (mkIf cfg.useSystemdReload
           (foldl'
             (acc: i: recursiveUpdate acc (
               optionalAttrs (cfg.peerSnapshotFile i != null) {
@@ -950,12 +927,12 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
-        reloadTriggers = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) [ (selectTopology i) ];
+        reloadTriggers = mkIf cfg.useSystemdReload [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
-          ExecReload = mkIf (cfg.useSystemdReload && (cfg.useNewTopology != false)) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+          ExecReload = mkIf cfg.useSystemdReload "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = mkIf (!cfg.systemdSocketActivation)
             (removePrefix cfg.runDirBase (runtimeDir i));
@@ -1033,20 +1010,12 @@ in {
           '';
         }
         {
-          assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));
-          message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
-        }
-        {
-          assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
-          message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
+          assertion = !cfg.systemdSocketActivation;
+          message = "Systemd socket activation cannot be used due to a systemd socket re-use issue.";
         }
         {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
           message   = "When configuring multiple LSM enabled nodes on one instance, lsmDatabasePath must be unique.";
-        }
-        {
-          assertion = all (i: !(cfg.withUtxoHdLmdb i && cfg.withUtxoHdLsmt i)) (genList trivial.id cfg.instances);
-          message = "Each instance can only declare either withUtxoHdLmdb or withUtxoHdLsmt";
         }
         {
           assertion = count (o: o != null) (with cfg; [
@@ -1058,13 +1027,6 @@ in {
           message   = "Only one option of services.cardano-node.tracerSocket(PathAccept|PathConnect|NetworkAccept|NetworkConnect) can be declared.";
         }
       ];
-
-      warnings = optional (cfg.useNewTopology != null) ''
-        The useNewTopology option is deprecated and will be removed in the future. As of cardano-node 10.6.0, this option should remain null.
-        For older node versions, a bool value can be set, but this will only be supported until the Dijkstra hard fork at which point all
-        cardano-node versions will be compelled to upgrade and the useNewTopology option will be removed.  See the services.cardano-node.useNewTopology
-        option description for further details.
-      '';
     }
   ]);
 }

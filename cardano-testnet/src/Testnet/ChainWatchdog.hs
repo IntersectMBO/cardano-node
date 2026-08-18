@@ -30,7 +30,7 @@ import           Control.Exception (Exception (..), asyncExceptionFromException,
                    asyncExceptionToException)
 import           Control.Exception.Safe (SomeException, try)
 import           Control.Monad (void, when)
-import           Control.Tracer (Tracer (..), traceWith)
+import           Control.Tracer (Tracer, mkTracer, traceWith)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
@@ -179,7 +179,7 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
 -- orchestration configuration and be used everywhere in the orchestration code
 -- instead of ad-hoc printing.
 stderrTracer :: Tracer IO Text
-stderrTracer = Tracer $ \msg -> Text.hPutStrLn stderr msg >> hFlush stderr
+stderrTracer = mkTracer $ \msg -> Text.hPutStrLn stderr msg >> hFlush stderr
 
 -- | Failure message explaining why a chain that stopped extending will never recover.
 -- See https://github.com/IntersectMBO/cardano-node/issues/5762

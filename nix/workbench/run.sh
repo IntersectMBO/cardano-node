@@ -751,6 +751,7 @@ EOF
                   jq > "$genesis" '
                     .initialFunds = {}
                   | .staking      = {}
+                  | del(.extraConfig)
                   ' "$genesis_orig"; fi; fi
         ;;
 

@@ -9,6 +9,10 @@ docker load -i result
 # Build and load the cardano-submit-api oci image
 nix build .#dockerImage/submit-api
 docker load -i result
+
+# Build and load the cardano-tracer oci image
+nix build .#dockerImage/tracer
+docker load -i result
 ```
 
 From a bash shell, the following command example for the cardano-node image
@@ -120,6 +124,16 @@ docker run \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
 
+The resulting merged config and topology are written to a private,
+per-container runtime directory under `/tmp` (see
+[Read-Only Root Filesystem](#read-only-root-filesystem) for the exact path)
+as `config-merged.json` / `topology-merged.json` (node) or
+`tracer-config-merged.json` (tracer), and used as the runtime configuration.
+Relative file references (the config's `*File` keys and the topology's
+`peerSnapshotFile`) are rewritten to absolute paths anchored at
+`/opt/cardano/config/$NETWORK/` so they resolve from the new location.
+
+
 ## CLI Mode
 To run cardano-cli, leave the `NETWORK` env variable unset and provide
 entrypoint args starting with `cli` followed by cardano-cli command args.
@@ -147,6 +161,127 @@ symlinked to the "scripts" mode default state directories of `/{data,ipc,logs}`
 respectively.  This makes bind mounting easier when switching between
 "scripts" and "custom" container modes as bind mounting any of the root
 default state directory locations, `/{data,ipc,logs}`, will work for both modes.
+
+
+## Read-Only Root Filesystem
+Under a normal writable root filesystem no `/tmp` mount is needed. This holds
+for every mode, run as root or as a non-root user, so existing deployments need
+no change.
+
+A writable `/tmp` must be supplied explicitly only when the root filesystem is
+made read-only. The image is compatible with `--read-only` (Docker/Podman) and
+`securityContext.readOnlyRootFilesystem: true` (Kubernetes), provided the
+runtime supplies writable storage for the state directories described above
+(`/data`, `/ipc`, `/logs`) and a writable `/tmp` (tmpfs or `emptyDir`). Under
+`--read-only` this applies to every run mode except `cli`, which does not use
+`/tmp`.
+
+For example, scripts mode with a read-only root filesystem, a per-container
+tmpfs at `/tmp`, and named volumes for the state directories:
+```
+docker run \
+  --read-only \
+  --tmpfs /tmp \
+  -v mainnet-data:/data \
+  -v mainnet-ipc:/ipc \
+  -v mainnet-logs:/logs \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
+All runtime-generated artifacts (the merged config/topology and the env
+snapshot below) are written under a private, `0700` runtime directory that
+the entrypoint creates in `/tmp`, at a fixed, predictable per-role path:
+
+```
+/tmp/cardano-node/      # node image:   config-merged.json, topology-merged.json, env
+/tmp/cardano-tracer/    # tracer image: tracer-config-merged.json, env
+```
+
+The path is fixed so operators and tooling can refer to the effective
+config/topology dependably. The entrypoint creates the directory atomically
+with `mkdir -m 700` and refuses to start if the path already exists and is
+not a private directory it owns, so it never follows an attacker-planted
+symlink. A consequence of the fixed name is that **a `/tmp` mount must not be
+shared across containers of the same role** — a second node (or tracer)
+container sharing one `/tmp` would refuse to start rather than collide. Use a
+per-container `/tmp`.
+
+In "custom" and "merge" modes a resolved-configuration snapshot is written at
+runtime to `env` inside that directory and can be `source`d for an interactive
+debug shell inside the container. The path `/usr/local/bin/env` is preserved as a
+symlink to it for backwards compatibility, so `source /usr/local/bin/env` keeps
+working. This is the supported way to locate the effective configuration:
+sourcing it exports `CARDANO_CONFIG`, `CARDANO_TOPOLOGY`, the socket path, etc.
+as the node was actually launched with. "Scripts" mode does not write the
+snapshot.
+
+In "scripts" mode GHC RTS output is directed to `/logs/` so the image keeps
+working under a read-only root, provided `/logs` is a writable mount. The
+lightweight machine-readable RTS summary `/logs/cardano-node.stats` is always
+produced and the RTS opens it at startup, so without that mount the node aborts
+at startup rather than degrading. The heavier profiling/eventlog outputs are
+produced only when profiling or eventlog is enabled. In "custom" mode the
+operator chooses the RTS flags, so any such output must similarly be directed to
+a writable mount, for example:
+```
+... run \
+  --config /opt/cardano/config/mainnet/config.json \
+  ... \
+  +RTS --machine-readable -t/logs/cardano-node.stats -po/logs/cardano-node -hT -RTS
+```
+Note that `-po` only covers `.prof`, `.hp` and `.ticky`. The eventlog needs its
+own `-ol` with a full filename, otherwise it is created in the process working
+directory and the RTS aborts at startup under a read-only root. This applies in
+"scripts" mode too: RTS flags given as entrypoint args are appended after the
+baked `+RTS` block and merge with it, so the baked `-po` will not redirect an
+operator-enabled eventlog:
+```
+... run \
+  ... \
+  +RTS -l -ol/logs/cardano-node.eventlog -RTS
+```
+
+The read-only, non-root and private-`/tmp` behaviors of all three images are
+exercised by the `nixosTests/cardanoOciReadonly` NixOS test
+(`nix build .#checks.<system>.nixosTests/cardanoOciReadonly`).
+
+
+## Non-Root User
+The image can run as any non-root user (`docker run --user <uid>` /
+Kubernetes `securityContext.runAsUser`). None of the entrypoint or
+`run-node` startup logic touches image-content directories at runtime;
+all generated artifacts live under `/tmp`.
+
+The mount-point directories (`/data`, `/ipc`, `/logs`) are owned by
+GID 0 and group-writable in the image, so non-root containers can write
+to freshly-created Docker or Kubernetes volumes mounted at those paths
+without an init container or pre-chown. To inherit the group-writable
+perm, the non-root user needs to run with primary group 0 (the Kubernetes
+default for `runAsUser`) or with supplementary group 0. In Kubernetes
+you can also set `securityContext.fsGroup: 0` to have the kubelet chown
+the volume on mount. For Docker, `--user <uid>:0` is the equivalent.
+
+Note what group 0 grants on a shared `/ipc` volume: any process holding it can
+replace `node.socket`, and so intercept the cli and submit-api traffic that
+reaches the node through it. Where that matters, give the sidecars their own
+group and pre-chown the volumes instead of relying on group 0.
+
+For example, the read-only invocation above, run as a non-root UID in
+group 0:
+```
+docker run \
+  --read-only \
+  --tmpfs /tmp \
+  --user 1000:0 \
+  -v mainnet-data:/data \
+  -v mainnet-ipc:/ipc \
+  -v mainnet-logs:/logs \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
+
+The image defaults to running as root; specify a UID explicitly
+to opt into a non-root run.
 
 
 ## Cardano-node Socket Sharing
@@ -215,42 +350,14 @@ The snapshot-converter utility is included in the cardano-node image at path
 state types as needed, without relying on host level tooling or full
 chain ledger replays.
 
-An example follows to convert preprod ledger state in a named docker volume
-from a memory based ledger snapshot to an LMDB snapshot when node is not
-already running:
+Consult snapshot-converter help for detailed usage:
 ```
-docker run -v preprod-data:/data --rm -it --entrypoint=bash ghcr.io/intersectmbo/cardano-node:dev -c '
-  mv /data/db/ledger /data/db/ledger-old \
-    && mkdir -p /data/db/ledger \
-    && snapshot-converter --mem-in /data/db/ledger-old/20807240 --lmdb-out /data/db/ledger/20807240 --config /opt/cardano/config/preprod/config.json
-'
+docker run --rm -it --entrypoint=snapshot-converter ghcr.io/intersectmbo/cardano-node:dev --help
 ```
 
 Note that once ledger state is converted, the cardano-node container will need
 to be run with a node configuration aligned with the new ledger state type,
 otherwise ledger replay from genesis will re-occur.
-
-For more info, see the [UTxO Migration Guide](https://ouroboros-consensus.cardano.intersectmbo.org/docs/references/miscellaneous/utxo-hd/migrating/).
-
-## Legacy Tracing System
-Cardano-node now defaults to using the new tracing system.  The legacy tracing
-system is deprecated and will be removed in a future node version.  While still
-available, the legacy tracing system can be used by following the example
-above in "custom" mode whereby config is passed, and in this case, the config
-passed is the legacy style configuration.
-
-Legacy default configuration files are also available within the image at paths:
-`/opt/cardano/config/$NETWORK/config-legacy.json`
-
-An example of legacy tracing system usage is:
-```
-docker run \
-  -v preprod-data:/data \
-  -e CARDANO_CONFIG="/opt/cardano/config/preprod/config-legacy.json" \
-  -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
-  ghcr.io/intersectmbo/cardano-node:dev \
-  run
-```
 
 
 # Cardano Submit API Image Operation
@@ -258,15 +365,21 @@ docker run \
 To launch cardano-submit-api with pre-loaded configuration, "scripts" mode,
 use the `NETWORK` env variable to declare an existing cardano network name.
 
-An example using a docker named volume to share ipc socket state:
+An example using a docker named volume to share ipc socket state and publishing
+the api port to the host:
 ```
 docker run \
   -v node-ipc:/ipc \
+  -p 8090:8090 \
   -e NETWORK=mainnet \
   ghcr.io/intersectmbo/cardano-submit-api:dev
 ```
 
-In "scripts" mode, the `node.socket` file is expected at `/ipc`.
+In "scripts" mode, the `node.socket` file is expected at `/ipc`.  The api listen
+address is set to `0.0.0.0` so the published port is reachable from the host.
+
+Unlike the cardano-node and cardano-tracer images, the cardano-submit-api image
+has no merge mode.
 
 
 ## Custom Mode
@@ -274,22 +387,60 @@ To launch cardano-submit-api with a custom configuration, "custom" mode,
 leave the `NETWORK` env variable unset and provide a complete set of
 cardano-submit-api args to the entrypoint.
 
+The cardano-submit-api image ships no network config files under
+`/opt/cardano/config`, so custom mode requires a config supplied from the host.
+Suitable starting points are
+[cardano-submit-api/config/tx-submit-mainnet-config.yaml](../../cardano-submit-api/config/tx-submit-mainnet-config.yaml)
+in this repository, or the per network `share/<network>/submit-api-config.json`
+from a release tarball.  Either YAML or JSON is accepted.
+
 For example:
 ```
 docker run \
   -v node-ipc:/ipc \
   -v $PWD/config.json:/config.json \
+  -p 8090:8090 \
   ghcr.io/intersectmbo/cardano-submit-api:dev \
   --config /config.json \
   --mainnet \
-  --socket-path /ipc/node.socket
+  --socket-path /ipc/node.socket \
+  --listen-address 0.0.0.0
 ```
+
+Note that custom mode does not inherit the image default listen address, so
+`--listen-address 0.0.0.0` is needed for a published port to be reachable.
 
 See the [docker-compose.yml](../../docker-compose.yml) file for a demonstration
 of cardano-node and cardano-submit-api together.
 
 
-## Bind Mounting Considerations:
+## Metrics
+Cardano-submit-api serves prometheus metrics on `/` of its metrics port, which
+defaults to `8081` and is set with `--metrics-port`.  To scrape it from the
+host, publish that port as well:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -p 8090:8090 \
+  -p 8081:8081 \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-submit-api:dev
+
+curl -s http://localhost:8081/
+```
+
+The metrics server always binds all interfaces.  The `--listen-address` arg
+applies only to the api port, not to the metrics port, so firewall the metrics
+port if it should not be reachable.
+
+If the metrics port is already bound, submit-api logs a
+`TxSubmitApi.Metrics.PortOccupied` trace and retries on the next port up,
+repeating until it binds.  Startup is not aborted, so the effective port can
+differ from the one requested.  The last `TxSubmitApi.Metrics.Started` trace
+reports the port actually bound.
+
+
+## Bind Mounting Considerations
 In the cardano-submit-api container a `/node-ipc` directory is symlinked to `/ipc`
 both to align the default ipc socket state directory in both the cardano-node
 and cardano-submit-api images and to remain backwards compatible.

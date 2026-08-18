@@ -95,6 +95,16 @@ with pkgs.lib; let
     then folded.acc
     else throw "configHardforksIntoEra: unknown era '${era}'";
 
+  ## Number of slots between two ledger snapshots.
+  ##
+  ## Before node 11.x the workbench requested a snapshot every 4230 seconds of
+  ## wall clock time via the top level SnapshotInterval option. The option now
+  ## counts slots, so the 4230 second cadence is converted using the profile
+  ## slot duration. Adding 0.5 before flooring rounds to the nearest slot,
+  ## avoiding float division artifacts when slot_duration is fractional.
+  snapshotIntervalSlots =
+    builtins.floor (4230 / profile.genesis.slot_duration + 0.5);
+
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
     then "${profile.node.ssd_directory}/node-${toString i}"
@@ -121,10 +131,10 @@ with pkgs.lib; let
       topology = "topology.json";
       nodeConfigFile = "config.json";
 
-      # Allow for local clusters to have multiple LSMT directories in the same physical ssd_directory;
+      # Allow for local clusters to have multiple on-disk (LSM-tree) directories in the same physical ssd_directory;
       # non-block producers (like the explorer node) keep using the in-memory backend
-      withUtxoHdLsmt = profile.node.utxo_lsmt && isProducer;
-      lsmDatabasePath = liveTablesPath i;
+      withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
+      lsmDatabasePath  = liveTablesPath i;
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)
@@ -154,8 +164,6 @@ with pkgs.lib; let
               // {
                 ExperimentalHardForksEnabled = true;
                 ExperimentalProtocolsEnabled = true;
-                TurnOnLogMetrics = true;
-                SnapshotInterval = 4230;
                 ChainSyncIdleTimeout = 0;
                 PeerSharing = false;
 
@@ -178,13 +186,37 @@ with pkgs.lib; let
                 ## If the node never activates that era the stub is inert.
                 ConwayGenesisFile = "../genesis/genesis.conway.json";
                 DijkstraGenesisFile = "../genesis/genesis.dijkstra.json";
-              }
-              // optionalAttrs (profile.node.utxo_lsmt && isProducer)
-              {
-                LedgerDB = {
-                  Backend = "V2LSM";
-                  LSMDatabasePath = liveTablesPath i;
-                };
+
+                ## The Snapshots section applies regardless of backend
+                ## choice. The Backend key, when absent, defaults to
+                ## "V2InMemory".
+                LedgerDB =
+                  {
+                    Snapshots = {
+                      ## SnapshotInterval counts slots on the fixed schedule
+                      ## SlotOffset + n * SnapshotInterval, the node snapshots
+                      ## the last immutable ledger state before each point.
+                      SnapshotInterval = snapshotIntervalSlots;
+                      ## The default SlotOffset is Mithril's 388800. A local
+                      ## cluster starts at slot 0 and would never reach the
+                      ## first snapshot point of that schedule, so anchor the
+                      ## schedule at slot 0 instead.
+                      SlotOffset = 0;
+                      ## Disable the minimum wall clock period between two
+                      ## written snapshots, the policy replaced by this
+                      ## section had no such check.
+                      RateLimit = 0;
+                      # Disable the randomised delay for kicking off snapshots:
+                      # For benchmarks, exact timing needs to be reproducible,
+                      # and identical for all nodes.
+                      MinDelay = 0;
+                      MaxDelay = 0;
+                    };
+                  }
+                  // optionalAttrs (profile.node.utxo_lsmt && isProducer) {
+                    Backend = "V2LSM";
+                    LSMDatabasePath = liveTablesPath i;
+                  };
               })
             (
               if __hasAttr "preset" profile && profile.preset != null

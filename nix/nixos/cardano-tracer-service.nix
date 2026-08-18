@@ -462,8 +462,6 @@ in {
         default =
           if (cfg.profiling != "none")
           then cfg.cardanoNodePackages.cardano-tracer.passthru.profiled
-          else if cfg.eventlog
-          then cfg.cardanoNodePackages.cardano-tracer.passthru.eventlogged
           else if cfg.asserts
           then cfg.cardanoNodePackages.cardano-tracer.passthru.asserted
           else cfg.cardanoNodePackages.cardano-tracer;
@@ -492,17 +490,51 @@ in {
         description = ''
           Haskell profiling types which are available and will be applied to
           the cardano-tracer binary if declared.
+
+          Note: the default `profilingArgs` always include the lightweight
+          `--machine-readable -t...cardano-tracer.stats` RTS summary (written
+          at exit, useful in any build). The cost-centre/heap profiling flags
+          are only added when this is not "none". The `-po` output stem is added
+          whenever `profilingOutputDir` is set, so a profiling flag passed by
+          hand through `rtsArgs` is redirected too. Enabling `eventlog` adds
+          `-l` with its own `-ol` path, since `-po` does not cover the eventlog.
+        '';
+      };
+
+      profilingOutputDir = mkOption {
+        type = nullOr str;
+        default = null;
+        description = ''
+          Optional directory prefix for GHC RTS profiling output files
+          (cardano-tracer.stats, cardano-tracer.prof, cardano-tracer.hp, etc.).
+          When null, files are written relative to the working directory
+          (the systemd unit's WorkingDirectory for NixOS deployments, which
+          is cfg.stateDir).
         '';
       };
 
       profilingArgs = mkOption {
         type = listOf str;
-        default =
-             [ "--machine-readable"
-               "-tcardano-node.stats"
-               "-pocardano-node"
-             ]
-          ++ optional (cfg.eventlog) "-l"
+        default = let
+          prefix = if cfg.profilingOutputDir == null then "" else "${cfg.profilingOutputDir}/";
+        in
+             # Always emit the lightweight machine-readable RTS/GC summary at
+             # exit. It works in any build, costs nothing, and is useful
+             # telemetry. The OCI images use the profilingOutputDir option to
+             # ensure it lands on a writable mount under a read-only-root OCI
+             # image.
+             [ "--machine-readable" "-t${prefix}cardano-tracer.stats" ]
+             # Set the output stem whenever an output dir is declared, not just
+             # when this module adds a profiling flag: `-po` costs nothing when
+             # nothing writes those files, and this way a profiling flag passed
+             # by hand through rtsArgs still lands on a writable OCI image mount.
+          ++ optionals (cfg.profilingOutputDir != null) [ "-po${prefix}cardano-tracer" ]
+             # `-po` sets the stem for .prof, .hp and .ticky only; the eventlog
+             # needs its own `-ol`, and takes a full filename rather than a stem.
+             # Without it the eventlog is created in the process cwd, which is /
+             # for the OCI images, and the RTS aborts at startup under a
+             # read-only root rather than degrading.
+          ++ optionals cfg.eventlog [ "-l" "-ol${prefix}cardano-tracer.eventlog" ]
           ++ (
                     if cfg.profiling == "time"           then ["-p"]
                else if cfg.profiling == "time-detail"    then ["-P"]

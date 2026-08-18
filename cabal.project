@@ -13,12 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-09T23:27:58Z
-  , cardano-haskell-packages 2026-08-07T15:03:01Z
-
-active-repositories:
-  , :rest
-  , cardano-haskell-packages:override
+  , hackage.haskell.org 2026-08-14T13:38:07Z
+  , cardano-haskell-packages 2026-08-17T11:39:16Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -52,8 +48,9 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-forward
 
--- Needed when cross compiling
-extra-packages: alex, dmq-node >= 0.4.2.0
+-- Shipped as a release binary but not a dependency of any local package, so it
+-- has to be added to the install plan explicitly.
+extra-packages: dmq-node >= 0.7.0.0
 
 program-options
   ghc-options: -Werror
@@ -68,8 +65,14 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
+package snap-server
+  flags: -openssl
+
 package bitvec
   flags: -simd
+
+package cardano-diffusion
+  flags: +optparse-applicative-fork
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
@@ -80,13 +83,6 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
-
--- IMPORTANT
--- Do NOT add more source-repository-package stanzas here unless they are strictly
--- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
-constraints:
-  , cuddle>=1.1 && <1.1.2
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
@@ -165,3 +161,8 @@ if impl(ghc >= 9.14)
     , vary:aeson
     , with-utf8:base
 -- cabal-allow-newer end
+
+-- IMPORTANT
+-- Do NOT add more source-repository-package stanzas here unless they are strictly
+-- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+

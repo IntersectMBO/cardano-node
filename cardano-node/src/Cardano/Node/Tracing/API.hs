@@ -41,9 +41,7 @@ import           Prelude
 import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
-import           "contra-tracer" Control.Tracer (traceWith)
-import           "trace-dispatcher" Control.Tracer (nullTracer)
-import           Data.Functor.Contravariant ((>$<))
+import           "contra-tracer" Control.Tracer (nullTracer, traceWith)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
@@ -71,7 +69,7 @@ initTraceDispatcher ::
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
 initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
   trConfig <- readConfigurationWithDefault
-                (unConfigPath $ ncConfigFile nc)
+                (FromFile (unConfigPath $ ncConfigFile nc))
                 defaultCardanoConfig
 
   (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig

@@ -57,6 +57,16 @@
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
 
     utils.url = "github:numtide/flake-utils";
+
+    # Mithril signer ships as a release artifact so pin an explicit release tag.
+    # There is no follows so that mithril builds against its own declared
+    # inputs rather than ours at the cost of a duplicate dep subtree in the
+    # lock. This does not reproduce the upstream release binary bit for bit as
+    # upstream release builds with cargo and musl in CI rather than with nix.
+    # Bump the tag and then run: nix flake lock --update-input mithril.
+    # Changing the tag alone only relocks mithril itself, leaving its
+    # transitive pins on an old release.
+    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
   };
 
   outputs = {
@@ -66,6 +76,7 @@
     haskellNix,
     incl,
     iohkNix,
+    mithril,
     nixpkgs,
     self,
     utils,
@@ -73,7 +84,7 @@
   } @ input: let
     inherit (builtins) elem match;
     inherit (nixpkgs) lib;
-    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optionals recursiveUpdate;
+    inherit (lib) collect getAttr genAttrs filterAttrs hasPrefix head isDerivation mapAttrs optionalAttrs optional optionals recursiveUpdate;
     inherit (utils.lib) eachSystem flattenTree;
     inherit (iohkNix.lib) prefixNamesWith;
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
@@ -375,9 +386,11 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "linux";
-                  exes = collect isDerivation (
-                    filterAttrs (n: _: elem n releaseBins) projectExes
-                  );
+                  exes =
+                    collect isDerivation (
+                      filterAttrs (n: _: elem n releaseBins) projectExes
+                    )
+                    ++ optional (system == "x86_64-linux") mithril.packages.${system}.mithril-signer;
                 };
                 internal.roots.project = muslProject.roots;
                 variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;

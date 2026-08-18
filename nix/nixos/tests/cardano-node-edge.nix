@@ -38,9 +38,11 @@ in {
         cardano-submit-api = {
           enable = true;
           port = 8101;
+          # Deliberately not submit-api's CLI default of 8081 so the assertion
+          # below proves metricsPort is actually plumbed through.
+          metricsPort = 8102;
           network = environment;
           socketPath = config.services.cardano-node.socketPath 0;
-          config = pkgs.cardanoLib.environments.${environment}.submitApiConfig;
         };
 
         cardano-tracer = {
@@ -81,8 +83,12 @@ in {
     machine.wait_until_succeeds("nc -z localhost 12798", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 3001", timeout=${timeout})
     machine.succeed("systemctl status cardano-node")
+    # Cardano-cli 11.1 takes the target as a positional host:port; --host and
+    # --port are gone and -h is now --help, which exits 0 after printing usage.
+    # Pipefail keeps a cli failure from being masked by jq, and selecting
+    # .sample fails the assertion on empty output or a changed json shape.
     out = machine.succeed(
-      "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
+      "set -o pipefail; ${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -c 1 -q --json 127.0.0.1:3001 | ${jq}/bin/jq -ec .sample"
     )
     print("ping:", out)
 
@@ -90,6 +96,18 @@ in {
     machine.wait_for_unit("cardano-submit-api.service", timeout=${timeout})
     machine.wait_until_succeeds("nc -z localhost 8101", timeout=${timeout})
     machine.succeed("systemctl status cardano-submit-api")
+
+    # Assert the default tracing config keeps the EKG backend enabled and that
+    # the metrics prefix is applied.
+    machine.wait_until_succeeds(
+      "${curl}/bin/curl -sf http://localhost:8102/ | grep -qF cardano_submit_api_metrics_tx_submit_counter",
+      timeout=${timeout}
+    )
+
+    # Assert Info severity traces still reach the journal.
+    machine.succeed(
+      "journalctl -u cardano-submit-api --no-pager | grep -qF TxSubmitApi.Endpoint.ListeningOnPort"
+    )
 
     # Cardano-tracer tests:
     machine.wait_for_unit("cardano-tracer.service", timeout=${timeout})
