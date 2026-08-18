@@ -142,7 +142,7 @@ library
                       , warp ^>= 3.4
                       , warp-tls
                       , yaml
-                      , cardano-timeseries-io
+                      , cardano-timeseries-io ^>= 1.1
 
   if os(windows)
     build-depends:    Win32
