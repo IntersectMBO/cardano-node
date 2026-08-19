@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -14,11 +15,16 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.Consensus
-  (
+  ( -- * ClientMetrics
     initialClientMetrics
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
+    -- * Leios Metrics
+  , initialLeiosMetrics
+  , calculateLeiosMetrics
+  , LeiosMetrics
+    -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
   , impliesMempoolTimeoutSoft
@@ -28,6 +34,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
+import qualified Cardano.Node.Tracing.Cdf as Cdf
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -76,17 +83,14 @@ import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
-import           Data.Int (Int64)
-import           Data.IntPSQ (IntPSQ)
-import qualified Data.IntPSQ as Pq
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
+import           LeiosDemoTypes (AnnouncementFields (..), TraceLeiosKernel (..), TraceLeiosPeer (..),
                    traceLeiosKernelToObject, traceLeiosPeerToObject)
+import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -512,31 +516,19 @@ instance MetaTrace (TraceChainSyncServerEvent blk) where
 -- BlockFetchClient Metrics
 --------------------------------------------------------------------------------
 
-data CdfCounter = CdfCounter {
-    limit   :: !Double
-  , counter :: !Int64
-}
-
-decCdf :: Double -> CdfCounter -> CdfCounter
-decCdf v cdf@CdfCounter{..}
-  | v < limit = cdf {counter = counter - 1}
-  | otherwise = cdf
-
-incCdf :: Double -> CdfCounter -> CdfCounter
-incCdf v cdf@CdfCounter{..}
-  | v < limit = cdf {counter = counter + 1}
-  | otherwise = cdf
-
-data ClientMetrics = ClientMetrics {
-    cmSlotMap   :: IntPSQ Word64 NominalDiffTime
-  , cmCdf1sVar  :: !CdfCounter
-  , cmCdf3sVar  :: !CdfCounter
-  , cmCdf5sVar  :: !CdfCounter
+data ClientMetrics' c = ClientMetrics {
+    cmCdfState  :: Cdf.State SlotNo
+  , cmCdf1sVar  :: !c
+  , cmCdf3sVar  :: !c
+  , cmCdf5sVar  :: !c
   , cmDelay     :: Double
   , cmBlockSize :: Word32
   , cmTraceIt   :: Bool
   , cmTraceVars :: Bool
-}
+  }
+  deriving Functor
+
+type ClientMetrics = ClientMetrics' Cdf.Counter
 
 instance LogFormatting ClientMetrics where
   forMachine _dtal _ = mempty
@@ -553,8 +545,8 @@ instance LogFormatting ClientMetrics where
              ]
         else []
     where
-      size                = Pq.size cmSlotMap
-      cdfMetric name var  = DoubleM name (fromIntegral (counter var) / fromIntegral size)
+      size                = Cdf.size cmCdfState
+      cdfMetric name var  = DoubleM name (fromIntegral (Cdf.counter var) / fromIntegral size)
       lateBlockMetric     = [ CounterM "blockfetchclient.lateblocks" Nothing | cmDelay > 5 ]
 
 instance MetaTrace ClientMetrics where
@@ -579,10 +571,10 @@ instance MetaTrace ClientMetrics where
 initialClientMetrics :: ClientMetrics
 initialClientMetrics =
     ClientMetrics
-      Pq.empty
-      (CdfCounter 1 0)
-      (CdfCounter 3 0)
-      (CdfCounter 5 0)
+      Cdf.empty
+      (Cdf.Counter 1 0)
+      (Cdf.Counter 3 0)
+      (Cdf.Counter 5 0)
       0
       0
       False
@@ -597,50 +589,25 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
     (TraceLabelPeer _ (BlockFetch.CompletedBlockFetch p _ _ _ forgeDelay blockSize)) =
   case pointSlot p of
     Origin -> nothingToDo
-    At (SlotNo slotNo) ->
-      if Pq.null cmSlotMap && forgeDelay > 20                      -- During startup wait until we are in sync
+    At slotNo@(SlotNo slotNo_) ->
+      if Cdf.null cmCdfState && forgeDelay > 20 -- During startup wait until we are in sync
         then nothingToDo
-        else processSlot slotNo
+        else
+          case Cdf.processDataPoint
+                 Cdf.defaultConfig -- should come from config file
+                 (fromIntegral slotNo_, slotNo, forgeDelay)
+                 cmCdfState
+                 cm of
+            Nothing -> nothingToDo
+            Just (cm', cmCdfState')
+              -> cm' { cmTraceIt   = True
+                     , cmTraceVars = Cdf.size cmCdfState' >= 45 -- wait until we have at least 45 samples before providing cdf estimates
+                     , cmBlockSize = getSizeInBytes blockSize
+                     , cmDelay     = realToFrac forgeDelay
+                     }
+
   where
     nothingToDo = cm {cmTraceIt = False}
-    delay       = realToFrac forgeDelay
-
-    processSlot slotNo
-      | fromIntegral slotNo `Pq.member` cmSlotMap = nothingToDo    -- Duplicate, only track the first
-      | otherwise =
-          let slotMap' = Pq.insert (fromIntegral slotNo) slotNo forgeDelay cmSlotMap
-          in if Pq.size slotMap' > 1080                            -- TODO: k/2, should come from config file
-              then trimSlotMap slotMap' slotNo
-              else updateMetrics slotMap'
-
-    trimSlotMap slotMap' slotNo = case Pq.minView slotMap' of
-      Nothing -> nothingToDo                                       -- Error: Just inserted element
-      Just (_, minSlotNo, realToFrac -> minDelay, slotMap'')
-        | minSlotNo == slotNo -> nothingToDo
-        | otherwise -> cm
-            { cmCdf1sVar  = adjust minDelay cmCdf1sVar
-            , cmCdf3sVar  = adjust minDelay cmCdf3sVar
-            , cmCdf5sVar  = adjust minDelay cmCdf5sVar
-            , cmDelay     = delay
-            , cmBlockSize = getSizeInBytes blockSize
-            , cmTraceVars = True
-            , cmTraceIt   = True
-            , cmSlotMap   = slotMap''
-            }
-
-    updateMetrics slotMap' = cm
-      { cmCdf1sVar  = update cmCdf1sVar
-      , cmCdf3sVar  = update cmCdf3sVar
-      , cmCdf5sVar  = update cmCdf5sVar
-      , cmDelay     = delay
-      , cmBlockSize = getSizeInBytes blockSize
-      , cmTraceVars = Pq.size cmSlotMap >= 45                      -- wait until we have at least 45 samples before providing cdf estimates
-      , cmTraceIt   = True
-      , cmSlotMap   = slotMap'
-      }
-
-    update   = incCdf delay
-    adjust d = update . decCdf d
 
 calculateBlockFetchClientMetrics cm _lc _ = cm
 
@@ -2330,6 +2297,132 @@ instance MetaTrace KESAgentClientTrace where
 --------------------------------------------------------------------------------
 -- Leios
 --------------------------------------------------------------------------------
+
+-- | Leios metrics which construct CDFs for EB announcements.
+data LeiosMetrics' c = LeiosMetrics {
+    lmCdfState     :: Cdf.State SlotNo
+    -- ^ internal state which collects all data points
+  , lmCdf200msVar  :: !c
+    -- ^ count EB announcements which arrived within 200ms
+  , lmCdf400msVar  :: !c
+    -- ^ count EB announcements which arrived within 400ms
+  , lmCdf600msVar  :: !c
+    -- ^ count EB announcements which arrived within 600ms
+  , lmCdf800msVar  :: !c
+    -- ^ count EB announcements which arrived within 800ms
+  , lmCdf1000msVar :: !c
+    -- ^ count EB announcements which arrived within 1000ms
+  , lmCdf1200msVar :: !c
+    -- ^ count EB announcements which arrived within 1200ms
+  , lmCdf1400msVar :: !c
+    -- ^ count EB announcements which arrived within 1400ms
+  , lmCdf1600msVar :: !c
+    -- ^ count EB announcements which arrived within 1600ms
+  , lmCdf1800msVar :: !c
+    -- ^ count EB announcements which arrived within 1800ms
+  , lmCdf2000msVar :: !c
+    -- ^ count EB announcements which arrived within 2000ms
+  , lmDelay        :: Double
+    -- ^ last EM announcement delay value
+  , lmTraceVars    :: Bool
+  , lmTraceIt      :: Bool
+  }
+  deriving Functor
+
+type LeiosMetrics = LeiosMetrics' Cdf.Counter
+
+initialLeiosMetrics :: LeiosMetrics
+initialLeiosMetrics = LeiosMetrics {
+    lmCdfState     = Cdf.empty
+  , lmCdf200msVar  = Cdf.Counter 0.2 0
+  , lmCdf400msVar  = Cdf.Counter 0.4 0
+  , lmCdf600msVar  = Cdf.Counter 0.6 0
+  , lmCdf800msVar  = Cdf.Counter 0.8 0
+  , lmCdf1000msVar = Cdf.Counter 1.0 0
+  , lmCdf1200msVar = Cdf.Counter 1.2 0
+  , lmCdf1400msVar = Cdf.Counter 1.4 0
+  , lmCdf1600msVar = Cdf.Counter 1.6 0
+  , lmCdf1800msVar = Cdf.Counter 1.8 0
+  , lmCdf2000msVar = Cdf.Counter 2.0 0
+  , lmDelay        = 0
+  , lmTraceIt      = False
+  , lmTraceVars    = False
+  }
+
+calculateLeiosMetrics ::
+     LeiosMetrics
+  -> LoggingContext
+  -> TraceLeiosKernel
+  -> LeiosMetrics
+calculateLeiosMetrics lm@LeiosMetrics {..} _lc (TraceLeiosAnnouncementAccepted _ _ fields (Just annDelay)) =
+    case announcementElection fields of
+      MkElId slotNo@(SlotNo slotNo_) _ ->
+        if Cdf.null lmCdfState
+          then nothingToDo
+          else
+            case Cdf.processDataPoint
+                   Cdf.defaultConfig -- should come from config file
+                   (fromIntegral slotNo_, slotNo, annDelay)
+                   lmCdfState
+                   lm
+                   of
+              Nothing -> nothingToDo
+              Just (lm', lmCdfState') ->
+                lm' { lmCdfState    = lmCdfState'
+                    }
+  where
+    nothingToDo = lm {lmTraceIt = False}
+
+calculateLeiosMetrics lm _lc _ = lm
+
+instance LogFormatting LeiosMetrics where
+  forMachine _dtal _ = mempty
+  asMetrics LeiosMetrics {lmTraceIt=False} = []
+  asMetrics LeiosMetrics {..} =
+       lateAnnouncementsAllMetric
+    ++ if lmTraceVars
+        then [ cdfMetric "leios.eb.announcement.delay.cdf200ms"  lmCdf200msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf400ms"  lmCdf400msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf600ms"  lmCdf600msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf800ms"  lmCdf800msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf1000ms" lmCdf1000msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf1200ms" lmCdf1200msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf1400ms" lmCdf1400msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf1600ms" lmCdf1600msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf1800ms" lmCdf1800msVar
+             , cdfMetric "leios.eb.announcement.delay.cdf2000ms" lmCdf2000msVar
+             ]
+        else []
+    where
+      size                   = Cdf.size lmCdfState
+      cdfMetric name var     = DoubleM name (fromIntegral (Cdf.counter var) / fromIntegral size)
+      lateAnnouncementsAllMetric = [ CounterM "leios.eb.announcement.late" Nothing | lmDelay > 2 ]
+
+instance MetaTrace LeiosMetrics where
+  namespaceFor _ = Namespace [] ["LeiosMetrics"]
+  severityFor _ _ = Just Debug
+  documentFor _ = Just ""
+
+  metricsDocFor (Namespace _ ["LeiosMetrics"]) =
+      [ ("leios.eb.announcement.delay.cdf200ms", "probability for EB announcemement to complete within 200ms")
+      , ("leios.eb.announcement.delay.cdf400ms", "probability for EB announcemement to complete within 400ms")
+      , ("leios.eb.announcement.delay.cdf600ms", "probability for EB announcemement to complete within 600ms")
+      , ("leios.eb.announcement.delay.cdf800ms", "probability for EB announcemement to complete within 800ms")
+      , ("leios.eb.announcement.delay.cdf1000ms", "probability for EB announcemement to complete within 1000ms")
+      , ("leios.eb.announcement.delay.cdf1200ms", "probability for EB announcemement to complete within 1200ms")
+      , ("leios.eb.announcement.delay.cdf1400ms", "probability for EB announcemement to complete within 1400ms")
+      , ("leios.eb.announcement.delay.cdf1600ms", "probability for EB announcemement to complete within 1600ms")
+      , ("leios.eb.announcement.delay.cdf1800ms", "probability for EB announcemement to complete within 1800ms")
+      , ("leios.eb.announcement.delay.cdf2000ms", "probability for EB announcemement to complete within 2000ms")
+      , ("leios.eb.announcement.late", "number of late EB announcements that took longer than 2s")
+      ]
+  metricsDocFor _ = []
+
+  allNamespaces = [
+          Namespace [] ["LeiosMetrics"]
+        ]
+
+
 
 -- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
