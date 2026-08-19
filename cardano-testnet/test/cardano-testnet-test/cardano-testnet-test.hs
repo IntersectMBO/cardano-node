@@ -36,6 +36,7 @@ import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
 import qualified Cardano.Testnet.Test.Rpc.Eval
+import qualified Cardano.Testnet.Test.Rpc.FetchBlock
 import qualified Cardano.Testnet.Test.Rpc.Query
 import qualified Cardano.Testnet.Test.Rpc.SearchUtxos
 import qualified Cardano.Testnet.Test.Rpc.Transaction
@@ -148,7 +149,8 @@ tests = do
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
         ]
     , T.testGroup "RPC"
-        [ ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
+        [ ignoreOnWindows "RPC FetchBlock" Cardano.Testnet.Test.Rpc.FetchBlock.hprop_rpc_fetch_block
+        , ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
         , ignoreOnWindows "RPC SearchUtxos" Cardano.Testnet.Test.Rpc.SearchUtxos.hprop_rpc_search_utxos
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx
