@@ -86,20 +86,6 @@
   },
   "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
   "era": "babbage",
-  "generator": {
-    "add_tx_size": 100,
-    "epochs": 2,
-    "init_cooldown": 5,
-    "inputs_per_tx": 2,
-    "outputs_per_tx": 2,
-    "plutus": {
-      "script": null,
-      "type": null
-    },
-    "tps": 15,
-    "tx_count": 9000,
-    "tx_fee": 1000000
-  },
   "genesis": {
     "active_slots_coeff": 0.05,
     "alonzo": {
@@ -368,5 +354,27 @@
     "withresources": false,
     "timeseries": false
   },
-  "workloads": []
+  "workloads": [
+    {
+      "name": "tx-generator",
+      "parameters": {
+        "add_tx_size": 100,
+        "epochs": 2,
+        "init_cooldown": 5,
+        "inputs_per_tx": 2,
+        "outputs_per_tx": 2,
+        "plutus": {
+          "script": null,
+          "type": null
+        },
+        "tps": 15,
+        "tx_count": 9000,
+        "tx_fee": 1000000
+      },
+      "entrypoint": "tx_generator",
+      "phase": "load",
+      "placement": "explorer",
+      "wait_pools": true
+    }
+  ]
 }

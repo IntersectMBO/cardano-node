@@ -93,7 +93,7 @@ let
       eval.config.services.cardano-tracer;
 
   ##
-  ## generator-service :: (TracerConfig, NixosServiceConfig, Config, StartScript)
+  ## tracer-service :: (TracerConfig, NixosServiceConfig, Config, StartScript)
   ##
   tracer-service =
     (nodeSpecs:

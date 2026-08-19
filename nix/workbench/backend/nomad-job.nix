@@ -747,8 +747,6 @@ let
                       then {}
                       else {"${nodeSpec.name}"=nodeSpec;}
                     ;
-                    # Only for the node that will run the generator
-                    withGenerator = taskName == generatorTaskName;
                     # Only if "tracer" was requested.
                     # And, if tracer task or also nodes if oneTracerPerNode.
                     withTracer =
@@ -874,25 +872,27 @@ let
             }
           ])
           ++
-          # Generator
-          (lib.optionals (taskName == generatorTaskName) (
+          # workloads
+          (lib.lists.concatMap (workload:
             [
-              ## Generator start.sh script.
+              ## workload start.sh script.
               {
                 env = false;
-                destination = "local/${stateDir}/generator/start.sh";
-                data = escapeTemplate
-                  profileBundle.generator-service.start;
+                destination = "local/${stateDir}/workloads/${workload.name}/start.sh";
+                data = escapeTemplate workload.start;
                 change_mode = "noop";
                 error_on_missing_key = true;
                 perms = "744"; # Only for every "start.sh" script. Default: "644"
               }
-              ## Generator configuration file.
+            ]
+            ++
+            ## Workload configuration file (the tx-generator's "run-script.json").
+            lib.optionals ((workload.config or null) != null) [
               {
                 env = false;
-                destination = "local/${stateDir}/generator/run-script.json";
+                destination = "local/${stateDir}/workloads/${workload.name}/run-script.json";
                 data = escapeTemplate (
-                  let runScript = profileBundle.generator-service.config;
+                  let runScript = workload.config;
                   in
                      # Recreate the "run-script.json" with IPs and ports that are
                      # nomad template variables.
@@ -914,42 +914,29 @@ let
               }
             ]
             ++
-            ## Generator Plutus redeemer.
-            lib.optionals ((profileBundle.generator-service.plutus-redeemer or null) != null) [
+            ## Workload Plutus redeemer.
+            lib.optionals ((workload.plutus-redeemer or null) != null) [
               {
                 env = false;
-                destination = "local/${stateDir}/generator/plutus-redeemer.json";
+                destination = "local/${stateDir}/workloads/${workload.name}/plutus-redeemer.json";
                 data = escapeTemplate (lib.generators.toJSON {}
-                  profileBundle.generator-service.plutus-redeemer);
+                  workload.plutus-redeemer);
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
             ]
             ++
-            ## Generator Plutus datum.
-            lib.optionals ((profileBundle.generator-service.plutus-datum or null) != null) [
+            ## Workload Plutus datum.
+            lib.optionals ((workload.plutus-datum or null) != null) [
               {
                 env = false;
-                destination = "local/${stateDir}/generator/plutus-datum.json";
+                destination = "local/${stateDir}/workloads/${workload.name}/plutus-datum.json";
                 data = escapeTemplate (lib.generators.toJSON {}
-                  profileBundle.generator-service.plutus-datum);
+                  workload.plutus-datum);
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
             ]
-          ))
-          ++
-          # workloads
-          (builtins.map (workload:
-            ## workload start.sh script.
-            {
-              env = false;
-              destination = "local/${stateDir}/workloads/${workload.name}/start.sh";
-              data = escapeTemplate workload.start;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
           ) profileBundle.workloads-service)
           ++
           # healthcheck

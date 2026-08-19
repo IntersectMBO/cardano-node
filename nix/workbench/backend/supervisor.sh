@@ -57,7 +57,6 @@ case "$op" in
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
 
         local svcs=$dir/profile/node-services.json
-        local gtor=$dir/profile/generator-service.json
         local work=$dir/profile/workloads-service.json
         local trac=$dir/profile/tracer-service.json
         local hche=$dir/profile/healthcheck-service.json
@@ -71,30 +70,30 @@ case "$op" in
            cp $(jq '."'"$node"'"."topology"' -r $svcs)  "$node_dir"/topology.json
         done
 
-        local gen_dir="$dir"/generator
-        mkdir -p                                         "$gen_dir"
-        jq ".start"                          -r $gtor >  "$gen_dir"/start.sh
-        chmod +x                                         "$gen_dir"/start.sh
-        jq ".config"                            $gtor >  "$gen_dir"/run-script.json
-        # Optional "plutus-redeemer" file!
-        if test "$(jq -r '."plutus-redeemer"'   $gtor)" != "null"
-        then
-            jq '."plutus-redeemer"'          -r $gtor > "$gen_dir"/plutus-redeemer.json
-        fi
-        # Optional "plutus-datum" file!
-        if test "$(jq -r '."plutus-datum"'      $gtor)" != "null"
-        then
-            jq '."plutus-datum"'             -r $gtor > "$gen_dir"/plutus-datum.json
-        fi
-
         local work_dir="$dir"/workloads
         mkdir -p                                        "$work_dir"
         for workload in $(jq_tolist 'map(.name)' "$work")
         do
+            local wentry="map(select(.name == \"${workload}\"))[0]"
             mkdir -p                      "$work_dir"/"${workload}"
-              jq "map(select(.name == \"${workload}\"))[0] | .start" -r $work \
+              jq "${wentry} | .start" -r $work \
             >                             "$work_dir"/"${workload}"/start.sh
             chmod +x                      "$work_dir"/"${workload}"/start.sh
+            # Optional config file (the tx-generator's "run-script.json")!
+            if test "$(jq "${wentry} | .config" $work)" != "null"
+            then
+                jq "${wentry} | .config"       $work > "$work_dir"/"${workload}"/run-script.json
+            fi
+            # Optional "plutus-redeemer" file!
+            if test "$(jq -r "${wentry} | .\"plutus-redeemer\"" $work)" != "null"
+            then
+                jq -r "${wentry} | .\"plutus-redeemer\"" $work > "$work_dir"/"${workload}"/plutus-redeemer.json
+            fi
+            # Optional "plutus-datum" file!
+            if test "$(jq -r "${wentry} | .\"plutus-datum\"" $work)" != "null"
+            then
+                jq -r "${wentry} | .\"plutus-datum\"" $work > "$work_dir"/"${workload}"/plutus-datum.json
+            fi
         done
 
         local trac_dir="$dir"/tracer
@@ -275,29 +274,6 @@ EOF
         fi
         backend_supervisor save-child-pids "$dir";;
 
-    start-generator )
-        local usage="USAGE: wb backend $op RUN-DIR"
-        local dir=${1:?$usage}; shift
-
-        while test $# -gt 0
-        do case "$1" in
-               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
-               * ) break;; esac; shift; done
-
-        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
-        if ! supervisorctl start generator
-        then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
-             echo "$(red run-script.json) ------------------------------------" >&2
-             cat "$dir"/generator/run-script.json
-             echo "$(red generator stdout) -----------------------------------" >&2
-             cat "$dir"/generator/stdout
-             echo "$(red generator stderr) -----------------------------------" >&2
-             cat "$dir"/generator/stderr
-             echo "$(white -------------------------------------------------)" >&2
-             fatal "could not start $(white supervisord)"
-        fi
-        backend_supervisor save-child-pids "$dir";;
-
     start-workload-by-name )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
@@ -367,13 +343,58 @@ EOF
         fi
         ;;
 
+    wait-workload-stopped )
+        local usage="USAGE: wb backend $op RUN-DIR WORKLOAD-NAME"
+        local dir=${1:?$usage}; shift
+        local workload=${1:?$usage}; shift
+
+        local start_time=$(date +%s)
+        msg_ne "supervisor:  waiting until workload \"${workload}\" is stopped: 000000"
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+            && \
+            supervisorctl status "${workload}" > /dev/null
+        do
+            echo -ne "\b\b\b\b\b\b"
+            printf "%6d" "$(($(date +%s) - start_time))"
+            sleep 1
+        done >&2
+        echo -ne "\b\b\b\b\b\b"
+        local elapsed=$(($(date +%s) - start_time))
+        if test -f "${dir}"/flag/cluster-stopping
+        then
+            echo " Termination requested       -- after $(yellow ${elapsed})s" >&2
+        else
+            echo " Workload \"${workload}\" exited -- after $(yellow ${elapsed})s" >&2
+            # Programs echo their exit code to a file named `exit_code` after
+            # the script runs (can't be obtained using `supervisorctl status`).
+            # Give the program's wrapper a moment to write the file.
+            sleep 1
+            local exit_code
+            exit_code="$(cat "${dir}"/workloads/"${workload}"/exit_code 2>/dev/null || true)"
+            if test "${exit_code}" != "0"
+            then
+                echo "$(red "${workload}" workload stdout) ----------------------" >&2
+                cat "$dir"/workloads/"${workload}"/stdout
+                echo "$(red "${workload}" workload stderr) ----------------------" >&2
+                cat "$dir"/workloads/"${workload}"/stderr
+                echo "$(white -------------------------------------------------)" >&2
+                fatal "workload $(white "${workload}") failed (exit code \"${exit_code}\")"
+            fi
+        fi
+        ;;
+
     wait-workloads-stopped )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         local start_time=$(date +%s)
-        msg_ne "supervisor:  waiting until all workloads are stopped: 000000"
-        for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+        msg_ne "supervisor:  waiting until all run-bounding workloads are stopped: 000000"
+        # Only the workloads that bound the run's duration are waited for
+        # (phase "load" and "wait_pools" false), the rest are stopped with the
+        # cluster ("wait_pools" true means the pools bound the run and "setup"
+        # workloads already ran to completion).
+        for workload in $(jq_tolist '.workloads | map(select(.phase == "load" and .wait_pools == false)) | map(.name)' "$dir"/profile.json)
         do
             while \
                 ! test -f "${dir}"/flag/cluster-stopping \

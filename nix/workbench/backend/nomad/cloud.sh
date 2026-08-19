@@ -81,6 +81,15 @@ backend_nomadcloud() {
       backend_nomad wait-pools-stopped     60 "$@"
     ;;
 
+    wait-workload-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecessary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-workload-stopped  60 "$@"
+    ;;
+
     wait-workloads-stopped )
       # It passes the sleep time (in seconds) required argument.
       # This time is different between local and cloud backends to avoid
@@ -140,10 +149,6 @@ backend_nomadcloud() {
 
     start-nodes )
       backend_nomad start-nodes             "$@"
-    ;;
-
-    start-generator )
-      backend_nomad start-generator         "$@"
     ;;
 
     start-workload-by-name )
@@ -1122,9 +1127,16 @@ fetch-logs-ssh-node() {
   # For every workload
   for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
   do
+    # Skip workloads that don't run on this node (because of its "placement").
+    local workload_nodes
+    workload_nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
+    if [[ " ${workload_nodes[*]} " != *" ${node} "* ]]
+    then
+      continue
+    fi
     msg "$(blue "Fetching") $(yellow "program \"${workload}\" workload") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
     if ! rsync -e "${ssh_command}" -au                                      \
-           -f'- start.sh'                                                   \
+           -f'- start.sh' -f'- run-script.json'                             \
            "${public_ipv4}":/local/run/current/workloads/"${workload}"/     \
            "${dir}"/workloads/"${workload}"/"${node}"/
     then
@@ -1133,21 +1145,6 @@ fetch-logs-ssh-node() {
       msg "$(red Error fetching) $(yellow "program \"${workload}\" workload") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
     fi
   done
-  # Download generator logs. ###################################################
-  ##############################################################################
-  if test "${node}" = "explorer"
-  then
-    msg "$(blue Fetching) $(yellow "program \"generator\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-    if ! rsync -e "${ssh_command}" -au                    \
-           -f'- start.sh' -f'- run-script.json'           \
-           "${public_ipv4}":/local/run/current/generator/ \
-           "${dir}"/generator/
-    then
-      node_ok="false"
-      touch "${dir}"/nomad/"${node}"/download_failed
-      msg "$(red Error fetching) $(yellow "program \"generator\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-    fi
-  fi
   # Download node(s) logs. #####################################################
   ##############################################################################
   msg "$(blue Fetching) $(yellow "program \"node\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."

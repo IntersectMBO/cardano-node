@@ -91,6 +91,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Workload params.
   , workloadAppend
+  , workloadsAppend
 
   -- Tracer's params.
   , tracerWithresources, tracerTimeseries
@@ -116,6 +117,7 @@ import           Data.Maybe (isJust)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson           as Aeson
+import qualified Data.Aeson.KeyMap    as KeyMap
 -- Package: scientific.
 import qualified Data.Scientific as Scientific
 -- Package: time.
@@ -766,7 +768,10 @@ generatorEpochs i = generator
 --------------------------------------------------------------------------------
 
 workloadAppend :: Types.Workload -> Types.Profile -> Types.Profile
-workloadAppend w p = p {Types.workloads = Types.workloads p ++ [w]}
+workloadAppend w = workloadsAppend [w]
+
+workloadsAppend :: [Types.Workload] -> Types.Profile -> Types.Profile
+workloadsAppend ws p = p {Types.workloads = Types.workloads p ++ ws}
 
 -- Tracer.
 --------------------------------------------------------------------------------
@@ -929,7 +934,13 @@ preset str p =
   else p {Types.preset = Just str}
 
 overlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
-overlay obj p =
-  if Types.overlay p /= mempty
-  then error "overlay: `overlay` already set (not an empty JSON object)."
-  else p {Types.overlay = obj}
+overlay obj p
+  -- The overlay is merged with the profile's JSON encoding, where the
+  -- generator is a "tx-generator" entry of the "workloads" array and not a
+  -- top-level property anymore. A "generator" key here would be silently
+  -- dropped when decoding the merged JSON back into a `Profile`.
+  | KeyMap.member "generator" obj =
+      error "overlay: the generator is not a top-level JSON property anymore (it's a \"tx-generator\" workload), use the generator primitives (`txFeeOverwrite`, ...) instead."
+  | Types.overlay p /= mempty =
+      error "overlay: `overlay` already set (not an empty JSON object)."
+  | otherwise = p {Types.overlay = obj}

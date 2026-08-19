@@ -3,6 +3,7 @@
 , profile
 , nodeSpecs
 , workload
+, ...
 }:
 
 with pkgs.lib;

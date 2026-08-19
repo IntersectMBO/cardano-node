@@ -19,10 +19,8 @@ latencyWorkload :: Types.Workload
 latencyWorkload = Types.Workload {
     Types.workloadName = "latency"
   , Types.parameters = mempty
-  , Types.entrypoints = Types.Entrypoints {
-      Types.pre_generator = Nothing
-    , Types.producers = "latency"
-    }
-  , Types.before_nodes = False
+  , Types.entrypoint = "latency"
+  , Types.phase = Types.Load
+  , Types.placement = Types.Producers
   , Types.wait_pools = False
 }

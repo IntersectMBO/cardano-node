@@ -67,26 +67,49 @@ case "$op" in
     fixed-loaded )
         backend start-tracers        "$dir"
 
+        # The pools bound the run's duration unless a load workload with
+        # "wait_pools" false is present (then that workload's exit does).
+        local wait_pools_p
+        if jqtest '.workloads | map(select(.phase == "load")) | all(.wait_pools)' "$dir"/profile.json
+        then wait_pools_p='true'
+        else wait_pools_p='false'
+        fi
+
         scenario_setup_exit_trap     "$dir"
         # Trap start
         ############
-        # Workloads that do not request that the nodes have already started.
-        for workload in $(jq -r '.workloads[] | select(.before_nodes == true) | .name' "$dir"/profile.json)
+        # Workloads that run before the nodes have started.
+        for workload in $(jq -r '.workloads[] | select(.phase == "before-nodes") | .name' "$dir"/profile.json)
         do
             backend start-workload-by-name "$dir" "$workload"
         done
         backend start-nodes          "$dir"
-        backend start-generator      "$dir"
-        # Workloads that request that the nodes have already started.
-        for workload in $(jq -r '.workloads[] | select(.before_nodes == false) | .name' "$dir"/profile.json)
+        if test "$wait_pools_p" = 'true'
+        then
+            # Armed before the "setup" phase so a stuck workload can't hang
+            # the run forever (end time is absolute, from "meta.json").
+            # NOTE: must come after "start-nodes", its bare `wait` would block
+            # on the watcher process.
+            scenario_setup_workload_termination   "$dir"
+        fi
+        # Workloads that run to completion after the nodes have started and
+        # before the load workloads (the tx-generator among them) are started.
+        for workload in $(jq -r '.workloads[] | select(.phase == "setup") | .name' "$dir"/profile.json)
+        do
+            backend start-workload-by-name "$dir" "$workload"
+        done
+        for workload in $(jq -r '.workloads[] | select(.phase == "setup") | .name' "$dir"/profile.json)
+        do
+            backend wait-workload-stopped "$dir" "$workload"
+        done
+        # The load workloads.
+        for workload in $(jq -r '.workloads[] | select(.phase == "load") | .name' "$dir"/profile.json)
         do
             backend start-workload-by-name "$dir" "$workload"
         done
         backend start-healthchecks   "$dir"
-        if     jqtest '.workloads == []'              "$dir"/profile.json \
-            || jqtest '.workloads | any(.wait_pools)' "$dir"/profile.json
+        if test "$wait_pools_p" = 'true'
         then
-            scenario_setup_workload_termination   "$dir"
             backend wait-pools-stopped "$dir"
         else
             backend wait-workloads-stopped "$dir"

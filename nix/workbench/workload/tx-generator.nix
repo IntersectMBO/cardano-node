@@ -1,16 +1,20 @@
 { pkgs
 , haskellProject
 , backend
-, profile
 ## Workbench's long-form ledger era name (`conway`, `babbage`, ...).
 , eraName
+, profile
 , nodeSpecs
-, node-services
+, workload
+, ...
 }:
 
 with pkgs.lib;
 
 let
+
+  # The generator's parameters are the "tx-generator" workload's parameters.
+  params = workload.parameters;
 
   # If there is an "explorer" node, the generator will run there!
   # TODO: Repeated code, add the generator's node name to profile.json
@@ -19,35 +23,34 @@ let
     else "node-0"
   ;
 
-  # We're reusing configuration from a cluster node.
-  exemplarNode = node-services."node-0";
-
   nodePublicIP =
     { i, name, ... }@nodeSpec:
     "127.0.0.1";
 
   # The Plutus redeemer value/content.
   plutus-redeemer =
-    if profile.generator.plutus == null || (profile.generator.plutus.redeemer or null) == null
+    if (params.plutus or null) == null || (params.plutus.redeemer or null) == null
     then null
-    else profile.generator.plutus.redeemer
+    else params.plutus.redeemer
   ;
 
   # The Plutus datum value/content.
   plutus-datum =
-    if profile.generator.plutus == null || (profile.generator.plutus.datum or null) == null
+    if (params.plutus or null) == null || (params.plutus.datum or null) == null
     then null
-    else profile.generator.plutus.datum
+    else params.plutus.datum
   ;
 
+  # All paths are relative to the workload's run directory
+  # ("run/current/workloads/tx-generator").
   finaliseGeneratorService =
-    profile: svc: recursiveUpdate svc
+    svc: recursiveUpdate svc
       ({
-        sigKey              = "../genesis/utxo-keys/utxo1/utxo.skey";
+        sigKey              = "../../genesis/utxo-keys/utxo1/utxo.skey";
         runScriptFile       = "run-script.json";
         ## path to the config and socket of the locally running node.
-        nodeConfigFile      = "../${runningNode}/config.json";
-        localNodeSocketPath = "../${runningNode}/node.socket";
+        nodeConfigFile      = "../../${runningNode}/config.json";
+        localNodeSocketPath = "../../${runningNode}/node.socket";
         ## Relative paths to use for the Plutus redeemer and datum properties.
         ## The workbench backend requested handles the creation of these files.
         plutusRedeemerFile  = if plutus-redeemer != null
@@ -59,7 +62,7 @@ let
                               else null
         ;
       } // optionalAttrs profile.node.tracer {
-        tracerSocketPath = "../tracer/tracer.socket";
+        tracerSocketPath = "../../tracer/tracer.socket";
       # Decide where the executable comes from:
       #########################################
       } // optionalAttrs (!backend.useCabalRun) {
@@ -74,19 +77,7 @@ let
   ##
   generatorServiceConfig =
     nodeSpecs:
-    let
-      generatorNodeConfigDefault =
-        (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
-        // { inherit (exemplarNode.config)
-               Protocol
-               ByronGenesisFile
-               ShelleyGenesisFile
-               AlonzoGenesisFile
-               ConwayGenesisFile
-               ;
-           };
-    in
-        finaliseGeneratorService profile
+        finaliseGeneratorService
         {
           # tx-generator's NixOS service module accepts the long lowercase
           # ledger era name, which is what the workbench's `eraName` is.
@@ -107,7 +98,7 @@ let
         //
         ((x: recursiveUpdate x
           { tx_count = __ceil x.tx_count; })
-          (removeAttrs profile.generator ["epochs"]));
+          (removeAttrs params ["epochs"]));
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.
@@ -144,70 +135,35 @@ let
           };
       in eval.config.services.tx-generator;
 
-  ##
-  ## generator-service :: (ServiceConfig, Service, NodeConfig, Script)
-  ##
-  generator-service =
-    (nodeSpecs:
-    let
-      serviceConfig = generatorServiceConfig nodeSpecs;
-      service       = generatorServiceConfigService serviceConfig;
-    in {
-      start =
-        ''
-        #!${pkgs.stdenv.shell}
+  service = generatorServiceConfigService (generatorServiceConfig nodeSpecs);
 
-        ###########################################
-        # Extra workloads start ###################
-        ###########################################
-        ${builtins.concatStringsSep "" (builtins.map (workload:
-            let workload_name = workload.name;
-                entrypoint = workload.entrypoints.pre_generator;
-                node_name = if profile.composition.with_explorer
-                            then "explorer"
-                            else "node-0"
-                ;
-            in
-                ''
-                ###########################################
-                ########## workload start: ${workload_name}
-                ###########################################
-                ${if entrypoint != null
-                  then
-                    ''
-                    ${import ../workload/${workload_name}.nix
-                      {inherit pkgs haskellProject profile nodeSpecs workload;}
-                    }
-                    (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
-                    ''
-                  else
-                    ''
-                    ''
-                }
-                ###########################################
-                ########## workload end:   ${workload_name}
-                ###########################################
-                ''
-          ) (profile.workloads or []))
-        }
-        #############################################
-        # Extra workloads end #######################
-        #############################################
+in {
 
-        ${service.script}
-        ''
-      ;
+  start =
+    ''
+    #!${pkgs.stdenv.shell}
 
-      config = (service.decideRunScript service);
+    # The entrypoint function.
+    function tx_generator() {
+      # The generator runs on the same machine as the "${runningNode}" node.
+      if ! test -d "../../${runningNode}"
+      then
+        echo "tx-generator: no locally deployed \"${runningNode}\" node, nothing to do"
+        exit 0
+      fi
 
-      # Not present on every profile.
-      # Don't create a derivation to a file containing "null" !!!
-      # The corresponding file is created/deployed by the workbench.
-      inherit plutus-redeemer plutus-datum;
+      ${service.script}
+    }
+    ''
+  ;
 
-    })
-    nodeSpecs;
-in
-{
-  inherit generator-service;
+  # The tx-generator's config file ("run-script.json"), materialized by the
+  # backend in the workload's run directory.
+  config = service.decideRunScript service;
+
+  # Not present on every profile.
+  # Don't create a derivation to a file containing "null" !!!
+  # The corresponding file is created/deployed by the workbench.
+  inherit plutus-redeemer plutus-datum;
+
 }

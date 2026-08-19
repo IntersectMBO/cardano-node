@@ -29,8 +29,7 @@ do
            "$1/${profile_name}/profile/${filename}" \
            "$2/${profile_name}/profile/${filename}" \
       || read -r
-    elif test "${filename}" = "generator-service.json"   \
-      || test "${filename}" = "healthcheck-service.json" \
+    elif test "${filename}" = "healthcheck-service.json" \
       || test "${filename}" = "tracer-service.json"
     then
       for key in $(jq -r 'keys | join (" ")' "$1/${profile_name}/profile/${filename}")

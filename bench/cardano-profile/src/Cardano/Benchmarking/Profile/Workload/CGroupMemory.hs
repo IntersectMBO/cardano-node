@@ -19,10 +19,8 @@ cgroupMemoryWorkload :: Types.Workload
 cgroupMemoryWorkload = Types.Workload {
     Types.workloadName = "cgroup_memory"
   , Types.parameters = mempty
-  , Types.entrypoints = Types.Entrypoints {
-      Types.pre_generator = Nothing
-    , Types.producers = "cgroup_memory"
-    }
-  , Types.before_nodes = True
+  , Types.entrypoint = "cgroup_memory"
+  , Types.phase = Types.BeforeNodes
+  , Types.placement = Types.Producers
   , Types.wait_pools = True
 }

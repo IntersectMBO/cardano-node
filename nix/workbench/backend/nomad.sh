@@ -33,7 +33,6 @@ backend_nomad() {
     # - allocate-run-directory-supervisor      RUN-DIR              (Nomad only)
     # - allocate-run-directory-tracers         RUN-DIR              (Nomad only)
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
-    # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
     # - allocate-run-directory-workloads       RUN-DIR              (Nomad only)
     # - allocate-run-directory-healthchecks    RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-name      RUN-DIR NAME         (Nomad only)
@@ -50,9 +49,9 @@ backend_nomad() {
     ;;
 
     # After `allocate-run` the Nomad job is running (supervisord) waiting for
-    # genesis to be deployed and tracer/cardano-nodes/generator to be started.
+    # genesis to be deployed and tracer/cardano-nodes/workloads to be started.
     #
-    # "generator", "tracer", "node", "workloads" and "healthcheck" folder
+    # "tracer", "node", "workloads" and "healthcheck" folder
     # contents (start.sh, config files, etc) are included in the Nomad Job spec
     # file as "template" stanzas and are materialized inside the container when
     # the job is started. This is how it works for every environment combination
@@ -82,7 +81,6 @@ backend_nomad() {
       backend_nomad allocate-run-directory-supervisor   "${dir}"
       backend_nomad allocate-run-directory-tracers      "${dir}"
       backend_nomad allocate-run-directory-nodes        "${dir}"
-      backend_nomad allocate-run-directory-generator    "${dir}"
       backend_nomad allocate-run-directory-workloads    "${dir}"
       backend_nomad allocate-run-directory-healthchecks "${dir}"
 
@@ -178,16 +176,6 @@ backend_nomad() {
       done
     ;;
 
-    allocate-run-directory-generator )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      # Not much to do!
-      # Generator actually runs inside Task/container "node-0" for local runs
-      # and "explorer" for cloud runs.
-      # See: `local generator_task=$(envjqr 'generator_task_name')`
-      mkdir -p "${dir}"/generator
-    ;;
-
     allocate-run-directory-workloads )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -197,8 +185,8 @@ backend_nomad() {
       for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
       do
         mkdir "${dir}"/workloads/"${workload}"
-        # Workload may or may not run something in all producers.
-        local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+        # Workload may or may not run something in all its target nodes.
+        local nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
         for node in ${nodes[*]}
         do
           # File "start.sh" that usually goes in here is copied from the
@@ -423,16 +411,12 @@ backend_nomad() {
         backend_nomad download-config-node        "${dir}" "${node}" &
         jobs_tasks+=("$!")
       done
-      # The `tx-generator` config files, running in one of the Tasks were
-      # `cardano-node` is deployed.
-      backend_nomad download-config-generator     "${dir}" &
-      jobs_tasks+=("$!")
       # For every workload
       for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
       do
         # For every node (not including a possible tracer Task) ...
-        # Workload may or may not run something in all producers.
-        local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+        # Workload may or may not run something in all its target nodes.
+        local nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
         for node in ${nodes[*]}
         do
           # Only used for debugging!
@@ -765,7 +749,6 @@ backend_nomad() {
     # - stop-all              RUN-DIR
     # - stop-all-healthchecks RUN-DIR                               (Nomad only)
     # - stop-all-workloads    RUN-DIR                               (Nomad only)
-    # - stop-all-generator    RUN-DIR                               (Nomad only)
     # - stop-all-nodes        RUN-DIR                               (Nomad only)
     # - stop-all-tracers      RUN-DIR                               (Nomad only)
     # - fetch-logs            RUN-DIR
@@ -775,10 +758,24 @@ backend_nomad() {
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
+    # Which nodes/tasks a workload runs next to, depending on its "placement".
+    workload-target-nodes )
+      local usage="USAGE: wb backend $op RUN-DIR WORKLOAD-NAME"
+      local dir=${1:?$usage}; shift
+      local workload=${1:?$usage}; shift
+      local placement=$(jq -r ".workloads | map(select(.name == \"${workload}\"))[0] | .placement" "${dir}"/profile.json)
+      if test "${placement}" = "explorer"
+      then
+        # The machine where the tx-generator runs ("explorer" or "node-0").
+        envjqr 'generator_task_name'
+      else
+        jq_tolist 'map(select(.isProducer) | .name)' "${dir}"/node-specs.json
+      fi
+    ;;
+
     stop-all )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
-      local generator_task=$(envjqr 'generator_task_name')
 
       # Stop healthcheck(s).
       ######################
@@ -798,8 +795,8 @@ backend_nomad() {
       # For every workload
       for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
       do
-        # Workload may or may not run something in all producers.
-        for node in $(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json)
+        # Workload may or may not run something in all its target nodes.
+        for node in $(backend_nomad workload-target-nodes "${dir}" "${workload}")
         do
           backend_nomad stop-all-workloads "${dir}" "${workload}" "${node}" &
           jobs_workloads_array+=("$!")
@@ -809,9 +806,6 @@ backend_nomad() {
       then
         msg "$(red "Failed to stop workload(s)")"
       fi
-      # Stop generator.
-      #################
-      backend_nomad stop-all-generator "${dir}" "${generator_task}"
       # Stop node(s).
       ###############
       local jobs_nodes_array=()
@@ -924,45 +918,6 @@ backend_nomad() {
             fi
           else
             msg "$(yellow "WARNING: Program \"${workload}\" inside Task \"${task}\" was not running, should it?")"
-          fi
-        fi
-      fi
-    ;;
-
-    stop-all-generator )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local task=${1:?$usage}; shift
-      # Only if it was started
-      if test -f "${dir}"/generator/started && !(test -f "${dir}"/"${node}"/stopped || test -f "${dir}"/"${node}"/quit)
-      then
-        if backend_nomad is-task-program-running "${dir}" "${task}" generator
-        then
-          if ! backend_nomad task-program-stop "${dir}" "${task}" generator
-          then
-            # A race condition were we try to stop the generator just after it
-            # quits automatically can happen.
-            msg "$(yellow "WARNING: Program \"generator\" inside Task \"${task}\" failed to stop")"
-          else
-            touch "${dir}"/generator/stopped
-            msg "$(green "supervisord program \"generator\" inside Nomad Task \"${task}\" down!")"
-          fi
-        else
-          touch "${dir}"/generator/quit
-          if backend_nomad is-task-program-failed "${dir}" "${task}" generator
-          then
-            # If the node quits (due to `--shutdown_on_slot_synced X` or
-            # `--shutdown_on_block_synced X`) the generator quits with an error.
-            local generator_can_fail=$(jq ".\"${task}\".shutdown_on_slot_synced or .\"${task}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-            if test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" "${task}" "${task}"
-            then
-              # Do not fail here, because nobody will be able to stop the cluster!
-              msg "$(red "FATAL: \"generator\" quit unexpectedly")"
-            else
-              msg "$(yellow "INFO: Program \"generator\" inside Task \"${task}\" failed, but expected when \"${task}\" automatically exits first")"
-            fi
-          else
-            msg "$(yellow "WARNING: Program \"generator\" inside Task \"${task}\" was not running, should it?")"
           fi
         fi
       fi
@@ -1127,8 +1082,8 @@ backend_nomad() {
         # Download retry "infinite" loop.
         local workloads_array
         # Fetch the nodes that don't have all the log files in its directory
-        # Workload may or may not run something in all producers.
-        workloads_array=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+        # Workload may or may not run something in all its target nodes.
+        workloads_array=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
         while test -n "${workloads_array:-}"
         do
           local workloads_jobs_array=()
@@ -1153,15 +1108,6 @@ backend_nomad() {
         done
       done
       msg "$(green "Finished downloading workload(s) logs")"
-      # Download generator logs. ###############################################
-      ##########################################################################
-      # Download retry "infinite" loop.
-      while ! backend_nomad download-logs-generator "${dir}" "${generator_task}"
-      do
-        msg "Retrying \"generator\" logs download"
-        read -p "Hit enter to continue ..."
-      done
-      msg "$(green "Finished downloading \"generator\" logs")"
       # Download node(s) logs. #################################################
       ##########################################################################
       # Download retry "infinite" loop.
@@ -1646,8 +1592,8 @@ backend_nomad() {
       local workload=${1:?$usage}; shift
 
       local jobs_array=()
-      # Workload may or may not run something in all producers.
-      local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+      # Workload may or may not run something in all its target nodes.
+      local nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
       for node in ${nodes[*]}
       do
         backend_nomad start-workload "${dir}" "${workload}" "${node}" &
@@ -1709,7 +1655,6 @@ backend_nomad() {
     # Functions to start/stop individual cluster "programs":
     # - start-tracer       RUN-DIR           (Nomad backend specific subcommand)
     # - start-node         RUN-DIR NODE-NAME
-    # - start-generator    RUN-DIR
     # - start-workload     RUN-DIR WORKLOAD-NAME TASK-NAME (Nomad backend .....)
     # - start-healthcheck  RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - wait-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
@@ -1717,7 +1662,6 @@ backend_nomad() {
     # - stop-node          RUN-DIR NODE-NAME
     #
     # TODO: They are up here as "stop-cluster-*"
-    # - stop-generator     RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - stop-workload      RUN-DIR WORKLOAD-NAME TASK-NAME (Nomad backend .....)
     # - stop-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - stop-healthcheck   RUN-DIR TASK-NAME (Nomad backend specific subcommand)
@@ -1909,73 +1853,6 @@ backend_nomad() {
           # Failed to start, mostly timeout before listening socket was found.
           fatal "Node \"${node}\" startup did not succeed"
         fi
-      fi
-    ;;
-
-    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-generator )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local generator_task=$(envjqr 'generator_task_name')
-
-      while test $# -gt 0
-      do case "$1" in
-        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
-          * ) break;; esac; shift; done
-
-      if ! backend_nomad task-program-start "${dir}" "${generator_task}" generator
-      then
-        msg "$(red "FATAL: Program \"generator\" (inside \"${generator_task}\") startup failed")"
-        # TODO: Let the download fail when everything fails?
-        backend_nomad download-logs-entrypoint "${dir}" "${generator_task}" || true
-        backend_nomad download-logs-generator  "${dir}" "${generator_task}" || true
-        # Should show the output/log of `supervisord` (runs as "entrypoint").
-        msg "$(yellow "${dir}/nomad/${generator_task}/stdout:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/"${generator_task}"/stdout                     \
-          <(echo "-------------------- log end   --------------------")
-        msg "$(yellow "${dir}/nomad/${generator_task}/stderr:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/"${generator_task}"/stderr                     \
-          <(echo "-------------------- log end   --------------------")
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/generator/stdout
-        then
-          msg "$(yellow "${dir}/generator/stdout:")"
-          cat                                                           \
-          <(echo "-------------------- log start --------------------") \
-          "$dir"/generator/stdout                                       \
-          <(echo "-------------------- log end   --------------------")
-        fi
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/generator/stderr
-        then
-          msg "$(yellow "${dir}/generator/stderr:")"
-          cat                                                             \
-            <(echo "-------------------- log start --------------------") \
-            "${dir}"/generator/stderr                                     \
-            <(echo "-------------------- log end   --------------------")
-        fi
-        fatal "Failed to start program \"generator\""
-      else
-        # Link to "live" logs only available when running local.
-        local nomad_environment=$(envjqr 'nomad_environment')
-        if test "${nomad_environment}" != "cloud"
-        then
-          ln -s                                                                      \
-            ../nomad/alloc/"${generator_task}"/local/run/current/generator/stdout    \
-            "${dir}"/generator/stdout
-          ln -s                                                                      \
-            ../nomad/alloc/"${generator_task}"/local/run/current/generator/stderr    \
-            "${dir}"/generator/stderr
-          ln -s                                                                      \
-            ../nomad/alloc/"${generator_task}"/local/run/current/generator/exit_code \
-            "${dir}"/generator/exit_code
-        fi
-        # It was "intentionally started and should not automagically stop" flag!
-        touch "${dir}"/generator/started
       fi
     ;;
 
@@ -2276,20 +2153,20 @@ backend_nomad() {
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
           fi
-          # Always check that a started generator has not FAILED!
+          # Always check that a started tx-generator workload has not FAILED!
           if \
-                test -f "${dir}"/generator/started                              \
-            &&                                                                  \
-              ! test -f "${dir}"/generator/quit                                 \
-            &&                                                                  \
-              ! backend_nomad is-task-program-running "${dir}" "${generator_task}" generator 5
+                test -f "${dir}"/workloads/tx-generator/"${generator_task}"/started \
+            &&                                                                      \
+              ! test -f "${dir}"/workloads/tx-generator/"${generator_task}"/quit    \
+            &&                                                                      \
+              ! backend_nomad is-task-program-running "${dir}" "${generator_task}" tx-generator 5
           then
-            if backend_nomad is-task-program-failed   "${dir}" "${generator_task}" generator 5
+            if backend_nomad is-task-program-failed   "${dir}" "${generator_task}" tx-generator 5
             then
               # If the node in "${generator_task}" quits generators fails with:
               # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
               # Service binary 'tx-generator' returned status: 1
-              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code!")"
+              msg "$(yellow "WARNING: supervisord program \"tx-generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code!")"
               # Give the node where tx-generator runs some time to quit.
               msg "$(yellow " Waiting 60s to check the status of supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\")")"
               sleep 30
@@ -2299,7 +2176,7 @@ backend_nomad() {
                 # But check it wasn't a race condition of a stopping cluster!
                 if ! test -f "${dir}"/flag/cluster-stopping
                 then
-                  msg "$(red "ERROR: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code while supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is still running!")"
+                  msg "$(red "ERROR: supervisord program \"tx-generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code while supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is still running!")"
                   # The tx-generator can fail because something happened with
                   # the nodes (out of memory?), this gives the nodes more time
                   # to shutdown properly and/or show any possible cause of
@@ -2307,24 +2184,24 @@ backend_nomad() {
                   msg "$(yellow "WARNING: Waiting one minute so nodes are not killed immediately")"
                   sleep 60
                   touch "${dir}"/flag/cluster-stopping
-                  fatal "Generator quit unexpectedly!!!"
+                  fatal "tx-generator quit unexpectedly!!!"
                 fi
               else
                 # The whole cluster is about to finish!
-                touch "${dir}"/generator/quit
+                touch "${dir}"/workloads/tx-generator/"${generator_task}"/quit
                 # Show the warning and continue with the counter
                 echo -ne "\n"
-                msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code but expected when supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is not running")"
+                msg "$(yellow "WARNING: supervisord program \"tx-generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code but expected when supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is not running")"
                 msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
               fi
             else
-              touch "${dir}"/generator/quit
+              touch "${dir}"/workloads/tx-generator/"${generator_task}"/quit
               # Show the warning and continue with the counter
               echo -ne "\n"
-              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with a non-error exit code")"
+              msg "$(yellow "WARNING: supervisord program \"tx-generator\" (inside Nomad Task \"${generator_task}\") quit with a non-error exit code")"
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
-          fi # Finish generator checks.
+          fi # Finish tx-generator checks.
           local elapsed="$(($(date +%s) - start_time))"
           echo -ne "\b\b\b\b\b\b"
           printf "%6d" "${elapsed}"
@@ -2357,6 +2234,56 @@ backend_nomad() {
       fi
     ;;
 
+    wait-workload-stopped )
+      local usage="USAGE: wb backend $op SLEEP-SECONDS RUN-DIR WORKLOAD-NAME"
+      # This parameters is added by the nomad backend being used.
+      local sleep_seconds=${1:?$usage}; shift
+      local dir=${1:?$usage}; shift
+      local workload=${1:?$usage}; shift
+
+      local start_time=$(date +%s)
+      msg_ne "nomad: $(blue Waiting) until workload \"${workload}\" is stopped: 000000"
+      # Workload may or may not run something in all its target nodes.
+      local nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
+      for node in ${nodes[*]}
+      do
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+          && \
+            backend_nomad is-task-program-running "${dir}" "${node}" "${workload}" 5 > /dev/null
+        do
+          local elapsed="$(($(date +%s) - start_time))"
+          echo -ne "\b\b\b\b\b\b"
+          printf "%6d" "${elapsed}"
+          # This time is different between local and cloud backends to avoid
+          # unnecesary Nomad specific traffic and at the same time be less
+          # sensitive to network failures.
+          sleep "${sleep_seconds}"
+        done # While
+      done >&2 # For
+      echo -ne "\b\b\b\b\b\b"
+
+      local elapsed=$(($(date +%s) - start_time))
+      if test -f "${dir}"/flag/cluster-stopping
+      then
+        echo -ne "\n"
+        msg "Termination requested                -- after $(yellow ${elapsed})s"
+      else
+        echo -ne "\n"
+        msg "Workload \"${workload}\" exited -- after $(yellow ${elapsed})s"
+        # Fail hard if the workload failed: the run must not continue with a
+        # half-done setup phase!
+        for node in ${nodes[*]}
+        do
+          if backend_nomad is-task-program-failed "${dir}" "${node}" "${workload}" 5
+          then
+            backend_nomad download-logs-workload "${dir}" "${workload}" "${node}" || true
+            fatal "Workload \"${workload}\" inside Task \"${node}\" failed"
+          fi
+        done
+      fi
+    ;;
+
     wait-workloads-stopped )
       local usage="USAGE: wb backend $op SLEEP-SECONDS RUN-DIR"
       # This parameters is added by the nomad backend being used.
@@ -2364,11 +2291,15 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
 
       local start_time=$(date +%s)
-      msg_ne "nomad: $(blue Waiting) until all workloads are stopped: 000000"
-      for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+      msg_ne "nomad: $(blue Waiting) until all run-bounding workloads are stopped: 000000"
+      # Only the workloads that bound the run's duration are waited for
+      # (phase "load" and "wait_pools" false), the rest are stopped with the
+      # cluster ("wait_pools" true means the pools bound the run and "setup"
+      # workloads already ran to completion).
+      for workload in $(jq_tolist '.workloads | map(select(.phase == "load" and .wait_pools == false)) | map(.name)' "$dir"/profile.json)
       do
-        # Workload may or may not run something in all producers.
-        local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "${dir}"/node-specs.json))
+        # Workload may or may not run something in all its target nodes.
+        local nodes=($(backend_nomad workload-target-nodes "${dir}" "${workload}"))
         for node in ${nodes[*]}
         do
           while \
@@ -2414,10 +2345,11 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local generator_task=$(envjqr 'generator_task_name')
       local array=()
-      # Generator
-      if ! test -f "${dir}"/generator/started
+      # The tx-generator workload
+      if jqtest '.workloads | any(.name == "tx-generator")' "${dir}"/profile.json \
+         && ! test -f "${dir}"/workloads/tx-generator/"${generator_task}"/started
       then
-        backend_nomad is-task-program-running "${dir}" "${generator_task}" generator || array+=("generator")
+        backend_nomad is-task-program-running "${dir}" "${generator_task}" tx-generator || array+=("tx-generator")
       fi
       # Nodes
       local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
@@ -2520,32 +2452,6 @@ backend_nomad() {
         then
           rm "${dir}"/workloads/"${workload}"/"${task}"/download_failed
         fi
-        return 0
-      fi
-    ;;
-
-    # For debugging when something fails, downloads and prints details!
-    download-logs-generator )
-      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
-      local dir=${1:?$usage}; shift
-      local task=${1:?$usage}; shift
-      local download_ok="true"
-      # Remove "live" symlinks before downloading the "originals"
-      local nomad_environment=$(envjqr 'nomad_environment')
-      if test "${nomad_environment}" != "cloud"
-      then
-        rm -f "${dir}"/generator/{stdout,stderr,exit_code}
-      fi
-      # Downloads "exit_code", "stdout", "stderr" and GHC files.
-      # Depending on when the start command failed, logs may not be available!
-      backend_nomad download-zstd-generator "${dir}" "${task}" \
-      || download_ok="false"
-      # Return
-      if test "${download_ok}" = "false"
-      then
-        msg "$(red "Failed to download \"generator\" run files from \"${task}\"")"
-        return 1
-      else
         return 0
       fi
     ;;
@@ -2732,20 +2638,6 @@ backend_nomad() {
           --no-same-owner --no-same-permissions
     ;;
 
-    download-zstd-generator )
-      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
-      local dir=${1:?$usage}; shift
-      local task=${1:?$usage}; shift
-
-      msg "$(blue Fetching) $(yellow "\"generator\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
-      # TODO: Add compression, either "--zstd" or "--xz"
-        backend_nomad task-exec-program-run-files-tar-zstd        \
-          "${dir}" "${task}" "generator"                          \
-      | tar --extract                                             \
-          --directory="${dir}"/generator/ --file=-                \
-          --no-same-owner --no-same-permissions
-    ;;
-
     download-zstd-node )
       local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
       local dir=${1:?$usage}; shift
@@ -2864,20 +2756,14 @@ backend_nomad() {
       backend_nomad task-file-contents "${dir}" "${node}"   \
         run/current/workloads/"${workload}"/start.sh        \
       > "${dir}"/workloads/"${workload}"/"${node}"/start.sh
-    ;;
-
-    download-config-generator )
-      local usage="USAGE: wb backend pass $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local generator_task=$(envjqr 'generator_task_name')
-      # Generator runs inside task/supervisord "${generator_task}"
-      # Node files that may suffer interpolation/sed replace.
-      backend_nomad task-file-contents "${dir}" "${generator_task}" \
-        run/current/generator/start.sh                              \
-      > "${dir}"/generator/start.sh
-      backend_nomad task-file-contents "${dir}" "${generator_task}" \
-        run/current/generator/run-script.json                       \
-      > "${dir}"/generator/run-script.json
+      # Config file that may suffer interpolation/sed replace (the
+      # tx-generator's "run-script.json").
+      if test "$(jq "map(select(.name == \"${workload}\"))[0] | .config" "${dir}"/profile/workloads-service.json 2>/dev/null)" != "null"
+      then
+        backend_nomad task-file-contents "${dir}" "${node}"      \
+          run/current/workloads/"${workload}"/run-script.json    \
+        > "${dir}"/workloads/"${workload}"/"${node}"/run-script.json
+      fi
     ;;
 
     download-config-node )

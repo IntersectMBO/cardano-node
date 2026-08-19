@@ -58,7 +58,7 @@ usage_run() {
 
     $(helpcmd stop RUN)              Stop the named run
 
-    $(helpcmd restart [--no-generator] BACKEND-START-ARGS..)
+    $(helpcmd restart BACKEND-START-ARGS..)
                           Stop and restart the current run (without a new allocation)
 
   $(red run) $(blue options):
@@ -902,6 +902,9 @@ run_remote_get() {
         genesis.alonzo.json
         genesis-shelley.json
         profile.json
+        workloads/tx-generator/protocol-parameters-queried.json
+        workloads/tx-generator/plutus-budget-summary.json
+        ## The generator's directory before it became a workload.
         generator/protocol-parameters-queried.json
         generator/plutus-budget-summary.json
     )
@@ -982,7 +985,12 @@ legacy_run_timing() {
     )
     jq '
     .meta.profile_content                                       as $prof
-  | ($stamp + ($prof.generator.tx_count / $prof.generator.tps)) as $stamp_end
+    ## The generator: a top-level property on legacy runs, a "workloads"
+    ## list entry afterwards.
+  | ($prof.generator
+     // ($prof.workloads | map(select(.name == "tx-generator"))[0].parameters)
+    )                                                           as $gtor
+  | ($stamp + ($gtor.tx_count / $gtor.tps))                     as $stamp_end
   |
   { future_offset:   "0 seconds"
   , start:           $stamp

@@ -79,32 +79,37 @@ let
         )
         node-services
       ;
-      inherit
-        (import
-          ../service/generator.nix
-          { inherit pkgs;
-            inherit (workbenchNix) haskellProject;
-            inherit backend profile eraName nodeSpecs;
-            inherit node-services;
-          }
-        )
-        generator-service
-      ;
+      # A workload's Nix template can either return the workload script
+      # directly (a string) or an attrset with the script as "start" plus
+      # optional extra files to materialize in the workload's run directory
+      # (like the tx-generator's "run-script.json" as "config").
       workloads-service = builtins.map
-        (workload: rec {
-          name = workload.name;
-          start =
-            ''
-            ${import ../workload/${name}.nix
+        (workload:
+          let template =
+            import ../workload/${workload.name}.nix
               { inherit pkgs;
                 inherit (workbenchNix) haskellProject;
-                inherit profile nodeSpecs workload;
+                inherit backend eraName profile nodeSpecs workload;
               }
-            }
-            ${workload.entrypoints.producers}
-            ''
           ;
-        })
+              bundle =
+            if builtins.isAttrs template
+            then template
+            else { start = template; }
+          ;
+          in {
+            name = workload.name;
+            start =
+              ''
+              ${bundle.start}
+              ${workload.entrypoint}
+              ''
+            ;
+            config            = bundle.config or null;
+            plutus-redeemer   = bundle.plutus-redeemer or null;
+            plutus-datum      = bundle.plutus-datum or null;
+          }
+        )
         profile.workloads
       ;
       inherit
@@ -142,7 +147,6 @@ let
       };
       inherit
         node-services
-        generator-service
         workloads-service
         tracer-service
         healthcheck-service
@@ -153,7 +157,7 @@ let
   ##############################################################################
 
   materialise-profile = { profileBundle }:
-    # Output (node-services + generator-service) depends on the era.
+    # Output (node-services + the tx-generator workload) depends on the era.
     pkgs.runCommand "workbench-profile-data-${profileName}-${profileBundle.eraName}"
       { buildInputs = [];
         inherit profileJsonPath;
@@ -170,17 +174,14 @@ let
             profileBundle.node-services
           )
         ;
-        generatorService = __toJSON
-          { name            = "generator";
-            inherit (profileBundle.generator-service) start config;
-            # Not present on every profile. Can be null.
-            inherit (profileBundle.generator-service) plutus-redeemer;
-            # Not present on every profile. Can be null.
-            inherit (profileBundle.generator-service) plutus-datum;
-          }
-        ;
         workloadsService = __toJSON (builtins.map (workload:
           { inherit (workload) name start;
+            # Only present for the "tx-generator" workload. Can be null.
+            inherit (workload) config;
+            # Not present on every profile. Can be null.
+            inherit (workload) plutus-redeemer;
+            # Not present on every profile. Can be null.
+            inherit (workload) plutus-datum;
           }
         ) profileBundle.workloads-service);
         tracerService = __toJSON
@@ -196,7 +197,6 @@ let
         passAsFile =
           [
             "nodeServices"
-            "generatorService"
             "workloadsService"
             "tracerService"
             "healthcheckService"
@@ -209,7 +209,6 @@ let
       cp    $topologyDotPath              $out/topology.dot
       cp    $nodeSpecsJsonPath            $out/node-specs.json
       cp    $nodeServicesPath             $out/node-services.json
-      cp    $generatorServicePath         $out/generator-service.json
       cp    $workloadsServicePath         $out/workloads-service.json
       cp    $tracerServicePath            $out/tracer-service.json
       cp    $healthcheckServicePath       $out/healthcheck-service.json

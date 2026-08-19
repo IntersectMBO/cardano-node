@@ -81,7 +81,7 @@ case "$op" in
               , "    - stuffed:            \(.derived.utxo_stuffed)"
               , "  - delegators:         \(.genesis.delegators)"
               , "  - generator duration: \(.derived.generator_duration              | tostring)s"
-              , "    - requested epochs:   \(.generator.epochs                      | tostring)ep"
+              , "    - requested epochs:   \(.workloads | map(select(.name == "tx-generator"))[0].parameters.epochs | tostring)ep"
               , "    - effective epochs:   \(.derived.effective_epochs              | tostring)ep"
               , "    - transaction count:  \(.derived.generator_tx_count | . / 1000 | ceil | tostring)kTx"
               , "    - full blocks:        \(.derived.generator_blocks_lower_bound  | tostring)"

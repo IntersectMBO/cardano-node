@@ -13,7 +13,7 @@ module Cardano.Benchmarking.Profile.Builtin.Plutuscall (
 import           Prelude
 import           Data.Function ((&))
 -- Package: self.
-import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlockMemx2)
+import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlockMemx2, calibrateLoopBlockMemx2TxFee)
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
@@ -55,7 +55,7 @@ profilesPlutuscall =
       postPlomin      = V.genesisVariantVoltaire
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
-  , loop        & P.name "plutuscall-loop-memx2"           . postPlomin . P.budgetBlockMemoryDouble . P.overlay Pl.calibrateLoopBlockMemx2
+  , loop        & P.name "plutuscall-loop-memx2"           . postPlomin . P.budgetBlockMemoryDouble . P.overlay Pl.calibrateLoopBlockMemx2 . P.txFeeOverwrite Pl.calibrateLoopBlockMemx2TxFee
   , ecdsa       & P.name "plutuscall-secp-ecdsa"           . postPlomin
   , ecdsa       & P.name "plutuscall-secp-ecdsa-stepx2"    . postPlomin . P.budgetBlockStepsDouble
   , schnorr     & P.name "plutuscall-secp-schnorr"         . postPlomin

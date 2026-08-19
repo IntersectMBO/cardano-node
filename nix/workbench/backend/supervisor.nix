@@ -25,7 +25,6 @@ let
           profile = profileBundle.profile.value;
           inherit profiling;
           nodeSpecs = profileBundle.node-specs.value;
-          withGenerator = true;
           withTracer = profileBundle.profile.value.node.tracer;
           withSsh = false;
           inetHttpServerPort = "127.0.0.1:9001";

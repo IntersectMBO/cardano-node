@@ -3,6 +3,7 @@
 , profile
 , nodeSpecs
 , workload
+, ...
 }:
 
 let
@@ -30,6 +31,26 @@ let
   genesis_funds_skey = "../../genesis/utxo-keys/utxo2/utxo.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
+
+  # The commit of "github.com/cardano-foundation/CIPs" the proposals' anchor
+  # URLs point to. `cardano-cli` downloads them to check "--anchor-data-hash",
+  # so a mutable reference like "master" breaks proposal creation as soon as
+  # the file changes upstream. Bump together with the hashes below.
+  # Abbreviated: the ledger rejects an anchor URL of more than 128 bytes and
+  # the full commit hash doesn't fit.
+  cips_commit = "0ed8837a02ed";
+
+  # The document the constitution proposal points to. Content-addressed, so
+  # unlike the anchors above it cannot change under us.
+  constitution_url = "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto";
+
+  # The node next to which the setup phase (fund-splitting / proposal-creation)
+  # runs: the same machine as the tx-generator.
+  gen_node_name =
+    if profile.composition.with_explorer
+    then "explorer"
+    else "node-0"
+  ;
 
   # Filter producers from "node-specs.json".
   producers =
@@ -170,10 +191,11 @@ function calculate_next_utxo {
   local addr=''${2:-null}
 
   local tx_id
-  # Prints a transaction identifier.
+  # Prints a transaction identifier (a JSON object with a "txhash" property).
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file "''${tx_signed}"                            \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
   # View transaction as JSON and get index of FIRST output containing "$addr".
     ${cardano-cli}/bin/cardano-cli debug transaction view \
@@ -271,8 +293,9 @@ function is_tx_in_mempool {
 
   local tx_id
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid  \
-      --tx-file "''${tx_signed}"                            \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file "''${tx_signed}"                            \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
     ${cardano-cli}/bin/cardano-cli conway query tx-mempool           \
         tx-exists         "''${tx_id}"                               \
@@ -570,8 +593,9 @@ function wait_proposal_id {
   # Get proposal's "txId" from the "--tx-file".
   local tx_id
   tx_id="$( \
-    ${cardano-cli}/bin/cardano-cli conway transaction txid    \
-      --tx-file     "''${tx_signed}"                          \
+      ${cardano-cli}/bin/cardano-cli conway transaction txid  \
+        --tx-file   "''${tx_signed}"                          \
+    | ${jq}/bin/jq --raw-output .txhash                       \
   )"
 
   local contains_proposal="false"
@@ -925,12 +949,13 @@ function governance_create_constitution {
   | ${jq}/bin/jq -r                                                  \
       '.nextRatifyState.nextEnactState.prevGovActionIds'
 
-  # Create dummy constitution.
-    ${coreutils}/bin/echo "My Constitution: free mate and asado"     \
-  > ./constitution.txt
-  # Calculate constitution hash.
+  # Calculate the constitution's hash from the document the proposal points to:
+  # `cardano-cli` downloads "--constitution-url" when building the transaction
+  # and refuses to build if it does not hash to "--constitution-hash". It used
+  # to be the hash of a dummy text file created here, which never was the hash
+  # of that document.
   ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
-    --file-text ./constitution.txt                                   \
+    --url       "${constitution_url}"                                \
     --out-file  ./constitution.hash
   # Copy guardrails-script.
   ${coreutils}/bin/cp                                                \
@@ -942,12 +967,15 @@ function governance_create_constitution {
     --out-file    ./guardrails-script.hash
 
   # Create action.
+  # The anchor URL is pinned to a commit of the CIPs repository: `cardano-cli`
+  # fetches it to check "--anchor-data-hash" and the contents of a branch like
+  # "master" change without notice, breaking every voting run when they do.
   local tx_filename=./create-constitution
   ${cardano-cli}/bin/cardano-cli conway governance action create-constitution \
     --testnet \
-    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json" \
-    --anchor-data-hash "9d99fbca260b2d77e6d3012204e1a8658f872637ae94cdb1d8a53f4369400aa9" \
-    --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
+    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/${cips_commit}/CIP-0100/cip-0100.common.schema.json" \
+    --anchor-data-hash "c407dda548dbbbfb4dc89b5a980f75fe0b7b6721d33d8f151ea3e711bede3cda" \
+    --constitution-url "${constitution_url}" \
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
@@ -1020,7 +1048,7 @@ function governance_create_withdrawal {
   # Create action.
   ${cardano-cli}/bin/cardano-cli conway governance action create-treasury-withdrawal \
     --testnet                                                                                                                    \
-    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0108/examples/treasury-withdrawal.jsonld" \
+    --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/${cips_commit}/CIP-0108/examples/treasury-withdrawal.jsonld" \
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
@@ -1340,15 +1368,28 @@ function workflow_generator {
   ''
   }
   #- Waiting ------------------------------------------------------------------#
+  # Only the proposals this workload creates: the withdrawal ones are created
+  # by the "voting" workload of the "load" phase, which is not started until
+  # this one exits, and which waits for the full `proposals_count` itself
+  # before voting.
   ${coreutils}/bin/echo "wait_proposals_count:            Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
-  wait_proposals_count "''${node_str}" ${toString proposals_count}
+  wait_proposals_count "''${node_str}" ${toString constitutions_from_genesis}
   ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   #- Log ----------------------------------------------------------------------#
   # Keep a job that periodically stores the proposals from the gov-state.
+  # A background job: the workload script exits (the end of the "setup" phase)
+  # and the orphaned logger keeps running until the cluster is stopped.
   workflow_generator_log_proposals "''${node_str}" &
 
 }
 
+# Entrypoint of the "voting-setup" workload (phase "setup", runs to completion
+# before the load workloads are started, placement "explorer").
+function workflow_setup {
+  workflow_generator "${gen_node_name}"
+}
+
+# Entrypoint of the "voting" workload (phase "load", placement "producers").
 function workflow_producer {
   # Run the producer workflow for each deployed producer.
   local producers=${toString producers_bash_array}

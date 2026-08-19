@@ -21,7 +21,7 @@ import           Data.Function ((&))
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
 import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
-import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlockMemx15, calibrateLoopBlockMemx2)
+import qualified Cardano.Benchmarking.Profile.Playground as Pl (calibrateLoopBlockMemx15, calibrateLoopBlockMemx15TxFee, calibrateLoopBlockMemx2, calibrateLoopBlockMemx2TxFee)
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
@@ -141,8 +141,10 @@ profilesCloud =
       blst     = plutusVolt & plutusBlstBase   . V.plutusTypeBLST     . P.analysisSizeModerate2
       ripemd   = plutusVolt & plutusRipemdBase . V.plutusTypeRIPEMD   . P.analysisSizeSmall
       -- PParams overlays and calibration for 4 tx per block memory full.
-      blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
-      blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
+      blockMem15x =   P.budgetBlockMemoryOneAndAHalf . P.overlay Pl.calibrateLoopBlockMemx15
+                    . P.txFeeOverwrite Pl.calibrateLoopBlockMemx15TxFee
+      blockMem2x  =   P.budgetBlockMemoryDouble      . P.overlay Pl.calibrateLoopBlockMemx2
+                    . P.txFeeOverwrite Pl.calibrateLoopBlockMemx2TxFee
       -- LSMT helper. Node config add the "hostvolume"s as a cluster constraint.
       ephemeral =
                 -- The name of the defined volume in the Nomad Client config and
@@ -203,12 +205,12 @@ profilesCloud =
       loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop . P.analysisSizeSmall
   in [
   -- Voting
-    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.workloadAppend W.votingWorkloadUtxo
-  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.workloadAppend W.votingWorkloadx1
-  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.workloadAppend W.votingWorkloadx2
-  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.workloadAppend W.votingWorkloadUtxo
-  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.workloadAppend W.votingWorkloadx1
-  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.workloadAppend W.votingWorkloadx2
+    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.workloadsAppend W.votingWorkloadUtxo
+  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx1
+  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx2
+  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.workloadsAppend W.votingWorkloadUtxo
+  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx1
+  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.workloadsAppend W.votingWorkloadx2
   ]
   -----------
   -- Latency.

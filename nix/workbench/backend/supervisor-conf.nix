@@ -3,7 +3,6 @@
 , profile
 , profiling
 , nodeSpecs
-, withGenerator
 , withTracer
 , withSsh
 , unixHttpServerPort ? null
@@ -156,29 +155,6 @@ let
       })
     nodeSpecs))
     //
-    lib.attrsets.optionalAttrs withGenerator
-    {
-      "program:generator" = {
-        # "command" below assumes "directory" is set accordingly.
-        directory      = "${stateDir}/generator";
-        command        = "${command}";
-        stdout_logfile = "${stateDir}/generator/stdout";
-        stderr_logfile = "${stateDir}/generator/stderr";
-        # Set these values to 0 to indicate an unlimited log size / no rotation.
-        stdout_logfile_maxbytes = 0;
-        stderr_logfile_maxbytes = 0;
-        # Send stop and kill signals to the whole process group.
-        stopasgroup    = true;
-        killasgroup    = true;
-        autostart      = false;
-        autorestart    = false;
-        # Don't attempt any restart!
-        startretries   = 0;
-        # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
-      };
-    }
-    //
     {
       "program:healthcheck" = {
         # "command" below assumes "directory" is set accordingly.
@@ -222,8 +198,14 @@ let
         autorestart    = false;
         # Don't attempt any restart!
         startretries   = 0;
-        # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
+        # Seconds it needs to stay running to consider the start successful.
+        # A "setup" phase workload is expected to run to completion, and a
+        # short one must not be reported as a failed start: the scenario waits
+        # for it and fails the run using its "exit_code" file instead (see
+        # `wait-workload-stopped`). The other phases are long running, where
+        # these seconds are what makes an immediate crash a start failure with
+        # its logs dumped.
+        startsecs      = if workload.phase == "setup" then 0 else 5;
       };
     }) profile.workloads))
 
