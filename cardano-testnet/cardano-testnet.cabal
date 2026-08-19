@@ -241,6 +241,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.Eval
                         Cardano.Testnet.Test.Rpc.FetchBlock
                         Cardano.Testnet.Test.Rpc.FollowTip
+                        Cardano.Testnet.Test.Rpc.Genesis
                         Cardano.Testnet.Test.Rpc.Query
                         Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction
