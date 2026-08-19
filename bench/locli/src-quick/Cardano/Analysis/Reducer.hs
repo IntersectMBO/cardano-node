@@ -4,7 +4,7 @@ module Cardano.Analysis.Reducer
        (module Cardano.Analysis.Reducer)
        where
 
-import           Cardano.Api (SlotNo)
+import           Cardano.Slotting.Slot (SlotNo)
 
 import           Cardano.Analysis.Reducer.Util
 import           Cardano.Unlog.LogObject (LOBody (..), LogObject (..))

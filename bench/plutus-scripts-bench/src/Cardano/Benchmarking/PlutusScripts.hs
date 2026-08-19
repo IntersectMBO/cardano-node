@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -24,12 +23,17 @@ import           System.FilePath (takeBaseName)
 import           Cardano.Api
 
 import qualified Cardano.Benchmarking.PlutusScripts.CustomCall as CustomCall
+import qualified Cardano.Benchmarking.PlutusScripts.CustomCallV3 as CustomCallV3
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
+import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1LoopV3 as ECDSAV3
+import qualified Cardano.Benchmarking.PlutusScripts.ExpModInteger as ExpModInteger
 import qualified Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd as HashG2Add
 import qualified Cardano.Benchmarking.PlutusScripts.Loop2024 as Loop2024
 import qualified Cardano.Benchmarking.PlutusScripts.LoopV3 as LoopV3
+import qualified Cardano.Benchmarking.PlutusScripts.MultiScalarMulG1 as MultiScalarMulG1
 import qualified Cardano.Benchmarking.PlutusScripts.Ripemd160 as Ripemd160
 import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schnorr
+import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1LoopV3 as SchnorrV3
 import qualified Cardano.Benchmarking.PlutusScripts.SupplementalDatum as SupplementalDatum
 import           Cardano.Benchmarking.ScriptAPI
 
@@ -37,12 +41,17 @@ import           Cardano.Benchmarking.ScriptAPI
 getAllScripts :: [PlutusBenchScript]
 getAllScripts =
   [ CustomCall.script
+  , CustomCallV3.script
   , ECDSA.script
+  , ECDSAV3.script
+  , ExpModInteger.script
   , HashG2Add.script
   , Loop2024.script
   , LoopV3.script
+  , MultiScalarMulG1.script
   , Ripemd160.script
   , Schnorr.script
+  , SchnorrV3.script
   , SupplementalDatum.script
   ]
 

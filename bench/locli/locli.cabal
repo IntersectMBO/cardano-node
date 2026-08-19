@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                2.3
+version:                2.4
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -104,6 +104,7 @@ library
                         Cardano.Unlog.BackendFile
                         Cardano.Unlog.LogObject
                         Cardano.Unlog.LogObjectDB
+                        Cardano.Unlog.PlutusBudgetSummary
                         Cardano.Unlog.Resources
 
   other-modules:        Paths_locli
@@ -123,7 +124,7 @@ library
                       , ede
                       , extra
                       , filepath
-                      , fingertree == 0.1.5.0
+                      , fingertree ^>= 0.1.6.1
                       , hashable
                       , optparse-applicative
                       , ouroboros-consensus:ouroboros-consensus
@@ -188,10 +189,11 @@ executable locli-quick
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api
+                      , cardano-slotting
                       , containers
                       , directory
                       , extra
+                      , mtl
                       , process
                       , split
                       , text

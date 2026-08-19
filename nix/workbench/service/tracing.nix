@@ -46,6 +46,7 @@ let
       "ChainDB".severity = "Debug";
       "ChainDB.LedgerEvent.Flavor.V1.".severity = "Silence";
       "ChainDB.LedgerEvent.Flavor.V2".severity = "Silence";
+      "ChainDB.PerasCertDbEvent".severity = "Silence";
       "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";
       "ChainSync.Client".severity = "Debug";
       "ChainSync.Local".severity = "Notice";

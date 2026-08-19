@@ -41,6 +41,13 @@ summaryAndRedeermerOrDie scope =
     (\(summary, budget, _) -> (summary, autoBudgetRedeemer budget))
   where withScope s = concat [scope, ": ", s]
 
+summaryAndRedeermerSafe :: String -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, b) -> IO (Maybe (PlutusBudgetSummary, ScriptRedeemer))
+summaryAndRedeermerSafe scope =
+  either
+    (\err -> putStrLn (withScope $ show err) >> pure Nothing)
+    (\(summary, budget, _) -> pure (Just (summary, autoBudgetRedeemer budget)))
+  where withScope s = concat [scope, ": ", s]
+
 resolveRedeemer :: Either ScriptData TxGenPlutusParams -> IO (Either TxGenError HashableScriptData)
 resolveRedeemer = resolveRedeemerQuiet False
 

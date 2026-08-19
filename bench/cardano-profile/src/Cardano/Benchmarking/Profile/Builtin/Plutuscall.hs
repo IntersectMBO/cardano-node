@@ -44,13 +44,17 @@ profilesPlutuscall =
         . P.analysisStandard
         . P.desc "Small dataset, honest 15 epochs duration"
 
-      loop            = plutusCall & V.plutusTypeLoop    . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
-      ecdsa           = plutusCall & V.plutusTypeECDSA   . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
-      schnorr         = plutusCall & V.plutusTypeSchnorr . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
+      loop            = plutusCall & V.plutusTypeLoop             . V.plutusDoubleSaturation     . P.analysisSizeModerate  . P.analysisEpoch3Plus
+      ecdsa           = plutusCall & V.plutusTypeECDSA            . V.plutusDoubleSaturation     . P.analysisSizeModerate  . P.analysisEpoch3Plus
+      schnorr         = plutusCall & V.plutusTypeSchnorr          . V.plutusDoubleSaturation     . P.analysisSizeModerate  . P.analysisEpoch3Plus
+      schnorrV3       = plutusCall & V.plutusTypeSchnorrV3        . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
+      mscalmul        = plutusCall & V.plutusTypeMultScalarMultG1 . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
+      ripemdVolt4tx   = plutusCall & V.plutusTypeRIPEMD_4tx       . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
+      expmod          = plutusCall & V.plutusTypeExpMod           . V.plutusDoubleSaturation     . P.analysisSizeSmall     . P.analysisEpoch3Plus
 
-      loopVolt        = plutusCall & V.plutusTypeLoop    . V.plutusDoublePlusSaturation . P.analysisSizeSmall
-      blstVolt        = plutusCall & V.plutusTypeBLST    . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
-      ripemdVolt      = plutusCall & V.plutusTypeRIPEMD  . V.plutusDoublePlusSaturation . P.analysisSizeSmall
+      loopVolt        = plutusCall & V.plutusTypeLoop       . V.plutusDoublePlusSaturation . P.analysisSizeSmall        . P.analysisEpoch3Plus
+      blstVolt        = plutusCall & V.plutusTypeBLST       . V.plutusDoublePlusSaturation . P.analysisSizeModerate2    . P.analysisEpoch3Plus
+      ripemdVolt      = plutusCall & V.plutusTypeRIPEMD     . V.plutusDoublePlusSaturation . P.analysisSizeSmall        . P.analysisEpoch3Plus
 
       postPlomin      = V.genesisVariantVoltaire
   in [
@@ -64,4 +68,10 @@ profilesPlutuscall =
   , loopVolt    & P.name "plutuscall-volt-loop"            . postPlomin
   , blstVolt    & P.name "plutuscall-volt-blst"            . postPlomin
   , ripemdVolt  & P.name "plutuscall-volt-ripemd"          . postPlomin
+
+  -- PlutusV3 benchmarks, targeting PV11
+  , ripemdVolt4tx  & P.name "plutuscall-voltv11-ripemd"    . postPlomin . P.v11Preview
+  , schnorrV3      & P.name "plutuscall-voltv11-schnorrv3" . postPlomin . P.v11Preview
+  , mscalmul       & P.name "plutuscall-voltv11-mscalmul"  . postPlomin . P.v11Preview
+  , expmod         & P.name "plutuscall-voltv11-expmod"    . postPlomin . P.v11Preview
   ]

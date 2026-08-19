@@ -14,9 +14,6 @@ import           Cardano.Api
 
 import           Cardano.Benchmarking.Compiler (keyBenchmarkInputs)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-#ifdef WITH_LIBRARY
-import           Cardano.Benchmarking.PlutusScripts (listPlutusScripts)
-#endif
 import           Cardano.TxGenerator.Calibrate.Utils
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters ( ProtocolParameters (..), convertToLedgerProtocolParameters, 
@@ -45,8 +42,11 @@ import           System.Directory
 import           System.FilePath
 import           Text.Read (readMaybe)
 
+#ifdef WITH_LIBRARY
+import           Cardano.Benchmarking.PlutusScripts (listPlutusScripts)
+#else
 import           Paths_tx_generator hiding (version)
-
+#endif
 
 data CommandLine
     = CLIList
@@ -206,10 +206,10 @@ runScaling ::
   -> IO [(PlutusBudgetSummary, ScriptRedeemer)]
 runScaling script budgetType basePParams baseline baseBudget (scaleSanitize -> scalesArg)
   | null scalesArg = go1 scaleBaseLine scaleAutoFactors
-  | otherwise      = mapM go0 scalesArg
+  | otherwise      = catMaybes <$> mapM go0 scalesArg
   where
     -- specific scaling requested
-    go0 :: Scale -> IO (PlutusBudgetSummary, ScriptRedeemer)
+    go0 :: Scale -> IO (Maybe (PlutusBudgetSummary, ScriptRedeemer))
     go0 scale =
       let
         fields@[txm, txs, bm, bs] = scaleFields scale
@@ -218,9 +218,8 @@ runScaling script budgetType basePParams baseline baseBudget (scaleSanitize -> s
         budget  = withHint (maximum fields) baseBudget
       in do
         putStrLn $ "--> run: " ++ show scope
-        evaluate $
-          summaryAndRedeermerOrDie scope $
-            plutusAutoScaleBlockfit pparams (scriptNameExt, scope) script budget strategy 1
+        summaryAndRedeermerSafe scope $
+          plutusAutoScaleBlockfit pparams (scriptNameExt, scope) script budget strategy 1
 
     -- auto-scale until conditions are met (last list entry), but include intermediate results
     go1 :: Scale -> [Double] -> IO [(PlutusBudgetSummary, ScriptRedeemer)]
@@ -228,12 +227,13 @@ runScaling script budgetType basePParams baseline baseBudget (scaleSanitize -> s
     go1 scale_ factors@(factor:fs) =
       case bumpLimit strategy budgetType factor scale_ of
         Nothing     -> go1 scaleBaseLine fs     -- no further bump possible: give up and auto-scale for next factor
-        Just scale  -> do
-          run@(summary, _) <- go0 scale
-          (run :) <$>
-            if all (\cond -> cond summary baseline) happilyCalibrated
-              then go1 scaleBaseLine fs         -- auto-scale next factor
-              else go1 scale factors            -- apply next bump to current scaling, re-run
+        Just scale  -> go0 scale >>= \case
+          Nothing               -> pure []      -- if there was an error, skip all remaining scaling runs
+          Just run@(summary, _) ->
+            (run :) <$>
+              if all (\cond -> cond summary baseline) happilyCalibrated
+                then go1 scaleBaseLine fs         -- auto-scale next factor
+                else go1 scale factors            -- apply next bump to current scaling, re-run
 
     -- conditions for a succesful calibration: same limiting factors, same txn count per block
     -- NEXT RELEASE: does that need to be strategy dependent with TargetBlockExpenditure?
