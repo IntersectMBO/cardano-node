@@ -17,13 +17,13 @@ import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Api.Ledger as L
 
-import           Cardano.Rpc.Client (Proto)
 import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
-import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (serialisePaymentCredential)
+import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPredicate,
+                   serialisePaymentCredential)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import           Cardano.Testnet
 
@@ -34,9 +34,8 @@ import           Control.Monad.Trans.Control (liftBaseOp)
 import           Data.ByteString (ByteString)
 import           Data.Default.Class
 import           Data.List.NonEmpty (NonEmpty ((:|)))
-import           GHC.Stack
 import           Lens.Micro
-import           Network.GRPC.Spec (GrpcError (..), GrpcException (..))
+import           Network.GRPC.Spec (GrpcError (..), GrpcException (..), Proto)
 
 import           Testnet.Components.Query (TestnetWaitPeriod (..), getEpochStateView, retryUntilM)
 import           Testnet.Property.Util (integrationRetryWorkspace)
@@ -97,13 +96,13 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
 
     search' <-
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
-        def & U5c.predicate .~ addressPredicate address0
+        def & U5c.predicate .~ exactAddressPredicate address0
     pure (pparams', search')
 
   pparams <- H.leftFail $ utxoRpcPParamsToProtocolParams era $ pparamsResponse ^. U5c.values . U5c.cardano
 
   txOut0 : _ <- H.noteShow $ initialSearch ^. U5c.items
-  txIn0 <- txoRefToTxIn $ txOut0 ^. U5c.txoRef
+  txIn0 <- H.leftFail . txoRefUtxoRpcToTxIn $ txOut0 ^. U5c.txoRef
 
   outputCoin <- H.leftFail $ txOut0 ^. U5c.cardano . U5c.coin . to utxoRpcBigIntToInteger
   let amount = 200_000_000
@@ -134,7 +133,7 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
     utxosAtAddress1 <- retryUntilM epochStateView (WaitForBlocks 10)
       (do searchResult <- H.evalIO $
             Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
-              def & U5c.predicate .~ addressPredicate address1
+              def & U5c.predicate .~ exactAddressPredicate address1
           pure $ searchResult ^. U5c.items
       )
       (\xs -> length xs == 2)
@@ -201,23 +200,9 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
     H.note_ "Test 4: Verify anyOf predicate with both addresses returns all UTxOs"
     allUtxosSearch <- H.noteShowM . H.evalIO $
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.QueryService "searchUtxos")) $
-        def & U5c.predicate .~ (def & U5c.anyOf .~ [addressPredicate address0, addressPredicate address1])
+        def & U5c.predicate .~ (def & U5c.anyOf .~ [exactAddressPredicate address0, exactAddressPredicate address1])
 
     H.assertWith (allUtxosSearch ^. U5c.items) $ \xs -> length xs > 2
 
 asAddressInEra :: ShelleyBasedEra era -> AsType (AddressInEra era)
 asAddressInEra s = shelleyBasedEraConstraints s $ AsAddressInEra asType
-
-txoRefToTxIn :: (HasCallStack, MonadTest m) => Proto UtxoRpc.TxoRef -> m TxIn
-txoRefToTxIn r = withFrozenCallStack $ do
-  txId' <- H.leftFail $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
-  pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
-
-addressPredicate :: IsCardanoEra era => AddressInEra era -> Proto UtxoRpc.UtxoPredicate
-addressPredicate address =
-  def
-    & U5c.match
-      .~ ( def
-             & U5c.cardano
-               .~ (def & U5c.address .~ (def & U5c.exactAddress .~ serialiseToRawBytes address))
-         )
