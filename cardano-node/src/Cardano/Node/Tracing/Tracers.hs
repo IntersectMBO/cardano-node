@@ -23,7 +23,6 @@ import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Network.NodeToNode.Version ()
 import           Cardano.Network.OrphanInstances ()
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
@@ -87,10 +86,9 @@ mkDispatchTracers
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
-  -> SomeConsensusProtocol
   -> IO (Tracers RemoteAddress LocalAddress blk IO)
 
-mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = do
+mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
 
     configReflection <- emptyConfigReflection
 
@@ -175,7 +173,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig p = d
       {
         chainDBTracer = mkTracer (traceWith chainDBTr')
                       <> mkTracer (traceWith replayBlockTr')
-                      <> mkTracer (SR.traceNodeStateChainDB p nodeStateDP)
+                      <> mkTracer (SR.traceNodeStateChainDB nodeStateDP)
       , consensusTracers = consensusTr
       , churnModeTracer = mkTracer (traceWith churnModeTr)
       , nodeToClientTracers = nodeToClientTr

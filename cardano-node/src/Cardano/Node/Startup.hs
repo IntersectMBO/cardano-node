@@ -28,7 +28,6 @@ import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersi
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
@@ -37,7 +36,6 @@ import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
 import           Ouroboros.Consensus.Config
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Ledger.Query (getSystemStart)
-import           Ouroboros.Consensus.Node (pInfoConfig)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
@@ -206,18 +204,19 @@ data BasicInfoNetwork = BasicInfoNetwork {
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo
-  :: NodeConfiguration
-  -> SomeConsensusProtocol
+  :: Api.ConfigSupportsNode blk
+  => NodeConfiguration
+  -> Api.BlockType blk
+  -> TopLevelConfig blk
   -> TraceConfig
   -> UTCTime
   -> IO NodeInfo
-prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
+prepareNodeInfo nc blockType cfg tc nodeStartTime = do
   nodeName <- prepareNodeName
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
   let getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
       systemStartTime :: UTCTime
       systemStartTime =
-        case whichP of
+        case blockType of
           Api.ByronBlockType ->
             getSystemStartByron
           Api.ShelleyBlockType ->
