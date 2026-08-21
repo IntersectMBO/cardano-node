@@ -166,3 +166,10 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: a1727ea62fe6198d66b631441a83663f517289e2
+  --sha256: 080cg6xc929lqyqaw4hvgvv225y9kw9p0m7b20hjd0gaabmj73ik
+  subdir: eras/shelley/impl
+
