@@ -65,6 +65,7 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Logging.Types (LogFormatting)
 import           Cardano.Logging.Utils (showT)
 
+import           Ouroboros.Consensus.Block.Forging (MkBlockForging)
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
@@ -221,8 +222,8 @@ handleNodeWithTracers
   -> SomeConsensusProtocol
   -> Api.GenesisHashShelley
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
-  (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
+handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
+  (pInfo@ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
@@ -234,12 +235,13 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyG
   tracers <-
     initTraceDispatcher
       nc
-      p
+      blockType
+      pInfoConfig
       networkMagic
       nodeKernelData
       (null blockForging)
 
-  startupInfo <- getStartupInfo nc p fp
+  startupInfo <- getStartupInfo nc blockType pInfoConfig fp
   mapM_ (traceWith $ startupTracer tracers) startupInfo
   traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
   -- sends initial BlockForgingUpdate
@@ -249,7 +251,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyG
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -288,6 +290,8 @@ handleSimpleNode
   => Api.BlockType blk
   -> Api.GenesisHashShelley
   -> Api.ProtocolInfoArgs IO blk
+  -> ProtocolInfo blk
+  -> (Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
   -> PartialNodeConfiguration
@@ -299,7 +303,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -310,8 +314,6 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic
   when (ncValidateDB nc) $
     traceWith (startupTracer tracers)
       StartupDBValidation
-
-  pInfo <- fst <$> Api.protocolInfo @IO runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -391,7 +393,6 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc cmdPc networkMagic
               }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              (_, mkBlockForging) <- Api.protocolInfo runP
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $

@@ -27,7 +27,6 @@ import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -41,7 +40,6 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLedgerConfig (..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
@@ -61,13 +59,14 @@ import           Paths_cardano_node (version)
 
 
 getStartupInfo
-  :: NodeConfiguration
-  -> SomeConsensusProtocol
+  :: ConfigSupportsNode blk
+  => NodeConfiguration
+  -> Api.BlockType blk
+  -> Consensus.TopLevelConfig blk
   -> FilePath
   -> IO [StartupTrace blk]
-getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
+getStartupInfo nc blockType cfg fp = do
   nodeStartTime <- getCurrentTime
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
   let basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
@@ -77,7 +76,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg
               }
       protocolDependentItems =
-        case whichP of
+        case blockType of
           Api.ByronBlockType ->
             let DegenLedgerConfig cfgByron = Consensus.configLedger cfg
             in [getGenesisValuesByron cfg cfgByron]

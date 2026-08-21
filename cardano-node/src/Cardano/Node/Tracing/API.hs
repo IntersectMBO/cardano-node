@@ -12,13 +12,14 @@ module Cardano.Node.Tracing.API
   ( initTraceDispatcher
   ) where
 
+import           Cardano.Api (BlockType)
+
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer
 import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
@@ -29,6 +30,7 @@ import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node.GSM
@@ -62,12 +64,13 @@ initTraceDispatcher ::
   , LogFormatting (TraceGsmEvent (Tip blk))
   )
   => NodeConfiguration
-  -> SomeConsensusProtocol
+  -> BlockType blk
+  -> TopLevelConfig blk
   -> NetworkMagic
   -> NodeKernelData blk
   -> Bool
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
-initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
+initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
   trConfig <- readConfigurationWithDefault
                 (FromFile (unConfigPath $ ncConfigFile nc))
                 defaultCardanoConfig
@@ -77,7 +80,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
   -- The NodeInfo DataPoint needs to be fully evaluated and stored
   -- before it is queried for the first time by cardano-tracer.
   -- Hence, we delay initiating the forwarding connection.
-  nodeInfo <- prepareNodeInfo nc p trConfig =<< getCurrentTime
+  nodeInfo <- prepareNodeInfo nc blockType cfg trConfig =<< getCurrentTime
   nodeInfo `deepseq` traceWith (nodeInfoTracer tracers) nodeInfo
 
   kickoffForwarder
@@ -150,7 +153,6 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
       (Just ekgTrace)
       dpTracer
       trConfig
-      p
 
     let
       kickoffPrometheusSimple = case prometheusSimple of
