@@ -95,8 +95,8 @@ allow-older:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 0ebbd27336b57ee1c1e91d12ed337c7f1d9c3737
-  --sha256: sha256-tfeIsZvdBPitheKmmq4HDvybzDKHTKXukS4lz8vODiE=
+  tag: 9313d1c80169aac161ce264b97e4a4feb5adb8bb
+  --sha256: sha256-GU50HWW4CgDUpKcM7dGQm1UQpjuh61QfzZJlVcjKTiA=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -136,8 +136,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: c1eb7e3f45e599324426771abfd747ffeab5b064
-  --sha256: sha256-fIqpI2whstetodpiONmUDVgnhTpzXeq1/gmzuHItK5A=
+  tag: 6846fd685dad9f730b028212e3fd25766d19e929
+  --sha256: sha256-GU50HWW4CgDUpKcM7dGQm1UQpjuh61QfzZJlVcjKTiA=
   subdir:
     ouroboros-network
     cardano-diffusion
