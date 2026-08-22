@@ -49,6 +49,7 @@ data BuiltTx era = BuiltTx
   { btxSigned :: !(Api.Tx era)
   , btxId :: !TxId
   , btxSize :: !Word32
+  , btxInputs :: !Int
   , btxOutputs :: ![Fund]
   }
 
@@ -117,6 +118,7 @@ buildTx sbe destAddr signingKey inFunds numOutputs fee
       { btxSigned = Api.ShelleyTx sbe ledgerTx
       , btxId = ledgerTxId
       , btxSize = ledgerTx ^. sizeTxF
+      , btxInputs = length inFunds
       , btxOutputs = outFunds
       }
 

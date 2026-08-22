@@ -44,7 +44,7 @@ import Cardano.Api
   )
 import Cardano.Api qualified as Api
 import Cardano.Benchmarking.TxFirehose.Tx
-  ( BuiltTx (BuiltTx, btxId, btxOutputs, btxSigned, btxSize)
+  ( BuiltTx (BuiltTx, btxId, btxInputs, btxOutputs, btxSigned, btxSize)
   , Fund (Fund, fundTxIn, fundValue)
   )
 import Cardano.Benchmarking.TxFirehose.Tx qualified as Tx
@@ -57,8 +57,10 @@ import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (Value, (.=))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy.Char8 qualified as BSL
+import Data.List (isInfixOf, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -83,7 +85,7 @@ data Options = Options
   , optSigningKey :: !FilePath
   , optStakingKey :: !(Maybe FilePath)
   , optTps :: !Double
-  , optInputsPerTx :: !Natural
+  , optInputsPerTx :: !(Maybe Natural)
   , optOutputsPerTx :: !Natural
   , optFee :: !Integer
   , optMaxConsecutiveErrors :: !Int
@@ -131,13 +133,15 @@ optionsParser =
           <> Opt.metavar "NATURAL"
           <> Opt.help "Target submissions per second (rate ceiling)"
       )
-    <*> Opt.option
-      Opt.auto
-      ( Opt.long "inputs-per-tx"
-          <> Opt.metavar "NATURAL"
-          <> Opt.value 1
-          <> Opt.showDefault
-          <> Opt.help "Number of inputs per generated tx"
+    <*> optional
+      ( Opt.option
+          Opt.auto
+          ( Opt.long "inputs-per-tx"
+              <> Opt.metavar "NATURAL"
+              <> Opt.help
+                "Number of inputs per generated tx. Omit to derive it from \
+                \--outputs-per-tx and keep the UTxO set size constant."
+          )
       )
     <*> Opt.option
       Opt.auto
@@ -206,7 +210,7 @@ runInEra (AnyCardanoEra ce) k =
 validateOptions :: Options -> IO ()
 validateOptions opts = do
   when (optTps opts <= 0) $ die "--tps must be > 0"
-  when (optInputsPerTx opts == 0) $ die "--inputs-per-tx must be >= 1"
+  when (optInputsPerTx opts == Just 0) $ die "--inputs-per-tx must be >= 1"
   when (optOutputsPerTx opts == 0) $ die "--outputs-per-tx must be >= 1"
   when (optMaxConsecutiveErrors opts <= 0) $
     die "--max-consecutive-errors must be >= 1"
@@ -275,8 +279,14 @@ mkFirehoseClient sbe opts addr sk initialFunds =
   LocalTxSubmissionClient (step initialFunds 0)
  where
   !period = round (1_000_000 / optTps opts) :: Int
-  !n = fromIntegral (optInputsPerTx opts) :: Int
+  !target = fromIntegral (optOutputsPerTx opts) :: Int
+  !mFixedInputs = fromIntegral <$> optInputsPerTx opts :: Maybe Int
   !maxErrs = optMaxConsecutiveErrors opts
+
+  -- With a fixed input count we can only ever build a tx while that many
+  -- funds are on hand; ramping instead always has a move, down to one
+  -- remaining fund.
+  !minFunds = fromMaybe 1 mFixedInputs
 
   -- One step of the loop, in IO. Returns the next client state.
   step ::
@@ -284,14 +294,19 @@ mkFirehoseClient sbe opts addr sk initialFunds =
     Int ->
     IO (LocalTxClientStIdle TxInMode TxValidationErrorInCardanoMode IO ())
   step !funds !consec
-    | Map.size funds < n =
+    | Map.size funds < minFunds =
         -- We recycle outputs on every success and never lose funds on
         -- reject (inputs stay put), so running dry is catastrophic —
         -- exit and let the supervisor restart with a fresh query.
         pure (SendMsgDone ())
     | otherwise =
-        case Tx.buildTx sbe addr sk inFunds
-              (optOutputsPerTx opts) (Coin (optFee opts)) of
+        case Tx.buildTx
+          sbe
+          addr
+          sk
+          inFunds
+          (optOutputsPerTx opts)
+          (Coin (optFee opts)) of
           Left err -> do
             trace "TxFirehose.Build.Fail" "Error" $
               Aeson.object ["error" .= T.pack err]
@@ -301,7 +316,13 @@ mkFirehoseClient sbe opts addr sk initialFunds =
           Right built ->
             pure (submitStep funds funds' consec built)
    where
-    (chosen, funds') = takeInputs n funds
+    -- Fixed input count: build exactly that shape, whatever it does to
+    -- the UTxO set. Otherwise take the @target@ largest funds, which both
+    -- reaches the steady state from any starting shape and keeps it there:
+    -- @target@ in, @target@ out leaves the set size unchanged.
+    (chosen, funds') = case mFixedInputs of
+      Just n -> takeInputs n funds
+      Nothing -> takeLargest target (optFee opts) funds
     inFunds =
       [ Fund{fundTxIn = tin, fundValue = v}
       | (tin, v) <- chosen
@@ -320,14 +341,18 @@ mkFirehoseClient sbe opts addr sk initialFunds =
     fundsOnFail
     fundsOnSuccess
     !consec
-    BuiltTx{btxSigned, btxId, btxSize, btxOutputs} =
+    BuiltTx{btxSigned, btxId, btxSize, btxInputs, btxOutputs} =
       SendMsgSubmitTx (TxInMode sbe btxSigned) $ \result -> do
         threadDelay period
         case result of
           SubmitSuccess -> do
             trace "TxFirehose.Submit.Success" "Info" $
               Aeson.object
-                ["txId" .= btxId, "size" .= btxSize]
+                [ "txId" .= btxId
+                , "size" .= btxSize
+                , "inputs" .= btxInputs
+                , "outputs" .= length btxOutputs
+                ]
             let !funds'' = foldr addOutput fundsOnSuccess btxOutputs
             step funds'' 0
           SubmitFail reason -> do
@@ -337,7 +362,17 @@ mkFirehoseClient sbe opts addr sk initialFunds =
                 , "size" .= btxSize
                 , "reason" .= T.pack (show reason)
                 ]
-            onError fundsOnFail consec (show reason)
+            -- Keeping the inputs is right for a transient reject, but wrong when
+            -- the ledger says they are gone: 'takeInputs' is deterministic, so
+            -- the retry rebuilds this exact tx and earns this exact rejection,
+            -- forever. Worse at startup with a single UTxO and a fan-out target,
+            -- where that one tx is the only one buildable. Drop them so the next
+            -- build differs; if that drains the set we exit and the supervisor
+            -- restarts with a fresh query, which is the intended recovery.
+            onError
+              (if inputsAreGone (show reason) then fundsOnSuccess else fundsOnFail)
+              consec
+              (show reason)
 
   -- Bump the consecutive-error counter and either exit or loop.
   onError ::
@@ -362,12 +397,55 @@ mkFirehoseClient sbe opts addr sk initialFunds =
    where
     !consec' = consec + 1
 
+-- | Does this rejection mean the inputs we spent no longer exist?
+--
+-- Matched on the rendered error because the useful constructors sit behind
+-- several era-parameterised wrappers; the alternative is threading an era
+-- dictionary through purely to name two of them.
+inputsAreGone :: String -> Bool
+inputsAreGone reason =
+  any (`isInfixOf` reason) ["AllInputsAreSpent", "BadInputsUTxO"]
+
 -- | Deterministically pull @n@ entries out of a fund set.
 takeInputs :: Int -> Map TxIn Integer -> ([(TxIn, Integer)], Map TxIn Integer)
 takeInputs n m = (taken, m')
  where
   taken = take n (Map.toList m)
   m' = foldr (Map.delete . fst) m taken
+
+-- | Every generated output stays comfortably above min-UTxO, so a tx never
+-- creates a fund too small to be spent again.
+outputFloor :: Integer
+outputFloor = 1_500_000
+
+-- | Cap on inputs when consolidating, so a recovery tx cannot outgrow maxTxSize.
+maxConsolidationInputs :: Int
+maxConsolidationInputs = 100
+
+-- | Select inputs for a derived-shape tx: the @target@ largest funds, extended
+-- with the next largest until they cover the fee and leave every one of
+-- @target@ outputs above 'outputFloor'.
+--
+-- Selecting by value is the whole point. 'takeInputs' picks by 'TxIn' order,
+-- which is effectively random, so it can pick @target@ dust entries and split
+-- their sum @target@ ways — producing finer dust, and repeating until the
+-- selection cannot cover a fee. Taking the largest instead never sharpens the
+-- spiral, strands whatever dust exists rather than compounding it, and
+-- consolidates when the top funds alone are not enough.
+takeLargest ::
+  Int -> Integer -> Map TxIn Integer -> ([(TxIn, Integer)], Map TxIn Integer)
+takeLargest target fee m = go [] 0 byValue
+ where
+  byValue = sortOn (negate . snd) (Map.toList m)
+  needed = fee + fromIntegral target * outputFloor
+  done acc = (reverse acc, foldr (Map.delete . fst) m acc)
+  go acc total rest
+    -- Enough value, and at least the target shape (or everything we have).
+    | total >= needed, length acc >= min target (Map.size m) = done acc
+    | length acc >= maxConsolidationInputs = done acc
+    | otherwise = case rest of
+        [] -> done acc
+        (entry : more) -> go (entry : acc) (total + snd entry) more
 
 addOutput :: Fund -> Map TxIn Integer -> Map TxIn Integer
 addOutput f = Map.insert (fundTxIn f) (fundValue f)
