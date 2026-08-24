@@ -18,6 +18,7 @@ import System.Exit (die)
 import System.IO
   ( BufferMode (LineBuffering)
   , IOMode (AppendMode)
+  , hFileSize
   , hIsTerminalDevice
   , hPutStrLn
   , hSetBuffering
@@ -64,10 +65,13 @@ main = do
           Just (monitorClient (round (optInterval opts * 1_000_000)) emit)
       }
  where
+  -- Header only for a fresh file: a restart appends to the existing one, and a
+  -- header in the middle of it breaks every reader downstream.
   openTsv path = do
     handle <- openFile path AppendMode
     hSetBuffering handle LineBuffering
-    hPutStrLn handle tsvHeader
+    size <- hFileSize handle
+    when (size == 0) $ hPutStrLn handle tsvHeader
     pure handle
 
 connectInfo :: Options -> Api.LocalNodeConnectInfo
