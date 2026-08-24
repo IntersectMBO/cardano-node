@@ -51,11 +51,13 @@ data Snapshot = Snapshot
   , snapTaken :: !UTCTime
   }
 
--- | Acquire, size, drain, release, wait, repeat.
+-- | Acquire, size, drain, release, wait out the rest of the period, repeat.
 --
 -- The snapshot is acquired once per round and walked within it, so the whole
--- tally is consistent. Draining is a round trip per transaction, which is why
--- the interval between rounds is generous.
+-- tally is consistent. Draining is a round trip per transaction, so it takes real
+-- time, and the interval is the period between snapshot *starts* rather than a
+-- gap tacked on afterwards. A drain that overruns its period therefore degrades
+-- to draining continuously instead of silently stretching the cadence.
 monitorClient ::
   Int ->
   (Snapshot -> IO ()) ->
@@ -83,7 +85,8 @@ monitorClient intervalMicros emit = LocalTxMonitorClient (pure idle)
             , snapTaken = finished
             }
         pure . SendMsgRelease $ do
-          threadDelay intervalMicros
+          let spent = round (realToFrac (finished `diffUTCTime` started) * 1e6 :: Double)
+          threadDelay (max 0 (intervalMicros - spent))
           pure idle
 
   count key = Map.insertWith (+) key 1

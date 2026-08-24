@@ -45,8 +45,15 @@ transaction, so draining a 27,000-transaction mempool means 27,000 round trips
 and something like 17 MB. Depth and capacity come from `MsgGetSizes`, which is a
 single message, so the expensive part is only the colour tally.
 
-Ten seconds between snapshots is therefore the default: fragmentation evolves
-over tens of seconds, so a faster rate buys nothing and costs real work.
+`--interval` is the period between snapshot *starts*, not a gap after each drain,
+so the cadence is what you asked for rather than that plus however long draining
+took. A drain that overruns its period degrades to draining continuously instead
+of quietly stretching the cadence, which is visible in `drained ... in Xs`.
+
+Ten seconds is the default because a deployment's mempool depth is unknown and a
+drain scales with it. Where the depth is known and drains measure in a second or
+two, a shorter period is fine — watch the drain time against the period to see
+what fraction of the time a node is being iterated.
 
 Three consequences worth keeping in mind:
 
