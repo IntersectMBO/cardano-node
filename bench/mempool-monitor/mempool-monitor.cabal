@@ -1,0 +1,58 @@
+cabal-version:      3.0
+
+name:               mempool-monitor
+version:            0.1.0.0
+synopsis:           Per-node mempool composition observer
+description:
+  Watches one cardano-node's mempool over the node-to-client LocalTxMonitor
+  protocol and reports which colours it is holding, where a colour is the
+  metadata tag tx-firehose writes. Observing each pool individually is what
+  makes mempool fragmentation visible: an aggregate hides it.
+
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             IOHK
+maintainer:         operations@iohk.io
+copyright:          2026 Intersect
+category:           Cardano, Test
+build-type:         Simple
+
+common project-config
+  default-language: Haskell2010
+  ghc-options:      -Wall
+                    -Wcompat
+                    -Wredundant-constraints
+                    -Wincomplete-uni-patterns
+                    -Wincomplete-record-updates
+                    -Wpartial-fields
+                    -Wunused-packages
+
+library
+  import:           project-config
+  hs-source-dirs:   src
+  exposed-modules:  Cardano.Benchmarking.MempoolMonitor.Render
+                    Cardano.Benchmarking.MempoolMonitor.Snapshot
+  build-depends:    base                 >= 4.14 && < 5
+                  , cardano-api
+                  , cardano-ledger-api
+                  , cardano-strict-containers
+                  , containers
+                  , microlens
+                  , ouroboros-network:protocols
+                  , primitive
+                  , time
+                  , tx-firehose
+
+executable mempool-monitor
+  import:           project-config
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  ghc-options:      -threaded
+                    -rtsopts
+                    "-with-rtsopts=-N -T"
+  build-depends:    base                 >= 4.14 && < 5
+                  , cardano-api
+                  , mempool-monitor
+                  , optparse-applicative
+                  , tx-firehose

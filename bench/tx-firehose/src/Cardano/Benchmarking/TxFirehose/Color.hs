@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Colours that tag a firehose's transactions, so a mempool observer can tell
 -- whose load a mempool is holding.
@@ -9,6 +10,8 @@ module Cardano.Benchmarking.TxFirehose.Color
   , resolveColor
   , colorHex
   , colorBytes
+  , colorFromBytes
+  , colorFromOctets
   , colorSwatch
   , colorMetadataLabel
   ) where
@@ -27,7 +30,7 @@ data Color = Color
   , colorGreen :: !Word8
   , colorBlue :: !Word8
   }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 -- | What @--color@ asked for: a literal colour, or one derived from the key.
 data ColorSpec
@@ -104,6 +107,16 @@ colorHex (Color r g b) = printf "%02x%02x%02x" r g b
 -- | The three bytes that go into transaction metadata.
 colorBytes :: Color -> ByteString
 colorBytes (Color r g b) = BS.pack [r, g, b]
+
+-- | Read a colour back out of the three metadata bytes.
+colorFromBytes :: ByteString -> Maybe Color
+colorFromBytes = colorFromOctets . BS.unpack
+
+-- | The wire format in one place: exactly three octets, red green blue.
+colorFromOctets :: [Word8] -> Maybe Color
+colorFromOctets = \case
+  [r, g, b] -> Just (Color r g b)
+  _ -> Nothing
 
 -- | The colour itself, as a 24-bit background block for a terminal.
 colorSwatch :: Color -> String
