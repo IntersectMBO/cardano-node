@@ -58,7 +58,12 @@ renderPane label mOwn snap =
       (mb (sizeInBytes sizes))
       (mb (capacityInBytes sizes))
 
-  capacityBar = meter (fillRatio (sizeInBytes sizes) (capacityInBytes sizes))
+  -- Labelled as bytes on purpose. GetSizes reports only the byte projection of
+  -- a multi-dimensional capacity, and the mempool's own measure also carries a
+  -- validation-time dimension that this protocol never exposes. On the Leios
+  -- prototype that time budget is what actually binds, so a full mempool can sit
+  -- at a fraction of this bar. Read it as bytes, not as fullness.
+  capacityBar = "bytes " ++ meter (fillRatio (sizeInBytes sizes) (capacityInBytes sizes))
 
   colorLine =
     printf "colours %d%s" (distinctColors snap) ownSuffix

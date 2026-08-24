@@ -23,7 +23,7 @@ much of this mempool came from the generator attached to this node.
 
     mempool-monitor  bp1                  slot 41205
     depth   27015 tx      17.6 / 25.0 MB
-    [########################..........]
+    bytes [########################..........]
     colours 2    local ff0000 62%
     [====================|========|====]   <- painted in the real tx colours
       ff0000     16700   62%
@@ -48,12 +48,19 @@ single message, so the expensive part is only the colour tally.
 Ten seconds between snapshots is therefore the default: fragmentation evolves
 over tens of seconds, so a faster rate buys nothing and costs real work.
 
-Two consequences worth keeping in mind:
+Three consequences worth keeping in mind:
 
 - **The observer is not free.** It acquires one snapshot per round rather than
   one per transaction, so the cost should be modest, but it is not nothing.
   Treat "monitor attached" as a condition to measure rather than a neutral act,
   and keep it constant across arms of any comparison.
+- **The capacity bar is bytes, not fullness.** `MsgGetSizes` reports only the
+  byte projection of a multi-dimensional capacity, and the mempool's own measure
+  additionally carries a validation-time dimension that neither `GetSizes` nor
+  `GetMeasures` exposes. On the Leios prototype that time budget is what binds
+  first, so a mempool that has stopped accepting can show this bar at a fraction
+  of full. Trust `depth` and the composition; treat the bar as one dimension of
+  several.
 - **`drained` is a check, not decoration.** It must agree with the `txs` figure
   that `MsgGetSizes` reports for the same snapshot. Two independent counts of
   one quantity; disagreement means the drain did not complete.
