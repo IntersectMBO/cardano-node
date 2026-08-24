@@ -48,6 +48,30 @@ Every output is an equal split of (inputs − fee), so values stay balanced acro
 the set. `--fee` must be covered by the inputs and each resulting output must
 clear min-UTxO; otherwise the build fails (traced as `TxFirehose.Build.Fail`).
 
+## Colouring the load
+
+`--color` tags every generated tx with a colour in metadata label `1022`, three
+bytes of RGB. A mempool observer can then attribute each tx to the firehose that
+made it, which is what makes mempool fragmentation visible when several
+generators feed different parts of a network.
+
+    --color ff0000    # or #ff0000
+    --color auto      # derive one from the signing key
+
+`auto` hashes the verification key and takes a hue from it, keeping saturation
+and lightness fixed so the result is always vivid. Hues are uniform over the
+circle, but at fixed saturation and lightness there are only about 1500
+distinguishable colours, so with a handful of generators expect some pairs to
+land close together. **Assign explicit colours for a run whose whole point is
+telling generators apart**; `auto` is for convenience.
+
+The colour is printed on stderr at startup, as a swatch when stderr is a
+terminal and as bare hex otherwise (`NO_COLOR` is honoured).
+
+Metadata is not free: the auxiliary data hash alone is 32 bytes in the body, so
+a coloured tx runs roughly 45 bytes larger. That is about +20% on a minimal
+228-byte tx, so coloured runs are not byte-comparable with uncoloured baselines.
+
 ## Output
 
 One JSON line per event on **stderr**, in the cardano-node trace schema (`{at,
