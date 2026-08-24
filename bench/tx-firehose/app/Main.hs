@@ -328,6 +328,9 @@ mkFirehoseClient sbe opts addr sk initialFunds mColor =
   !target = fromIntegral (optOutputsPerTx opts) :: Int
   !mFixedInputs = fromIntegral <$> optInputsPerTx opts :: Maybe Int
   !maxErrs = optMaxConsecutiveErrors opts
+  -- Present only when there is a colour, so uncoloured runs keep the log shape
+  -- the digest scripts already read.
+  colorField = ["color" .= colorHex c | Just c <- [mColor]]
 
   -- With a fixed input count we can only ever build a tx while that many
   -- funds are on hand; ramping instead always has a move, down to one
@@ -394,21 +397,23 @@ mkFirehoseClient sbe opts addr sk initialFunds mColor =
         case result of
           SubmitSuccess -> do
             trace "TxFirehose.Submit.Success" "Info" $
-              Aeson.object
+              Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
                 , "inputs" .= btxInputs
                 , "outputs" .= length btxOutputs
                 ]
+                  ++ colorField
             let !funds'' = foldr addOutput fundsOnSuccess btxOutputs
             step funds'' 0
           SubmitFail reason -> do
             trace "TxFirehose.Submit.Reject" "Warning" $
-              Aeson.object
+              Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
                 , "reason" .= T.pack (show reason)
                 ]
+                  ++ colorField
             -- Keeping the inputs is right for a transient reject, but wrong when
             -- the ledger says they are gone: 'takeInputs' is deterministic, so
             -- the retry rebuilds this exact tx and earns this exact rejection,

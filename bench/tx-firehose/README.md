@@ -83,6 +83,11 @@ sev, host, thread, ns, data}`). Namespaces:
 - `TxFirehose.Build.Fail`
 - `TxFirehose.Exit.MaxErrors`
 
+Both submit events carry a `color` field when `--color` is set, so each
+transaction is attributable in the log as well as in its metadata. The field is
+absent rather than null without `--color`, leaving uncoloured runs' logs
+unchanged.
+
 Pipe stderr into Loki/Vector to filter on `ns` in Grafana.
 
 ## Exit behaviour
