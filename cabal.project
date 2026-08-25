@@ -47,6 +47,7 @@ packages:
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-forward
+  ../ouroboros-consensus/ouroboros-consensus.cabal
 
 -- Shipped as a release binary but not a dependency of any local package, so it
 -- has to be added to the install plan explicitly.
@@ -83,6 +84,10 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
+  -- Local ouroboros-consensus HEAD pulls newer transitive deps than the
+  -- released cardano-api (from CHaP) pins; relax those bounds so cardano-api
+  -- is rebuilt against them.
+  , cardano-api:resource-registry
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
