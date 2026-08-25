@@ -10,7 +10,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -88,11 +87,11 @@ import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
+import           LeiosDemoLogic.Announcements.ElBimap (ElId (..))
 import           LeiosDemoTypes (AnnouncementFields (..), FetchArrivalBytes (..),
                    TraceLeiosKernel (..), TraceLeiosPeer (..), traceLeiosKernelToObject,
                    traceLeiosPeerToObject)
 import qualified LeiosDemoTypes as Leios
-import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -2467,6 +2466,14 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosVoted{weight}         -> "Leios voted, weight=" <> showT (fromRational @Double weight)
     TraceLeiosVoteAcquired{}        -> "Leios vote acquired"
     TraceLeiosCertified{rbHash}     -> "Leios cert assembled for RB " <> Text.pack (show rbHash)
+    TraceLeiosVoteScheduled{ebPoint, voteIn, deadlineIn} ->
+      "Leios vote scheduled for " <> Text.pack (show ebPoint)
+        <> " in " <> showT voteIn
+        <> ", deadline in " <> showT deadlineIn
+    TraceLeiosEbValidated{ebPoint, reapplied, applied} ->
+      "Leios EB validated " <> Text.pack (show ebPoint)
+        <> " (reapplied " <> showT reapplied
+        <> ", applied " <> showT applied <> ")"
     TraceLeiosNotVoted{ebPoint, reason} ->
       "Leios not voted for " <> Text.pack (show ebPoint) <> ": " <> Text.pack (show reason)
     TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
@@ -2521,6 +2528,8 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosVoteAcquired{}      = Namespace [] ["VoteAcquired"]
   namespaceFor TraceLeiosCertified{}         = Namespace [] ["Certified"]
   namespaceFor TraceLeiosNotVoted{}          = Namespace [] ["NotVoted"]
+  namespaceFor TraceLeiosVoteScheduled{}     = Namespace [] ["VoteScheduled"]
+  namespaceFor TraceLeiosEbValidated{}       = Namespace [] ["EbValidated"]
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
   namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
@@ -2567,6 +2576,9 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["VoteAcquired"]
     , Namespace [] ["Certified"]
     , Namespace [] ["NotVoted"]
+    , Namespace [] ["VoteScheduled"]
+    , Namespace [] ["EbValidated"]
+    , Namespace [] ["TxCacheEbBody"]
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
     , Namespace [] ["CertifiedAndAnnounced"]
