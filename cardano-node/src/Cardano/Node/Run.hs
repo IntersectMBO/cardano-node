@@ -251,7 +251,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -289,7 +289,6 @@ handleSimpleNode
     )
   => Api.BlockType blk
   -> Api.GenesisHashShelley
-  -> Api.ProtocolInfoArgs IO blk
   -> ProtocolInfo blk
   -> (Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
   -> Tracers RemoteAddress LocalAddress blk IO
@@ -303,7 +302,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -483,7 +482,7 @@ handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers 
                 mkNodeKernelAccess
                   (rpcTracer tracers)
                   shelleyGenesisHash
-                  runP
+                  shelleyGenesisFile
                   blockType
                   nodeKernel
                   >>= writeIORef nodeKernelAccessRef
@@ -505,6 +504,12 @@ handleSimpleNode blockType shelleyGenesisHash runP pInfo mkBlockForging tracers 
             , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
             }
  where
+  shelleyGenesisFile :: Api.ShelleyGenesisFile In
+  shelleyGenesisFile =
+    case ncProtocolConfig nc of
+      NodeProtocolConfigurationCardano _ shelleyConfig _ _ _ _ _ ->
+        File . unGenesisFile $ npcShelleyGenesisFile shelleyConfig
+
   customizeChainSyncTimeout :: ChainSyncIdleTimeout
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
     NoTimeoutOverride -> Configuration.defaultChainSyncIdleTimeout
