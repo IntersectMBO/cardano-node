@@ -2446,12 +2446,14 @@ instance LogFormatting TraceLeiosKernel where
       "LeiosFetch tx batch arrival (bytes): invalid=" <> showT (fabInvalid fab)
         <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
         <> " extra=" <> showT (fabExtra fab)
-    TraceLeiosTxCacheEbBody pt ibs ->
+    TraceLeiosBodyHits pt ibs mempoolHits missedBoth ->
       "EB body added to TxCache " <> Text.pack (show pt)
         <> ": " <> showT (Leios.ibsTxsInEb ibs) <> " txs"
         <> ", " <> showT (Leios.ibsTracked ibs) <> " already tracked"
         <> " (" <> showT (Leios.ibsAcquired ibs) <> " acquired"
         <> ", " <> showT (Leios.ibsValidated ibs) <> " validated)"
+        <> ", " <> showT mempoolHits <> " mempool hits"
+        <> ", " <> showT missedBoth <> " in neither"
         <> "; cache now holds " <> showT (Leios.ibsCacheTxCount ibs) <> " txs"
         <> ", load " <> showT (Leios.ibsCacheLoad ibs)
     TraceLeiosBlockForged{slot, eb} ->
@@ -2475,6 +2477,17 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosAnnouncementAccepted src equiv fields mbAge ->
       "EB announcement accepted from " <> Text.pack (show src)
         <> " (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields) <> " age=" <> showT mbAge
+    TraceLeiosFetchDecision d stats dec ->
+      "LeiosFetch decision took " <> showT d
+        <> "; issued " <> showT (Leios.ldsRequests dec) <> " reqs to "
+        <> showT (Leios.ldsPeers dec) <> " peers ("
+        <> showT (Leios.ldsBodyRequests dec) <> " bodies, "
+        <> showT (Leios.ldsJobs dec) <> " jobs)"
+        <> "; " <> showT (Leios.losTracked stats) <> " EBs tracked"
+        <> ", missingBodies=" <> showT (Leios.losMissingBodies stats)
+        <> ", peersInflight=" <> showT (Leios.losPeersInflight stats)
+        <> ", inflightBytesDesc=" <> showT (Leios.losInflightBytesDesc stats)
+        <> ", offersDesc=" <> showT (Leios.losOffersDesc stats)
   asMetrics = \case
     -- LeiosFetch arrival bytes, partitioned by prior LeiosTxCache state; each an
     -- accumulating counter. The four per message sum to its size.
@@ -2499,7 +2512,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosBlockTxsAcquired{}  = Namespace [] ["BlockTxsAcquired"]
   namespaceFor TraceLeiosFetchBodyArrival{}  = Namespace [] ["FetchBodyArrival"]
   namespaceFor TraceLeiosFetchTxsArrival{}   = Namespace [] ["FetchTxsArrival"]
-  namespaceFor TraceLeiosTxCacheEbBody{}     = Namespace [] ["TxCacheEbBody"]
+  namespaceFor TraceLeiosBodyHits{}          = Namespace [] ["BodyHits"]
   namespaceFor TraceLeiosBlockForged{}       = Namespace [] ["BlockForged"]
   namespaceFor TraceLeiosBlockStored{}       = Namespace [] ["BlockStored"]
   namespaceFor TraceLeiosBlockAnnounced{}    = Namespace [] ["BlockAnnounced"]
@@ -2512,6 +2525,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
   namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
   namespaceFor TraceLeiosAnnouncementAccepted{}  = Namespace [] ["AnnouncementAccepted"]
+  namespaceFor TraceLeiosFetchDecision{}     = Namespace [] ["FetchDecision"]
 
   severityFor (Namespace _ ["DbException"])        _ = Just Error
   severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
@@ -2542,6 +2556,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["BlockAcquired"]
     , Namespace [] ["BlockPointMissing"]
     , Namespace [] ["BlockTxsAcquired"]
+    , Namespace [] ["BodyHits"]
     , Namespace [] ["FetchBodyArrival"]
     , Namespace [] ["FetchTxsArrival"]
     , Namespace [] ["BlockForged"]
@@ -2556,6 +2571,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["Db"]
     , Namespace [] ["CertifiedAndAnnounced"]
     , Namespace [] ["AnnouncementAccepted"]
+    , Namespace [] ["FetchDecision"]
     ]
 
 instance LogFormatting TraceLeiosPeer where
