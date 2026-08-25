@@ -2435,9 +2435,9 @@ instance LogFormatting TraceLeiosKernel where
   forMachine _dtal = traceLeiosKernelToObject
   forHuman = \case
     MkTraceLeiosKernel msg          -> "LeiosKernel: " <> Text.pack msg
-    TraceLeiosBlockAcquired pt      -> "EB body acquired: "        <> Text.pack (show pt)
+    TraceLeiosBlockAcquired pt age  -> "EB body acquired: "        <> Text.pack (show pt) <> " age=" <> showT age
     TraceLeiosBlockPointMissing pt  -> "EB point missing on body acquisition: " <> Text.pack (show pt)
-    TraceLeiosBlockTxsAcquired pt   -> "EB txs acquired: "         <> Text.pack (show pt)
+    TraceLeiosBlockTxsAcquired pt age -> "EB txs acquired: "       <> Text.pack (show pt) <> " age=" <> showT age
     TraceLeiosFetchBodyArrival fab ->
       "LeiosFetch EB body arrival (bytes): invalid=" <> showT (fabInvalid fab)
         <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
