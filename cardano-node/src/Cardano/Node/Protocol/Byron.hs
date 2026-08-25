@@ -27,6 +27,7 @@ import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Tracing.Era.Byron ()
+import           Cardano.Node.Tracing.Era.Shelley ()
 import           Ouroboros.Consensus.Tracing.Era.HardFork ()
 import           Ouroboros.Consensus.Tracing.ChainDB ()
 import           Cardano.Node.Types as Node

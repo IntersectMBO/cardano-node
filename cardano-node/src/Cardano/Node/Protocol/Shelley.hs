@@ -34,6 +34,7 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Types
+import           Cardano.Node.Tracing.Era.Byron ()
 import           Ouroboros.Consensus.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Ouroboros.Consensus.Tracing.Formatting ()

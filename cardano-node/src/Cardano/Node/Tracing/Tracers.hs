@@ -27,6 +27,8 @@ import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
+import           Cardano.Node.Tracing.Era.Byron ()
+import           Cardano.Node.Tracing.Era.Shelley ()
 import           Ouroboros.Consensus.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Ouroboros.Consensus.Tracing.BlockReplayProgress
@@ -428,6 +430,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.perasCertDiffusionOutboundTracer = mkTracer $ traceWith txPerasCertOut
       , Consensus.perasVoteDiffusionInboundTracer = mkTracer $ traceWith txPerasVoteIn
       , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $ traceWith txPerasVoteOut
+      -- TODO @js: wire these new Peras tracers to real trace sources once the
+      -- node surfaces cert-inclusion and vote-forging events; no-op for now.
+      , Consensus.perasCertInclusionTracer = mkTracer $ const (pure ())
+      , Consensus.perasVoteForgingTracer = mkTracer $ const (pure ())
       }
 
 mkNodeToClientTracers :: forall blk.

@@ -160,7 +160,6 @@ library
                       , hashable
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8 || ^>= 1.9
-                      , kes-agent ^>=1.3
                       , microlens
                       , mmap
                       , network-mux
@@ -174,14 +173,12 @@ library
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1.1
                       , prettyprinter
                       , prettyprinter-ansi-terminal
-                      , psqueues
                       , random
                       , resource-registry
                       , safe-exceptions
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
-                      , strict-sop-core
                       , sop-core
                       , sop-extras
                       , text >= 2.0

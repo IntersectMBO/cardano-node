@@ -29,6 +29,8 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
+import           Cardano.Node.Tracing.Era.Byron ()
+import           Cardano.Node.Tracing.Era.Shelley ()
 import           Ouroboros.Consensus.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Ouroboros.Consensus.Tracing.BlockReplayProgress

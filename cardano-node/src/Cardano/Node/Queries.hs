@@ -38,28 +38,22 @@ module Cardano.Node.Queries
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash as Crypto
-import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 import qualified Cardano.Ledger.Conway.State as Conway
-import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.State as Ledger
-import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.Network.NodeToClient (LocalConnectionId)
 import           Cardano.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
+import           Ouroboros.Consensus.Block (ForgeStateInfo)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
-                   OneEraForgeStateUpdateError (..))
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
@@ -69,7 +63,6 @@ import           Ouroboros.Consensus.Tracing.Queries (ConvertTxId (..), GetKESIn
                    HasKESInfo (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
@@ -77,7 +70,6 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Monad.STM (atomically)
-import           Data.ByteString (ByteString)
 import           Data.Foldable (foldMap')
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map

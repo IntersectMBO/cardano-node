@@ -86,3 +86,6 @@ selectorToArgs (V2LSM fp fpExport) fastStoragePath =
     (fromMaybe "lsm" fp)
     fpExport
     fastStoragePath
+    -- TODO @js: consider exposing the LSM disk cache policy as node
+    -- configuration; default to caching everything, as before.
+    LSM.DiskCacheAll
