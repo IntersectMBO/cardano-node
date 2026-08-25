@@ -29,10 +29,10 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
-import           Cardano.Node.Tracing.Formatting ()
+import           Ouroboros.Consensus.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Ouroboros.Consensus.Tracing.BlockReplayProgress
+import           Ouroboros.Consensus.Tracing.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()

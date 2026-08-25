@@ -18,7 +18,7 @@ import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
-import           Cardano.Node.Tracing.Tracers.ChainDB (fragmentChainDensity)
+import           Ouroboros.Consensus.Tracing.ChainDB (fragmentChainDensity)
 import           Ouroboros.Consensus.BlockchainTime.API
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)

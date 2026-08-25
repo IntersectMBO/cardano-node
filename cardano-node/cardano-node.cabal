@@ -100,18 +100,12 @@ library
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
                         Cardano.Node.Tracing.Era.Byron
-                        Cardano.Node.Tracing.Era.HardFork
                         Cardano.Node.Tracing.Era.Shelley
-                        Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
-                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
-                        Cardano.Node.Tracing.Tracers.ChainDB
-                        Cardano.Node.Tracing.Tracers.Consensus
-                        Cardano.Node.Tracing.Tracers.ConsensusStartupException
                         Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
@@ -121,7 +115,6 @@ library
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
-                        Cardano.Node.Tracing.Tracers.HasIssuer
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
 
@@ -176,7 +169,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} ^>= 4.1
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 4.1
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.2
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1.1
                       , prettyprinter

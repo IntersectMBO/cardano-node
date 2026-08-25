@@ -12,9 +12,9 @@ import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
-import           Cardano.Node.Tracing.Tracers.HasIssuer (HasIssuer)
+import           Ouroboros.Consensus.Tracing.HasIssuer (HasIssuer)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
-import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
+import qualified Ouroboros.Consensus.Tracing.Consensus as ConsensusTracers
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    GetHeader, HasHeader, Header, HeaderHash)

@@ -39,14 +39,14 @@ import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
-import           Cardano.Node.Tracing.Formatting ()
+import           Ouroboros.Consensus.Tracing.Formatting ()
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ChainDB
-import           Cardano.Node.Tracing.Tracers.Consensus
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Ouroboros.Consensus.Tracing.BlockReplayProgress
+import           Ouroboros.Consensus.Tracing.ChainDB
+import           Ouroboros.Consensus.Tracing.Consensus
+import           Ouroboros.Consensus.Tracing.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)

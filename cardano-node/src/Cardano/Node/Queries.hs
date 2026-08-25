@@ -65,6 +65,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Tracing.Queries (ConvertTxId (..), GetKESInfo (..),
+                   HasKESInfo (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
@@ -87,33 +89,6 @@ import           Data.Word (Word64)
 import           Lens.Micro ((^.))
 
 --
--- * TxId -> ByteString projection
---
--- | Convert a transaction ID to raw bytes.
-class ConvertTxId blk where
-  txIdToRawBytes :: TxId (GenTx blk) -> ByteString
-
-instance ConvertTxId ByronBlock where
-  txIdToRawBytes (ByronTxId txId) = Byron.Crypto.abstractHashToBytes txId
-  txIdToRawBytes (ByronDlgId dlgId) = Byron.Crypto.abstractHashToBytes dlgId
-  txIdToRawBytes (ByronUpdateProposalId upId) =
-    Byron.Crypto.abstractHashToBytes upId
-  txIdToRawBytes (ByronUpdateVoteId voteId) =
-    Byron.Crypto.abstractHashToBytes voteId
-
-instance ConvertTxId (ShelleyBlock protocol c) where
-  txIdToRawBytes (ShelleyTxId txId) =
-    Crypto.hashToBytes . Ledger.extractHash . Ledger.unTxId $ txId
-
-instance All ConvertTxId xs
-      => ConvertTxId (HardForkBlock xs) where
-  txIdToRawBytes =
-    hcollapse
-      . hcmap (Proxy @ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
-      . getOneEraGenTxId
-      . getHardForkGenTxId
-
---
 -- * KES
 --
 -- | The maximum number of evolutions that a KES key can undergo before it is
@@ -122,30 +97,6 @@ newtype MaxKESEvolutions = MaxKESEvolutions Word64
 
 -- | The start KES period of the configured operational certificate.
 newtype OperationalCertStartKESPeriod = OperationalCertStartKESPeriod Period
-
---
--- * HasKESInfo
---
-class HasKESInfo blk where
-  getKESInfo :: Proxy blk -> ForgeStateUpdateError blk -> Maybe HotKey.KESInfo
-  getKESInfo _ _ = Nothing
-
-instance HasKESInfo (ShelleyBlock protocol era) where
-  getKESInfo _ (HotKey.KESCouldNotEvolve ki _) = Just ki
-  getKESInfo _ (HotKey.KESKeyAlreadyPoisoned ki _) = Just ki
-
-instance HasKESInfo ByronBlock
-
-instance All HasKESInfo xs => HasKESInfo (HardForkBlock xs) where
-  getKESInfo _ =
-      hcollapse
-    . hcmap (Proxy @HasKESInfo) getOne
-    . getOneEraForgeStateUpdateError
-   where
-    getOne :: forall blk. HasKESInfo blk
-           => WrapForgeStateUpdateError blk
-           -> K (Maybe HotKey.KESInfo) blk
-    getOne = K . getKESInfo (Proxy @blk) . unwrapForgeStateUpdateError
 
 --
 -- * KESMetricsData
@@ -202,33 +153,6 @@ instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
              => WrapForgeStateInfo blk
              -> K KESMetricsData blk
       getOne = K . getKESMetricsData (Proxy @blk) . unwrapForgeStateInfo
-
---
--- * GetKESInfo
---
-class GetKESInfo blk where
-  getKESInfoFromStateInfo :: Proxy blk -> ForgeStateInfo blk -> Maybe HotKey.KESInfo
-  getKESInfoFromStateInfo _ _ = Nothing
-
-instance GetKESInfo (ShelleyBlock protocol era) where
-  getKESInfoFromStateInfo _ = Just
-
-instance GetKESInfo ByronBlock
-
-instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
-  getKESInfoFromStateInfo _ forgeStateInfo =
-      case forgeStateInfo of
-        CurrentEraLacksBlockForging _ -> Nothing
-        CurrentEraForgeStateUpdated currentEraForgeStateInfo ->
-            hcollapse
-          . hcmap (Proxy @GetKESInfo) getOne
-          . getOneEraForgeStateInfo
-          $ currentEraForgeStateInfo
-    where
-      getOne :: forall blk. GetKESInfo blk
-             => WrapForgeStateInfo blk
-             -> K (Maybe HotKey.KESInfo) blk
-      getOne = K . getKESInfoFromStateInfo (Proxy @blk) . unwrapForgeStateInfo
 
 --
 -- * General ledger

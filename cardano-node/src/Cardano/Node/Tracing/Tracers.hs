@@ -27,11 +27,11 @@ import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
-import           Cardano.Node.Tracing.Formatting ()
+import           Ouroboros.Consensus.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ChainDB
-import           Cardano.Node.Tracing.Tracers.Consensus
+import           Ouroboros.Consensus.Tracing.BlockReplayProgress
+import           Ouroboros.Consensus.Tracing.ChainDB
+import           Ouroboros.Consensus.Tracing.Consensus
 import           Cardano.Node.Tracing.Tracers.ForgingStats (calcForgeStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()

@@ -14,7 +14,7 @@ import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
 import           Cardano.Node.Tracing.StateRep (NodeState)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Ouroboros.Consensus.Tracing.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
