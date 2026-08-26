@@ -13,43 +13,54 @@ module Cardano.Tracer.Handlers.Alarms.Registry
   , rejectEvent
   , checkTraceObjectsForAlarms
   , readHistoryFiltered
+  , runTimeseriesEvaluator
   , traceHistoryRead
   , lookupProducerCredential
   , lookupReaderCredential
   ) where
 
 import           Cardano.Logging.Types (TraceObject)
+import           Cardano.Timeseries.AsText (asText)
+import           Cardano.Timeseries.Component (TimeseriesHandle, execute)
 import           Cardano.Tracer.Configuration (AlarmsConfig (..), AlarmsRetentionConfig (..))
 import           Cardano.Tracer.Handlers.Alarms.Auth
 import           Cardano.Tracer.Handlers.Alarms.Consumers
 import           Cardano.Tracer.Handlers.Alarms.Store
+import           Cardano.Tracer.Handlers.Alarms.TimeseriesRules
 import           Cardano.Tracer.Handlers.Alarms.TraceRules
 import           Cardano.Tracer.Handlers.Alarms.Types
 import           Cardano.Tracer.MetaTrace (TracerTrace (..), Trace, traceWith)
 
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Async (async, link)
+import           Control.Monad (forever)
 import           Data.Foldable (for_)
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text)
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 data AlarmRegistry = AlarmRegistry
-  { arStore      :: !AlarmStoreHandle
-  , arConsumers  :: ![AlarmConsumer] -- ^ static, fixed at startup
-  , arTraceRules :: ![TraceAlarmRule]
-  , arAuth       :: !AuthTables
-  , arTracer     :: !(Trace IO TracerTrace)
+  { arStore           :: !AlarmStoreHandle
+  , arConsumers       :: ![AlarmConsumer]         -- ^ static, fixed at startup
+  , arTraceRules      :: ![TraceAlarmRule]
+  , arTimeseriesRules :: ![TimeseriesAlarmRule]
+  , arAuth            :: !AuthTables
+  , arTracer          :: !(Trace IO TracerTrace)
   }
 
 newAlarmRegistry :: Trace IO TracerTrace -> AlarmsConfig -> IO AlarmRegistry
-newAlarmRegistry tracer AlarmsConfig{alRetention, alConsumers, alAuthentication, alTraceRules} = do
-  store     <- newAlarmStore (fromMaybe emptyRetention alRetention)
-  authTable <- loadCredentials alAuthentication
+newAlarmRegistry tracer AlarmsConfig{alRetention, alConsumers, alAuthentication, alTraceRules, alTimeseriesRules} = do
+  store       <- newAlarmStore (fromMaybe emptyRetention alRetention)
+  authTable   <- loadCredentials alAuthentication
+  tsRules     <- traverse timeseriesRuleFromConfig (fromMaybe [] alTimeseriesRules)
   pure AlarmRegistry
-    { arStore      = store
-    , arConsumers  = map consumerFromConfig alConsumers
-    , arTraceRules = map traceRuleFromConfig (fromMaybe [] alTraceRules)
-    , arAuth       = authTable
-    , arTracer     = tracer
+    { arStore           = store
+    , arConsumers       = map consumerFromConfig alConsumers
+    , arTraceRules      = map traceRuleFromConfig (fromMaybe [] alTraceRules)
+    , arTimeseriesRules = tsRules
+    , arAuth            = authTable
+    , arTracer          = tracer
     }
  where
   emptyRetention = AlarmsRetentionConfig Nothing Nothing
@@ -109,6 +120,36 @@ traceHistoryRead registry readerName resultCount =
     { ttAlarmHistoryReader      = readerName
     , ttAlarmHistoryResultCount = resultCount
     }
+
+-- | Spawn one supervised thread per timeseries rule. Each ticks on the
+--   rule's evaluateEvery interval and pushes any resulting alarms
+--   through 'acceptEvent'.
+runTimeseriesEvaluator :: AlarmRegistry -> TimeseriesHandle -> IO ()
+runTimeseriesEvaluator registry tsHandle =
+  for_ (arTimeseriesRules registry) \rule -> do
+    a <- async (evaluatorLoop registry tsHandle rule)
+    link a
+
+evaluatorLoop :: AlarmRegistry -> TimeseriesHandle -> TimeseriesAlarmRule -> IO ()
+evaluatorLoop registry tsHandle rule = forever $ do
+  threadDelay (fromIntegral (tarEvaluateEvery rule) * 1_000_000)
+  now    <- getCurrentTime
+  result <- execute tsHandle (round (utcTimeToPOSIXSeconds now * 1000)) (tarQuery rule)
+  case result of
+    Left err ->
+      failed (asText err)
+    Right val -> case decodeSamples val of
+      Nothing -> failed "unexpected value shape from query"
+      Just samples -> do
+        reqs <- evaluateOnce rule now samples
+        for_ reqs \req -> acceptEvent registry timeseriesAlarmSource req
+ where
+  failed :: Text -> IO ()
+  failed reason =
+    traceWith (arTracer registry) TracerAlarmTimeseriesEvalFailed
+      { ttAlarmTimeseriesEvalFailedRule   = unRuleId (tarRuleId rule)
+      , ttAlarmTimeseriesEvalFailedReason = reason
+      }
 
 lookupProducerCredential :: AlarmRegistry -> Text -> Maybe ProducerCredential
 lookupProducerCredential registry = lookupProducer (arAuth registry)

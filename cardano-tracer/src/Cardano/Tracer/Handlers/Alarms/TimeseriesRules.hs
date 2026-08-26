@@ -23,15 +23,21 @@
 -- pathological rule cannot starve normal timeseries ingestion.
 module Cardano.Tracer.Handlers.Alarms.TimeseriesRules
   ( TimeseriesAlarmRule
+  , tarRuleId
+  , tarQuery
+  , tarEvaluateEvery
   , timeseriesAlarmSource
   , timeseriesRuleFromConfig
   , SamplePoint (..)
+  , decodeSamples
   , evaluateOnce
   , ruleRequests
   , SeriesState (..)
   ) where
 
 import           Cardano.Logging.Types (SeverityS)
+import           Cardano.Timeseries.API (Value (..))
+import           Cardano.Timeseries.Domain.Instant (Instant (..))
 import           Cardano.Tracer.Configuration (AlarmsTimeseriesRuleConfig (..))
 import           Cardano.Tracer.Handlers.Alarms.Types
 
@@ -211,6 +217,23 @@ buildRequest TimeseriesAlarmRule{tarRuleId, tarSummary, tarSeverity, tarLabels}
   -- 'repeatEvery') always get distinct source-event-ids.
   windowIndex :: UTCTime -> Integer
   windowIndex t = floor (realToFrac (utcTimeToPOSIXSeconds t) * (1000 :: Double))
+
+-- | Decode a query result into per-series boolean samples. Only three
+--   shapes are meaningful; anything else is a shape error.
+decodeSamples :: Value -> Maybe [SamplePoint]
+decodeSamples val = case val of
+  Truth           -> Just [SamplePoint Map.empty True]
+  Falsity         -> Just [SamplePoint Map.empty False]
+  InstantVector v -> traverse decodeInstant v
+  _               -> Nothing
+ where
+  decodeInstant :: Instant Value -> Maybe SamplePoint
+  decodeInstant (Instant labels _ inner) = do
+    truth <- case inner of
+      Truth   -> Just True
+      Falsity -> Just False
+      _       -> Nothing
+    pure (SamplePoint (Map.fromList (Set.toList labels)) truth)
 
 -- | 'IO' wrapper around 'ruleRequests': reads the previous per-series
 --   state atomically, computes the new state, writes it back, and

@@ -95,6 +95,9 @@ doRunCardanoTracer config stateDir tr protocolsBrake dpRequestors = do
 
   !timeseriesHandle <- for (hasTimeseries config) (const $ Timeseries.create @(Tree _) tr.timeseries Nothing)
   !alarmRegistry    <- for (alarms config) (Alarms.newAlarmRegistry tr.assorted)
+  case (alarmRegistry, timeseriesHandle) of
+    (Just reg, Just ts) -> Alarms.runTimeseriesEvaluator reg ts
+    _                   -> pure ()
 
   -- Environment for all following functions.
   let tracerEnv :: TracerEnv
