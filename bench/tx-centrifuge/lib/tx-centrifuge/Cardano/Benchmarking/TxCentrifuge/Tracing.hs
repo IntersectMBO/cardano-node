@@ -45,7 +45,7 @@ import Data.Map.Strict qualified as Map
 -------------------
 -- contra-tracer --
 -------------------
-import "contra-tracer" Control.Tracer (Tracer (..), traceWith)
+import "contra-tracer" Control.Tracer (Tracer, mkTracer, nullTracer, traceWith)
 ---------------------------------
 -- ouroboros-consensus:cardano --
 ---------------------------------
@@ -135,13 +135,13 @@ data Tracers = Tracers
 -- | All-silent tracers.
 nullTracers :: Tracers
 nullTracers = Tracers
-  { trBuilder       = Tracer (\_ -> pure ())
-  , trPipe          = Tracer (\_ -> pure ())
-  , trRecycler      = Tracer (\_ -> pure ())
-  , trObserver      = Tracer (\_ -> pure ())
-  , trTxSubmission  = Tracer (\_ -> pure ())
-  , trTxSubmission2 = Tracer (\_ -> pure ())
-  , trKeepAlive     = Tracer (\_ -> pure ())
+  { trBuilder       = nullTracer
+  , trPipe          = nullTracer
+  , trRecycler      = nullTracer
+  , trObserver      = nullTracer
+  , trTxSubmission  = nullTracer
+  , trTxSubmission2 = nullTracer
+  , trKeepAlive     = nullTracer
   }
 
 --------------------------------------------------------------------------------
@@ -195,13 +195,13 @@ setupTracers configFile = do
                      ["KeepAlive"]
   Logging.configureTracers configReflection trConfig [keepAliveTr]
   pure Tracers
-    { trBuilder       = Tracer $ Logging.traceWith builderTr
-    , trPipe          = Tracer $ Logging.traceWith pipeTr
-    , trRecycler      = Tracer $ Logging.traceWith recyclerTr
-    , trObserver      = Tracer $ Logging.traceWith observerTr
-    , trTxSubmission  = Tracer $ Logging.traceWith txSubTraceTr
-    , trTxSubmission2 = Tracer $ Logging.traceWith txSub2Trace
-    , trKeepAlive     = Tracer $ Logging.traceWith keepAliveTr
+    { trBuilder       = mkTracer $ Logging.traceWith builderTr
+    , trPipe          = mkTracer $ Logging.traceWith pipeTr
+    , trRecycler      = mkTracer $ Logging.traceWith recyclerTr
+    , trObserver      = mkTracer $ Logging.traceWith observerTr
+    , trTxSubmission  = mkTracer $ Logging.traceWith txSubTraceTr
+    , trTxSubmission2 = mkTracer $ Logging.traceWith txSub2Trace
+    , trKeepAlive     = mkTracer $ Logging.traceWith keepAliveTr
     }
 
 -- | Default config: stdout machine format, severity Debug for all namespaces.

@@ -82,6 +82,7 @@ import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Network.Magic qualified as Magic
 import Ouroboros.Network.PeerSelection.PeerSharing qualified as PeerSharing
 import Ouroboros.Network.PeerSelection.PeerSharing.Codec qualified as PSCodec
+import Ouroboros.Network.PerasSupport (PerasSupport (..))
 ---------------------------------
 -- ouroboros-network:framework --
 ---------------------------------
@@ -175,7 +176,8 @@ mkBlockFetchMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString
   -> TxIdSync.BlockFetchClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -197,7 +199,8 @@ mkChainSyncMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString
   -> TxIdSync.ChainSyncClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -219,7 +222,8 @@ mkKeepAliveMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString
   -> Tracing.Tracers
   -> KeepAlive.KeepAliveClient
   -> NetMux.MiniProtocol
@@ -236,7 +240,7 @@ mkKeepAliveMiniProtocol codecs tracers client = NetMux.MiniProtocol
           Driver.runPeerWithLimits
             (Tracing.trKeepAlive tracers)
             (NetN2N.cKeepAliveCodec codecs)
-            (KACodec.byteLimitsKeepAlive (const 0))
+            KACodec.byteLimitsKeepAlive
             KACodec.timeLimitsKeepAlive
             channel
             $ KAClient.keepAliveClientPeer client
@@ -247,7 +251,8 @@ mkTxSubmissionMiniProtocol
   :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-       BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString
   -> Tracing.Tracers
   -> TxSubmission.TxSubmissionClient
   -> NetMux.MiniProtocol
@@ -343,6 +348,7 @@ connect
                 , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
                 , NtN.peerSharing = PeerSharing.PeerSharingDisabled
                 , NtN.query = False
+                , NtN.perasSupport = PerasUnsupported
                 }
             )
             $ \_n2nData -> bundleToApp
@@ -363,7 +369,8 @@ connect
       :: NetN2N.Codecs Block.CardanoBlock NtN.RemoteAddress
            Serialise.DeserialiseFailure IO
            BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
-           BSL.ByteString BSL.ByteString BSL.ByteString
+           BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+           BSL.ByteString
       -> NetMux.OuroborosBundle
            'Mux.InitiatorMode
            (NetCtx.MinimalInitiatorContext NtN.RemoteAddress)
