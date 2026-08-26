@@ -367,7 +367,35 @@ namespaces.
 These parameters define the **transaction profile** for a workload:
 - `inputs_per_tx` / `outputs_per_tx`: Controls the transaction structure (size and complexity).
 - `fee`: Fixed Lovelace fee per transaction.
-- `destination_signing_key` (optional): Path to a `.skey` file (a payment or genesis UTxO key, like the `signing_key` entries in funds.json) whose address receives every output this builder produces and which spends the recycled UTxOs. When omitted, a built-in per-builder key is derived instead. Supplying your own key lets you fund and inspect a known address, which is printed to stderr at startup.
+- `destination_signing_key` (optional): Path to a `.skey` file (a payment or genesis UTxO key, like the `signing_key` entries in funds.json) whose address receives every output this builder produces and which spends the recycled UTxOs. When omitted, a built-in per-builder key is derived instead. Supplying your own key lets you fund and inspect a known address, which is printed to stderr at startup. Note that with a single destination every recycled input shares one key, so steady-state transactions carry **one witness** regardless of `inputs_per_tx` (smaller than the initial batch built from distinct genesis keys).
+- `destination_signing_keys` (optional): Like `destination_signing_key` but a **list** of `.skey` paths. Outputs are distributed round-robin **by output index within each transaction**: output `i` pays to key `i mod n`, where `n` is the number of keys in the list, and each recycled fund keeps its destination's key. This makes multi-witness steady-state transactions *possible*, not guaranteed: a batch's witness count is however many distinct keys its inputs happen to carry, and that depends on queue order. With `inputs_per_tx = 2`, `outputs_per_tx = 2` and two keys, each transaction's A/B output pair re-enters the queue together, so batches typically alternate keys and carry two witnesses; but nothing enforces the alignment — a `recovery` reseed returns funds grouped by address (same-key stretches until the interleave re-forms), an `outputs_per_tx` that is not a multiple of `n` leaves same-key neighbours in the queue, and with `outputs_per_tx = 1` the index restarts at 0 every transaction so keys beyond the first are never used at all. Verify the achieved witness mix in the traces (tx sizes, or `Builder.NewTx` at `DMaximum`) rather than assuming it. All addresses are announced at startup (one line per builder), and a builder `recovery` queries all of them. Setting both the singular and the plural form is a startup error.
+
+A two-witness builder for a 2-in/2-out profile:
+
+```json
+"builder": {
+  "type": "value",
+  "params": {
+    "inputs_per_tx": 2,
+    "outputs_per_tx": 2,
+    "fee": 1000000,
+    "destination_signing_keys": ["dest-a.skey", "dest-b.skey"]
+  },
+  "recycle": { "type": "on_confirm", "params": "my-observer" }
+}
+```
+
+Each transaction pays output 0 to `dest-a`'s address and output 1 to
+`dest-b`'s; the recycled pair re-enters the input queue together, so the next
+2-input batch typically spends one UTxO per key (typically, not guaranteed;
+see the parameter description above for how the alignment can break). With a
+single destination (or the derived built-in key) the same builder's
+steady-state transactions always collapse to one witness and shrink
+accordingly (e.g. 270 vs 371 bytes for 2-in/2-out). Startup announces:
+
+```
+Builder group-A: destination addresses addr_test1..., addr_test1...
+```
 - `recycle` (optional): Controls when output UTxOs are returned to the input queue. See [Resource Recycling](#resource-recycling) for the three strategies (`on_build`, `on_pull`, `on_confirm`). When omitted, outputs are **not recycled** — the generator consumes initial funds and eventually exhausts them.
 - `recovery` (optional): Rollback recovery for this builder, resetting its input queue from an input source when an observer reports one of its transactions orphaned. Requires `recycle`. See [Rollback recovery](#rollback-recovery-recovery).
 

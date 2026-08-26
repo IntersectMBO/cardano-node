@@ -272,9 +272,10 @@ data BuilderTrace
     -- * 'String': builder name (the workload name, see 'Runtime.builderName').
     -- * 'Api.TxId': Blake2b-256 hash identifying the new transaction.
     --   Obtain via @'Api.getTxId' ('Api.getTxBody' signedTx)@.
-    -- * 'Api.AddressInEra': the destination address this transaction pays to
-    --   (the builder's own address, from 'destination_signing_key'). Rendered
-    --   as bech32 only at 'Logging.DMaximum'.
+    -- * @['Api.AddressInEra']@: the destination addresses this transaction
+    --   pays to, round-robin by output index (the builder's own addresses,
+    --   from @destination_signing_key(s)@). Rendered as bech32 only at
+    --   'Logging.DMaximum'.
     -- * @['Fund.Fund']@ (inputs): funds consumed by this transaction. Each
     --   fund's 'Fund.fundTxIn' is a 'Api.TxIn' pointing to an existing UTxO
     --   on the ledger.
@@ -282,7 +283,7 @@ data BuilderTrace
     --   fund's 'Fund.fundTxIn' is derived from the new 'Api.TxId' and a
     --   sequential 'Api.TxIx' index (0, 1, 2, ...).
     BuilderNewTx
-      !String !Api.TxId !(Api.AddressInEra Api.ConwayEra) [Fund.Fund] [Fund.Fund]
+      !String !Api.TxId ![Api.AddressInEra Api.ConwayEra] [Fund.Fund] [Fund.Fund]
   | -- | A dust batch was dropped: its total input value did not cover the fee,
     -- so 'TxAssembly.buildTx' produced no valid change output. The inputs are
     -- abandoned (dropped from the builder loop, not recycled) and the service
@@ -336,12 +337,13 @@ instance Logging.MetaTrace BuilderTrace where
 --
 -- Machine format ('Logging.DMaximum'): renders each fund in full (a JSON
 -- object with its @\"utxo\"@ reference and @\"lovelace\"@ value) and adds the
--- @\"destination\"@ address the transaction pays to.
+-- @\"destinations\"@ addresses the transaction pays to (round-robin by
+-- output index).
 --
 -- @
 -- { \"builder\": \"workload-name\"
 -- , \"txId\": \"\<64-char hex\>\"
--- , \"destination\": \"addr...\"
+-- , \"destinations\": [\"addr...\", ...]
 -- , \"inputs\": [{\"utxo\": \"\<txid\>#\<ix\>\", \"lovelace\": 1000000}, ...]
 -- , \"outputs\": [{\"utxo\": \"\<txid\>#\<ix\>\", \"lovelace\": 500000}, ...]
 -- }
@@ -353,11 +355,11 @@ instance Logging.MetaTrace BuilderTrace where
 -- NewTx [workload-name] \<txid\> inputs=[...] outputs=[...]
 -- @
 instance Logging.LogFormatting BuilderTrace where
-  forMachine dtal (BuilderNewTx name txId dest inputs outputs) = mconcat $
+  forMachine dtal (BuilderNewTx name txId dests inputs outputs) = mconcat $
        [ "builder" .= name
        , "txId"    .= String (Api.serialiseToRawBytesHexText txId)
        ]
-    ++ [ "destination" .= Api.serialiseAddress dest
+    ++ [ "destinations" .= map Api.serialiseAddress dests
        | dtal >= Logging.DMaximum
        ]
     ++ [ "inputs"  .= map (renderFund dtal) inputs

@@ -179,11 +179,15 @@ main = do
         -- Interpret the opaque builder config into a concrete builder, with its
         -- destination signing key and address already resolved.
         builder <- interpretBuilder networkId builderIndex rawBuilder
-        -- Announce the destination address so an operator knows which address
-        -- to fund and can inspect its UTxOs.
+        -- Announce the destination addresses so an operator knows which
+        -- addresses to fund and can inspect their UTxOs. One line per builder.
         hPutStrLn stderr $
-          "Builder " ++ builderName ++ ": destination address "
-          ++ Text.unpack (Api.serialiseAddress (destinationAddress builder))
+          "Builder " ++ builderName ++ ": destination addresses "
+          ++ Text.unpack
+               (Text.intercalate
+                 ", "
+                 (map (Api.serialiseAddress . snd) (destinations builder))
+               )
         -- This builder owns its loop: it pulls a fixed 'inputsPerTx' batch,
         -- builds a transaction, and either publishes it or, when the batch is
         -- unbuildable (an all-dust batch whose input value does not cover the
@@ -193,8 +197,7 @@ main = do
           inputFunds <- Runtime.baTakeInputs api (inputsPerTx builder)
           let buildTxAns = TxAssembly.buildTx
                              era
-                             (destinationAddress builder)
-                             (destinationSigningKey builder)
+                             (destinations builder)
                              inputFunds (outputsPerTx builder)
                              (L.Coin (fee builder))
           case buildTxAns of
@@ -234,7 +237,9 @@ main = do
               Tracing.traceWith
                 (Tracing.trBuilder tracers)
                 (Tracing.BuilderNewTx
-                  builderName txId (destinationAddress builder)
+                  builderName txId
+                  -- The destination addresses.
+                  (map snd (destinations builder))
                   inputFunds outputFunds
                 )
               Runtime.baAddPayload api txId tx inputFunds outputFunds
@@ -303,13 +308,12 @@ main = do
                     ++ " source"
                 builder <- interpretBuilder
                              networkId builderIndex (Validated.builder wl)
-                -- Startup probe: only connectivity matters, an empty result
-                -- is fine (the address fills up as this builder's
-                -- transactions confirm).
+                -- Startup probe: only connectivity matters, an empty result is
+                -- fine (the address fills up as this builder's transactions
+                -- confirm).
                 eProbe <- Fund.discoverFundsAtAddresses
                             networkId socketPath
-                            [ ( destinationSigningKey builder
-                              , destinationAddress builder ) ]
+                            (destinations builder)
                 case eProbe of
                   Left err -> die $
                     "Builder " ++ builderName ++ ": recovery socket ("
@@ -319,8 +323,7 @@ main = do
                   let attempt = do
                         eFunds <- Fund.discoverFundsAtAddresses
                                     networkId socketPath
-                                    [ ( destinationSigningKey builder
-                                      , destinationAddress builder ) ]
+                                    (destinations builder)
                         case eFunds of
                           Left err -> do
                             hPutStrLn stderr $
@@ -606,51 +609,64 @@ data ValueBuilder
     { inputsPerTx           :: !Natural
     , outputsPerTx          :: !Natural
     , fee                   :: !Integer
-    , destinationSigningKey :: !(Api.SigningKey Api.PaymentKey)
-    , destinationAddress    :: !(Api.AddressInEra Era)
+      -- | Non-empty. Output i pays to destination (i mod n), n being the length
+      -- of this list, and its recycled fund keeps that key: multiple
+      -- destinations let steady-state batches mix keys and stay multi-witness
+      -- (typical, not guaranteed; the count follows the keys a batch happens to
+      -- draw, see 'TxAssembly.buildTx').
+    , destinations :: ![(Api.SigningKey Api.PaymentKey, Api.AddressInEra Era)]
     }
 
 -- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
 -- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1),
 -- validates invariants, and resolves the destination signing key and address.
 --
--- Each builder pays to (and recycles under) a single signing key. It comes from
--- the 'destination_signing_key' builder param when set, otherwise we fall back
--- to a per-index built-in key. The destination address is derived from it.
+-- Each builder pays to (and recycles under) its destination keys: the
+-- @destination_signing_keys@ builder param (a list; outputs round-robin over
+-- it) or the singular @destination_signing_key@ (setting both is an error),
+-- otherwise a per-index built-in key. Addresses are derived from the keys.
 interpretBuilder :: Api.NetworkId -> Int -> Raw.Builder -> IO ValueBuilder
 interpretBuilder networkId builderIndex raw = case Raw.builderType raw of
   "value" ->
     case Aeson.Types.parseEither parseValueParams (Raw.builderParams raw) of
       Left err -> die $ "Builder params error: " ++ err
-      Right (maybeInputs, maybeOutputs, rawFee, maybeDestPath) -> do
+      Right (maybeInputs, maybeOutputs, rawFee, maybeDestPath, maybeDestPaths) -> do
         let nInputs  = fromMaybe 1 maybeInputs
             nOutputs = fromMaybe 1 maybeOutputs
         when (nInputs  == 0) $ die "Builder: inputs_per_tx must be >= 1"
         when (nOutputs == 0) $ die "Builder: outputs_per_tx must be >= 1"
         when (rawFee   <  0) $ die "Builder: fee must be >= 0"
-        (destKey, destAddr) <- case maybeDestPath of
-          Nothing   -> pure (createSigningKeyAndAddress networkId builderIndex)
-          Just path -> do
-            eitherSkey <- Fund.readSigningKey path
-            case eitherSkey of
-              Left err ->
-                die $ "destination_signing_key (" ++ path ++ "): " ++ err
-              Right skey -> pure (skey, Fund.deriveAddress networkId skey)
+        let readDestinations path = do
+              eitherSkey <- Fund.readSigningKey path
+              case eitherSkey of
+                Left err ->
+                  die $ "destination signing key (" ++ path ++ "): " ++ err
+                Right skey -> pure (skey, Fund.deriveAddress networkId skey)
+        dests <- case (maybeDestPath, maybeDestPaths) of
+          (Just _, Just _) -> die $
+            "Builder: set destination_signing_key or"
+            ++ " destination_signing_keys, not both"
+          (Nothing, Just []) ->
+            die "Builder: destination_signing_keys must be non-empty"
+          (Nothing, Just paths) -> mapM readDestinations paths
+          (Just path, Nothing)  -> (:[]) <$> readDestinations path
+          (Nothing, Nothing)    ->
+            pure [createSigningKeyAndAddress networkId builderIndex]
         pure ValueBuilder
-          { inputsPerTx           = nInputs
-          , outputsPerTx          = nOutputs
-          , fee                   = rawFee
-          , destinationSigningKey = destKey
-          , destinationAddress    = destAddr
+          { inputsPerTx  = nInputs
+          , outputsPerTx = nOutputs
+          , fee          = rawFee
+          , destinations = dests
           }
   other -> die $
     "Builder: unknown type " ++ show other ++ ", expected \"value\""
   where
     parseValueParams = Aeson.withObject "ValueParams" $ \o ->
-      (,,,) <$> o .:? "inputs_per_tx"
-            <*> o .:? "outputs_per_tx"
-            <*> o .:  "fee"
-            <*> o .:? "destination_signing_key"
+      (,,,,) <$> o .:? "inputs_per_tx"
+             <*> o .:? "outputs_per_tx"
+             <*> o .:  "fee"
+             <*> o .:? "destination_signing_key"
+             <*> o .:? "destination_signing_keys"
 
 --------------------------------------------------------------------------------
 -- Observer interpretation.

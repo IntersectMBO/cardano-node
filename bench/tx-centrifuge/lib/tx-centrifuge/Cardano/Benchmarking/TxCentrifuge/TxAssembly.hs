@@ -56,11 +56,19 @@ data BuildError
   deriving Show
 
 -- | Build and sign a transaction consuming the given funds and producing
--- @numOutputs@ outputs to @destAddr@. Returns the signed transaction and
--- recycled funds (one per output, keyed with @outKey@ for future spending).
+-- @numOutputs@ outputs, distributed round-robin over the destinations: output
+-- @i@ pays to destination @i \`mod\` n@, where @n@ is the number of
+-- destinations given, and its recycled fund is keyed with that destination's
+-- signing key. Returns the signed transaction and recycled funds (one per
+-- output).
 --
 -- Signing keys are extracted from the input funds. If inputs belong to
--- different keys, all unique keys are used as witnesses.
+-- different keys, all unique keys are used as witnesses. Multiple destinations
+-- make multi-witness batches possible after recycling, but do not guarantee
+-- them: a batch's witness count is the number of distinct keys among the inputs
+-- it happens to draw, which depends on queue order. Note the index restarts
+-- every transaction, so with @numOutputs < n@ the tail destinations are never
+-- used. A single destination always collapses recycled batches to one witness.
 --
 -- Era-generic: the caller passes the target 'Api.ShelleyBasedEra', so the same
 -- code builds transactions in any Shelley-based era.
@@ -68,10 +76,9 @@ data BuildError
 buildTx
   -- | Target era (also fixes the address and output transaction types).
   :: forall era. Api.ShelleyBasedEra era
-  -- | Destination address for outputs (embeds the network identifier).
-  -> Api.AddressInEra era
-  -- | Signing key for recycled output funds.
-  -> Api.SigningKey Api.PaymentKey
+  -- | Destinations for outputs: signing key and its address (which embeds
+  -- the network identifier). Must be non-empty.
+  -> [(Api.SigningKey Api.PaymentKey, Api.AddressInEra era)]
   -- | Input funds.
   -> [Fund]
   -- | Number of outputs.
@@ -79,19 +86,20 @@ buildTx
   -- | Fee.
   -> L.Coin
   -> Either BuildError (Api.Tx era, [Fund])
-buildTx sbe destAddr outKey inFunds numOutputs fee
-  | null inFunds     = Left (InvalidInput "no input funds")
-  | numOutputs  == 0 = Left (InvalidInput "outputs_per_tx must be >= 1")
-  | feeLovelace  < 0 = Left (InvalidInput "fee must be >= 0")
-  | changeTotal <= 0 = Left $ InsufficientValue $
+buildTx sbe destinations inFunds numOutputs fee
+  | null destinations = Left (InvalidInput "no destinations")
+  | null inFunds      = Left (InvalidInput "no input funds")
+  | numOutputs  == 0  = Left (InvalidInput "outputs_per_tx must be >= 1")
+  | feeLovelace  < 0  = Left (InvalidInput "fee must be >= 0")
+  | changeTotal <= 0  = Left $ InsufficientValue $
       "total inputs (" ++ show totalIn ++ " lovelace) do not cover fee ("
       ++ show feeLovelace ++ " lovelace)"
     -- Guard against outputs that would be below the Cardano minimum UTxO
     -- value. We cannot check the actual protocol-parameter minimum here (it
     -- depends on the serialised output size and the current coinsPerUTxOByte),
     -- but we can catch the obviously-invalid case where integer division
-    -- produces zero-value or negative outputs. A real minimum UTxO check
-    -- should be added once the protocol parameters are threaded through to this
+    -- produces zero-value or negative outputs. A real minimum UTxO check should
+    -- be added once the protocol parameters are threaded through to this
     -- function.
   | minOutputLovelace <= 0 = Left $ InsufficientValue $
       show numOutputs ++ " outputs from " ++ show changeTotal
@@ -110,7 +118,7 @@ buildTx sbe destAddr outKey inFunds numOutputs fee
               txId = Api.getTxId txBody
               outFunds = [ Fund { fundTxIn    = Api.TxIn txId (Api.TxIx ix)
                                 , fundValue   = amt
-                                , fundSignKey = outKey
+                                , fundSignKey = fst (destinationFor ix)
                                 }
                          | (ix, amt) <- zip [0..] outAmounts
                          ]
@@ -137,10 +145,20 @@ buildTx sbe destAddr outKey inFunds numOutputs fee
           remainder = changeTotal `mod` fromIntegral numOutputs
       in (base + remainder) : replicate (fromIntegral numOutputs - 1) base
 
+    -- Destination for output index i (round-robin).
+    destinationFor
+      :: Integral i
+      => i -> (Api.SigningKey Api.PaymentKey, Api.AddressInEra era)
+    destinationFor ix =
+      destinations !! (fromIntegral ix `mod` length destinations)
+
     -- Unique signing keys from input funds (deduplicated by verification key
-    -- hash). After recycling, all inputs share the builder's single key, so
-    -- this produces 1 witness instead of N, making steady-state transactions
-    -- smaller than the initial batch (e.g. 270 vs 371 bytes for 2-in/2-out).
+    -- hash). Steady-state witness count equals the number of distinct
+    -- destination keys among the consumed inputs: with a single destination
+    -- all recycled inputs share one key (1 witness instead of N, e.g. 270 vs
+    -- 371 bytes for 2-in/2-out); with round-robin destinations it depends on
+    -- which funds the batch drew (mixed keys typically, but nothing enforces
+    -- the interleave).
     uniqueKeys :: [Api.SigningKey Api.PaymentKey]
     uniqueKeys = nubBy sameKey (map fundSignKey inFunds)
       where
@@ -165,8 +183,8 @@ buildTx sbe destAddr outKey inFunds numOutputs fee
         )
       ) inFunds
 
-    mkTxOut :: Integer -> Api.TxOut Api.CtxTx era
-    mkTxOut lovelace = Api.TxOut
+    mkTxOut :: Api.AddressInEra era -> Integer -> Api.TxOut Api.CtxTx era
+    mkTxOut destAddr lovelace = Api.TxOut
       destAddr
       (Api.lovelaceToTxOutValue sbe (Api.Coin lovelace))
       Api.TxOutDatumNone
@@ -176,7 +194,11 @@ buildTx sbe destAddr outKey inFunds numOutputs fee
     txBodyContent = Api.defaultTxBodyContent sbe
       & Api.setTxIns txIns
       & Api.setTxInsCollateral Api.TxInsCollateralNone
-      & Api.setTxOuts (map mkTxOut outAmounts)
+      & Api.setTxOuts
+          (zipWith
+            (\ix amt -> mkTxOut (snd (destinationFor (ix :: Int))) amt)
+            [0..] outAmounts
+          )
       & Api.setTxFee
           ( Api.TxFeeExplicit
               sbe
