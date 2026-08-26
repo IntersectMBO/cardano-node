@@ -14,7 +14,7 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
 
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId)
-import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
+import           Ouroboros.Consensus.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)

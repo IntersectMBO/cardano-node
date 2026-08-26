@@ -99,11 +99,8 @@ library
                         Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
-                        Cardano.Node.Tracing.Era.Byron
-                        Cardano.Node.Tracing.Era.Shelley
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
-                        Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
                         Cardano.Node.Tracing.Tracers.ForgingStats
@@ -127,14 +124,11 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.5
-                      , cardano-data
                       , cardano-crypto-class ^>=2.5
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
-                      , cardano-ledger-allegra
                       , cardano-ledger-api
-                      , cardano-ledger-babbage
                       , cardano-ledger-binary >= 1.7.1
                       , cardano-ledger-byron
                       , cardano-ledger-conway >= 1.22.1.0
@@ -143,7 +137,6 @@ library
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol ^>= 0.1
-                      , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
                       , cardano-rpc ^>= 11.1
                       , cborg ^>= 0.2.4

@@ -27,8 +27,8 @@ import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
-import           Cardano.Node.Tracing.Era.Byron ()
-import           Cardano.Node.Tracing.Era.Shelley ()
+import           Ouroboros.Consensus.Tracing.Era.Byron ()
+import           Ouroboros.Consensus.Tracing.Era.Shelley ()
 import           Ouroboros.Consensus.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Ouroboros.Consensus.Tracing.BlockReplayProgress
