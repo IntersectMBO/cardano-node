@@ -23,7 +23,7 @@ import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Query ()
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (anyUtxoDataUtxoRpcToUtxo,
-                   utxoRpcBigIntToInteger)
+                   utxoRpcBigIntToInteger, utxoRpcRationalNumberToRational)
 import           Cardano.Testnet
 
 import           Prelude
@@ -140,9 +140,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     pparams ^. L.ppPoolDepositL ===^ chainParams ^. U5c.poolDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
     pparams ^. L.ppEMaxL . to L.unEpochInterval === chainParams ^. U5c.poolRetirementEpochBound . to fromIntegral
     pparams ^. L.ppNOptL === chainParams ^. U5c.desiredNumberOfPools . to fromIntegral
-    pparams ^. L.ppA0L . to L.unboundRational === chainParams ^. U5c.poolInfluence . to inject
-    pparams ^. L.ppTauL . to L.unboundRational === chainParams ^. U5c.treasuryExpansion . to inject
-    pparams ^. L.ppRhoL . to L.unboundRational === chainParams ^. U5c.monetaryExpansion . to inject
+    Just (pparams ^. L.ppA0L . to L.unboundRational) === chainParams ^. U5c.poolInfluence . to utxoRpcRationalNumberToRational
+    Just (pparams ^. L.ppTauL . to L.unboundRational) === chainParams ^. U5c.treasuryExpansion . to utxoRpcRationalNumberToRational
+    Just (pparams ^. L.ppRhoL . to L.unboundRational) === chainParams ^. U5c.monetaryExpansion . to utxoRpcRationalNumberToRational
     pparams ^. L.ppMinPoolCostL ===^ chainParams ^. U5c.minPoolCost . to (fmap L.Coin . utxoRpcBigIntToInteger)
     ( pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
       , pparams ^. L.ppProtocolVersionL . to L.pvMinor
@@ -159,16 +159,16 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     M.lookup L.PlutusV2 pparamsCostModels === chainParams ^. U5c.costModels . U5c.plutusV2 . U5c.values . to wrapInMaybe
     M.lookup L.PlutusV3 pparamsCostModels === chainParams ^. U5c.costModels . U5c.plutusV3 . U5c.values . to wrapInMaybe
     M.lookup L.PlutusV4 pparamsCostModels === chainParams ^. U5c.costModels . U5c.plutusV4 . U5c.values . to wrapInMaybe
-    pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational === chainParams ^. U5c.prices . U5c.steps . to inject
-    pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational === chainParams ^. U5c.prices . U5c.memory . to inject
+    Just (pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational) === chainParams ^. U5c.prices . U5c.steps . to utxoRpcRationalNumberToRational
+    Just (pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational) === chainParams ^. U5c.prices . U5c.memory . to utxoRpcRationalNumberToRational
     pparams ^. L.ppMaxTxExUnitsL === chainParams ^. U5c.maxExecutionUnitsPerTransaction . to inject
     pparams ^. L.ppMaxBlockExUnitsL === chainParams ^. U5c.maxExecutionUnitsPerBlock . to inject
-    pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational
-      === chainParams ^. U5c.minFeeScriptRefCostPerByte . to inject
+    Just (pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational)
+      === chainParams ^. U5c.minFeeScriptRefCostPerByte . to utxoRpcRationalNumberToRational
     let poolVotingThresholds :: L.PoolVotingThresholds =
           conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppPoolVotingThresholdsL
-    ( L.unboundRational
+    ( Just . L.unboundRational
         <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
             , poolVotingThresholds ^. L.pvtCommitteeNormalL
             , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
@@ -176,11 +176,11 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
             , poolVotingThresholds ^. L.pvtPPSecurityGroupL
             ]
       )
-      === chainParams ^. U5c.poolVotingThresholds . U5c.thresholds . to (map inject)
+      === chainParams ^. U5c.poolVotingThresholds . U5c.thresholds . to (map utxoRpcRationalNumberToRational)
     let drepVotingThresholds :: L.DRepVotingThresholds =
           conwayEraOnwardsConstraints (convert era) $
             pparams ^. L.ppDRepVotingThresholdsL
-    ( L.unboundRational
+    ( Just . L.unboundRational
         <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
             , drepVotingThresholds ^. L.dvtCommitteeNormalL
             , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
@@ -193,7 +193,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
             , drepVotingThresholds ^. L.dvtTreasuryWithdrawalL
             ]
       )
-      === chainParams ^. U5c.drepVotingThresholds . U5c.thresholds . to (map inject)
+      === chainParams ^. U5c.drepVotingThresholds . U5c.thresholds . to (map utxoRpcRationalNumberToRational)
     pparams ^. L.ppCommitteeMinSizeL === chainParams ^. U5c.minCommitteeSize . to fromIntegral
     pparams ^. L.ppCommitteeMaxTermLengthL . to L.unEpochInterval
       === chainParams ^. U5c.committeeTermLimit . to fromIntegral

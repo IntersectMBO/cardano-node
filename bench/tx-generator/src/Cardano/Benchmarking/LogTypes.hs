@@ -22,7 +22,7 @@ module Cardano.Benchmarking.LogTypes
   , TraceBenchTxSubmit (..)
   ) where
 
-import           Cardano.Api
+import           Cardano.Api hiding (CardanoBlock)
 
 import           Cardano.Benchmarking.OuroborosImports
 import           Cardano.Benchmarking.Types

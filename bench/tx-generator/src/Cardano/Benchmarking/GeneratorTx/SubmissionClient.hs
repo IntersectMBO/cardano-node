@@ -23,7 +23,7 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
-import           Cardano.Api hiding (Active)
+import           Cardano.Api hiding (Active, CardanoBlock)
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types

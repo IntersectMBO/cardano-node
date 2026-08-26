@@ -139,6 +139,7 @@ import           Data.Bits
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
 import           Data.Functor.Identity (Identity (..))
+import           Data.IORef (IORef, newIORef, writeIORef)
 import           Data.IP (toSockAddr)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -194,7 +195,7 @@ runNode cmdPc = do
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-  consensusProtocol <-
+  (consensusProtocol, shelleyGenesisHash) <-
     runThrowExceptT $
       mkConsensusProtocol
        ncProtocolConfig
@@ -202,7 +203,7 @@ runNode cmdPc = do
        -- don't need these.
        (Just ncProtocolFiles)
 
-  handleNodeWithTracers cmdPc nc consensusProtocol
+  handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
@@ -240,8 +241,9 @@ handleNodeWithTracers
   :: PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
+  -> Api.GenesisHashShelley
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
+handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
   (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
@@ -269,7 +271,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType runP tracers nc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -306,6 +308,7 @@ handleSimpleNode
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
+  -> Api.GenesisHashShelley
   -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
@@ -315,7 +318,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -328,6 +331,10 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
       StartupDBValidation
 
   pInfo <- fst <$> Api.protocolInfo @IO runP
+
+  let NodeProtocolConfigurationCardano _ shelleyProtocolConfig _ _ _ _ _ = ncProtocolConfig nc
+      shelleyGenesisFile :: Api.ShelleyGenesisFile In
+      shelleyGenesisFile = File . unGenesisFile $ npcShelleyGenesisFile shelleyProtocolConfig
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -463,6 +470,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+    nodeKernelAccessRef <- newIORef Nothing
     void $
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
@@ -495,7 +503,7 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
               (readTVar ledgerPeerSnapshotVar)
               nc
       in
-      withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic) $ \_ ->
+      withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic nodeKernelAccessRef) $ \_ ->
         Node.run
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do
@@ -505,6 +513,13 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
+                mkNodeKernelAccess
+                  (rpcTracer tracers)
+                  shelleyGenesisHash
+                  shelleyGenesisFile
+                  blockType
+                  nodeKernel
+                  >>= writeIORef nodeKernelAccessRef
           }
           StdRunNodeArgs
             { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
@@ -647,7 +662,7 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
           setBlockForging nodeKernel []
         _NothingOrOtherFileError ->
           traceWith startupTracer (BlockForgingUpdateError err)
-    Right (SomeConsensusProtocol blockType' runP') ->
+    Right (SomeConsensusProtocol blockType' runP', _) ->
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
@@ -777,8 +792,9 @@ rpcServerLoop :: Tracer IO (StartupTrace blk)
               -> Tracer IO TraceRpc
               -> StrictTVar IO RpcConfig
               -> NetworkMagic
+              -> IORef (Maybe NodeKernelAccess)
               -> IO ()
-rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
+rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccessRef = go
   where
     go = do
       config@RpcConfig{isEnabled = Identity enabled} <- readTVarIO rpcConfigVar
@@ -786,7 +802,7 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic = go
         then
           race_
             (do
-              runRpcServer rpcTracer (config, networkMagic)
+              runRpcServer rpcTracer config networkMagic nodeKernelAccessRef
               traceWith startupTracer RpcForceDisabled
               disableRpcServer)
             (waitForRpcConfigChange config)

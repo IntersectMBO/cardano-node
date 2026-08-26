@@ -400,6 +400,7 @@ defaultShelleyGenesis asbe startTime maxSupply options = do
         -- , Api.sgSecurityParam = securityParam
         , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
         , Api.sgSystemStart = startTime
+        , Api.sgExtraConfig = SNothing
         }
 
 

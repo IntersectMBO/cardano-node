@@ -16,7 +16,7 @@ module Cardano.Node.Protocol.Cardano
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Byron as Byron
+import           Cardano.Api.Byron as Byron hiding (GenesisHash)
 
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Api.Transition as Ledger
@@ -69,7 +69,7 @@ mkSomeConsensusProtocolCardano
   -> NodeHardForkProtocolConfiguration
   -> NodeCheckpointsConfiguration
   -> Maybe ProtocolFilepaths
-  -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
+  -> ExceptT CardanoProtocolInstantiationError IO (SomeConsensusProtocol, GenesisHashShelley)
 mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,
                              npcByronGenesisFileHash,
@@ -155,8 +155,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
     -- read initial funds/staking injected from genesis (testnets only).
     let shelleyGenesisFS = SomeHasFS $ ioHasFS $ MountPoint $ takeDirectory $ unGenesisFile npcShelleyGenesisFile
 
-    return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano shelleyGenesisFS $ Consensus.CardanoProtocolParams {
+    let GenesisHash rawShelleyGenesisHash = shelleyGenesisHash
+        genesisHashShelley = GenesisHashShelley rawShelleyGenesisHash
+
+    return
+      ( SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano shelleyGenesisFS $ Consensus.CardanoProtocolParams {
         Consensus.byronProtocolParams =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
@@ -258,6 +261,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
       , Consensus.cardanoCheckpoints = checkpointsMap
       }
+      , genesisHashShelley
+      )
 
         ----------------------------------------------------------------------
         -- WARNING When adding new entries above, be aware that if there is an

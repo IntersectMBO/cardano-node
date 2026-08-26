@@ -411,15 +411,15 @@ instance
              , "acceptable" .= Set.toList acceptable
              ]
   forMachine _ (ExtraRedeemers rdmrs) =
-    Api.caseShelleyToMaryOrAlonzoEraOnwards
-      (const mempty)
+    Api.forEraInEon
+      (Api.convert (Api.shelleyBasedEra :: Api.ShelleyBasedEra era))
+      mempty
       (\alonzoOnwards ->
          mconcat
            [ "kind" .= String "ExtraRedeemers"
            , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) (NonEmpty.toList rdmrs)
            ]
       )
-      (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
   forMachine _ (ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes) =
       mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
               , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
@@ -1546,15 +1546,15 @@ instance
               , "txins" .= NonEmptySet.toList ins
               ]
     Conway.ExtraRedeemers rs ->
-      Api.caseShelleyToMaryOrAlonzoEraOnwards
-        (const mempty)
+      Api.forEraInEon
+        (Api.convert (Api.shelleyBasedEra :: Api.ShelleyBasedEra era))
+        mempty
         (\alonzoOnwards ->
            mconcat
              [ "kind" .= String "ExtraRedeemers"
              , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) (NonEmpty.toList rs)
              ]
         )
-        (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
     Conway.MalformedScriptWitnesses scripts ->
       mconcat [ "kind" .= String "MalformedScriptWitnesses"
               , "scripts" .= scripts

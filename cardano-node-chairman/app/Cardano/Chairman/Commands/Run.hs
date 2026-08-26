@@ -111,7 +111,7 @@ run RunOpts
   p :: SomeConsensusProtocol <-
     case eitherSomeProtocol of
       Left err -> putStrLn (docToString $ prettyError err) >> exitFailure
-      Right p  -> pure p
+      Right (p, _) -> pure p
 
   (k , nId) <- case p of
             SomeConsensusProtocol _ runP -> do

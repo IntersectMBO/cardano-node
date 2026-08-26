@@ -49,7 +49,7 @@ mkConsensusProtocol :: NodeConfiguration -> IO (Either TxGenError SomeConsensusP
 mkConsensusProtocol nodeConfig =
   case ncProtocolConfig nodeConfig of
     NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig conwayConfig dijkstraConfig hardforkConfig checkpointsConfig ->
-      first ProtocolError
+      first ProtocolError . fmap fst
         <$> runExceptT (mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig conwayConfig dijkstraConfig hardforkConfig checkpointsConfig Nothing)
 
 -- | Creates a NodeConfiguration from a config file;
