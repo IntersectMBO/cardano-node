@@ -268,13 +268,14 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
                 ]
             ShelleyBasedEraDijkstra ->
-                [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+                [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+                , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
                 , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
                 , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
                 , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
                 , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
-                , ("TestDijkstraHardForkAtEpoch", Aeson.Number 0)
+                , ("TestDijkstraHardForkAtEpoch", Aeson.Number 1)
                 ]
                 )
 

@@ -7,6 +7,7 @@ module Main
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Api.TxReferenceInputDatum
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
+import qualified Cardano.Testnet.Test.Cli.LeiosStakePoolRegistration
 import qualified Cardano.Testnet.Test.Cli.Plutus.BuildRaw
 import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
 import qualified Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
@@ -121,6 +122,7 @@ tests = do
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
+          , ignoreOnWindows "leios stake pool registration" Cardano.Testnet.Test.Cli.LeiosStakePoolRegistration.hprop_leios_stake_pool_registration
           , ignoreOnWindows "transaction build with withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward
           , ignoreOnWindows "transaction build with plutus withdrawal" Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward.hprop_tx_withdrawal_reward_plutus_v3
           -- FIXME
