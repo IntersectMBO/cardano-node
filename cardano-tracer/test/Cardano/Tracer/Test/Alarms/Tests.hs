@@ -33,7 +33,7 @@ import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 
 import           Test.Tasty
-import           Test.Tasty.QuickCheck
+import           Test.Tasty.QuickCheck hiding (labels)
 
 --------------------------------------------------------------------------------
 -- Test suite
@@ -329,13 +329,13 @@ propBroaderRejected =
 -- | One trace rule at Error threshold, 60s suppression window.
 testAlarmsConfig :: AlarmsConfig
 testAlarmsConfig = AlarmsConfig
-  { alEndpoint       = Endpoint "127.0.0.1" 0 Nothing
-  , alAllowInsecure  = Just True
-  , alRetention      = Nothing
-  , alLimits         = Nothing
-  , alAuthentication = AlarmsAuthConfig [] []
-  , alConsumers      = []
-  , alTraceRules     = Just
+  { alEndpoint        = Endpoint "127.0.0.1" 0 Nothing
+  , alAllowInsecure   = Just True
+  , alRetention       = Nothing
+  , alLimits          = Nothing
+  , alAuthentication  = AlarmsAuthConfig [] []
+  , alConsumers       = []
+  , alTraceRules      = Just
       [ AlarmsTraceRuleConfig
           { atrRuleId          = "error-traces"
           , atrSummary         = Nothing
@@ -344,6 +344,7 @@ testAlarmsConfig = AlarmsConfig
           , atrLabels          = Nothing
           }
       ]
+  , alTimeseriesRules = Nothing
   }
 
 newTestRegistry :: IO AlarmRegistry

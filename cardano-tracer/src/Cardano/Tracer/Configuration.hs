@@ -17,6 +17,7 @@ module Cardano.Tracer.Configuration
   , AlarmsConsumerConfig (..)
   , AlarmsLimitsConfig (..)
   , AlarmsRetentionConfig (..)
+  , AlarmsTimeseriesRuleConfig (..)
   , AlarmsTraceRuleConfig (..)
   , Certificate (..)
   , Net.HowToConnect (..)
@@ -259,18 +260,63 @@ instance ToJSON AlarmsTraceRuleConfig where
     , ("labels" .=)          <$> atrLabels
     ]
 
+-- | A rule that periodically evaluates a @cardano-timeseries-io@ query and
+--   raises an alarm when the query returns 'Truth' (or a truthy
+--   'InstantVector' entry) for at least @for@ seconds. The @sourceEventId@
+--   embeds the rule id and a canonical series key from the sample's labels
+--   so per-series edges are deduplicated by the store.
+data AlarmsTimeseriesRuleConfig = AlarmsTimeseriesRuleConfig
+  { atsRuleId        :: !Text
+  , atsSummary       :: !(Maybe Text)
+  , atsSeverity      :: !SeverityS
+  , atsQuery         :: !Text
+  , atsEvaluateEvery :: !Word64                 -- ^ seconds between evaluations
+  , atsFor           :: !(Maybe Word64)         -- ^ seconds the sample must stay truthy before publishing
+  , atsRepeatEvery   :: !(Maybe Word64)         -- ^ seconds between reminder alarms while still true
+  , atsLabels        :: !(Maybe (Map Text Text))
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromJSON AlarmsTimeseriesRuleConfig where
+  parseJSON = withObject "AlarmsTimeseriesRuleConfig" \o -> do
+    atsRuleId        <- o .: "ruleId"
+    atsSummary       <- o .:? "summary"
+    severityText     <- o .: "severity"
+    atsSeverity      <- maybe (fail ("unknown severity: " <> Text.unpack severityText)) pure
+                              (parseAlarmSeverityText severityText)
+    atsQuery         <- o .: "query"
+    atsEvaluateEvery <- o .: "evaluateEvery"
+    atsFor           <- o .:? "for"
+    atsRepeatEvery   <- o .:? "repeatEvery"
+    atsLabels        <- o .:? "labels"
+    pure AlarmsTimeseriesRuleConfig{..}
+
+instance ToJSON AlarmsTimeseriesRuleConfig where
+  toJSON AlarmsTimeseriesRuleConfig{..} = object $
+    [ "ruleId"        .= atsRuleId
+    , "severity"      .= alarmSeverityToText atsSeverity
+    , "query"         .= atsQuery
+    , "evaluateEvery" .= atsEvaluateEvery
+    ] <> catMaybes
+    [ ("summary" .=)     <$> atsSummary
+    , ("for" .=)         <$> atsFor
+    , ("repeatEvery" .=) <$> atsRepeatEvery
+    , ("labels" .=)      <$> atsLabels
+    ]
+
 -- | Configuration for the alarm subsystem (see
 --   @cardano-tracer/docs/alarm-system-concept.md@). @Nothing@ for the
 --   enclosing 'Maybe' in 'TracerConfig' is the on/off switch for the whole
 --   subsystem; every field below is only meaningful once it's turned on.
 data AlarmsConfig = AlarmsConfig
-  { alEndpoint       :: !Endpoint
-  , alAllowInsecure  :: !(Maybe Bool)
-  , alRetention      :: !(Maybe AlarmsRetentionConfig)
-  , alLimits         :: !(Maybe AlarmsLimitsConfig)
-  , alAuthentication :: !AlarmsAuthConfig
-  , alConsumers      :: ![AlarmsConsumerConfig]
-  , alTraceRules     :: !(Maybe [AlarmsTraceRuleConfig])
+  { alEndpoint        :: !Endpoint
+  , alAllowInsecure   :: !(Maybe Bool)
+  , alRetention       :: !(Maybe AlarmsRetentionConfig)
+  , alLimits          :: !(Maybe AlarmsLimitsConfig)
+  , alAuthentication  :: !AlarmsAuthConfig
+  , alConsumers       :: ![AlarmsConsumerConfig]
+  , alTraceRules      :: !(Maybe [AlarmsTraceRuleConfig])
+  , alTimeseriesRules :: !(Maybe [AlarmsTimeseriesRuleConfig])
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)

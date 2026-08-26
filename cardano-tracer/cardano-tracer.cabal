@@ -66,6 +66,7 @@ library
                         Cardano.Tracer.Handlers.Alarms.Registry
                         Cardano.Tracer.Handlers.Alarms.Server
                         Cardano.Tracer.Handlers.Alarms.Store
+                        Cardano.Tracer.Handlers.Alarms.TimeseriesRules
                         Cardano.Tracer.Handlers.Alarms.TraceRules
                         Cardano.Tracer.Handlers.Alarms.Types
 
