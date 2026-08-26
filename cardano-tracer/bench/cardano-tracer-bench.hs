@@ -61,6 +61,7 @@ main = do
         , teStateDir              = Nothing
         , teMetricsHelp           = []
         , teTimeseriesHandle      = Nothing
+        , teAlarmRegistry         = Nothing
         }
 
   removePathForcibly root

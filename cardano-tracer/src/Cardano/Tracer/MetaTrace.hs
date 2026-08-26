@@ -110,6 +110,10 @@ data TracerTrace
     { ttAlarmHistoryReader      :: Text
     , ttAlarmHistoryResultCount :: Int
     }
+  | TracerAlarmTimeseriesEvalFailed
+    { ttAlarmTimeseriesEvalFailedRule   :: Text
+    , ttAlarmTimeseriesEvalFailedReason :: Text
+    }
   deriving Show
 
 -- | A bundle of domain-split tracers used in the application.
@@ -242,6 +246,11 @@ instance LogFormatting TracerTrace where
       , "reader"      .= ttAlarmHistoryReader
       , "resultCount" .= ttAlarmHistoryResultCount
       ]
+    TracerAlarmTimeseriesEvalFailed{..} -> mconcat
+      [ "kind"   .= AE.String "TracerAlarmTimeseriesEvalFailed"
+      , "rule"   .= ttAlarmTimeseriesEvalFailedRule
+      , "reason" .= ttAlarmTimeseriesEvalFailedReason
+      ]
 
 instance MetaTrace TracerTrace where
     namespaceFor TracerBuildInfo {} = Namespace [] ["BuildInfo"]
@@ -272,6 +281,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerAlarmRejected {} = Namespace [] ["AlarmRejected"]
     namespaceFor TracerAlarmDispatched {} = Namespace [] ["AlarmDispatched"]
     namespaceFor TracerAlarmHistoryRead {} = Namespace [] ["AlarmHistoryRead"]
+    namespaceFor TracerAlarmTimeseriesEvalFailed {} = Namespace [] ["AlarmTimeseriesEvalFailed"]
 
     severityFor (Namespace _ ["BuildInfo"]) _ = Just Info
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
@@ -301,6 +311,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["AlarmRejected"]) _ = Just Warning
     severityFor (Namespace _ ["AlarmDispatched"]) _ = Just Info
     severityFor (Namespace _ ["AlarmHistoryRead"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmTimeseriesEvalFailed"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor _ = Just ""
@@ -334,6 +345,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["AlarmRejected"]
       , Namespace [] ["AlarmDispatched"]
       , Namespace [] ["AlarmHistoryRead"]
+      , Namespace [] ["AlarmTimeseriesEvalFailed"]
       ]
 
 stderrShowTracer :: Show a => Trace IO a
