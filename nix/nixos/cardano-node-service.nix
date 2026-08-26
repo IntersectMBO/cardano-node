@@ -33,10 +33,11 @@ let
   };
 
   assertNewTopology = i:
+    let topo = newTopology i; in
     assert assertMsg
-    (cfg.bootstrapPeers == [] -> any (e: e.trustable == true) (newTopology i).localRoots)
+    (cfg.bootstrapPeers == [] -> any (e: e.trustable == true) topo.localRoots)
     "When bootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
-    newTopology i;
+    topo;
 
   selectTopology = i:
     if cfg.topology != null
