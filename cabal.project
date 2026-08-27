@@ -95,8 +95,8 @@ allow-older:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 61a188861c0b0c1877f8dee9723e6b1bd86594ab
-  --sha256: sha256-3/fGdijGqMXwDjwZ/uUJx8HzYTR2Jpg0QjYR0Mntir8=
+  tag: c663fa561be6b6da30786fb2ceba66966ed920d4
+  --sha256: sha256-Uf9cNFo+BTp0DpLSgAriZq7HS2tRIaormX+h/kKo7Oc=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
