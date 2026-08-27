@@ -2,6 +2,14 @@
 
 ## Next version
 
+* Added `Cardano.Node.Tracing.Span`: OpenTelemetry-style Begin/End tracing spans
+  with a shared `trace_id`, `parent_span_id` links for nesting, and a
+  client-side measured duration shipped in `SpanEnd`. Emits a flat JSON
+  envelope (`trace_id`, `span_id`, `parent_span_id`, `name`,
+  `event=begin|end`, `duration_ms`) usable directly from Loki/Tempo, plus a
+  Prometheus/EKG `spanDurationMs.<name>` metric on end. Nested `withSpan`
+  calls thread parent context through an explicit `SpanContext`.
+
 ## 11.1.0 -- August 2026
 
 - **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
