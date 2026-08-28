@@ -39,7 +39,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
-                   makeRpcConfig)
+                   RpcEndpoint (..), defaultRpcListenAddress, makeRpcConfig)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
@@ -68,6 +68,7 @@ import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
+import           Data.Word (Word16)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
@@ -412,11 +413,21 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
-      pncRpcConfig <-
-        RpcConfig
-          <$> (Last <$> v .:? "EnableRpc")
-          <*> (Last <$> v .:? "RpcSocketPath")
-          <*> pure mempty
+      pncRpcConfig <- do
+        enableRpc <- Last <$> v .:? "EnableRpc"
+        mSocketPath <- v .:? "RpcSocketPath"
+        mListenAddress <- v .:? "RpcListenAddress"
+        mListenPort :: Maybe Word16 <- v .:? "RpcListenPort"
+        rpcEndpoint <- case (mSocketPath, mListenAddress, mListenPort) of
+          (Just _, Just _, _) -> fail "RpcSocketPath and RpcListenAddress are mutually exclusive"
+          (Just _, _, Just _) -> fail "RpcSocketPath and RpcListenPort are mutually exclusive"
+          (Nothing, Just _, Nothing) -> fail "RpcListenAddress requires RpcListenPort to be set"
+          (Just socketPath, Nothing, Nothing) -> pure . Just $ RpcEndpointUnixSocket socketPath
+          (Nothing, _, Just listenPort) ->
+            pure . Just $
+              RpcEndpointTcp (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort)
+          (Nothing, Nothing, Nothing) -> pure Nothing
+        pure (mempty :: PartialRpcConfig){isEnabled = enableRpc, rpcEndpoint = Last rpcEndpoint}
 
       txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
       let parseInitDelay =

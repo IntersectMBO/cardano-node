@@ -23,7 +23,8 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
-import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..))
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..), RpcEndpoint (..),
+                   defaultRpcListenAddress)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
@@ -438,8 +439,8 @@ parseStartAsNonProducingNode =
 parseRpcConfig :: Parser PartialRpcConfig
 parseRpcConfig = do
   isEnabled <- lastOption parseRpcToggle
-  socketPath <- lastOption parseRpcSocketPath
-  pure $ RpcConfig isEnabled socketPath mempty
+  rpcEndpoint <- lastOption $ parseRpcUnixSocketEndpoint <|> parseRpcTcpEndpoint
+  pure (mempty :: PartialRpcConfig){isEnabled, rpcEndpoint}
   where
     parseRpcToggle :: Parser Bool
     parseRpcToggle =
@@ -447,11 +448,40 @@ parseRpcConfig = do
         [ long "grpc-enable"
         , help "[EXPERIMENTAL] Enable node gRPC endpoint."
         ]
-    parseRpcSocketPath :: Parser SocketPath
-    parseRpcSocketPath =
-      parseSocketPath
-        "grpc-socket-path"
-        "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
+
+    parseRpcUnixSocketEndpoint :: Parser RpcEndpoint
+    parseRpcUnixSocketEndpoint =
+      RpcEndpointUnixSocket <$>
+        parseSocketPath
+          "grpc-socket-path"
+          "[EXPERIMENTAL] gRPC unix socket path. Defaults to rpc.sock in the same directory as the node socket. Mutually exclusive with --grpc-listen-port."
+
+    parseRpcTcpEndpoint :: Parser RpcEndpoint
+    parseRpcTcpEndpoint =
+      RpcEndpointTcp . fromMaybe defaultRpcListenAddress
+        <$> Opt.optional parseRpcListenAddress
+        <*> Opt.option readPortNumber (mconcat
+              [ long "grpc-listen-port"
+              , metavar "PORT"
+              , help "[EXPERIMENTAL] TCP port the gRPC server listens on. When set, the gRPC server listens on plaintext TCP (HTTP/2 without TLS) instead of a unix socket. Mutually exclusive with --grpc-socket-path."
+              ])
+
+    parseRpcListenAddress :: Parser Text
+    parseRpcListenAddress =
+      strOption $ mconcat
+        [ long "grpc-listen-address"
+        , metavar "HOST"
+        , help "[EXPERIMENTAL] Host address the gRPC server binds to. Requires --grpc-listen-port. Defaults to 127.0.0.1."
+        ]
+
+-- | Read a TCP port number, rejecting values outside the 0 - 65535 range.
+readPortNumber :: Opt.ReadM PortNumber
+readPortNumber = Opt.eitherReader $ \raw ->
+  case readMaybe raw :: Maybe Integer of
+    Just port
+      | 0 <= port && port <= 65535 -> Right $ fromIntegral port
+      | otherwise -> Left $ "Port number out of range (0 - 65535): " <> show port
+    Nothing -> Left $ "Not a valid port number: " <> raw
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
