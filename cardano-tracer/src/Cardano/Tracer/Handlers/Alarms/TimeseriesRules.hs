@@ -218,8 +218,19 @@ buildRequest TimeseriesAlarmRule{tarRuleId, tarSummary, tarSeverity, tarLabels}
   windowIndex :: UTCTime -> Integer
   windowIndex t = floor (realToFrac (utcTimeToPOSIXSeconds t) * (1000 :: Double))
 
--- | Decode a query result into per-series boolean samples. Only three
---   shapes are meaningful; anything else is a shape error.
+-- | Decode a query result into per-series boolean samples.
+--
+-- Three top-level shapes are meaningful; anything else is a shape
+-- error. Inside an instant vector two element shapes are accepted:
+--
+--   * 'Truth'\/'Falsity' — produced by explicitly boolean queries such
+--     as @map (\\x -> x > 200) (m now)@;
+--   * 'Scalar' — produced by comparison filters such as @m now > 200@,
+--     which keep only the series satisfying the relation. Presence of
+--     a series in the result means the condition holds for it, exactly
+--     like a PromQL alert expression, so a surviving 'Scalar' decodes
+--     as true. Series filtered out are absent from the vector and are
+--     treated as missing (false) by the state machine.
 decodeSamples :: Value -> Maybe [SamplePoint]
 decodeSamples val = case val of
   Truth           -> Just [SamplePoint Map.empty True]
@@ -230,9 +241,10 @@ decodeSamples val = case val of
   decodeInstant :: Instant Value -> Maybe SamplePoint
   decodeInstant (Instant labels _ inner) = do
     truth <- case inner of
-      Truth   -> Just True
-      Falsity -> Just False
-      _       -> Nothing
+      Truth    -> Just True
+      Falsity  -> Just False
+      Scalar _ -> Just True
+      _        -> Nothing
     pure (SamplePoint (Map.fromList (Set.toList labels)) truth)
 
 -- | 'IO' wrapper around 'ruleRequests': reads the previous per-series

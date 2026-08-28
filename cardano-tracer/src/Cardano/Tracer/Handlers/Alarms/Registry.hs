@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The central alarm registry: static consumers (fixed at startup) sitting
@@ -14,6 +15,8 @@ module Cardano.Tracer.Handlers.Alarms.Registry
   , checkTraceObjectsForAlarms
   , readHistoryFiltered
   , runTimeseriesEvaluator
+  , evaluateTimeseriesRule
+  , evaluateTimeseriesRules
   , traceHistoryRead
   , lookupProducerCredential
   , lookupReaderCredential
@@ -27,7 +30,8 @@ import           Cardano.Tracer.Handlers.Alarms.Auth
 import           Cardano.Tracer.Handlers.Alarms.Consumers
 import           Cardano.Tracer.Handlers.Alarms.Store
 import           Cardano.Tracer.Handlers.Alarms.TimeseriesRules
-import           Cardano.Tracer.Handlers.Alarms.TraceRules
+import           Cardano.Tracer.Handlers.Alarms.TraceRules (TraceAlarmRule, traceAlarmSource,
+                   traceRuleFromConfig, traceRuleRequest)
 import           Cardano.Tracer.Handlers.Alarms.Types
 import           Cardano.Tracer.MetaTrace (TracerTrace (..), Trace, traceWith)
 
@@ -37,7 +41,7 @@ import           Control.Monad (forever)
 import           Data.Foldable (for_)
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text)
-import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 data AlarmRegistry = AlarmRegistry
@@ -133,7 +137,18 @@ runTimeseriesEvaluator registry tsHandle =
 evaluatorLoop :: AlarmRegistry -> TimeseriesHandle -> TimeseriesAlarmRule -> IO ()
 evaluatorLoop registry tsHandle rule = forever $ do
   threadDelay (fromIntegral (tarEvaluateEvery rule) * 1_000_000)
-  now    <- getCurrentTime
+  now <- getCurrentTime
+  evaluateTimeseriesRule registry tsHandle now rule
+
+-- | Evaluate one rule at an explicit timestamp: run its query against
+--   the store, decode the samples, advance the per-series state
+--   machines, and push any resulting alarms through 'acceptEvent'.
+--   Query and shape failures are traced as evaluation failures, never
+--   published as alarms. The evaluation time is an argument (rather
+--   than 'getCurrentTime') so tests can drive rules deterministically;
+--   the production 'evaluatorLoop' passes the current time.
+evaluateTimeseriesRule :: AlarmRegistry -> TimeseriesHandle -> UTCTime -> TimeseriesAlarmRule -> IO ()
+evaluateTimeseriesRule registry tsHandle now rule = do
   result <- execute tsHandle (round (utcTimeToPOSIXSeconds now * 1000)) (tarQuery rule)
   case result of
     Left err ->
@@ -150,6 +165,12 @@ evaluatorLoop registry tsHandle rule = forever $ do
       { ttAlarmTimeseriesEvalFailedRule   = unRuleId (tarRuleId rule)
       , ttAlarmTimeseriesEvalFailedReason = reason
       }
+
+-- | Evaluate every configured timeseries rule once at the given
+--   timestamp.
+evaluateTimeseriesRules :: AlarmRegistry -> TimeseriesHandle -> UTCTime -> IO ()
+evaluateTimeseriesRules registry tsHandle now =
+  for_ (arTimeseriesRules registry) (evaluateTimeseriesRule registry tsHandle now)
 
 lookupProducerCredential :: AlarmRegistry -> Text -> Maybe ProducerCredential
 lookupProducerCredential registry = lookupProducer (arAuth registry)

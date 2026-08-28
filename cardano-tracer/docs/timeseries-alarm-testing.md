@@ -38,34 +38,83 @@ rule logic (thresholds, `for` durations, edge-triggering, repeat intervals).
 propHighLatencyRaisesAlarm :: Property
 propHighLatencyRaisesAlarm = once $ ioProperty do
   bundle <- mkTraceBundle (SeverityF (Just Warning))
-  handle <- Timeseries.create @(Tree _) (timeseries bundle) Nothing
+  handle <- Timeseries.create @(Tree Double) (timeseries bundle) (Just noPruneConfig)
   registry <- newAlarmRegistry (assorted bundle) testAlarmsConfig
 
-  -- 1. Arrange: five samples, 30 s apart, all above the threshold
+  -- 1. Arrange: insert all samples up front (queries only look backward)
   let t0 = 1_700_000_000_000                       -- fixed ms timestamp
       series = Set.fromList [("node_name", "node-1")]
-  for_ [0 .. 4] \i ->
+  for_ [0 .. 10] \i ->
     Timeseries.insert handle series (t0 + i * 30_000) [("ping_latency_ms", 640)]
 
-  -- 2. Act: evaluate the rule once, at a fixed time
-  --    (evaluateTimeseriesRules is the Phase-2 evaluator entry point;
-  --     design it to take the evaluation timestamp as an argument!)
-  evaluateTimeseriesRules registry handle (t0 + 5 * 30_000)
+  -- 2. Act: evaluate all configured rules at fixed instants, one round
+  --    per simulated 30 s (the state machine needs several rounds to
+  --    cross the rule's `for` duration)
+  for_ [1 .. 10] \k ->
+    evaluateTimeseriesRules registry handle
+      (posixSecondsToUTCTime (fromIntegral (t0 `div` 1000 + 30 * k)))
 
   -- 3. Assert: exactly one alarm in the store
   events <- readHistoryFiltered registry Nothing 10 emptyAlarmFilter
   pure (length events === 1)
 ```
 
-Design rule for the evaluator that follows from this: **pass the evaluation
-time in explicitly** (like `pruneOnce` and `traceRuleRequest` already do).
-Anything that calls `getCurrentTime` internally cannot be tested
-deterministically.
+`evaluateTimeseriesRules :: AlarmRegistry -> TimeseriesHandle -> UTCTime -> IO ()`
+(and its single-rule sibling `evaluateTimeseriesRule`) in
+`Cardano.Tracer.Handlers.Alarms.Registry` **take the evaluation time
+explicitly** (like `pruneOnce` and `traceRuleRequest` already do); only the
+production `evaluatorLoop` supplies `getCurrentTime`. This is what makes the
+rounds above deterministic.
 
-Until the evaluator exists, the same pattern already works for testing query
-semantics alone: insert known samples, call `execute handle at query`, and
-assert on the returned `Value` (thresholds crossing true/false, missing data,
-window boundaries).
+The same pattern also works for testing query semantics alone: insert known
+samples, call `execute handle at query`, and assert on the returned `Value`
+(thresholds crossing true/false, missing data, window boundaries).
+
+Determinism pitfalls, learned the hard way (all verified against
+`cardano-timeseries-io`):
+
+- **Create the store with pruning disabled** (`pruningPeriodMillis =
+  Nothing`). The pruner compares against the real wall clock and silently
+  deletes fixed historical test timestamps.
+- **Instant lookups have a 300 s staleness bound** — a rule evaluated at `t`
+  sees a series only if it has a sample in `(t - 300 s, t]`, so test data
+  must keep sampling at least that often across the whole horizon.
+- **Keep timestamps large.** The Tree store's staleness-window arithmetic is
+  on `Word64` and underflows for query times below 300 000 ms.
+- **`rate` has no value on a single-point series** (hard error, traced as an
+  evaluation failure). Start evaluation rounds only after the range window
+  contains at least two populated grid points.
+- **A bare metric is a function of time**: instant threshold rules must
+  apply it, `m now > 200`; range forms `m[now - 5m; now]` take the metric
+  unapplied.
+- **Comparisons on instant vectors are filters**, not boolean vectors: the
+  result keeps the surviving series with their original values, and the
+  evaluator treats series *presence* as "condition holds" (exactly PromQL's
+  alert semantics).
+
+## Example test cases
+
+`Cardano.Tracer.Test.Alarms.TimeseriesTests` instantiates this pattern with
+three rules ported from the Grafana catalogue
+(`grafana-alerts-as-timeseries-rules.md`), each driven once with data that
+must not raise an alarm and once with data that must raise exactly one — six
+cases total. Samples arrive every 30 s from `t0`, one evaluation round per
+30 simulated seconds starting at round 1, and the history is read back
+through `readHistoryFiltered` for inspection.
+
+| Rule (query construct) | Quiet case — why no alarm | Alarm case — publish round |
+| --- | --- | --- |
+| `mempool-high` — `cardano_node_metrics_txsInMempool_int now > 200`, for 600 s | mempool hovers at 120–180: expression never true | constant 250: true from round 1, `for` satisfied at round 21; extra rounds prove the edge publishes once |
+| `blockheight-unchanged` — `rate (cardano_node_metrics_blockNum_int[now - 5m; now]) == 0`, for 120 s | chain grows by 1 block per sample: rate > 0, series filtered out every round | constant block height: rate exactly 0, publishes at round 5 with severity `critical` |
+| `high-ping-latency` — `avg_over_time (…ping_latency…[now - 5m; now]) > 500`, for 3600 s | 10 min spike at 600 ms, then recovery to 100 ms: expression true far shorter than `for`, pending state resets | constant 800 ms for 62 min: publishes at round 121 |
+
+The three quiet cases deliberately cover the three distinct ways a rule stays
+silent: the expression is never true (mempool), the series is filtered out of
+the result (blockheight), and the expression is true for less than the `for`
+duration before recovering (ping latency). The alarm cases assert exactly one
+event and inspect its `ruleId`, `severity`, `source` (`timeseries`), the
+`node_name` label carried over from the series key, and the
+per-series `sourceEventId` prefix (`ts:<ruleId>:node_name=node-1:`).
 
 ## Level 2: end-to-end with a launched `cardano-tracer`
 
@@ -98,12 +147,12 @@ alarms:
       - name: test-reader
         tokenFile: "reader.token" # written by the test setup
         allowHistory: true
-  timeseriesRules:                # Phase 2, not yet implemented
+  timeseriesRules:
     - ruleId: high-latency
       summary: "latency above threshold"
       severity: warning
       query: "avg_over_time (ping_latency_ms[now - 5m; now]) > 500"
-      evaluateEvery: 1s           # keep the test fast
+      evaluateEvery: 1            # seconds; keep the test fast
   consumers: []
 ```
 
