@@ -95,8 +95,8 @@ allow-older:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 61a188861c0b0c1877f8dee9723e6b1bd86594ab
-  --sha256: sha256-3/fGdijGqMXwDjwZ/uUJx8HzYTR2Jpg0QjYR0Mntir8=
+  tag: b7e2b7526580f42fa9f2bb87de1d63086e28e83f
+  --sha256: sha256-Pg41RbdXPlNaa+F281n7/wVx95+iJdb9v0XlNcpnW/Y=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -142,6 +142,14 @@ source-repository-package
     ouroboros-network
     cardano-diffusion
     network-mux
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 19148df7530ae81fb7e1dd99f3cebfa494f221f7
+  --sha256: sha256-cV4Kc60nQBpIE9p8Eetv7ZLK5t5Di4Dla0Y3cdvk0XY=
+  subdir:
+    window-stats
 
 -- Points to cardano-api/leios-prototype
 source-repository-package
