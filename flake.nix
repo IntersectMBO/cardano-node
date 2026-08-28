@@ -86,6 +86,8 @@
         head
         isDerivation
         mapAttrs
+        mapAttrs'
+        nameValuePair
         optionalAttrs
         optional
         optionals
@@ -259,6 +261,11 @@
           // {
             inherit (pkgs) checkCabalProject;
           }
+          # cardano-node built with a Leios EB ExUnits factor, one package per
+          # flake variant declared in nix/haskell.nix: cardano-node-eb<n>x.
+          // mapAttrs' (
+            vName: vProject: nameValuePair "cardano-node-${vName}" (collectExes vProject).cardano-node
+          ) project.projectVariants
           // flattenTree (
             pkgs.scripts
             // {

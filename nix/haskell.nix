@@ -25,6 +25,22 @@ let
       compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then windowsCompilerNixName else "ghc967");
       # Extra-compilers
       # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
+      # Leios EB ExUnits factor variants: build with the EB Plutus budget set
+      # to <n> times the RB budget (ppMaxBlockExUnits), via the
+      # LEIOS_EB_EXUNITS_FACTOR CPP macro read in
+      # Ouroboros.Consensus.Shelley.Ledger.Mempool, which lives in the
+      # `cardano` public sublibrary of the ouroboros-consensus package on the
+      # leios-prototype branch. The flake exposes these variants as
+      # packages.cardano-node-eb<n>x; the plain packages keep factor 1.
+      flake.variants = lib.listToAttrs (map (n: {
+        name = "eb${toString n}x";
+        value = {
+          modules = [{
+            packages.ouroboros-consensus.components.sublibs.cardano.ghcOptions =
+              [ "-DLEIOS_EB_EXUNITS_FACTOR=${toString n}" ];
+          }];
+        };
+      }) [ 2 4 8 ]);
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
