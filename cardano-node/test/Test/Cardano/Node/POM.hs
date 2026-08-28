@@ -21,7 +21,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import           Cardano.Rpc.Server.Config (RpcConfigF (..), makeRpcConfig)
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..), makeRpcConfig)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args
@@ -436,7 +436,7 @@ prop_rpcReload_cliEnabledYamlSilent :: Property
 prop_rpcReload_cliEnabledYamlSilent =
   H.propertyOnce $ do
     let cliConfig = testPartialCliConfig
-          { pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty
+          { pncRpcConfig = (mempty :: PartialRpcConfig){isEnabled = Last (Just True)}
           , pncSocketConfig = testSocketConfigWithPath
           }
         merged = defaultPartialNodeConfiguration <> testPartialYamlConfig <> cliConfig
@@ -447,7 +447,7 @@ prop_rpcReload_cliEnabledYamlSilent =
 prop_rpcReload_cliSilentYamlEnabled :: Property
 prop_rpcReload_cliSilentYamlEnabled =
   H.propertyOnce $ do
-    let yamlConfig = testPartialYamlConfig{pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty}
+    let yamlConfig = testPartialYamlConfig{pncRpcConfig = (mempty :: PartialRpcConfig){isEnabled = Last (Just True)}}
         cliConfig = testPartialCliConfig{pncSocketConfig = testSocketConfigWithPath}
         merged = defaultPartialNodeConfiguration <> yamlConfig <> cliConfig
     NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
@@ -465,9 +465,9 @@ prop_rpcReload_bothSilent =
 prop_rpcReload_cliOverridesYaml :: Property
 prop_rpcReload_cliOverridesYaml =
   H.propertyOnce $ do
-    let yamlConfig = testPartialYamlConfig{pncRpcConfig = RpcConfig (Last (Just False)) mempty mempty}
+    let yamlConfig = testPartialYamlConfig{pncRpcConfig = (mempty :: PartialRpcConfig){isEnabled = Last (Just False)}}
         cliConfig = testPartialCliConfig
-          { pncRpcConfig = RpcConfig (Last (Just True)) mempty mempty
+          { pncRpcConfig = (mempty :: PartialRpcConfig){isEnabled = Last (Just True)}
           , pncSocketConfig = testSocketConfigWithPath
           }
         merged = defaultPartialNodeConfiguration <> yamlConfig <> cliConfig
