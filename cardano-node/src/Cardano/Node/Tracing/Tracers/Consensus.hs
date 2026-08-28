@@ -25,6 +25,10 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , LeiosBlockTxsAcquiredComp
   , LeiosBlockTxsAcquiredStats
   , leiosBlockTxsAcquiredAge
+  , type LeiosAnnouncementAcceptedKind (..)
+  , LeiosAnnouncementAcceptedComp 
+  , LeiosAnnouncementAcceptedStats 
+  , leiosAnnouncementAcceptedAge
     -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
@@ -92,20 +96,11 @@ import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-<<<<<<< HEAD
 import           LeiosDemoLogic.Announcements.ElBimap (ElId (..))
 import           LeiosDemoTypes (AnnouncementFields (..), FetchArrivalBytes (..),
                    TraceLeiosKernel (..), TraceLeiosPeer (..), traceLeiosKernelToObject,
                    traceLeiosPeerToObject)
 import qualified LeiosDemoTypes as Leios
-||||||| parent of d0b50a5b6 (Revert "CDFs for EB announcements")
-import           LeiosDemoTypes (AnnouncementFields (..), TraceLeiosKernel (..), TraceLeiosPeer (..),
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
-import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
-=======
-import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
-                   traceLeiosKernelToObject, traceLeiosPeerToObject)
->>>>>>> d0b50a5b6 (Revert "CDFs for EB announcements")
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -2325,6 +2320,34 @@ mapLeiosSeverity = \case
   Leios.LSError   -> Error
 
 
+type data LeiosAnnouncementAcceptedKind = LeiosAnnouncementAccepted
+type LeiosAnnouncementAcceptedComp = 10
+type LeiosAnnouncementAcceptedStats = Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted
+
+leiosAnnouncementAcceptedAge :: TraceLeiosKernel -> Maybe Double
+leiosAnnouncementAcceptedAge = \case
+  TraceLeiosAnnouncementAccepted _ _ _ age
+    -> realToFrac <$> age
+  _ -> Nothing
+
+instance LogFormatting (Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted) where
+  forMachine _dtal _ = mempty
+  asMetrics Stats { tdigestWindow } =
+    [ DoubleM ("leios.eb.announcement.delay." <> n) v
+    | (p, n) <- [(0.90, "p90"), (0.95, "p95"), (0.99, "p99")]
+    , v <- maybeToList (TDigest.quantile p tdigestWindow)
+    ]
+
+instance MetaTrace (Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted) where
+  namespaceFor Stats {} = Namespace [] ["LeiosMetrics", "Eb", "Announcement"]
+  severityFor _ _ = Just Info
+
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["LeiosMetrics", "Eb", "Announcement"]
+    ]
+
+
 -- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
 instance LogFormatting TraceLeiosKernel where
@@ -2360,7 +2383,7 @@ type LeiosBlockTxsAcquiredStats = Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsA
 instance LogFormatting (Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired) where
   forMachine _dtal _ = mempty
   asMetrics Stats { tdigestWindow } =
-    [ DoubleM ("leios.eb.txs.acquired." <> n) v
+    [ DoubleM ("leios.eb.txs.acquired.delay." <> n) v
     | (p, n) <- [(0.90, "p90"), (0.95, "p95"), (0.99, "p99")]
     , v <- maybeToList (TDigest.quantile p tdigestWindow)
     ]
@@ -2378,9 +2401,8 @@ instance MetaTrace (Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired) where
 -- acquired, i.e. the sample fed into 'LeiosBlockTxsAcquiredStats'.
 leiosBlockTxsAcquiredAge :: TraceLeiosKernel -> Maybe Double
 leiosBlockTxsAcquiredAge = \case
-  TraceLeiosBlockTxsAcquired { ebAge } -> Just (realToFrac ebAge)
-  _                                    -> Nothing
-
+  TraceLeiosBlockTxsAcquired _ age -> realToFrac <$> age
+  _                                -> Nothing
 
 instance LogFormatting TraceLeiosPeer where
   forMachine _dtal = traceLeiosPeerToObject
