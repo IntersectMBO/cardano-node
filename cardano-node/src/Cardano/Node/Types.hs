@@ -49,7 +49,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..), RpcTlsFiles (..))
 
 import           Control.Exception
 import           Data.Aeson
@@ -516,7 +516,16 @@ instance Functor f => AdjustFilePaths (RpcConfigF f) where
       }
    where
     adjustEndpoint (RpcEndpointUnixSocket socketPath) = RpcEndpointUnixSocket $ adjustFilePaths f socketPath
-    adjustEndpoint endpoint@RpcEndpointTcp{} = endpoint
+    adjustEndpoint endpoint@RpcEndpointHttp{} = endpoint
+    adjustEndpoint (RpcEndpointHttps host port tlsFiles) =
+      RpcEndpointHttps host port (adjustTlsFiles tlsFiles)
+
+    adjustTlsFiles RpcTlsFiles{certificateFile, privateKeyFile, chainCertificateFiles} =
+      RpcTlsFiles
+        { certificateFile = adjustFilePaths f certificateFile
+        , privateKeyFile = adjustFilePaths f privateKeyFile
+        , chainCertificateFiles = adjustFilePaths f <$> chainCertificateFiles
+        }
 
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath

@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
@@ -13,9 +14,11 @@ module Cardano.Node.Parsers
   , parseHostPort
   ) where
 
+import           Cardano.Api (FileDirection (In))
+
 import           Cardano.Logging.Types
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Node.Configuration.NodeAddress (File (..),
+import           Cardano.Node.Configuration.NodeAddress (File (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
@@ -24,17 +27,18 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..), RpcEndpoint (..),
-                   defaultRpcListenAddress)
+                   RpcTlsFiles (..), TlsCertificate, TlsPrivateKey, defaultRpcListenAddress)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
 import           Data.Char (isDigit)
 import           Data.Foldable
+import           Data.IP (IP)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Word (Word16, Word32)
+import           Data.Word (Word32)
 import           Options.Applicative hiding (str, switch)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
@@ -172,10 +176,10 @@ parseHostPort str
   = if
     | null hostRev        -> Left "parseHostPort: Empty host."
     | null portRev        -> Left "parseHostPort: Empty port."
-    | all isDigit portRev
-    , Just port <- readMaybe @Word16 (reverse portRev) -> if
-      | 0 <= port, port <= 65535 -> Right (Net.RemoteSocket (Text.pack (reverse hostRev)) port)
-      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
+    | all isDigit portRev ->
+        case parsePortNumber (reverse portRev) of
+          Right port -> Right (Net.RemoteSocket (Text.pack (reverse hostRev)) (fromIntegral port))
+          Left err   -> Left ("parseHostPort: " ++ err)
     | otherwise -> Left "parseHostPort: Non-numeric port."
   | otherwise
   = Left "parseHostPort: No colon found."
@@ -241,9 +245,18 @@ parseNodeHostIPv6Address str =
     (Right . NodeHostIPv6Address)
     (readMaybe str)
 
+-- | Parse either an IPv4 or an IPv6 address, unlike 'parseNodeHostIPv4Address'
+-- and 'parseNodeHostIPv6Address' which each accept only one address family.
+parseNodeHostIPAddress :: String -> Either String NodeHostIPAddress
+parseNodeHostIPAddress str =
+  maybe
+    (Left $ "Failed to parse IP address: " ++ str)
+    (Right . NodeHostIPAddress)
+    (readMaybe str)
+
 parsePort :: Parser PortNumber
 parsePort =
-    Opt.option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    Opt.option readPortNumber (
           long "port"
        <> metavar "PORT"
        <> help "The port number"
@@ -439,7 +452,7 @@ parseStartAsNonProducingNode =
 parseRpcConfig :: Parser PartialRpcConfig
 parseRpcConfig = do
   isEnabled <- lastOption parseRpcToggle
-  rpcEndpoint <- lastOption $ parseRpcUnixSocketEndpoint <|> parseRpcTcpEndpoint
+  rpcEndpoint <- lastOption $ parseRpcUnixSocketEndpoint <|> parseRpcHttpEndpoint
   pure (mempty :: PartialRpcConfig){isEnabled, rpcEndpoint}
   where
     parseRpcToggle :: Parser Bool
@@ -456,32 +469,80 @@ parseRpcConfig = do
           "grpc-socket-path"
           "[EXPERIMENTAL] gRPC unix socket path. Defaults to rpc.sock in the same directory as the node socket. Mutually exclusive with --grpc-listen-port."
 
-    parseRpcTcpEndpoint :: Parser RpcEndpoint
-    parseRpcTcpEndpoint =
-      RpcEndpointTcp . fromMaybe defaultRpcListenAddress
+    parseRpcHttpEndpoint :: Parser RpcEndpoint
+    parseRpcHttpEndpoint =
+      mkHttpEndpoint
         <$> Opt.optional parseRpcListenAddress
         <*> Opt.option readPortNumber (mconcat
               [ long "grpc-listen-port"
               , metavar "PORT"
-              , help "[EXPERIMENTAL] TCP port the gRPC server listens on. When set, the gRPC server listens on plaintext TCP (HTTP/2 without TLS) instead of a unix socket. Mutually exclusive with --grpc-socket-path."
+              , help "[EXPERIMENTAL] TCP port the gRPC server listens on. When set, the gRPC server listens over HTTP/2 without TLS, or HTTP/2 over TLS if --grpc-tls-certificate is given, instead of a unix socket. Mutually exclusive with --grpc-socket-path."
               ])
+        <*> Opt.optional parseRpcTlsFiles
 
-    parseRpcListenAddress :: Parser Text
+    mkHttpEndpoint :: Maybe IP -> PortNumber -> Maybe RpcTlsFiles -> RpcEndpoint
+    mkHttpEndpoint mAddress port =
+      maybe (RpcEndpointHttp address port) (RpcEndpointHttps address port)
+     where
+      address = fromMaybe defaultRpcListenAddress mAddress
+
+    parseRpcListenAddress :: Parser IP
     parseRpcListenAddress =
-      strOption $ mconcat
+      unNodeHostIPAddress <$> Opt.option (eitherReader parseNodeHostIPAddress) (mconcat
         [ long "grpc-listen-address"
-        , metavar "HOST"
-        , help "[EXPERIMENTAL] Host address the gRPC server binds to. Requires --grpc-listen-port. Defaults to 127.0.0.1."
+        , metavar "IP-ADDRESS"
+        , help "[EXPERIMENTAL] IP address the gRPC server binds to. Requires --grpc-listen-port. Defaults to 127.0.0.1."
+        ])
+
+    parseRpcTlsFiles :: Parser RpcTlsFiles
+    parseRpcTlsFiles =
+      RpcTlsFiles
+        <$> parseRpcTlsCertificateFile
+        <*> parseRpcTlsPrivateKeyFile
+        <*> Opt.many parseRpcTlsChainCertificateFile
+
+    parseRpcTlsCertificateFile :: Parser (File TlsCertificate 'In)
+    parseRpcTlsCertificateFile =
+      strOption $ mconcat
+        [ long "grpc-tls-certificate"
+        , metavar "FILEPATH"
+        , help "[EXPERIMENTAL] Path to the TLS certificate file. Enables TLS; requires --grpc-tls-private-key and --grpc-listen-port."
+        , completer (bashCompleter "file")
         ]
 
--- | Read a TCP port number, rejecting values outside the 0 - 65535 range.
+    parseRpcTlsPrivateKeyFile :: Parser (File TlsPrivateKey 'In)
+    parseRpcTlsPrivateKeyFile =
+      strOption $ mconcat
+        [ long "grpc-tls-private-key"
+        , metavar "FILEPATH"
+        , help "[EXPERIMENTAL] Path to the TLS private key file. Requires --grpc-tls-certificate and --grpc-listen-port."
+        , completer (bashCompleter "file")
+        ]
+
+    parseRpcTlsChainCertificateFile :: Parser (File TlsCertificate 'In)
+    parseRpcTlsChainCertificateFile =
+      strOption $ mconcat
+        [ long "grpc-tls-chain-certificate"
+        , metavar "FILEPATH"
+        , help "[EXPERIMENTAL] Path to an additional certificate to include in the TLS chain. May be given multiple times. Requires --grpc-tls-certificate and --grpc-tls-private-key."
+        , completer (bashCompleter "file")
+        ]
+
 readPortNumber :: Opt.ReadM PortNumber
-readPortNumber = Opt.eitherReader $ \raw ->
-  case readMaybe raw :: Maybe Integer of
-    Just port
-      | 0 <= port && port <= 65535 -> Right $ fromIntegral port
-      | otherwise -> Left $ "Port number out of range (0 - 65535): " <> show port
-    Nothing -> Left $ "Not a valid port number: " <> raw
+readPortNumber = Opt.eitherReader parsePortNumber
+
+-- | Parse a port number, rejecting values outside the 0 - 65535 range.
+-- Decimal digits only - hex/octal notation, a sign, and surrounding
+-- whitespace (all otherwise accepted by a plain 'Integer' read) are rejected.
+parsePortNumber :: String -> Either String PortNumber
+parsePortNumber raw
+  | not (all isDigit raw) = Left $ "Not a valid port number: " <> raw
+  | otherwise =
+      case readMaybe raw :: Maybe Integer of
+        Just port
+          | 0 <= port && port <= 65535 -> Right $ fromIntegral port
+          | otherwise -> Left $ "Port number out of range (0 - 65535): " <> show port
+        Nothing -> Left $ "Not a valid port number: " <> raw
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

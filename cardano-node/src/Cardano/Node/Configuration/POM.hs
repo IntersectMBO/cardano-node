@@ -34,12 +34,13 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConse
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPAddress (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
-                   RpcEndpoint (..), defaultRpcListenAddress, makeRpcConfig)
+                   RpcEndpoint (..), RpcTlsFiles (..), defaultRpcListenAddress, makeRpcConfig)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
@@ -413,21 +414,7 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
-      pncRpcConfig <- do
-        enableRpc <- Last <$> v .:? "EnableRpc"
-        mSocketPath <- v .:? "RpcSocketPath"
-        mListenAddress <- v .:? "RpcListenAddress"
-        mListenPort :: Maybe Word16 <- v .:? "RpcListenPort"
-        rpcEndpoint <- case (mSocketPath, mListenAddress, mListenPort) of
-          (Just _, Just _, _) -> fail "RpcSocketPath and RpcListenAddress are mutually exclusive"
-          (Just _, _, Just _) -> fail "RpcSocketPath and RpcListenPort are mutually exclusive"
-          (Nothing, Just _, Nothing) -> fail "RpcListenAddress requires RpcListenPort to be set"
-          (Just socketPath, Nothing, Nothing) -> pure . Just $ RpcEndpointUnixSocket socketPath
-          (Nothing, _, Just listenPort) ->
-            pure . Just $
-              RpcEndpointTcp (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort)
-          (Nothing, Nothing, Nothing) -> pure Nothing
-        pure (mempty :: PartialRpcConfig){isEnabled = enableRpc, rpcEndpoint = Last rpcEndpoint}
+      pncRpcConfig <- parsePartialRpcConfig v
 
       txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
       let parseInitDelay =
@@ -732,6 +719,46 @@ instance FromJSON PartialNodeConfiguration where
           { npcCheckpointsFile
           , npcCheckpointsFileHash
           }
+
+      parsePartialRpcConfig v = do
+        enableRpc <- Last <$> v .:? "EnableRpc"
+        mSocketPath <- v .:? "RpcSocketPath"
+        mListenAddress <- fmap unNodeHostIPAddress <$> v .:? "RpcListenAddress"
+        mListenPort :: Maybe Word16 <- v .:? "RpcListenPort"
+        mTlsFiles <- parseRpcTlsFiles v
+        rpcEndpoint <- case (mSocketPath, mListenAddress, mListenPort, mTlsFiles) of
+          (Just _, Just _, _, _) -> fail "RpcSocketPath and RpcListenAddress are mutually exclusive"
+          (Just _, _, Just _, _) -> fail "RpcSocketPath and RpcListenPort are mutually exclusive"
+          (Just _, _, _, Just _) -> fail "RpcSocketPath and TLS configuration are mutually exclusive"
+          (Just socketPath, Nothing, Nothing, Nothing) -> pure . Just $ RpcEndpointUnixSocket socketPath
+          (Nothing, Just _, Nothing, _) -> fail "RpcListenAddress requires RpcListenPort to be set"
+          (Nothing, _, Nothing, Just _) -> fail "TLS configuration requires RpcListenPort to be set"
+          (Nothing, _, Just listenPort, Just tlsFiles) ->
+            pure . Just $
+              RpcEndpointHttps (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort) tlsFiles
+          (Nothing, _, Just listenPort, Nothing) ->
+            pure . Just $
+              RpcEndpointHttp (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort)
+          (Nothing, Nothing, Nothing, Nothing) -> pure Nothing
+        pure (mempty :: PartialRpcConfig){isEnabled = enableRpc, rpcEndpoint = Last rpcEndpoint}
+
+      parseRpcTlsFiles v = do
+        mCertificateFile <- v .:? "RpcTlsCertificateFile"
+        mPrivateKeyFile <- v .:? "RpcTlsPrivateKeyFile"
+        mChainCertificateFiles <- v .:? "RpcTlsChainCertificateFiles"
+        case (mCertificateFile, mPrivateKeyFile) of
+          (Just certificateFile, Just privateKeyFile) ->
+            pure . Just $
+              RpcTlsFiles
+                { certificateFile
+                , privateKeyFile
+                , chainCertificateFiles = fromMaybe [] mChainCertificateFiles
+                }
+          (Nothing, Nothing)
+            | Just _ <- mChainCertificateFiles ->
+                fail "RpcTlsChainCertificateFiles requires RpcTlsCertificateFile and RpcTlsPrivateKeyFile to be set"
+            | otherwise -> pure Nothing
+          _ -> fail "RpcTlsCertificateFile and RpcTlsPrivateKeyFile must be set together"
 
 -- | Default configuration is mainnet
 defaultPartialNodeConfiguration :: PartialNodeConfiguration
