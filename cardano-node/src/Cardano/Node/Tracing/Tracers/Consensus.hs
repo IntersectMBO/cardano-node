@@ -26,6 +26,10 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , LeiosBlockTxsAcquiredComp
   , LeiosBlockTxsAcquiredStats
   , leiosBlockTxsAcquiredAge
+  , type LeiosAnnouncementAcceptedKind (..)
+  , LeiosAnnouncementAcceptedComp 
+  , LeiosAnnouncementAcceptedStats 
+  , leiosAnnouncementAcceptedAge
     -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
@@ -2302,6 +2306,34 @@ instance MetaTrace KESAgentClientTrace where
 -- Leios
 --------------------------------------------------------------------------------
 
+type data LeiosAnnouncementAcceptedKind = LeiosAnnouncementAccepted
+type LeiosAnnouncementAcceptedComp = 10
+type LeiosAnnouncementAcceptedStats = Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted
+
+leiosAnnouncementAcceptedAge :: TraceLeiosKernel -> Maybe Double
+leiosAnnouncementAcceptedAge = \case
+  TraceLeiosAnnouncementAccepted _ _ _ age
+    -> realToFrac <$> age
+  _ -> Nothing
+
+instance LogFormatting (Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted) where
+  forMachine _dtal _ = mempty
+  asMetrics Stats { tdigestWindow } =
+    [ DoubleM ("leios.eb.announcement.delay." <> n) v
+    | (p, n) <- [(0.90, "p90"), (0.95, "p95"), (0.99, "p99")]
+    , v <- maybeToList (TDigest.quantile p tdigestWindow)
+    ]
+
+instance MetaTrace (Stats LeiosAnnouncementAcceptedComp LeiosAnnouncementAccepted) where
+  namespaceFor Stats {} = Namespace [] ["LeiosMetrics", "Eb", "Announcement"]
+  severityFor _ _ = Just Info
+
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["LeiosMetrics", "Eb", "Announcement"]
+    ]
+
+
 -- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
 instance LogFormatting TraceLeiosKernel where
@@ -2384,7 +2416,7 @@ type LeiosBlockTxsAcquiredStats = Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsA
 instance LogFormatting (Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired) where
   forMachine _dtal _ = mempty
   asMetrics Stats { tdigestWindow } =
-    [ DoubleM ("leios.eb.txs.acquired." <> n) v
+    [ DoubleM ("leios.eb.txs.acquired.delay." <> n) v
     | (p, n) <- [(0.90, "p90"), (0.95, "p95"), (0.99, "p99")]
     , v <- maybeToList (TDigest.quantile p tdigestWindow)
     ]
@@ -2404,7 +2436,6 @@ leiosBlockTxsAcquiredAge :: TraceLeiosKernel -> Maybe Double
 leiosBlockTxsAcquiredAge = \case
   TraceLeiosBlockTxsAcquired { ebAge } -> Just (realToFrac ebAge)
   _                                    -> Nothing
-
 
 instance LogFormatting TraceLeiosPeer where
   forMachine _dtal = traceLeiosPeerToObject

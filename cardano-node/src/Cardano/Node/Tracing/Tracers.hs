@@ -362,6 +362,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "LeiosKernel"]
     configureTracers configReflection trConfig [leiosKernelTr]
 
+    !leiosAnnouncementAcceptedStatsTr <-
+      mkStatsTracer
+        1800 -- bucket duration (seconds)
+        24 -- retention window, in buckets (12h)
+        (natSing @LeiosAnnouncementAcceptedComp)
+        45 -- minimal samples before reporting percentiles
+        20 -- all initial samples higher than 20s will be ignored
+        leiosAnnouncementAcceptedAge
+        (mkTracer (traceWith (metricsFormatter (mkMetricsTracer mbTrEKG) :: Trace IO LeiosAnnouncementAcceptedStats)))
+
     !leiosBlockTxsAcquiredStatsTr <-
       mkStatsTracer
         1800 -- bucket duration (seconds)
@@ -369,7 +379,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
         (natSing @LeiosBlockTxsAcquiredComp)
         45 -- minimal samples before reporting percentiles
         20 -- all initial samples higher than 20s will be ignored
-        leiosBlockTxsAcquiredAge
+        leiosAnnouncementAcceptedAge
         (mkTracer (traceWith (metricsFormatter (mkMetricsTracer mbTrEKG) :: Trace IO LeiosBlockTxsAcquiredStats)))
 
     !leiosPeerTr <- mkCardanoTracer
@@ -433,6 +443,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txCountersTracer
       , Consensus.leiosKernelTracer =
           mkTracer (traceWith leiosKernelTr)
+          <> leiosAnnouncementAcceptedStatsTr
           <> leiosBlockTxsAcquiredStatsTr
       , Consensus.leiosPeerTracer = mkTracer $
           traceWith leiosPeerTr
