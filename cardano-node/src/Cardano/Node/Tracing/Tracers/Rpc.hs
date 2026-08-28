@@ -9,16 +9,14 @@
 
 module Cardano.Node.Tracing.Tracers.Rpc () where
 
-import           Cardano.Api (File (..))
 import           Cardano.Api.Pretty
 
 import           Cardano.Logging hiding (nsInner)
 import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcNodeKernelAccess (..),
                    TraceRpcQuery (..), TraceRpcSubmit (..), TraceRpcSync (..), TraceSpanEvent (..))
-import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
+import           Cardano.Rpc.Server.Config ()
 
 import           Data.Aeson (Object, Value (..), (.=))
-import qualified Data.Text as Text
 
 instance LogFormatting TraceRpc where
   forMachine _dtal tr =
@@ -69,7 +67,7 @@ instance LogFormatting TraceRpc where
                 TraceRpcUnsupportedBlockType blockType -> ["blockType" .= String blockType]
           TraceRpcServerListening endpoint ->
             [ "kind" .= String "ServerListening"
-            , "endpoint" .= endpointToText endpoint
+            , "endpoint" .= docToText (pretty endpoint)
             ]
 
   forHuman = docToText . pretty
@@ -220,7 +218,3 @@ spanToObject =
   mconcat . \case
     SpanBegin spanId -> ["span" .= String "begin", "spanId" .= spanId]
     SpanEnd spanId -> ["span" .= String "end", "spanId" .= spanId]
-
-endpointToText :: RpcEndpoint -> Text
-endpointToText (RpcEndpointUnixSocket (File socketPath)) = Text.pack socketPath
-endpointToText (RpcEndpointTcp host port) = host <> ":" <> Text.pack (show port)

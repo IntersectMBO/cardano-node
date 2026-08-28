@@ -29,6 +29,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Types (PeerSnapshotFile (..))
+import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
 import           Cardano.Slotting.Slot (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
@@ -147,6 +148,14 @@ data StartupTrace blk =
   | RpcUnsupportedBlockType Text
   -- | Log RPC is forcefully disabled after a RPC server crash.
   | RpcForceDisabled
+  -- | Warn that the RPC (gRPC) server is enabled on a block-producing node.
+  | RpcEnabledOnBlockProducer
+  -- | Warn that the RPC (gRPC) server is listening on a non-loopback address.
+  | RpcListeningOnPublicAddress RpcEndpoint
+  -- | Warn that 'SSLKEYLOGFILE' is set, so the RPC TLS listener will write TLS session key-log material.
+  | RpcTlsKeyLogEnabled Text
+  -- | Warn that the RPC TLS private key file is readable by group or others.
+  | RpcTlsPrivateKeyPermissive Text
 
   | MovedTopLevelOption String
 
