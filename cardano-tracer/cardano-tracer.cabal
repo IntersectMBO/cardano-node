@@ -286,6 +286,7 @@ test-suite cardano-tracer-test
   main-is:              cardano-tracer-test.hs
 
   other-modules:        Cardano.Tracer.Test.Alarms.Tests
+                        Cardano.Tracer.Test.Alarms.TimeseriesTests
                         Cardano.Tracer.Test.Forwarder
                         Cardano.Tracer.Test.DataPoint.Tests
                         Cardano.Tracer.Test.Logs.Tests
@@ -296,6 +297,7 @@ test-suite cardano-tracer-test
   build-depends:        aeson
                       , async
                       , bytestring
+                      , cardano-timeseries-io
                       , cardano-tracer
                       , cborg
                       , containers

@@ -485,7 +485,7 @@ The following choices do not block the architecture:
 1. Which push consumers are required first (`webhook`, `email`, a message broker,
    or another integration).
 2. Which embedded storage backend should implement `AlarmStore`.
-3. Whether Hermod gains a native HTTP alarm sink immediately or initially uses an
+3. Whether Hermod Recon gains a native HTTP alarm sink immediately or initially uses an
    adapter.
 4. Whether configuration hot reload is needed.
 5. Whether consumer retry queues must survive process restart in the first

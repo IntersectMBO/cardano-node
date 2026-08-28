@@ -43,9 +43,12 @@ data AlarmStoreHandle = AlarmStoreHandle
   , ashWake      :: !(MVar ()) -- ^ unused for now (no dynamic reconfiguration in this sketch); kept so the pruner loop matches Cardano.Timeseries.Component.create's shape
   }
 
--- | Prune every 60 seconds when any retention limit is configured; otherwise
---   the pruner thread just parks, mirroring
---   @Cardano.Timeseries.Component.create@'s pruner.
+-- | Prune every 60 seconds when any retention limit is configured. With no
+--   retention there is nothing to prune, ever, and no pruner is started: a
+--   thread parked forever on 'ashWake' would be killed by the RTS's deadlock
+--   detector once the handle becomes garbage, and 'link' would then rethrow
+--   into whatever the creating thread is doing by that time (observed as
+--   spurious failures in unrelated tests).
 pruneIntervalMicros :: Int
 pruneIntervalMicros = 60 * 1000 * 1000
 
@@ -57,17 +60,16 @@ newAlarmStore retention = do
   wake     <- newEmptyMVar
   startTag <- Text.pack . show <$> getTimeMs
   let handle = AlarmStoreHandle events index nextSeq startTag retention wake
-  async (runPruner handle) >>= link
+  case (arcMaxAgeSeconds retention, arcMaxEvents retention) of
+    (Nothing, Nothing) -> pure ()
+    _ -> async (runPruner handle) >>= link
   pure handle
  where
   runPruner :: AlarmStoreHandle -> IO ()
-  runPruner handle = forever $
-    case (arcMaxAgeSeconds (ashRetention handle), arcMaxEvents (ashRetention handle)) of
-      (Nothing, Nothing) -> takeMVar (ashWake handle) -- no retention configured; nothing to do, ever
-      _ -> do
-        now <- getCurrentTime
-        pruneOnce handle now
-        race_ (threadDelay pruneIntervalMicros) (takeMVar (ashWake handle))
+  runPruner handle = forever $ do
+    now <- getCurrentTime
+    pruneOnce handle now
+    race_ (threadDelay pruneIntervalMicros) (takeMVar (ashWake handle))
 
 -- | Insert a new event, or return the already-accepted event for a replayed
 --   @(source, sourceEventId)@ pair without dispatching it again. One STM
