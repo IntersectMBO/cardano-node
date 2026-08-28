@@ -91,12 +91,13 @@ allow-older:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to ouroboros-consensus/leios-prototype
+-- Points to ouroboros-consensus/perturbing/leios-eb-exunits-factor
+-- (leios-prototype at 61a18886 + build-time LEIOS_EB_EXUNITS_FACTOR)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 61a188861c0b0c1877f8dee9723e6b1bd86594ab
-  --sha256: sha256-3/fGdijGqMXwDjwZ/uUJx8HzYTR2Jpg0QjYR0Mntir8=
+  tag: b39adef3d6e471979ace5b96af22020aeb89e1e3
+  --sha256: sha256-WpMUJ0oO0tGH0FQy/PK0CGfxeEPLLkrgvHursiS93Xw=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
