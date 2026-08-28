@@ -30,6 +30,7 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
+import           Cardano.Node.Tracing.Stats (mkStatsTracer)
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
@@ -64,6 +65,7 @@ import           "contra-tracer" Control.Tracer (mkTracer)
 import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
+import           GHC.TypeLits (natSing)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
@@ -360,6 +362,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "LeiosKernel"]
     configureTracers configReflection trConfig [leiosKernelTr]
 
+    !leiosBlockTxsAcquiredStatsTr <-
+      mkStatsTracer
+        1800 -- bucket duration (seconds)
+        24 -- retention window, in buckets (12h)
+        (natSing @LeiosBlockTxsAcquiredComp)
+        45 -- minimal samples before reporting percentiles
+        20 -- all initial samples higher than 20s will be ignored
+        leiosBlockTxsAcquiredAge
+        (mkTracer (traceWith (metricsFormatter (mkMetricsTracer mbTrEKG) :: Trace IO LeiosBlockTxsAcquiredStats)))
+
     !leiosPeerTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "LeiosPeer"]
@@ -419,8 +431,9 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = mkTracer $
           traceWith txCountersTracer
-      , Consensus.leiosKernelTracer = mkTracer $
-          traceWith leiosKernelTr
+      , Consensus.leiosKernelTracer =
+          mkTracer (traceWith leiosKernelTr)
+          <> leiosBlockTxsAcquiredStatsTr
       , Consensus.leiosPeerTracer = mkTracer $
           traceWith leiosPeerTr
       }

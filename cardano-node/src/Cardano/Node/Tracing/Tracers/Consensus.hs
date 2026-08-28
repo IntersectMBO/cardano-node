@@ -7,6 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,6 +20,12 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
+    -- ** LeiosBlockTxsAcquired Stats
+  , type LeiosBlockTxsAcquiredKind (..)
+  , LeiosBlockTxsAcquiredComp
+  , LeiosBlockTxsAcquiredStats
+  , leiosBlockTxsAcquiredAge
+    -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
   , impliesMempoolTimeoutSoft
@@ -33,6 +40,7 @@ import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
+import           Cardano.Node.Tracing.Stats (Stats (..))
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -78,6 +86,8 @@ import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
 import qualified Data.List as List
+import           Data.Maybe (maybeToList)
+import qualified Data.TDigest as TDigest
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
@@ -2342,6 +2352,35 @@ instance MetaTrace TraceLeiosKernel where
   documentFor _ = Nothing
   metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosKernelNSByPath p)
   allNamespaces = Namespace [] <$> Leios.leiosKernelNSPaths
+
+type data LeiosBlockTxsAcquiredKind = LeiosBlockTxsAcquired
+type LeiosBlockTxsAcquiredComp = 10
+type LeiosBlockTxsAcquiredStats = Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired
+
+instance LogFormatting (Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired) where
+  forMachine _dtal _ = mempty
+  asMetrics Stats { tdigestWindow } =
+    [ DoubleM ("leios.eb.txs.acquired." <> n) v
+    | (p, n) <- [(0.90, "p90"), (0.95, "p95"), (0.99, "p99")]
+    , v <- maybeToList (TDigest.quantile p tdigestWindow)
+    ]
+
+instance MetaTrace (Stats LeiosBlockTxsAcquiredComp LeiosBlockTxsAcquired) where
+  namespaceFor Stats {} = Namespace [] ["LeiosMetrics", "Eb", "TxsAcquired"]
+  severityFor _ _ = Just Info
+
+  documentFor _ = Nothing
+  allNamespaces =
+    [ Namespace [] ["LeiosMetrics", "Eb", "TxsAcquired"]
+    ]
+
+-- | The elapsed time since the EB's slot onset until all of its txs were
+-- acquired, i.e. the sample fed into 'LeiosBlockTxsAcquiredStats'.
+leiosBlockTxsAcquiredAge :: TraceLeiosKernel -> Maybe Double
+leiosBlockTxsAcquiredAge = \case
+  TraceLeiosBlockTxsAcquired { ebAge } -> Just (realToFrac ebAge)
+  _                                    -> Nothing
+
 
 instance LogFormatting TraceLeiosPeer where
   forMachine _dtal = traceLeiosPeerToObject

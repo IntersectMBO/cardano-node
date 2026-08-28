@@ -99,6 +99,7 @@ library
                         Cardano.Node.Tracing.NodeStartupInfo
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
+                        Cardano.Node.Tracing.Stats
                         Cardano.Node.Tracing.Tracers
                         Cardano.Node.Tracing.Tracers.BlockReplayProgress
                         Cardano.Node.Tracing.Tracers.ChainDB
@@ -182,6 +183,7 @@ library
                       , strict-sop-core
                       , sop-core
                       , sop-extras
+                      , tdigest
                       , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.12.0
@@ -190,6 +192,7 @@ library
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
+                      , window-stats:with-tdigest
                       , yaml
 
 executable cardano-node
