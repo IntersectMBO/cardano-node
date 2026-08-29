@@ -43,6 +43,14 @@ import Cardano.Api
   , UTxO (UTxO)
   )
 import Cardano.Api qualified as Api
+import Cardano.Benchmarking.TxFirehose.Color
+  ( Color
+  , ColorSpec
+  , colorHex
+  , colorSwatch
+  , parseColorSpec
+  , resolveColor
+  )
 import Cardano.Benchmarking.TxFirehose.Tx
   ( BuiltTx (BuiltTx, btxId, btxInputs, btxOutputs, btxSigned, btxSize)
   , Fund (Fund, fundTxIn, fundValue)
@@ -60,6 +68,7 @@ import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.List (isInfixOf, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -73,7 +82,16 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Client
   , LocalTxSubmissionClient (LocalTxSubmissionClient)
   )
 import System.Exit (die)
-import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stderr, utf8)
+import System.Environment (lookupEnv)
+import System.IO
+  ( BufferMode (LineBuffering)
+  , hIsTerminalDevice
+  , hPutStrLn
+  , hSetBuffering
+  , hSetEncoding
+  , stderr
+  , utf8
+  )
 
 --------------------------------------------------------------------------------
 -- CLI
@@ -89,6 +107,7 @@ data Options = Options
   , optOutputsPerTx :: !Natural
   , optFee :: !Integer
   , optMaxConsecutiveErrors :: !Int
+  , optColor :: !(Maybe ColorSpec)
   }
 
 parseOptions :: IO Options
@@ -167,6 +186,15 @@ optionsParser =
           <> Opt.showDefault
           <> Opt.help "Exit after this many consecutive rejects (for supervisor restart)"
       )
+    <*> optional
+      ( Opt.option
+          (Opt.eitherReader parseColorSpec)
+          ( Opt.long "color"
+              <> Opt.metavar "HEX|auto"
+              <> Opt.help
+                "Tag every tx with this colour as metadata, e.g. ff0000, or 'auto' to derive one from the signing key"
+          )
+      )
 
 main :: IO ()
 main = do
@@ -191,9 +219,25 @@ main = do
 
   -- Dispatch on whatever era the node reports; the tx builder is
   -- generic over ShelleyBasedEra.
+  -- Resolve the colour once, here, so the swatch we print and the metadata we
+  -- attach cannot disagree.
+  let mColor = flip resolveColor (Api.getVerificationKey signingKey) <$> optColor opts
+  traverse_ announceColor mColor
+
   currentEra <- queryCurrentEra connInfo
   runInEra currentEra $ \sbe ->
-    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk
+    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk mColor
+
+-- | Show the colour on stderr at startup, as a block when the terminal can
+-- render it and as bare hex otherwise.
+announceColor :: Color -> IO ()
+announceColor color = do
+  tty <- hIsTerminalDevice stderr
+  noColor <- lookupEnv "NO_COLOR"
+  let swatch
+        | tty && noColor == Nothing = " " ++ colorSwatch color
+        | otherwise = ""
+  hPutStrLn stderr ("tx-firehose colour: " ++ colorHex color ++ swatch)
 
 -- | Fail if the node is in Byron; otherwise run the continuation with
 -- the era's 'ShelleyBasedEra' witness.
@@ -234,8 +278,9 @@ runFirehoseInEra ::
   NetworkId ->
   SigningKey Api.PaymentKey ->
   Maybe (Api.VerificationKey Api.StakeKey) ->
+  Maybe Color ->
   IO ()
-runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk = do
+runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk mColor = do
   trace "TxFirehose.Startup.Query" "Info" $
     Aeson.object ["address" .= T.pack (show addrAny), "era" .= show sbe]
 
@@ -255,7 +300,7 @@ runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk = do
       { localChainSyncClient = NoLocalChainSyncClient
       , localStateQueryClient = Nothing
       , localTxSubmissionClient =
-          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds)
+          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds mColor)
       , localTxMonitoringClient = Nothing
       }
  where
@@ -274,14 +319,18 @@ mkFirehoseClient ::
   AddressInEra era ->
   SigningKey Api.PaymentKey ->
   Map TxIn Integer ->
+  Maybe Color ->
   LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
-mkFirehoseClient sbe opts addr sk initialFunds =
+mkFirehoseClient sbe opts addr sk initialFunds mColor =
   LocalTxSubmissionClient (step initialFunds 0)
  where
   !period = round (1_000_000 / optTps opts) :: Int
   !target = fromIntegral (optOutputsPerTx opts) :: Int
   !mFixedInputs = fromIntegral <$> optInputsPerTx opts :: Maybe Int
   !maxErrs = optMaxConsecutiveErrors opts
+  -- Present only when there is a colour, so uncoloured runs keep the log shape
+  -- the digest scripts already read.
+  colorField = ["color" .= colorHex c | Just c <- [mColor]]
 
   -- With a fixed input count we can only ever build a tx while that many
   -- funds are on hand; ramping instead always has a move, down to one
@@ -306,7 +355,8 @@ mkFirehoseClient sbe opts addr sk initialFunds =
           sk
           inFunds
           (optOutputsPerTx opts)
-          (Coin (optFee opts)) of
+          (Coin (optFee opts))
+          mColor of
           Left err -> do
             trace "TxFirehose.Build.Fail" "Error" $
               Aeson.object ["error" .= T.pack err]
@@ -347,21 +397,23 @@ mkFirehoseClient sbe opts addr sk initialFunds =
         case result of
           SubmitSuccess -> do
             trace "TxFirehose.Submit.Success" "Info" $
-              Aeson.object
+              Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
                 , "inputs" .= btxInputs
                 , "outputs" .= length btxOutputs
                 ]
+                  ++ colorField
             let !funds'' = foldr addOutput fundsOnSuccess btxOutputs
             step funds'' 0
           SubmitFail reason -> do
             trace "TxFirehose.Submit.Reject" "Warning" $
-              Aeson.object
+              Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
                 , "reason" .= T.pack (show reason)
                 ]
+                  ++ colorField
             -- Keeping the inputs is right for a transient reject, but wrong when
             -- the ledger says they are gone: 'takeInputs' is deterministic, so
             -- the retry rebuilds this exact tx and earns this exact rejection,

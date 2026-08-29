@@ -47,6 +47,7 @@ packages:
   bench/plutus-scripts-bench
   bench/tx-generator
   bench/tx-firehose
+  bench/mempool-monitor
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-resources

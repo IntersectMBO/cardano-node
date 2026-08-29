@@ -1,13 +1,13 @@
 cabal-version:      3.0
 
-name:               tx-firehose
+name:               mempool-monitor
 version:            0.1.0.0
-synopsis:           Push-based, single-node Cardano transaction load generator
+synopsis:           Per-node mempool composition observer
 description:
-  A minimal load generator that drives a single cardano-node via the
-  node-to-client protocol. Discovers its own UTxO by address query,
-  submits transactions with LocalTxSubmission, and reacts to accept/reject
-  responses. Contrast with tx-centrifuge, which reacts to N2N pulls.
+  Watches one cardano-node's mempool over the node-to-client LocalTxMonitor
+  protocol and reports which colours it is holding, where a colour is the
+  metadata tag tx-firehose writes. Observing each pool individually is what
+  makes mempool fragmentation visible: an aggregate hides it.
 
 license:            Apache-2.0
 license-files:      LICENSE
@@ -31,18 +31,20 @@ common project-config
 library
   import:           project-config
   hs-source-dirs:   src
-  exposed-modules:  Cardano.Benchmarking.TxFirehose.Color
-                    Cardano.Benchmarking.TxFirehose.Tx
+  exposed-modules:  Cardano.Benchmarking.MempoolMonitor.Render
+                    Cardano.Benchmarking.MempoolMonitor.Snapshot
   build-depends:    base                 >= 4.14 && < 5
-                  , bytestring
                   , cardano-api
                   , cardano-ledger-api
-                  , cardano-ledger-core
                   , cardano-strict-containers
                   , containers
                   , microlens
+                  , ouroboros-network:protocols
+                  , primitive
+                  , time
+                  , tx-firehose
 
-executable tx-firehose
+executable mempool-monitor
   import:           project-config
   hs-source-dirs:   app
   main-is:          Main.hs
@@ -50,15 +52,7 @@ executable tx-firehose
                     -rtsopts
                     "-with-rtsopts=-N -T"
   build-depends:    base                 >= 4.14 && < 5
-                  , aeson
-                  , bytestring
                   , cardano-api
-                  , cardano-ledger-api
-                  , cardano-ledger-core
-                  , containers
+                  , mempool-monitor
                   , optparse-applicative
-                  , ouroboros-network:protocols
-                  , text
-                  , time
-                  , transformers
                   , tx-firehose

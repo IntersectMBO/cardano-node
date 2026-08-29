@@ -14,8 +14,11 @@
 module Cardano.Benchmarking.TxFirehose.Tx where
 
 import Cardano.Api qualified as Api
+import Cardano.Benchmarking.TxFirehose.Color (Color, colorBytes, colorMetadataLabel)
 import Cardano.Ledger.Api
   ( addrTxWitsL
+  , auxDataHashTxBodyL
+  , auxDataTxL
   , feeTxBodyL
   , inputsTxBodyL
   , mkBasicTx
@@ -25,9 +28,12 @@ import Cardano.Ledger.Api
   , txIdTx
   , witsTxL
   )
+import Cardano.Ledger.Api.Tx.AuxData (EraTxAuxData (TxAuxData), hashTxAuxData)
 import Cardano.Ledger.Api.Tx.In (TxId, TxIn, mkTxInPartial)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Data.Function ((&))
+import Data.Map.Strict qualified as Map
+import Data.Maybe.Strict (StrictMaybe, maybeToStrictMaybe)
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
 import Data.Word (Word32)
@@ -64,8 +70,9 @@ buildTx ::
   [Fund] ->
   Natural ->
   Coin ->
+  Maybe Color ->
   Either String (BuiltTx era)
-buildTx sbe destAddr signingKey inFunds numOutputs fee
+buildTx sbe destAddr signingKey inFunds numOutputs fee mColor
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
@@ -87,12 +94,27 @@ buildTx sbe destAddr signingKey inFunds numOutputs fee
           ++ " per output"
   | otherwise = Right built
  where
-  -- Body: pure ledger, era-generic via EraTxBody.
+  -- Optional colour, carried as transaction metadata so a mempool observer
+  -- can attribute the tx to the firehose that made it.
+  -- Via cardano-api for the same reason signing is: it case-analyses the era,
+  -- so the aux-data constraints resolve where an era-generic build cannot.
+  mAuxData :: StrictMaybe (TxAuxData (Api.ShelleyLedgerEra era))
+  mAuxData = maybeToStrictMaybe (Api.toAuxiliaryData sbe metadataInEra Api.TxAuxScriptsNone)
+
+  metadataInEra = case mColor of
+    Nothing -> Api.TxMetadataNone
+    Just color ->
+      Api.TxMetadataInEra sbe . Api.makeTransactionMetadata $
+        Map.singleton colorMetadataLabel (Api.TxMetaBytes (colorBytes color))
+
+  -- Body: pure ledger, era-generic via EraTxBody. The aux-data hash has to be
+  -- in place before signing, since the witness covers it.
   body =
     mkBasicTxBody
       & inputsTxBodyL .~ Set.fromList (map fundTxIn inFunds)
       & outputsTxBodyL %~ (<> StrictSeq.fromList (map mkOut outAmounts))
       & feeTxBodyL .~ fee
+      & auxDataHashTxBodyL .~ (hashTxAuxData <$> mAuxData)
 
   -- Signing via cardano-api - era-generic and Dijkstra-safe.
   witVKey = case Api.makeShelleyKeyWitness'
@@ -105,6 +127,7 @@ buildTx sbe destAddr signingKey inFunds numOutputs fee
   ledgerTx =
     mkBasicTx body
       & witsTxL . addrTxWitsL .~ Set.singleton witVKey
+      & auxDataTxL .~ mAuxData
 
   ledgerTxId = txIdTx ledgerTx
 
