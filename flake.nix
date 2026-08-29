@@ -363,7 +363,12 @@
               # "dmq-node" FIXME: not updated within leios-prototype
               "kes-agent"
               "kes-agent-control"
+              # The load generator and its observer travel together: the
+              # leios-prototype release ships both so an SPO can colour their
+              # own load and see whose load their mempool holds.
+              "mempool-monitor"
               "snapshot-converter"
+              "tx-firehose"
               "tx-generator"
             ];
 
