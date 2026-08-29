@@ -41,18 +41,14 @@ import qualified Hedgehog.Extras as H
 -- | Register a stake pool that carries a Leios (BLS) voting key.
 --
 -- The offline half exercises @cardano-cli@ alone: it generates a BLS key pair
--- with @node key-gen-BLS@ and its proof of possession with @node issue-pop-BLS@,
--- then builds the same Dijkstra registration certificate three ways -- from the
--- BLS signing key, from the BLS verification key plus its possession proof, and
--- with no BLS key material at all. The first two must be byte-identical (the
--- verification-key path derives exactly the registration the signing-key path
--- does, without ever putting the hot key on the machine that builds the
--- certificate) and the third must succeed and differ from them (the ledger keeps
--- the Leios key optional).
+-- with @node key-gen-BLS@ and builds the Dijkstra registration certificate from
+-- the BLS signing key, which is the only way to build one -- the certificate
+-- carries the verification key and a proof of possession, and the CLI derives
+-- both from the signing key.
 --
--- The on-chain half submits the certificate built from the verification key and
--- the proof of possession, and checks that the pool shows up in
--- @query stake-pools@ with the registered BLS key visible in @query pool-state@.
+-- The on-chain half submits that certificate and checks that the pool shows up
+-- in @query stake-pools@ with the registered BLS key visible in
+-- @query pool-state@.
 --
 -- Note that this test talks to the node only through @cardano-cli@ queries,
 -- and the testnet starts in Conway and hard forks into Dijkstra at epoch 1,
@@ -106,22 +102,15 @@ hprop_leios_stake_pool_registration = integrationRetryWorkspace 2 "leios-stake-p
   -- Offline: BLS key material and the three registration certificates
   --------------------------------------------------------------------------
 
-  H.note_ "Generate the pool's Leios BLS key pair and its proof of possession"
+  H.note_ "Generate the pool's Leios BLS key pair"
   let blsKeys = KeyPair { verificationKey = File $ work </> "bls.vkey"
                         , signingKey = File $ work </> "bls.skey"
                         }
-      blsPopFp = work </> "bls.pop"
 
   execCli_
     [ eraName, "node", "key-gen-BLS"
     , "--verification-key-file", verificationKeyFp blsKeys
     , "--signing-key-file", signingKeyFp blsKeys
-    ]
-
-  execCli_
-    [ eraName, "node", "issue-pop-BLS"
-    , "--bls-signing-key-file", signingKeyFp blsKeys
-    , "--out-file", blsPopFp
     ]
 
   H.note_ "Generate the pool's cold, VRF and reward account keys"
@@ -156,28 +145,10 @@ hprop_leios_stake_pool_registration = integrationRetryWorkspace 2 "leios-stake-p
           <> [ "--out-file", outFp ]
 
       certFromSigningKeyFp = work </> "registration-from-signing-key.cert"
-      certFromProofFp = work </> "registration-from-proof.cert"
-      certWithoutBlsFp = work </> "registration-without-bls.cert"
 
   H.note_ "Build the registration certificate from the BLS signing key"
   execCli_ $ registrationCertArgs certFromSigningKeyFp
     [ "--bls-signing-key-file", signingKeyFp blsKeys ]
-
-  H.note_ "Build the registration certificate from the BLS verification key and its proof of possession"
-  execCli_ $ registrationCertArgs certFromProofFp
-    [ "--bls-verification-key-file", verificationKeyFp blsKeys
-    , "--bls-possession-proof-file", blsPopFp
-    ]
-
-  H.note_ "The verification key and proof of possession derive exactly the same registration as the signing key"
-  certFromSigningKey <- H.lbsReadFile certFromSigningKeyFp
-  certFromProof <- H.lbsReadFile certFromProofFp
-  certFromSigningKey === certFromProof
-
-  H.note_ "A stake pool that does not take part in Leios voting registers without any BLS key material"
-  execCli_ $ registrationCertArgs certWithoutBlsFp []
-  certWithoutBls <- H.lbsReadFile certWithoutBlsFp
-  certWithoutBls /== certFromProof
 
   --------------------------------------------------------------------------
   -- On-chain: submit the certificate built from the verification key
@@ -224,7 +195,7 @@ hprop_leios_stake_pool_registration = integrationRetryWorkspace 2 "leios-stake-p
     ]
       <> txIns
       <> [ "--certificate-file", ownerRegCertFp
-         , "--certificate-file", certFromProofFp
+         , "--certificate-file", certFromSigningKeyFp
          , "--witness-override", show @Int 3
          , "--out-file", poolRegistrationTxBodyFp
          ]
