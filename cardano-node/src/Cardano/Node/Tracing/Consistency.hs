@@ -32,6 +32,7 @@ import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
+import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
@@ -68,7 +69,7 @@ import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
@@ -172,13 +173,13 @@ getAllNamespaces =
         chainSyncServerBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerBlock"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
         blockFetchDecisionNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Decision"])
-                        (allNamespaces :: [Namespace [BlockFetch.TraceLabelPeer
-                                                      remotePeer
-                                                      (FetchDecision [Point (Header blk)])]])
+                        (allNamespaces :: [Namespace (TraceDecisionEvent remotePeer (Header blk))])
         blockFetchClientNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                       remotePeer
                                                       (BlockFetch.TraceFetchClientState (Header blk)))])
+        blockFetchClientMetricsNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
+                        (allNamespaces :: [Namespace ClientMetrics])
         blockFetchServerNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
@@ -443,6 +444,7 @@ getAllNamespaces =
             <> blockFetchDecisionNS
             <> consensusSanityCheckNS
             <> blockFetchClientNS
+            <> blockFetchClientMetricsNS
             <> blockFetchServerNS
             <> forgeKESInfoNS
             <> txInboundNS

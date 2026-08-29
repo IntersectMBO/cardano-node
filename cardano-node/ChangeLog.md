@@ -2,6 +2,15 @@
 
 ## Next version
 
+- **Bugfix:** `BlockFetch.Decision` now documents the namespaces it actually emits,
+  `PeersFetch` and `PeerStarvedUs`, instead of `Accept`, `Decline` and `EmptyPeersFetch`,
+  which no longer correspond to any message. The two real namespaces can now be named in a
+  trace configuration; previously `checkTraceConfiguration` rejected them as unknown.
+
+- **Bugfix:** `BlockFetch.Client.ClientMetrics` is recognised by `checkTraceConfiguration`.
+  It was emitted and documented, but naming it in a trace configuration produced a
+  `Config namespace error`.
+
 ## 11.1.0 -- August 2026
 
 - **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
