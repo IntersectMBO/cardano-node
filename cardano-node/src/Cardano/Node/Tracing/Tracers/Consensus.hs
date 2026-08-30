@@ -2465,6 +2465,12 @@ instance LogFormatting TraceLeiosKernel where
       "EB certified at slot " <> showT atSlot <> ": " <> Text.pack (show certifiedPoint)
     TraceLeiosVoted{weight}         -> "Leios voted, weight=" <> showT (fromRational @Double weight)
     TraceLeiosVoteAcquired{}        -> "Leios vote acquired"
+    TraceLeiosTally{rbHash, seatId, weight, tally, threshold} ->
+      "Leios tally for RB " <> Text.pack (show rbHash)
+        <> ": seat " <> showT (Leios.leiosSeatIndex seatId)
+        <> " added " <> showT (fromRational @Double weight)
+        <> ", now " <> showT (fromRational @Double tally)
+        <> " against a threshold of " <> showT (fromRational @Double threshold)
     TraceLeiosCertified{rbHash}     -> "Leios cert assembled for RB " <> Text.pack (show rbHash)
     TraceLeiosVoteScheduled{ebPoint, voteIn, deadlineIn} ->
       "Leios vote scheduled for " <> Text.pack (show ebPoint)
@@ -2529,6 +2535,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosBlockCertified{}    = Namespace [] ["BlockCertified"]
   namespaceFor TraceLeiosVoted{}             = Namespace [] ["Voted"]
   namespaceFor TraceLeiosVoteAcquired{}      = Namespace [] ["VoteAcquired"]
+  namespaceFor TraceLeiosTally{}             = Namespace [] ["Tally"]
   namespaceFor TraceLeiosCertified{}         = Namespace [] ["Certified"]
   namespaceFor TraceLeiosNotVoted{}          = Namespace [] ["NotVoted"]
   namespaceFor TraceLeiosVoteScheduled{}     = Namespace [] ["VoteScheduled"]
@@ -2578,6 +2585,7 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["BlockCertified"]
     , Namespace [] ["Voted"]
     , Namespace [] ["VoteAcquired"]
+    , Namespace [] ["Tally"]
     , Namespace [] ["Certified"]
     , Namespace [] ["NotVoted"]
     , Namespace [] ["VoteScheduled"]
