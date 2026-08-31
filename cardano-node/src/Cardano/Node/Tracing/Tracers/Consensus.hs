@@ -2481,9 +2481,6 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosCertifiedAndAnnounced{atSlot, rbHash} ->
       "RB certified an EB and announced a new one at slot " <> showT atSlot
         <> " (RB " <> Text.pack (show rbHash) <> ")"
-    TraceLeiosAnnouncementPastHorizon{atSlot} ->
-      "EB announcement at slot " <> Text.pack (show atSlot)
-        <> " is beyond our forecast horizon; ignored"
     TraceLeiosAnnouncementAccepted src equiv fields mbAge ->
       "EB announcement accepted from " <> Text.pack (show src)
         <> " (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields) <> " age=" <> showT mbAge
@@ -2536,7 +2533,6 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
   namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
-  namespaceFor TraceLeiosAnnouncementPastHorizon{} = Namespace [] ["AnnouncementPastHorizon"]
   namespaceFor TraceLeiosAnnouncementAccepted{}  = Namespace [] ["AnnouncementAccepted"]
   namespaceFor TraceLeiosFetchDecision{}     = Namespace [] ["FetchDecision"]
 
@@ -2586,7 +2582,6 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
     , Namespace [] ["CertifiedAndAnnounced"]
-    , Namespace [] ["AnnouncementPastHorizon"]
     , Namespace [] ["AnnouncementAccepted"]
     , Namespace [] ["FetchDecision"]
     ]
