@@ -135,7 +135,7 @@ library
                       , bytestring
                       , cardano-api ^>= 11.6
                       , cardano-data
-                      , cardano-crypto-class ^>=2.5
+                      , cardano-crypto-class ^>=2.5 || ^>=2.6
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
