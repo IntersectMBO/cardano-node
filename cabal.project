@@ -221,7 +221,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: c69fe1783b9ef5d1c625b22d6ea87758da768a98
+  tag: 661a7b853be392968ee7442799ee23bec6604c92
   subdir: eras/byron/crypto
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
