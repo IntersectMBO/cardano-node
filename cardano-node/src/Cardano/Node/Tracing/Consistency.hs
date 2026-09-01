@@ -60,10 +60,6 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion,
-                   TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
-                   TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -216,24 +212,6 @@ getAllNamespaces =
                           (TraceTxLogic remotePeer (GenTxId blk) (GenTx blk))])
         txCountersNS = map (nsGetTuple . nsReplacePrefix ["txCounters", "Remote"])
                         (allNamespaces :: [Namespace TxSubmissionCounters])
-        perasCertInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasCertDiffusionInbound blk))])
-        perasCertOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Outbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasCertDiffusionOutbound blk))])
-        perasVoteInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Inbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasVoteDiffusionInbound blk))])
-        perasVoteOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Outbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasVoteDiffusionOutbound blk))])
-        perasCertDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Remote"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
-                          (TraceSendRecv (PerasCertDiffusion blk)))])
-        perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
-                          (TraceSendRecv (PerasVoteDiffusion blk)))])
         localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
                                             ["TxSubmission", "LocalServer"])
                         (allNamespaces :: [Namespace
@@ -474,13 +452,6 @@ getAllNamespaces =
             <> kesAgentNS
             <> txLogicNS
             <> txCountersNS
--- Peras
-            <> perasCertInboundNS
-            <> perasCertOutboundNS
-            <> perasVoteInboundNS
-            <> perasVoteOutboundNS
-            <> perasCertDiffusionNS
-            <> perasVoteDiffusionNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

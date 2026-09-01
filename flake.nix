@@ -23,7 +23,7 @@
     customConfig.url = "github:input-output-hk/empty-flake";
 
     CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=index-only";
       flake = false;
     };
 
@@ -67,6 +67,11 @@
     # Changing the tag alone only relocks mithril itself, leaving its
     # transitive pins on an old release.
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
+
+    ouroboros-consensus-src = {
+      url = "git+file:///media/nvme/git/iog/ouroboros-consensus?rev=835d3747eb2fbd6b7d69e73245ec7c9703faec21&submodules=1";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -550,6 +555,7 @@
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
+            ouroboros-consensus-src = input.ouroboros-consensus-src;
             macOS-security = macOS-security (final.pkgs);
             # buildPlatform, not hostPlatform: herald is a developer tool that
             # runs on the machine, so cross shells (e.g. windows) must not try
