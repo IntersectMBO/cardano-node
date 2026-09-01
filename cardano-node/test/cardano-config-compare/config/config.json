@@ -1,0 +1,121 @@
+{
+  "AcceptedConnectionsLimit": {
+    "delay": 5,
+    "hardLimit": 512,
+    "softLimit": 384
+  },
+  "AlonzoGenesisFile": "alonzo-genesis.json",
+  "AlonzoGenesisHash": "edb92321b614cfd7dcee3f49eedcde4f559ea9526194ff3cf42cd28a4bf0ad7b",
+  "ApplicationName": "cardano-sl",
+  "ApplicationVersion": 0,
+  "ByronGenesisFile": "byron-genesis.json",
+  "ByronGenesisHash": "6836b5d0ae3bb7250c318e8906ab2bf8e42e6acfd4483526be948752707ad435",
+  "ConwayGenesisFile": "conway-genesis.json",
+  "ConwayGenesisHash": "e4cbda3b0a0db8ea984330d0951d280ca490540c97cc6407ecd1011b174d983d",
+  "DijkstraGenesisFile": "dijkstra-genesis.json",
+  "DijkstraGenesisHash": "56c06ff0f668c584fc54fa3cee92dd5e121b67696924ac3b01b5aec9ecf95b78",
+  "EnableP2P": false,
+  "LastKnownBlockVersion-Alt": 0,
+  "LastKnownBlockVersion-Major": 3,
+  "LastKnownBlockVersion-Minor": 0,
+  "MaxKnownMajorProtocolVersion": 2,
+  "MempoolCapacityBytesOverride": "NoOverride",
+  "Protocol": "Cardano",
+  "ProtocolIdleTimeout": 5,
+  "RequiresNetworkMagic": "RequiresMagic",
+  "ShelleyGenesisFile": "shelley-genesis.json",
+  "ShelleyGenesisHash": "f6bb6e9d9b217681180754232470aa936716d62f8e11e944520b97490b100b7c",
+  "TargetNumberOfActivePeers": 20,
+  "TargetNumberOfEstablishedPeers": 50,
+  "TargetNumberOfKnownPeers": 100,
+  "TargetNumberOfRootPeers": 100,
+  "TestAllegraHardForkAtEpoch": 0,
+  "TestAlonzoHardForkAtEpoch": 0,
+  "TestBabbageHardForkAtEpoch": 0,
+  "ExperimentalHardForksEnabled": true,
+  "ExperimentalProtocolsEnabled": true,
+  "TestMaryHardForkAtEpoch": 0,
+  "TestShelleyHardForkAtEpoch": 0,
+  "TimeWaitTimeout": 60,
+  "TraceOptions": {
+    "": {
+      "backends": [
+        "Stdout MachineFormat",
+        "EKGBackend",
+        "Forwarder"
+      ],
+      "severity": "Notice"
+    },
+    "AcceptPolicy": {
+      "severity": "Info"
+    },
+    "BlockFetchClient": {
+      "detail": "DMinimal",
+      "severity": "Info"
+    },
+    "BlockFetchClient.CompletedBlockFetch": {
+      "maxFrequency": 2
+    },
+    "BlockFetchServer": {
+      "severity": "Info"
+    },
+    "ChainDB": {
+      "severity": "Info"
+    },
+    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+      "maxFrequency": 2
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToQueue": {
+      "maxFrequency": 2
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+      "maxFrequency": 2
+    },
+    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+      "maxFrequency": 2
+    },
+    "ChainSyncClient": {
+      "detail": "DMinimal",
+      "severity": "Info"
+    },
+    "ChainSyncServerBlock": {
+      "severity": "Info"
+    },
+    "ChainSyncServerHeader": {
+      "severity": "Info"
+    },
+    "DNSResolver": {
+      "severity": "Info"
+    },
+    "DNSSubscription": {
+      "severity": "Info"
+    },
+    "DiffusionInit": {
+      "severity": "Info"
+    },
+    "ErrorPolicy": {
+      "severity": "Info"
+    },
+    "Forge": {
+      "severity": "Info"
+    },
+    "IpSubscription": {
+      "severity": "Info"
+    },
+    "LocalErrorPolicy": {
+      "severity": "Info"
+    },
+    "Mempool": {
+      "severity": "Info"
+    },
+    "Resources": {
+      "severity": "Info"
+    },
+    "TxSubmission2": {
+      "detail": "DMinimal"
+    }
+  },
+  "TurnOnLogMetrics": true,
+  "TurnOnLogging": true,
+  "UseTraceDispatcher": true
+}
