@@ -192,3 +192,11 @@ source-repository-package
   --sha256: sha256-TcvIpN7bl4qVFwfmcBuLq0AGK8jfcfbimTHqwrElUiw=
   subdir:
     cardano-cli
+
+-- TEMPORARY: cardano-config is not published to CHaP yet. Remove this stanza
+-- (and depend on the CHaP release) as soon as it is.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config
+  tag: 5f17f6c07f7fcccc67b5360da4339e2c16615b41
+  --sha256: sha256-IWkreOeztCXfx31MyDtC3PmdlO4vzfklQiB4L2XW5KU=
