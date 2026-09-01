@@ -56,9 +56,9 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 import           Data.Aeson (Object, ToJSON, Value (Object, String), object, toJSON, (.=))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -101,6 +101,8 @@ instance (  LogFormatting (Header blk)
           , InspectLedger blk
           , HasIssuer blk
           , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
+          , Show (PerasCert blk)
+          , Show (PerasError blk)
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
     "ChainDB is not clean. Validating all immutable chunks"
@@ -258,6 +260,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -314,6 +320,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -370,6 +380,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -462,6 +476,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "PerasCertDbEvent")
                   (allNamespaces :: [Namespace (PerasCertDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "PerasVoteDbEvent")
+                  (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "AddPerasCertEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddPerasCertEvent blk)])
             )
@@ -533,6 +549,7 @@ instance ( LogFormatting (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          , HasIssuer blk
+         , Show (PerasError blk)
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
   forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
     "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
@@ -1201,7 +1218,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 -- -- TraceInitChainSelEvent
 -- --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk, Show (PerasError blk))
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
     forHuman ChainDB.InitialChainSelected{} =
@@ -1284,7 +1301,8 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 instance ( LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
          , ConvertRawHash blk
-         , LogFormatting (RealPoint blk))
+         , LogFormatting (RealPoint blk)
+         , Show (PerasError blk))
          => LogFormatting (ChainDB.TraceValidationEvent blk) where
     forHuman (ChainDB.InvalidBlock err pt) =
         "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
@@ -1682,7 +1700,7 @@ instance MetaTrace (PerasVoteDB.TraceEvent blk) where
   documentFor (Namespace _ ["GarbageCollected"]) = Just "GarbageCollected"
   documentFor _ = Nothing
 
-instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
+instance Show (PerasCert blk) => LogFormatting (PerasVoteDB.TraceEvent blk) where
   forHuman (PerasVoteDB.AddVote voteId _vote result) =
     "Peras vote " <> Text.pack (show voteId) <> ": " <> Text.pack (show result)
   forHuman (PerasVoteDB.GarbageCollected slotNo) =
@@ -1894,23 +1912,23 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
          ]
     documentFor (Namespace _ ["DeletedSnapshot"]) = Just
           "A snapshot was deleted from the disk."
+    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
+          "A snapshot request was delayed."
+    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
+          "A snapshot request was completed."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just $ mconcat
          [ "An on disk snapshot was invalid. Unless it was suffixed or"
          , " seems to be from an old node or different backend, it will"
          , " be deleted"
          ]
-    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
-        "A delayed snapshot request was issued. The snapshot will be initiated at the specified timestamp, with the specified delay and for the specified slots"
-    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
-        "The delayed snapshot request was completed"
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
-      , Namespace [] ["InvalidSnapshot"]
       , Namespace [] ["SnapshotRequestDelayed"]
       , Namespace [] ["SnapshotRequestCompleted"]
+      , Namespace [] ["InvalidSnapshot"]
       ]
 
 --------------------------------------------------------------------------------
@@ -2885,16 +2903,29 @@ instance ( StandardHash blk
 
 
 instance (   LogFormatting (LedgerError blk)
-           , LogFormatting (HeaderError blk))
+           , LogFormatting (HeaderError blk)
+           , Show (PerasError blk))
         => LogFormatting (ExtValidationError blk) where
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
+    forMachine _dtal (ExtValidationErrorPerasEpochContextResolver err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasEpochContextResolver"
+              , "error" .= String (showT err) ]
+    forMachine _dtal (ExtValidationErrorPerasCertInBlock err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasCertInBlock"
+              , "error" .= String (showT err) ]
 
     forHuman (ExtValidationErrorLedger err) =  forHuman err
     forHuman (ExtValidationErrorHeader err) =  forHuman err
+    forHuman (ExtValidationErrorPerasEpochContextResolver err) =
+      "Peras epoch context resolver error: " <> showT err
+    forHuman (ExtValidationErrorPerasCertInBlock err) =
+      "Peras cert in block error: " <> showT err
 
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err
+    asMetrics (ExtValidationErrorPerasEpochContextResolver _) = []
+    asMetrics (ExtValidationErrorPerasCertInBlock _) = []
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where

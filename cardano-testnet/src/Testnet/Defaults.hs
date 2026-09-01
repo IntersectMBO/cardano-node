@@ -421,7 +421,7 @@ eraToProtocolVersion =
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Word32) -> ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
-  case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
+  case (`ProtVer` fromIntegral minorProtVer) <$> Ledger.mkVersion majorProtVer of
     Just pVer -> pVer
     Nothing -> error "mkProtVer: invalid protocol version"
 
