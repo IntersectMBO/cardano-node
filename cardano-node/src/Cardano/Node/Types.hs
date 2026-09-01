@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -507,6 +508,19 @@ instance AdjustFilePaths a => AdjustFilePaths (Last a) where
 
 instance AdjustFilePaths (File a b) where
   adjustFilePaths f (File p) = File $ f p
+
+instance AdjustFilePaths RpcTlsFiles where
+  adjustFilePaths f (RpcTlsFiles cert key chain) =
+    RpcTlsFiles
+      (adjustFilePaths f cert)
+      (adjustFilePaths f key)
+      (map (adjustFilePaths f) chain)
+
+instance AdjustFilePaths RpcEndpoint where
+  adjustFilePaths f = \case
+    RpcEndpointUnixSocket sp -> RpcEndpointUnixSocket (adjustFilePaths f sp)
+    RpcEndpointHttp ip port -> RpcEndpointHttp ip port
+    RpcEndpointHttps ip port tls -> RpcEndpointHttps ip port (adjustFilePaths f tls)
 
 instance Functor f => AdjustFilePaths (RpcConfigF f) where
   adjustFilePaths f rpcConfig@RpcConfig{rpcEndpoint, nodeSocketPath} =

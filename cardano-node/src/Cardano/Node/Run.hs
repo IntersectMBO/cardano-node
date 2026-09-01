@@ -51,7 +51,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
-import           Data.IORef
+import           Cardano.Rpc.Server.NodeKernelAccess (NodeKernelAccess, mkNodeKernelAccess)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
@@ -147,6 +147,7 @@ import           Data.IP (IP (..), isMatchedTo, makeAddrRange, toIPv4, toIPv6, t
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.IORef (IORef, newIORef, writeIORef)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
@@ -497,6 +498,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
+                -- populate node kernel access for RPC server
                 mkNodeKernelAccess
                   (rpcTracer tracers)
                   shelleyGenesisHash
@@ -644,9 +646,11 @@ updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> NodeConfiguration
                    -> IO ()
 updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc = do
-  eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
-                                       (ncProtocolConfig nc)
-                                       (Just (ncProtocolFiles nc))
+  eitherSomeProtocol <-
+    runExceptT $
+      mkConsensusProtocol
+        (ncProtocolConfig nc)
+        (Just (ncProtocolFiles nc))
   case eitherSomeProtocol of
     Left err ->
       case wasFileRemovedFromScope err of
@@ -660,7 +664,7 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          (_, mkBlockForging) <- Api.protocolInfo runP'
+          (_, mkBlockForging) <- Api.protocolInfo @IO runP'
           blockForging <- mkBlockForging kesAgentTracer
           let enabled = not (null blockForging)
           -- Only an off-to-on transition starts a new run of slots for
@@ -770,7 +774,6 @@ updateLedgerPeerSnapshot startupTracer NodeConfiguration { ncConsensusMode } net
             | otherwise -> oops $
                 "NetworkMagic " <> showT networkMagic <> " doesn't match "
                 <> "peer snapshot NetworkMagic " <> showT magic
-          LedgerPeerSnapshotV2 {} -> oops "Unsupported legacy peer snapshot version."
         case afterSlot of
           Always -> do
             traceL $ LedgerPeerSnapshotLoaded fileSlot

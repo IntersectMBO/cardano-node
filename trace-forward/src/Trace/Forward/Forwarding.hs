@@ -17,6 +17,7 @@ module Trace.Forward.Forwarding
 
 import           Cardano.Logging.Types
 import           Cardano.Logging.Utils (runInLoop)
+import           Ouroboros.Network.ConnectionManager.Types (DataFlow (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
@@ -47,7 +48,7 @@ import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Void (Void, absurd)
-import           Data.Word (Word16)
+import           Data.Word (Word16, Word64)
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import           System.IO (hPutStrLn, stderr)
@@ -134,7 +135,7 @@ initForwardingDelayed iomgr config forwarding = liftIO $ do
       InitForwardingWith{initHowToConnect = RemoteSocket host port} -> EKGF.RemoteSocket host port
   queueSize         = tofQueueSize         config
   verbosity         = tofVerbosity         config
-  maxReconnectDelay = tofMaxReconnectDelay config
+  maxReconnectDelay = fromIntegral (tofMaxReconnectDelay config)
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
@@ -184,7 +185,7 @@ launchForwarders
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
   -> DataPointStore
-  -> Word
+  -> Word64
   -> IO ()
 launchForwarders iomgr forwarding
                  ekgConfig tfConfig dpfConfig
@@ -277,6 +278,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
                              ]
        )
     )
+    (const Unidirectional)
     Nothing
     address
   case done of
@@ -352,6 +354,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
                       ]
        )
     )
+    (const Unidirectional)
     $ \_ serverAsync ->
       wait serverAsync -- Block until async exception.
  where
