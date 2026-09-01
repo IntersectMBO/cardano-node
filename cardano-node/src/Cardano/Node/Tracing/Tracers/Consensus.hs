@@ -2466,14 +2466,12 @@ instance LogFormatting TraceLeiosKernel where
       , IntM "leiosDbWalBytes"  walBytes
       ]
     -- Accumulating counters, bumped per copier commit / GC pass.
-    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
-      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs)
-      , CounterM "leiosDbCopiedTxs" (Just copiedTxs)
-      ]
-    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
-      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs)
-      , CounterM "leiosDbEvictedTxs" (Just evictedTxs)
-      ]
+    TraceLeiosDb (TraceLeiosDbCopiedToImmutable copiedEbs) ->
+      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs) ]
+    TraceLeiosDb (TraceLeiosDbEvicted evictedEbs) ->
+      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs) ]
+    TraceLeiosDb TraceLeiosDbGCError{} ->
+      [ CounterM "leiosDbSweepErrors" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
       [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyError{} ->
