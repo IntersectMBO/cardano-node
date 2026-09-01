@@ -14,6 +14,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 extra-doc-files:        ChangeLog.md
+extra-source-files:     test/cardano-config-compare/config/*.json
 
 Flag unexpected_thunks
   Description:          Turn on unexpected thunks checks
@@ -221,11 +222,27 @@ executable cardano-node
   autogen-modules:      Paths_cardano_node
 
   build-depends:        base
+                      , cardano-config
+                      , cardano-config:commands
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
                       , optparse-applicative
                       , text
+
+test-suite cardano-config-compare-test
+  import:               project-config
+  hs-source-dirs:       test/cardano-config-compare
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base
+                      , cardano-config
+                      , cardano-node
+                      , directory
+                      , filepath
+                      , tasty
+                      , tasty-hunit
 
 test-suite cardano-node-test
   import:               project-config
