@@ -2358,7 +2358,7 @@ calculateLeiosMetrics ::
 calculateLeiosMetrics lm@LeiosMetrics {..} _lc (TraceLeiosAnnouncementAccepted _ _ fields (Just annDelay)) =
     case announcementElection fields of
       MkElId slotNo@(SlotNo slotNo_) _ ->
-        if Cdf.null lmCdfState && annDelay > 20 -- During startup wait until we are in sync
+        if Cdf.null lmCdfState
           then nothingToDo
           else
             case Cdf.processDataPoint
@@ -2369,10 +2369,7 @@ calculateLeiosMetrics lm@LeiosMetrics {..} _lc (TraceLeiosAnnouncementAccepted _
                    of
               Nothing -> nothingToDo
               Just (lm', lmCdfState') ->
-                lm' { lmCdfState  = lmCdfState'
-                    , lmTraceIt   = True
-                    , lmTraceVars = Cdf.size lmCdfState' >= 45 -- wait until we have at least 45 samples before providing cdf estimates
-                    , lmDelay     = realToFrac annDelay
+                lm' { lmCdfState    = lmCdfState'
                     }
   where
     nothingToDo = lm {lmTraceIt = False}
