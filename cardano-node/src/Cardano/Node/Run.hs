@@ -367,14 +367,19 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
 
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosDbPath -> do
-      let resolvedPath
-            | isAbsolute leiosDbPath = leiosDbPath
-            | otherwise = nonImmutableDbPath dbPath </> leiosDbPath
-      createDirectoryIfMissing True (takeDirectory resolvedPath)
+    LeiosDbSQLite leiosVolDbPath leiosImmDbPath -> do
+      let resolvedVolPath
+            | isAbsolute leiosVolDbPath = leiosVolDbPath
+            | otherwise = nonImmutableDbPath dbPath </> leiosVolDbPath
+          resolvedImmPath
+            | isAbsolute leiosImmDbPath = leiosImmDbPath
+            | otherwise = nonImmutableDbPath dbPath </> leiosImmDbPath
+      createDirectoryIfMissing True (takeDirectory resolvedVolPath)
+      createDirectoryIfMissing True (takeDirectory resolvedImmPath)
       newLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
-        resolvedPath
+        resolvedVolPath
+        resolvedImmPath
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
