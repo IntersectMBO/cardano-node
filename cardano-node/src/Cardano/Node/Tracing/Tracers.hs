@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,13 +28,8 @@ import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
-import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ChainDB
-import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar, calcForgeStats)
-import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -52,6 +48,7 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import           Ouroboros.Consensus.Tracing
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
@@ -59,12 +56,12 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
+import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
-
 
 -- | Construct tracers for all system components.
 --
@@ -428,10 +425,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = mkTracer $
           traceWith txCountersTracer
-      , Consensus.perasCertDiffusionInboundTracer = mkTracer $ traceWith txPerasCertIn
-      , Consensus.perasCertDiffusionOutboundTracer = mkTracer $ traceWith txPerasCertOut
-      , Consensus.perasVoteDiffusionInboundTracer = mkTracer $ traceWith txPerasVoteIn
-      , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $ traceWith txPerasVoteOut
+      , Consensus.perasCertDiffusionInboundTracer = mkTracer $
+          traceWith txPerasCertIn
+      , Consensus.perasCertDiffusionOutboundTracer = mkTracer $
+          traceWith txPerasCertOut
+      , Consensus.perasVoteDiffusionInboundTracer = mkTracer $
+          traceWith txPerasVoteIn
+      , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $
+          traceWith txPerasVoteOut
+      , Consensus.perasCertInclusionTracer = nullTracer
+      , Consensus.perasVoteForgingTracer = nullTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -741,7 +744,7 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            traceWith localInboundGovernorTr
        , Diffusion.dtInboundGovernorTransitionTracer = mkTracer $
            traceWith inboundGovernorTransitionsTr
-       , Diffusion.dtLocalConnectionManagerTracer =  mkTracer $
+       , Diffusion.dtLocalConnectionManagerTracer = mkTracer $
            traceWith localConnectionManagerTr
        , Diffusion.dtLocalServerTracer = mkTracer $
            traceWith localServerTr

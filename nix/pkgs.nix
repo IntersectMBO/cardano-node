@@ -46,6 +46,27 @@ in with final;
       }
   ;
 
+  # crypton 2.1.x vendors s2n-bignum assembly for the NIST prime curves. Its
+  # x86-64 macros take no formal parameters, and clang's integrated assembler
+  # reads $0..$9 in such a macro body as Darwin-style positional arguments, so
+  # immediates like `adcq $0, %r8` and `subq $64, innercount` expand to nothing
+  # and x86_64-darwin dies in the assembler. The flag only picks an optimised
+  # NIST-curve backend, and nothing here is on that path: crypton 2.1.x reaches
+  # us solely through the hoogle the dev shells build. That is a haskell.nix
+  # project of its own rather than part of cardanoNodeProject, which is why
+  # this goes in defaultModules instead of nix/haskell.nix. The version guard
+  # keeps the flag off crypton 1.x, which does not have it.
+  haskell-nix = prev.haskell-nix // {
+    defaultModules = prev.haskell-nix.defaultModules ++ [
+      (_: prev.haskell-nix.haskellLib.addPackageKeys {
+        packages.crypton = {config, ...}: {
+          flags.support_s2n_bignum =
+            lib.mkIf (lib.versionAtLeast config.package.identifier.version "2") false;
+        };
+      })
+    ];
+  };
+
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool "ghc96" "hlint" {

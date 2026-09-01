@@ -39,10 +39,10 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 11.7
+                      , cardano-api ^>= 11.8
                       , cardano-binary
-                      , cardano-cli ^>= 11.2.2
-                      , cardano-crypto-class ^>=2.5
+                      , cardano-cli ^>= 11.3
+                      , cardano-crypto-class ^>=2.6
                       , containers
                       , ekg-core
                       , http-media
@@ -99,4 +99,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base
-                      , cardano-crypto-class ^>=2.5
+                      , cardano-crypto-class ^>=2.6

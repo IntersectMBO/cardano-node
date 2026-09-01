@@ -25,10 +25,11 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Exception (try)
-import           Control.Monad (replicateM, void)
+import           Control.Exception (catch, throwIO, try)
+import           Control.Monad (replicateM, unless, void, (>=>))
 import qualified Data.ByteString as BS
 import           Data.Default.Class
+import           Data.IORef (newIORef, readIORef, writeIORef)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
@@ -60,15 +61,31 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
   rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
   let rpcServer = Rpc.ServerUnix rpcSocket
 
+      -- Open a FollowTip stream intersecting at the given references and run
+      -- @body@ over the stream's @recv@ action.
+      withFollowTip
+        :: [Rpc.Proto U5c.BlockRef]
+        -> (IO (NextElem (Rpc.Proto U5c.FollowTipResponse)) -> IO a)
+        -> H.Integration a
+      withFollowTip intersectRefs body = do
+        result <- H.evalIO $ do
+          resultRef <- newIORef Nothing
+          let stream =
+                Rpc.withConnection def rpcServer $ \conn ->
+                  Rpc.serverStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs) $
+                    body >=> (writeIORef resultRef . Just)
+          stream `catch` \e@GrpcException{grpcError} ->
+            unless (grpcError == GrpcCancelled) $ throwIO e
+          readIORef resultRef
+        H.nothingFail result
+
       -- Open a fresh FollowTip stream intersecting at the given references,
       -- read exactly the requested number of messages, then let the
       -- connection close: the stream is never consumed beyond what the
       -- caller asked for.
       followTipN :: Int -> [Rpc.Proto U5c.BlockRef] -> H.Integration [NextElem (Rpc.Proto U5c.FollowTipResponse)]
       followTipN messageCount intersectRefs =
-        H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
-          Rpc.serverStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs) $
-            \recv -> replicateM messageCount recv
+        withFollowTip intersectRefs $ \recv -> replicateM messageCount recv
 
       -- Open a stream expecting it to fail before any message is delivered,
       -- mirroring FetchBlock's @fetchBlockExpectingError@ pattern.
@@ -108,22 +125,21 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
         -> Int
         -> H.Integration (Maybe (Rpc.Proto U5c.Tx))
       followTipUntilTx intersectRefs txHash maxApplyMessages =
-        H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
-          Rpc.serverStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs) $ \recv ->
-            let scanApplies remaining
-                  | remaining <= 0 = pure Nothing
-                  | otherwise = do
-                      next <- recv
-                      case next of
-                        NoNextElem -> pure Nothing
-                        NextElem message ->
-                          case message ^. U5c.maybe'apply of
-                            Nothing -> scanApplies remaining
-                            Just block ->
-                              case filter (\t -> t ^. U5c.hash == txHash) (block ^. U5c.cardano . U5c.body . U5c.tx) of
-                                (tx : _) -> pure (Just tx)
-                                [] -> scanApplies (remaining - 1)
-             in scanApplies maxApplyMessages
+        withFollowTip intersectRefs $ \recv ->
+          let scanApplies remaining
+                | remaining <= 0 = pure Nothing
+                | otherwise = do
+                    next <- recv
+                    case next of
+                      NoNextElem -> pure Nothing
+                      NextElem message ->
+                        case message ^. U5c.maybe'apply of
+                          Nothing -> scanApplies remaining
+                          Just block ->
+                            case filter (\t -> t ^. U5c.hash == txHash) (block ^. U5c.cardano . U5c.body . U5c.tx) of
+                              (tx : _) -> pure (Just tx)
+                              [] -> scanApplies (remaining - 1)
+           in scanApplies maxApplyMessages
 
       -- Origin is a BlockRef with an empty hash: clients append it as an
       -- infallible catch-all requesting full-history sync.
