@@ -64,16 +64,24 @@ initTraceDispatcher ::
   , LogFormatting (TraceGsmEvent (Tip blk))
   )
   => NodeConfiguration
+  -> Maybe TraceConfig
+     -- ^ The tracing configuration, when it was already resolved alongside the
+     -- rest of the node configuration (see
+     -- 'Cardano.Node.Configuration.CardanoConfigResolve.rncTraceConfig').
+     -- 'Nothing' means read it from the configuration file, as ever.
   -> BlockType blk
   -> TopLevelConfig blk
   -> NetworkMagic
   -> NodeKernelData blk
   -> Bool
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
-initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
-  trConfig <- readConfigurationWithDefault
-                (FromFile (unConfigPath $ ncConfigFile nc))
-                defaultCardanoConfig
+initTraceDispatcher nc mTrConfig blockType cfg networkMagic nodeKernel noBlockForging = do
+  trConfig <- case mTrConfig of
+    Just resolved -> pure resolved
+    Nothing ->
+      readConfigurationWithDefault
+        (FromFile (unConfigPath $ ncConfigFile nc))
+        defaultCardanoConfig
 
   (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
 
