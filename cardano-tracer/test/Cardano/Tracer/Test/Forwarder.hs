@@ -23,6 +23,7 @@ import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils
+import           Ouroboros.Network.ConnectionManager.Types (DataFlow (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
@@ -221,6 +222,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
                                ]
          )
       )
+      (const Unidirectional)
       Nothing
       address
     case done of
@@ -296,6 +298,7 @@ doListenToAcceptor TestSetup{..}
                          ]
          )
       )
+      (const Unidirectional)
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
  where
   forwarderApp

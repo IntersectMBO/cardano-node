@@ -11,7 +11,10 @@
 # jq's cache format marker is the "layout.version" file: genesis-create-cache-jq
 # writes it, genesis-cache-hit-jq gates the cache hit on it. (Atomic commit is the
 # top-level caller's job; the ripper backend versions via its keys instead.)
-genesis_jq_layout_version=June-22-2026
+# Bumped October-08-2026: dijkstra-genesis.json is no longer cardano-cli's own
+# output (see genesis-create-cache-jq), so cache entries written before that
+# still hold a file the node refuses to parse.
+genesis_jq_layout_version=October-08-2026
 
 profile-cache-key-input-jq() {
     set -euo pipefail
@@ -96,6 +99,28 @@ genesis-create-cache-jq() {
     #   spec generation step here.
     progress genesis "$(colorise cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}")"
     cardano-cli latest genesis create-testnet-data "${create_testnet_data_args[@]}"
+
+    # Dijkstra genesis: `create-testnet-data` has no `--spec-dijkstra`, so it
+    # derives the file from cardano-api's `dijkstraGenesisDefaults` alone -- and
+    # that builds `plutusV4CostModel` from the full parameter list of the current
+    # Plutus version, while the ledger's genesis decoder insists on exactly
+    # `costModelInitParamCount PlutusV4` parameters. The node therefore refuses
+    # to parse the very file cardano-cli just wrote:
+    #   Number of parameters supplied 369 does not match the expected number of 251
+    # Overwrite it the way the ripper backend already assembles its own
+    # protocol.dijkstra.json: the profile's block when it has one, else the inert
+    # "zero" stub. This also keeps both backends byte-identical here.
+    # Activation check in service/nodes.nix (TestDijkstraHardForkAtEpoch).
+    #
+    # TODO: drop this once `create-testnet-data` grows a `--spec-dijkstra` flag,
+    # or cardano-api trims `dijkstraGenesisDefaults`' cost model to the count the
+    # genesis decoder accepts. cardano-testnet carries the same workaround in
+    # `Testnet.Defaults.defaultDijkstraGenesis`.
+    if [[ "$(jq -r '.genesis.dijkstra // "null"' "$profile_json")" != "null" ]]; then
+      jq '.genesis.dijkstra'     "$profile_json" > "$dir/dijkstra-genesis.json"
+    else
+      genesis zero-spec-dijkstra                 > "$dir/dijkstra-genesis.json"
+    fi
 
     # jq's format marker, checked by genesis-cache-hit-jq. (Atomic commit and the shared
     # cache.key / cache.key.input are the caller's job, in `genesis create-cache`.)
