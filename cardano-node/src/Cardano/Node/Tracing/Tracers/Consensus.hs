@@ -2447,12 +2447,12 @@ instance LogFormatting TraceLeiosKernel where
   forHuman = \case
     -- Consensus renders 'TraceLeiosDb' with 'show'; spell out the events an
     -- operator is likely to grep for.
-    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
+    TraceLeiosDb (TraceLeiosDbCopiedToImmutable copiedEbs) ->
       "Leios DB copied to the immutable partition: ebs=" <> showT copiedEbs
-        <> " txs=" <> showT copiedTxs
-    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
+    TraceLeiosDb (TraceLeiosDbEvicted evictedEbs) ->
       "Leios DB evicted from the volatile partition: ebs=" <> showT evictedEbs
-        <> " txs=" <> showT evictedTxs
+    TraceLeiosDb (TraceLeiosDbGCError reason) ->
+      "Leios DB sweep pass failed (will be retried): " <> Text.pack reason
     TraceLeiosDb (TraceLeiosDbCopyQueueFull ebHash) ->
       "Leios DB copy queue full, dropped " <> Text.pack ebHash
         <> " (harmless: GC self-heal re-delivers)"
@@ -2481,14 +2481,12 @@ instance LogFormatting TraceLeiosKernel where
       , IntM "leiosDbWalBytes"  walBytes
       ]
     -- Accumulating counters, bumped per copier commit / GC pass.
-    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
-      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs)
-      , CounterM "leiosDbCopiedTxs" (Just copiedTxs)
-      ]
-    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
-      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs)
-      , CounterM "leiosDbEvictedTxs" (Just evictedTxs)
-      ]
+    TraceLeiosDb (TraceLeiosDbCopiedToImmutable copiedEbs) ->
+      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs) ]
+    TraceLeiosDb (TraceLeiosDbEvicted evictedEbs) ->
+      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs) ]
+    TraceLeiosDb TraceLeiosDbGCError{} ->
+      [ CounterM "leiosDbSweepErrors" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
       [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyError{} ->
@@ -2503,6 +2501,7 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor (TraceLeiosDb TraceLeiosDbCall{}) = Namespace [] ["Db", "Call"]
   namespaceFor (TraceLeiosDb TraceLeiosDbCopiedToImmutable{}) = Namespace [] ["Db", "Copied"]
   namespaceFor (TraceLeiosDb TraceLeiosDbEvicted{}) = Namespace [] ["Db", "Evicted"]
+  namespaceFor (TraceLeiosDb TraceLeiosDbGCError{}) = Namespace [] ["Db", "SweepError"]
   namespaceFor (TraceLeiosDb TraceLeiosDbCopyQueueFull{}) = Namespace [] ["Db", "CopyQueueFull"]
   namespaceFor (TraceLeiosDb TraceLeiosDbCopyError{}) = Namespace [] ["Db", "CopyError"]
   namespaceFor ev = Namespace [] . Leios.nsiPath . Leios.leiosKernelNSInfo . Leios.leiosKernelNSOf $ ev
@@ -2514,6 +2513,9 @@ instance MetaTrace TraceLeiosKernel where
   -- stays pinned and GC self-heal retries) but worth an operator's eye.
   severityFor (Namespace _ ["Db", "CopyQueueFull"]) _ = Just Warning
   severityFor (Namespace _ ["Db", "CopyError"])     _ = Just Warning
+  -- The sweeper drops its connection and retries, but repeated failures mean
+  -- eviction is not keeping up.
+  severityFor (Namespace _ ["Db", "SweepError"])    _ = Just Warning
   severityFor (Namespace _ p) _ = mapLeiosSeverity . Leios.nsiSeverity <$> Leios.leiosKernelNSByPath p
 
   documentFor _ = Nothing
@@ -2524,17 +2526,18 @@ instance MetaTrace TraceLeiosKernel where
     ]
   metricsDocFor (Namespace _ ["Db", "Copied"]) =
     [ ("leiosDbCopiedEbs", "LeiosDb: EBs copied into the immutable partition")
-    , ("leiosDbCopiedTxs", "LeiosDb: transactions copied into the immutable partition")
     ]
   metricsDocFor (Namespace _ ["Db", "Evicted"]) =
     [ ("leiosDbEvictedEbs", "LeiosDb: announcement rows garbage collected from the volatile partition")
-    , ("leiosDbEvictedTxs", "LeiosDb: transactions garbage collected from the volatile partition")
     ]
   metricsDocFor (Namespace _ ["Db", "CopyQueueFull"]) =
     [ ("leiosDbCopyQueueFull", "LeiosDb: promotions dropped on a full copy queue (re-delivered by GC self-heal)")
     ]
   metricsDocFor (Namespace _ ["Db", "CopyError"]) =
     [ ("leiosDbCopyErrors", "LeiosDb: failed copy attempts (the EB stays pinned and is retried)")
+    ]
+  metricsDocFor (Namespace _ ["Db", "SweepError"]) =
+    [ ("leiosDbSweepErrors", "LeiosDb: failed sweep passes (retried)")
     ]
   metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosKernelNSByPath p)
 
@@ -2543,6 +2546,7 @@ instance MetaTrace TraceLeiosKernel where
     ++ [ Namespace [] ["Db", "Call"]
        , Namespace [] ["Db", "Copied"]
        , Namespace [] ["Db", "Evicted"]
+       , Namespace [] ["Db", "SweepError"]
        , Namespace [] ["Db", "CopyQueueFull"]
        , Namespace [] ["Db", "CopyError"]
        ]
