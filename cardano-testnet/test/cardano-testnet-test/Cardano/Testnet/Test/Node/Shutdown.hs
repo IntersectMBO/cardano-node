@@ -132,7 +132,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
   -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
-  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
+  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode defaultDijkstraGenesis
 
   (shelleyGenesisHash,alonzoGenesisHash)  <-
     liftToIntegration $ do

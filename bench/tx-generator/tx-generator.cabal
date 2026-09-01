@@ -116,13 +116,13 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.7
+                      , cardano-api ^>= 11.8
                       , cardano-binary
-                      , cardano-cli ^>= 11.2.2
+                      , cardano-cli ^>= 11.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
-                      , cardano-diffusion ^>= 1.1.1
+                      , cardano-diffusion ^>= 1.3
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
@@ -149,8 +149,8 @@ library
                       , network-mux
                       , network-uri
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.2.0.1
-                      , ouroboros-network:{api, framework, tracing, ouroboros-network, protocols} >= 1.1
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.0
+                      , ouroboros-network:{api, framework, ouroboros-network, protocols, tracing} >= 1.2
                       , plutus-ledger-api
                       , plutus-tx
                       , random
