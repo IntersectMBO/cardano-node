@@ -9,11 +9,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
 
 module Cardano.Node.Tracing.Era.Shelley () where
 
@@ -174,8 +175,8 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyRegisteredDELEG credential ->
-      [ "kind" .= String "StakeKeyRegisteredDELEG"
+    Conway.DelegAccountAlreadyRegistered (AccountAlreadyRegistered credential) ->
+      [ "kind" .= String "DelegAccountAlreadyRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
       ]
@@ -643,8 +644,8 @@ instance
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
 instance LogFormatting (ShelleyDelegPredFailure era) where
-  forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
-    mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
+  forMachine _dtal (DelegAccountAlreadyRegistered (AccountAlreadyRegistered alreadyRegistered)) =
+    mconcat [ "kind" .= String "DelegAccountAlreadyRegistered"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
@@ -1325,17 +1326,17 @@ instance LogFormatting (Praos.PraosCannotForge crypto) where
 instance LogFormatting Praos.EnvelopeError where
   forMachine _ err' =
     case err' of
-      Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
+      ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
         mconcat [ "kind" .= String "ObsoleteNode"
                 , "maxMajorProtocolVersion" .= maxPtclVersionFromPparams
                 , "headerProtocolVersion" .= blkHeaderPtclVersion
                 ]
-      Praos.HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
+      HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
         mconcat [ "kind" .= String "HeaderSizeTooLarge"
                 , "maxHeaderSize" .= ledgerViewMaxHeaderSize
                 , "headerSize" .= headerSize
                 ]
-      Praos.BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
+      BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
         mconcat [ "kind" .= String "BlockSizeTooLarge"
                 , "maxBlockSize" .= ledgerViewMaxBlockSize
                 , "blockSize" .= blockSize
