@@ -57,6 +57,9 @@ import           System.FS.API (SomeHasFS (..))
 import           System.FS.API.Types (MountPoint (MountPoint))
 import           System.FS.IO (ioHasFS)
 import qualified System.IO.MMap as MMap
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (..))
+import           System.FS.IO (ioHasFS)
 
 
 ------------------------------------------------------------------------------

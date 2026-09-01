@@ -326,7 +326,7 @@ requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
 mkProtVer :: (Natural, Word32) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   maybeToRight (PpceVersionInvalid majorProtVer) $
-    (`Ledger.ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer
+    (`Ledger.ProtVer` fromIntegral minorProtVer) <$> Ledger.mkVersion majorProtVer
 
 -- Duplicated from "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 boundRationalEither
@@ -528,7 +528,7 @@ fromShelleyCommonPParams
 fromShelleyCommonPParams pp =
   ProtocolParameters
     { protocolParamProtocolVersion = case pp ^. ppProtocolVersionL of
-        Ledger.ProtVer a b -> (Ledger.getVersion a, b)
+        Ledger.ProtVer a b -> (Ledger.getVersion a, fromIntegral b)
     , protocolParamMaxBlockHeaderSize = fromIntegral $ pp ^. ppMaxBHSizeL
     , protocolParamMaxBlockBodySize = fromIntegral $ pp ^. ppMaxBBSizeL
     , protocolParamMaxTxSize = fromIntegral $ pp ^. ppMaxTxSizeL

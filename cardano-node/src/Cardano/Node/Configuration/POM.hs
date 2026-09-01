@@ -497,13 +497,11 @@ instance FromJSON PartialNodeConfiguration where
               pure $ fmap (RequestedSnapshotInterval . fromJust . nonZero) si
             snapNum x      = fmap NumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
 
-        mTopLevelSnapInterval <- snapInterval v
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
-                       ["SnapshotInterval", "NumOfDiskSnapshots"]
+                   zip [ void mTopLevelSnapNum]
+                       ["NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 
         mLedgerDB <- v .:? "LedgerDB"

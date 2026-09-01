@@ -4,6 +4,12 @@
 { haskell-nix
 , incl
 , CHaP
+, cardano-ledger-src
+, ouroboros-consensus-src
+, cardano-api-src
+, cardano-cli-src
+, cardano-addresses-src
+, grapesy-src
 , macOS-security
 , windowsCompilerNixName
 , herald
@@ -48,6 +54,12 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
+        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger" = cardano-ledger-src;
+        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/ouroboros-consensus" = ouroboros-consensus-src;
+        "https://github.com/input-output-hk/cardano-api" = cardano-api-src;
+        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli" = cardano-cli-src;
+        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses" = cardano-addresses-src;
+        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy" = grapesy-src;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";

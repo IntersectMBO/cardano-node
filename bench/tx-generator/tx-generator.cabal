@@ -149,8 +149,8 @@ library
                       , network-mux
                       , network-uri
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.2.0.1
-                      , ouroboros-network:{api, framework, tracing, ouroboros-network, protocols} >= 1.1
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.3
+                      , ouroboros-network:{api, framework, ouroboros-network, protocols, tracing} >= 1.2
                       , plutus-ledger-api
                       , plutus-tx
                       , random

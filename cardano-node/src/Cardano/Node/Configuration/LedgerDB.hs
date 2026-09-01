@@ -9,7 +9,6 @@ module Cardano.Node.Configuration.LedgerDB (
     DeprecatedOptions (..),
     LedgerDbConfiguration (..),
     LedgerDbSelectorFlag (..),
-    Gigabytes,
     noDeprecatedOptions,
     selectorToArgs,
 ) where
@@ -22,8 +21,6 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 
-import qualified Data.Aeson.Types as Aeson (FromJSON)
-import           Data.Maybe (fromMaybe)
 import           Data.Proxy
 import           System.Random (StdGen)
 

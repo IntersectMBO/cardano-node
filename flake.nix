@@ -23,7 +23,7 @@
     customConfig.url = "github:input-output-hk/empty-flake";
 
     CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=index-only";
       flake = false;
     };
 
@@ -67,6 +67,31 @@
     # Changing the tag alone only relocks mithril itself, leaving its
     # transitive pins on an old release.
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
+
+    cardano-ledger-src = {
+      url = "git+file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger";
+      flake = false;
+    };
+    ouroboros-consensus-src = {
+      url = "github:IntersectMBO/ouroboros-consensus/63c57f433ce61e37461c48aeb1998ac8cbaff3fd";
+      flake = false;
+    };
+    cardano-api-src = {
+      url = "github:input-output-hk/cardano-api/341d86e5e2999a7eb8b6a753245017523724445a";
+      flake = false;
+    };
+    cardano-cli-src = {
+      url = "git+file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli";
+      flake = false;
+    };
+    cardano-addresses-src = {
+      url = "git+file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses";
+      flake = false;
+    };
+    grapesy-src = {
+      url = "git+file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -528,6 +553,12 @@
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
+            cardano-ledger-src = input.cardano-ledger-src;
+            ouroboros-consensus-src = input.ouroboros-consensus-src;
+            cardano-api-src = input.cardano-api-src;
+            cardano-cli-src = input.cardano-cli-src;
+            cardano-addresses-src = input.cardano-addresses-src;
+            grapesy-src = input.grapesy-src;
             macOS-security = macOS-security (final.pkgs);
             # buildPlatform, not hostPlatform: herald is a developer tool that
             # runs on the machine, so cross shells (e.g. windows) must not try

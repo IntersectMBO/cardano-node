@@ -993,9 +993,9 @@ instance MetaTrace SanityCheckIssue where
   allNamespaces = [Namespace [] ["SanityCheckIssue"]]
 
 instance LogFormatting SanityCheckIssue where
-  forMachine _dtal (InconsistentSecurityParam e) =
-    mconcat [ "kind" .= String "InconsistentSecurityParam"
-            , "error" .= String (Text.pack $ show e)
+  forMachine _dtal issue =
+    mconcat [ "kind" .= String "SanityCheckIssue"
+            , "issue" .= String (Text.pack $ show issue)
             ]
   forMachine _dtal (SnapshotDelayRangeInverted mn mx) =
     mconcat [ "kind" .= String "SnapshotDelayRangeInverted"
@@ -1097,7 +1097,7 @@ instance
           .= map
             ( \(tx, err) ->
                 Aeson.object $
-                  [ "tx" .= forMachine dtal (txForgetValidated tx)
+                  [ "tx" .= forMachine dtal tx
                   ] <>
                   [ "err" .= forMachine dtal err
                   | dtal >= DDetailed
@@ -1110,7 +1110,7 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
-      , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
+      , "txsInvalidated" .= map (forMachine dtal) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolSyncNotNeeded t) =

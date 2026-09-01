@@ -42,10 +42,13 @@ toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst <$> protocolI
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> IO (TopLevelConfig CardanoBlock)
-protocolToTopLevelConfig ptcl = pInfoConfig <$> toProtocolInfo ptcl
+protocolToTopLevelConfig ptcl = do
+  ProtocolInfo {pInfoConfig} <- toProtocolInfo ptcl
+  pure pInfoConfig
 
 protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig CardanoBlock)
 protocolToCodecConfig = fmap configCodec . protocolToTopLevelConfig
+protocolToCodecConfig ptcl = configCodec <$> protocolToTopLevelConfig ptcl
 
 protocolToNetworkId :: SomeConsensusProtocol -> IO NetworkId
 protocolToNetworkId ptcl

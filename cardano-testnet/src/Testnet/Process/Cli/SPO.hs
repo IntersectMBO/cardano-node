@@ -35,7 +35,10 @@ import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
-import           System.FilePath.Posix ((</>))
+import           System.FilePath.Posix (takeDirectory, (</>))
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 import           Testnet.Filepath
 import           Testnet.Process.Cli.Keys

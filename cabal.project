@@ -25,6 +25,8 @@ constraints:
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
   , any.alfred-margaret < 2.1.1.0 || > 2.1.1.0
+  -- Force cardano-crypto-class 2.6.x to avoid backtracking into 2.5.x
+  , any.cardano-crypto-class ^>= 2.6
 
 -- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
 -- which sidesteps the GHC type-checker plugin incompatibility with
@@ -83,6 +85,25 @@ package plutus-scripts-bench
 allow-newer:
   , io-sim:time
   , io-classes:time
+  , cardano-ping:network-mux
+  -- dmq-node-0.7.0.0 bounds ouroboros-consensus ^>=4.0 but we have 4.1
+  , dmq-node:ouroboros-consensus
+  , grapesy:aeson
+  , grapesy:crypton-x509
+  , grapesy:crypton-x509-store
+  , grapesy:crypton-x509-system
+  , grapesy:crypton-x509-validation
+  , grapesy:http2
+  , grapesy:http2-tls
+  , grapesy:network-run
+  , grapesy:tls
+  , grpc-spec:aeson
+  , http-api-data:text-iso8601
+  -- kes-agent bounds cardano-crypto-class ^>=2.5 but we have a newer version
+  , kes-agent:cardano-crypto-class
+  , kes-agent-crypto:cardano-crypto-class
+  -- plutus-scripts-bench bounds cardano-api ^>=11.5 but we have 11.6
+  , plutus-scripts-bench:cardano-api
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
@@ -166,3 +187,65 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger
+  tag: fcc6f4fdaa28f18f7a2a4ac3e9100e7f8238ec31
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 63c57f433ce61e37461c48aeb1998ac8cbaff3fd
+  --sha256: sha256-nZCGuy+hWep0LZHQqMyRoPwKjZ0U+jqH1UGbJbOpxYU=
+  subdir:
+    .
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: 341d86e5e2999a7eb8b6a753245017523724445a
+  --sha256: sha256-o9Ga0n6+1BWAU5cqnng903X6RpFjN2sI0/k46r9Fexg=
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli
+  tag: ca12c2754c64d4ac0d278fbea909005176b5fae2
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses
+  tag: d7d34f3275274fa3b5b08664c7d391eec7059b5b
+
+source-repository-package
+  type: git
+  location: file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy
+  tag: 016644096f0f6daa9f2faef0caf8678543c0bc5f
+  subdir:
+    grapesy
+    grpc-spec
