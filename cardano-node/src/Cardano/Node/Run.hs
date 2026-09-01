@@ -372,9 +372,11 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
             | isAbsolute leiosDbPath = leiosDbPath
             | otherwise = nonImmutableDbPath dbPath </> leiosDbPath
       createDirectoryIfMissing True (takeDirectory resolvedPath)
+      -- TODO(geo2a): read vol and imm path from config
       newLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
-        resolvedPath
+        (resolvedPath <> ".vol")
+        (resolvedPath <> ".imm")
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
