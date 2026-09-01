@@ -31,12 +31,7 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
-import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -64,11 +59,15 @@ import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (Per
                    TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
                    TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
+import           Ouroboros.Consensus.Peras.Cert.Inclusion.Trace (TracePerasCertInclusionEvent)
+import           Ouroboros.Consensus.Peras.Voting.Trace (TracePerasVoteForgingEvent)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing (ClientMetrics, ConsensusStartupException,
+                   ReplayBlockStats)
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
@@ -234,6 +233,10 @@ getAllNamespaces =
         perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (PerasVoteDiffusion blk)))])
+        perasCertInclusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inclusion"])
+                        (allNamespaces :: [Namespace (TracePerasCertInclusionEvent blk)])
+        perasVoteForgingNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Forging"])
+                        (allNamespaces :: [Namespace (TracePerasVoteForgingEvent blk)])
         localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
                                             ["TxSubmission", "LocalServer"])
                         (allNamespaces :: [Namespace
@@ -481,6 +484,8 @@ getAllNamespaces =
             <> perasVoteOutboundNS
             <> perasCertDiffusionNS
             <> perasVoteDiffusionNS
+            <> perasCertInclusionNS
+            <> perasVoteForgingNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

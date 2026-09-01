@@ -14,8 +14,6 @@ import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
 import           Cardano.Node.Tracing.StateRep (NodeState)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                   (ConsensusStartupException (..))
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
 import           Cardano.Rpc.Server (TraceRpc)
@@ -23,6 +21,7 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing (ConsensusStartupException (..))
 import           Ouroboros.Network.ConnectionId
 
 import           Prelude (IO)

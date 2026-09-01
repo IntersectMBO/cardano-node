@@ -37,10 +37,10 @@ import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..),
                    OuroborosBundle, RunMiniProtocol (..))
+import           Ouroboros.Network.PerasSupport (PerasSupport (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing.Codec (decodeRemoteAddress,
                    encodeRemoteAddress)
-import           Ouroboros.Network.PerasSupport (PerasSupport (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
                    blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
@@ -156,17 +156,16 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
                                              (cTxSubmission2Codec myCodecs)
                                              channel
                                              (txSubmissionClientPeer myTxSubClient)
+            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
+            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
             , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                           runPeer
                                              mempty
                                              (cPeerSharingCodec myCodecs)
                                              channel
                                              (peerSharingClientPeer peerSharingClientNull)
-            -- TODO Peras is not supported here
-            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras cert diffusion is unsupported"
-            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras vote diffusion is unsupported"
             }
           n2nVer
           n2nData
