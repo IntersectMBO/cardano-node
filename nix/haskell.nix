@@ -5,6 +5,7 @@
 , incl
 , CHaP
 , cardano-ledger-src
+, cardano-base-src
 , ouroboros-consensus-src
 , cardano-api-src
 , cardano-cli-src
@@ -54,12 +55,13 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
-        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger" = cardano-ledger-src;
-        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/ouroboros-consensus" = ouroboros-consensus-src;
+        "https://github.com/IntersectMBO/cardano-ledger" = cardano-ledger-src;
+        "https://github.com/intersectmbo/cardano-base.git" = cardano-base-src;
+        "https://github.com/IntersectMBO/ouroboros-consensus" = ouroboros-consensus-src;
         "https://github.com/input-output-hk/cardano-api" = cardano-api-src;
-        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli" = cardano-cli-src;
-        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses" = cardano-addresses-src;
-        "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy" = grapesy-src;
+        "https://github.com/input-output-hk/cardano-cli" = cardano-cli-src;
+        "https://github.com/IntersectMBO/cardano-addresses" = cardano-addresses-src;
+        "https://github.com/well-typed/grapesy" = grapesy-src;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";

@@ -439,7 +439,7 @@ parseRpcConfig :: Parser PartialRpcConfig
 parseRpcConfig = do
   isEnabled <- lastOption parseRpcToggle
   socketPath <- lastOption parseRpcSocketPath
-  pure $ RpcConfig isEnabled socketPath mempty
+  pure $ RpcConfig isEnabled mempty socketPath
   where
     parseRpcToggle :: Parser Bool
     parseRpcToggle =

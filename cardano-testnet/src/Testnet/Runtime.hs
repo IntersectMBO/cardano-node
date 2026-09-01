@@ -52,9 +52,6 @@ import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
-import           System.FS.API (SomeHasFS (..))
-import           System.FS.API.Types (MountPoint (MountPoint))
-import           System.FS.IO (ioHasFS)
 import qualified System.Process as IO
 import           System.Process (waitForProcess)
 import           System.Timeout (timeout)
@@ -493,9 +490,6 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       liftIOAnnotated $ appendFile logFile ""
 
       let socketPath = H.sprocketSystemName . NEL.head $ testnetSprockets testnetRuntime
-          configDir = takeDirectory . unFile $ configurationFile testnetRuntime
-          fs = SomeHasFS (ioHasFS (MountPoint configDir))
-
       fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
 
       void $ asyncRegister_ . runExceptT $

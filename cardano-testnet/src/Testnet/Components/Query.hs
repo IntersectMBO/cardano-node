@@ -79,10 +79,6 @@ import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
-import           System.FilePath (takeDirectory)
-import           System.FS.API (SomeHasFS (..))
-import           System.FS.API.Types (MountPoint (MountPoint))
-import           System.FS.IO (ioHasFS)
 
 import           Testnet.Filepath (mkNodeConfigFs)
 import           Testnet.Process.RunIO (liftIOAnnotated)
@@ -394,8 +390,6 @@ getEpochStateView
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   esv <- H.evalIO $ EpochStateView <$> newTVarIO (Left EpochStateNotInitialised) <*> newTVarIO 0
-  let configDir = takeDirectory $ unFile nodeConfigFile
-      fs = SomeHasFS (ioHasFS (MountPoint configDir))
   _ <- asyncRegister_ $ do
     fs <- mkNodeConfigFs nodeConfigFile
     result <- runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation (EpochNo maxBound) ()

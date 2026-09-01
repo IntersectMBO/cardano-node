@@ -1,5 +1,6 @@
 {- HLINT ignore "Eta reduce" -}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.OuroborosImports
@@ -48,7 +49,6 @@ protocolToTopLevelConfig ptcl = do
 
 protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig CardanoBlock)
 protocolToCodecConfig = fmap configCodec . protocolToTopLevelConfig
-protocolToCodecConfig ptcl = configCodec <$> protocolToTopLevelConfig ptcl
 
 protocolToNetworkId :: SomeConsensusProtocol -> IO NetworkId
 protocolToNetworkId ptcl

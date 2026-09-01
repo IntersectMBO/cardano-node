@@ -21,6 +21,8 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.LSM as LSM
 
+import qualified Data.Aeson as Aeson
+import           Data.Maybe (fromMaybe)
 import           Data.Proxy
 import           System.Random (StdGen)
 
@@ -83,3 +85,4 @@ selectorToArgs (V2LSM fp fpExport) fastStoragePath =
     (fromMaybe "lsm" fp)
     fpExport
     fastStoragePath
+    LSM.DiskCacheAll

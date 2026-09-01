@@ -1210,10 +1210,6 @@ instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= unWithdrawals rs
-            ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 
@@ -1326,17 +1322,17 @@ instance LogFormatting (Praos.PraosCannotForge crypto) where
 instance LogFormatting Praos.EnvelopeError where
   forMachine _ err' =
     case err' of
-      ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
+      Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
         mconcat [ "kind" .= String "ObsoleteNode"
                 , "maxMajorProtocolVersion" .= maxPtclVersionFromPparams
                 , "headerProtocolVersion" .= blkHeaderPtclVersion
                 ]
-      HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
+      Praos.HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
         mconcat [ "kind" .= String "HeaderSizeTooLarge"
                 , "maxHeaderSize" .= ledgerViewMaxHeaderSize
                 , "headerSize" .= headerSize
                 ]
-      BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
+      Praos.BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
         mconcat [ "kind" .= String "BlockSizeTooLarge"
                 , "maxBlockSize" .= ledgerViewMaxBlockSize
                 , "blockSize" .= blockSize

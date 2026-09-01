@@ -52,18 +52,9 @@ instance LogFormatting TraceRpc where
                 TraceRpcSubmitSpan s -> [spanToObject s]
                 TraceRpcEvalTxDecodingError _ -> []
                 TraceRpcEvalTxSpan s -> [spanToObject s]
-          TraceRpcSync syncTrace ->
-            ["kind" .= String "SyncService"]
-              <> case syncTrace of
-                TraceRpcFetchBlockSpan s -> [spanToObject s]
-                TraceRpcFetchBlockNotFound _ -> []
-                TraceRpcNodeKernelAccessUnavailable -> []
-                TraceRpcReadTipSpan s -> [spanToObject s]
-                TraceRpcFollowTipSpan s -> [spanToObject s]
-          TraceRpcNodeKernelAccess nodeKernelAccessTrace ->
-            ["kind" .= String "NodeKernelAccess"]
-              <> case nodeKernelAccessTrace of
-                TraceRpcUnsupportedBlockType blockType -> ["blockType" .= String blockType]
+          TraceRpcSync _ -> ["kind" .= String "SyncService"]
+          TraceRpcNodeKernelAccess _ -> ["kind" .= String "NodeKernelAccess"]
+          TraceRpcServerListening _ -> ["kind" .= String "ServerListening"]
 
   forHuman = docToText . pretty
 
@@ -106,14 +97,12 @@ instance MetaTrace TraceRpc where
         "SyncService"
           : case syncTrace of
             TraceRpcFetchBlockSpan _ -> ["FetchBlock", "Span"]
-            TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
-            TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
             TraceRpcReadTipSpan _ -> ["ReadTip", "Span"]
             TraceRpcFollowTipSpan _ -> ["FollowTip", "Span"]
-      TraceRpcNodeKernelAccess nodeKernelAccessTrace ->
-        "NodeKernelAccess"
-          : case nodeKernelAccessTrace of
-            TraceRpcUnsupportedBlockType _ -> ["UnsupportedBlockType"]
+            TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
+            TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
+      TraceRpcNodeKernelAccess (TraceRpcUnsupportedBlockType _) -> ["NodeKernelAccess", "UnsupportedBlockType"]
+      TraceRpcServerListening _ -> ["ServerListening"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
@@ -129,11 +118,12 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "TxValidationError"] -> Just Debug -- request error
     ["SubmitService", "EvalTxDecodingError"] -> Just Debug -- request error
     ["SyncService", "FetchBlock", "Span"] -> Just Debug
-    ["SyncService", "FetchBlockNotFound"] -> Just Debug
-    ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
     ["SyncService", "ReadTip", "Span"] -> Just Debug
     ["SyncService", "FollowTip", "Span"] -> Just Debug
+    ["SyncService", "FetchBlockNotFound"] -> Just Debug
+    ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
     ["NodeKernelAccess", "UnsupportedBlockType"] -> Just Warning
+    ["ServerListening"] -> Just Info
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -151,12 +141,13 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "TxDecodingError"] -> Just "A regular request error, when submitted transaction decoding fails."
     ["SubmitService", "TxValidationError"] -> Just "A regular request error, when submitted transaction is invalid."
     ["SubmitService", "EvalTxDecodingError"] -> Just "A regular request error, when evalTx transaction decoding fails."
-    ["SyncService", "FetchBlock", "Span"] -> Just "Span for the FetchBlock SyncService method."
-    ["SyncService", "FetchBlockNotFound"] -> Just "Requested block was not found in ChainDB."
-    ["SyncService", "NodeKernelAccessUnavailable"] -> Just "Node kernel access not yet initialised. The node is still starting up."
-    ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip SyncService method."
-    ["SyncService", "FollowTip", "Span"] -> Just "Span for the FollowTip SyncService method."
-    ["NodeKernelAccess", "UnsupportedBlockType"] -> Just "The block type is not supported by the RPC server."
+    ["SyncService", "FetchBlock", "Span"] -> Just "Span for the FetchBlock UTXORPC method."
+    ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip UTXORPC method."
+    ["SyncService", "FollowTip", "Span"] -> Just "Span for the FollowTip UTXORPC method."
+    ["SyncService", "FetchBlockNotFound"] -> Just "Requested block was not found."
+    ["SyncService", "NodeKernelAccessUnavailable"] -> Just "Node kernel access is not yet available."
+    ["NodeKernelAccess", "UnsupportedBlockType"] -> Just "Node kernel access is not supported for the running block type."
+    ["ServerListening"] -> Just "RPC server started and is listening for connections."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -173,11 +164,11 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "EvalTx", "Span"] ->
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
     ["SyncService", "FetchBlock", "Span"] ->
-      [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock SyncService method.")]
+      [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock UTXORPC method.")]
     ["SyncService", "ReadTip", "Span"] ->
-      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip SyncService method.")]
+      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip UTXORPC method.")]
     ["SyncService", "FollowTip", "Span"] ->
-      [("rpc.request.SyncService.FollowTip", "Span for the FollowTip SyncService method.")]
+      [("rpc.request.SyncService.FollowTip", "Span for the FollowTip UTXORPC method.")]
     _ -> []
 
   allNamespaces =
@@ -187,6 +178,7 @@ instance MetaTrace TraceRpc where
           , ["QueryService", "ReadParams", "Span"]
           , ["QueryService", "ReadUtxos", "Span"]
           , ["QueryService", "SearchUtxos", "Span"]
+          , ["QueryService", "ReadGenesis", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
           , ["SubmitService", "EvalTx", "Span"]
           , ["SubmitService", "N2cConnectionError"]
@@ -194,12 +186,12 @@ instance MetaTrace TraceRpc where
           , ["SubmitService", "TxValidationError"]
           , ["SubmitService", "EvalTxDecodingError"]
           , ["SyncService", "FetchBlock", "Span"]
-          , ["SyncService", "FetchBlockNotFound"]
-          , ["SyncService", "NodeKernelAccessUnavailable"]
           , ["SyncService", "ReadTip", "Span"]
           , ["SyncService", "FollowTip", "Span"]
-          , ["QueryService", "ReadGenesis", "Span"]
+          , ["SyncService", "FetchBlockNotFound"]
+          , ["SyncService", "NodeKernelAccessUnavailable"]
           , ["NodeKernelAccess", "UnsupportedBlockType"]
+          , ["ServerListening"]
           ]
 
 -- helper functions

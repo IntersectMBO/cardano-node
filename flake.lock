@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1788439818,
-        "narHash": "sha256-+sjKSr1tFhiLrxhplOOToCjXMyWZV4ZbvYOdkqwHzBg=",
+        "lastModified": 1788515479,
+        "narHash": "sha256-UoIoRsh+rWKJCJ03z8R/a2RJE9eA0rq8acYHwZWN3aQ=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "95889113a879bc92976bba48cf743bd78f99710f",
+        "rev": "244c29aac8aa9ae3611105ece01497bc91c40ff7",
         "type": "github"
       },
       "original": {
@@ -154,33 +154,34 @@
     "cardano-addresses-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1787277142,
+        "lastModified": 1788294850,
         "narHash": "sha256-HgLfcxlz+VC2ENmS5dP4S4dCtF6y9I9sjnd0EbDWo8k=",
-        "ref": "refs/heads/claude/prepare-11.2",
-        "rev": "d7d34f3275274fa3b5b08664c7d391eec7059b5b",
-        "revCount": 1680,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses"
+        "owner": "IntersectMBO",
+        "repo": "cardano-addresses",
+        "rev": "f59608374d955b653624822429685114f41e2db2",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-addresses"
+        "owner": "IntersectMBO",
+        "repo": "cardano-addresses",
+        "rev": "f59608374d955b653624822429685114f41e2db2",
+        "type": "github"
       }
     },
     "cardano-api-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1788286791,
-        "narHash": "sha256-o9Ga0n6+1BWAU5cqnng903X6RpFjN2sI0/k46r9Fexg=",
+        "lastModified": 1788457793,
+        "narHash": "sha256-qzDXgvooZXSbwSAh7JqQTXbIC1jUy+jp3NMtb4pbmhA=",
         "owner": "input-output-hk",
         "repo": "cardano-api",
-        "rev": "341d86e5e2999a7eb8b6a753245017523724445a",
+        "rev": "4a072645b1a85ee195d28abb252e1e430c1dda4e",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
         "repo": "cardano-api",
-        "rev": "341d86e5e2999a7eb8b6a753245017523724445a",
+        "rev": "4a072645b1a85ee195d28abb252e1e430c1dda4e",
         "type": "github"
       }
     },
@@ -209,20 +210,38 @@
         "type": "github"
       }
     },
+    "cardano-base-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787945237,
+        "narHash": "sha256-WUBluY6UqvBkS5cNsJnKMOaW+1dTfL3mg8iq/kVPV0o=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-base",
+        "rev": "d92e2e3841eaad354c5e1ef77b458b347f471271",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "master",
+        "repo": "cardano-base",
+        "type": "github"
+      }
+    },
     "cardano-cli-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1788276888,
-        "narHash": "sha256-YF/ltRserVQUm3dvfd2Rl/esZRwXdfb+xZrP5eLEens=",
-        "ref": "refs/heads/koslambrou/prepare-11.2",
-        "rev": "ca12c2754c64d4ac0d278fbea909005176b5fae2",
-        "revCount": 10905,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli"
+        "lastModified": 1788457845,
+        "narHash": "sha256-pCfoMDPT64k25FrEjIQvbKBMUSYBYJ0JguKtC9DP7bk=",
+        "owner": "input-output-hk",
+        "repo": "cardano-cli",
+        "rev": "7236b7f746d8e909cb12f9a1cf8fd0fb230735ab",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-cli"
+        "owner": "input-output-hk",
+        "repo": "cardano-cli",
+        "rev": "7236b7f746d8e909cb12f9a1cf8fd0fb230735ab",
+        "type": "github"
       }
     },
     "cardano-dev": {
@@ -254,17 +273,18 @@
     "cardano-ledger-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1787328725,
-        "narHash": "sha256-aFbGA5/Y9u6CXd0r82U9s5co1ytZLr6+4xQr8jZadfw=",
-        "ref": "refs/heads/koslambrou/prepare-11.2",
-        "rev": "fcc6f4fdaa28f18f7a2a4ac3e9100e7f8238ec31",
-        "revCount": 12861,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger"
+        "lastModified": 1788441480,
+        "narHash": "sha256-LI0zqi99UaXksj+op2rLFL0aY+Ayt7EmxvQtUlJvHDg=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-ledger",
+        "rev": "620d2e31ad263bcfab4ad1516a9549c7b53c3ef6",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-ledger"
+        "owner": "IntersectMBO",
+        "ref": "koslambrou/prepare-11.2",
+        "repo": "cardano-ledger",
+        "type": "github"
       }
     },
     "cardano-shell": {
@@ -431,17 +451,18 @@
     "grapesy-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1787317425,
-        "narHash": "sha256-bwAhegGKWS3VysyIIu8HX9B9n4kk5obO62454MBdrmk=",
-        "ref": "refs/heads/koslambrou/prepare-11.2",
-        "rev": "016644096f0f6daa9f2faef0caf8678543c0bc5f",
-        "revCount": 744,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy"
+        "lastModified": 1785840312,
+        "narHash": "sha256-4F+bUoytvrgOcQ8aIWbOY9uYsPoTZwQOlmh7ckgyK9M=",
+        "owner": "well-typed",
+        "repo": "grapesy",
+        "rev": "bd6af64f69ff89e3a8fc02e2c81262e648f4715d",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/grapesy"
+        "owner": "well-typed",
+        "repo": "grapesy",
+        "rev": "bd6af64f69ff89e3a8fc02e2c81262e648f4715d",
+        "type": "github"
       }
     },
     "hackage": {
@@ -545,11 +566,11 @@
     "hackageNix_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1788442286,
-        "narHash": "sha256-GlcmaNP/TOd7svFzcxvwZhIaDg89nm71rKeq+ehNN0I=",
+        "lastModified": 1788528276,
+        "narHash": "sha256-5ytaoHJVA3yxHSbXa4KOteI6f+vOTTxT9wACZniDITQ=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "2648bf92f0188f2a135c7f662a1641c2f0d28a04",
+        "rev": "b02fea8c74a7d4d9040d443de6b43775cc9d3913",
         "type": "github"
       },
       "original": {
@@ -1223,11 +1244,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1787718550,
-        "narHash": "sha256-Wkevfb7P201JHWpP4sbSg3HEO4YDPuCrwvARatfF2RI=",
+        "lastModified": 1777941182,
+        "narHash": "sha256-FX3+8GIrB2z4akmcYTStELDKVJWgqy9yFt0mxwpU3Qc=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "af463a46dbe9c6e2db6b2639c0f35f5689e0c3a8",
+        "rev": "9de00113c11ba8cac908a63acf34b193cda7475b",
         "type": "github"
       },
       "original": {
@@ -1616,17 +1637,17 @@
     "ouroboros-consensus-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1788274604,
-        "narHash": "sha256-nZCGuy+hWep0LZHQqMyRoPwKjZ0U+jqH1UGbJbOpxYU=",
+        "lastModified": 1788447168,
+        "narHash": "sha256-rno71IrjiOfEeOVDqesedJ+3eAWXIBhy/OwtnS44po4=",
         "owner": "IntersectMBO",
         "repo": "ouroboros-consensus",
-        "rev": "63c57f433ce61e37461c48aeb1998ac8cbaff3fd",
+        "rev": "4ee752860daff98f218ace65f828b1244a831055",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
         "repo": "ouroboros-consensus",
-        "rev": "63c57f433ce61e37461c48aeb1998ac8cbaff3fd",
+        "rev": "4ee752860daff98f218ace65f828b1244a831055",
         "type": "github"
       }
     },
@@ -1636,6 +1657,7 @@
         "cardano-addresses-src": "cardano-addresses-src",
         "cardano-api-src": "cardano-api-src",
         "cardano-automation": "cardano-automation",
+        "cardano-base-src": "cardano-base-src",
         "cardano-cli-src": "cardano-cli-src",
         "cardano-dev": "cardano-dev",
         "cardano-ledger-src": "cardano-ledger-src",
