@@ -88,7 +88,6 @@ import           Data.Foldable (Foldable (toList))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
-import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
@@ -684,50 +683,6 @@ instance (Show peer, ToJSON peer, LogFormatting peer, HasHeader blk)
             , "peer" .= toJSON peer
             ]
 
-instance (LogFormatting peer, Show peer) =>
-    LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
-  forMachine DMinimal _ = mempty
-  forMachine _ []       = mconcat
-    [ "kind"  .= String "EmptyPeersFetch"]
-  forMachine _ xs       = mconcat
-    [ "kind"  .= String "PeersFetch"
-    , "peers" .= toJSON
-      (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
-
-  asMetrics _ = []
-
-instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
-  namespaceFor (a : _tl) = (nsCast . namespaceFor) a
-  namespaceFor [] = Namespace [] ["EmptyPeersFetch"]
-
-  severityFor (Namespace [] ["EmptyPeersFetch"]) _ = Just Debug
-  severityFor ns Nothing =
-    severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just []) =
-    severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
-    severityFor (nsCast ns) (Just a)
-
-  privacyFor (Namespace _ ["EmptyPeersFetch"]) _ = Just Public
-  privacyFor ns Nothing =
-    privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just []) =
-    privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
-    privacyFor (nsCast ns) (Just a)
-
-  detailsFor (Namespace _ ["EmptyPeersFetch"]) _ = Just DNormal
-  detailsFor ns Nothing =
-    detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just []) =
-    detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
-    detailsFor (nsCast ns) (Just a)
-  documentFor ns = documentFor (nsCast ns :: Namespace (FetchDecision [Point header]))
-  metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace (FetchDecision [Point header]))
-  allNamespaces = Namespace [] ["EmptyPeersFetch"]
-    : map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
-
 instance LogFormatting (FetchDecision [Point header]) where
   forMachine _dtal (Left decline) =
     mconcat [ "kind" .= String "FetchDecision declined"
@@ -737,35 +692,6 @@ instance LogFormatting (FetchDecision [Point header]) where
     mconcat [ "kind" .= String "FetchDecision results"
              , "length" .= String (showT $ length results)
              ]
-
-instance MetaTrace (FetchDecision [Point header]) where
-    namespaceFor (Left _) = Namespace [] ["Decline"]
-    namespaceFor (Right _) = Namespace [] ["Accept"]
-
-    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineChainIntersectionTooDeep)) = Just Debug
-    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineChainNotPlausible)) = Just Notice
-    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineAlreadyFetched)) = Just Debug
-    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightThisPeer)) = Just Debug
-    severityFor (Namespace _ ["Decline"]) (Just (Left FetchDeclineInFlightOtherPeer)) = Just Debug
-    severityFor (Namespace _ ["Decline"]) _ = Just Info
-    severityFor (Namespace _ ["Accept"])  _ = Just Info
-    severityFor _ _ = Nothing
-
-    metricsDocFor (Namespace _ ["Decline"]) =
-      [("connectedPeers", "Number of connected peers")]
-    metricsDocFor (Namespace _ ["Accept"]) =
-      [("connectedPeers", "Number of connected peers")]
-    metricsDocFor _ = []
-
-    documentFor _ =  Just $ mconcat
-      [ "Throughout the decision making process we accumulate reasons to decline"
-      , " to fetch any blocks. This message carries the intermediate and final"
-      , " results."
-      ]
-    allNamespaces =
-      [ Namespace [] ["Decline"]
-      , Namespace [] ["Accept"]]
-
 
 --------------------------------------------------------------------------------
 -- BlockFetchClientState Tracer

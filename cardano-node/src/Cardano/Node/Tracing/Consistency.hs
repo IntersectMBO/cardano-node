@@ -10,11 +10,14 @@ module Cardano.Node.Tracing.Consistency
   ( getAllNamespaces
   , checkNodeTraceConfiguration
   , checkNodeTraceConfiguration'
+  , checkNodeTraceConfigurationWith
+  , namespaceInventoryDiff
+  , DocTracer
   ) where
 
 
 import           Cardano.Logging
-import           Cardano.Logging.DocuGenerator (dtWarnings)
+import           Cardano.Logging.DocuGenerator (DocTracer, docuResultsToNamespaces, dtWarnings)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
@@ -32,6 +35,7 @@ import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
+import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
@@ -68,7 +72,7 @@ import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
@@ -107,6 +111,7 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic,
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import qualified Codec.CBOR.Term as CBOR
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
@@ -120,11 +125,21 @@ checkNodeTraceConfiguration ::
      FilePath
   -> IO NSWarnings
 checkNodeTraceConfiguration configFileName = do
+  (dt,_) <- docTracersFirstPhase Nothing
+  checkNodeTraceConfigurationWith dt configFileName
+
+-- | Check the configuration in the given file against an already computed
+-- 'DocTracer' (from 'docTracersFirstPhase'), so that callers checking
+-- several configurations can share a single documentation pass.
+checkNodeTraceConfigurationWith ::
+     DocTracer
+  -> FilePath
+  -> IO NSWarnings
+checkNodeTraceConfigurationWith dt configFileName = do
   w1 <- checkTraceConfiguration
           (FromFile configFileName)
           defaultCardanoConfig
           getAllNamespaces
-  (dt,_) <- docTracersFirstPhase Nothing
   pure $ w1 <> dtWarnings dt
 
 -- | Check the configuration in the given file.
@@ -137,6 +152,24 @@ checkNodeTraceConfiguration' trConfig =
   checkTraceConfiguration'
     trConfig
     getAllNamespaces
+
+-- | Compare the namespace inventory of the configuration consistency check
+-- ('getAllNamespaces') against the namespaces of the documented tracers
+-- (the 'DocTracer' produced by 'docTracersFirstPhase').  Metrics are not part
+-- of the comparison; datapoint namespaces are.
+--
+-- Returns @(documentedButNotChecked, checkedButNotDocumented)@, both sorted.
+-- Both lists are empty exactly when the two hand-written tracer inventories
+-- in "Cardano.Node.Tracing.Documentation" and this module agree.
+namespaceInventoryDiff :: DocTracer -> ([T.Text], [T.Text])
+namespaceInventoryDiff dt =
+    ( Set.toAscList (documented `Set.difference` checked)
+    , Set.toAscList (checked `Set.difference` documented) )
+  where
+    documented = Set.fromList (T.lines (docuResultsToNamespaces dt))
+    checked    = Set.fromList
+                   [ T.intercalate "." (outer <> inner)
+                   | (outer, inner) <- getAllNamespaces ]
 
 
 -- | Returns a list of all namespaces from all tracers
@@ -172,13 +205,15 @@ getAllNamespaces =
         chainSyncServerBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerBlock"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
         blockFetchDecisionNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Decision"])
-                        (allNamespaces :: [Namespace [BlockFetch.TraceLabelPeer
+                        (allNamespaces :: [Namespace (TraceDecisionEvent
                                                       remotePeer
-                                                      (FetchDecision [Point (Header blk)])]])
+                                                      (Header blk))])
         blockFetchClientNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                       remotePeer
                                                       (BlockFetch.TraceFetchClientState (Header blk)))])
+        blockFetchClientMetricsNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
+                        (allNamespaces :: [Namespace ClientMetrics])
         blockFetchServerNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
@@ -443,6 +478,7 @@ getAllNamespaces =
             <> blockFetchDecisionNS
             <> consensusSanityCheckNS
             <> blockFetchClientNS
+            <> blockFetchClientMetricsNS
             <> blockFetchServerNS
             <> forgeKESInfoNS
             <> txInboundNS
