@@ -2428,76 +2428,24 @@ instance MetaTrace LeiosMetrics where
 
 
 
+-- TODO Consensus defines 'Leios.LeiosSeverity' for now, but eventually
+-- 'SeverityS' will be coming from a package that Consensus can depend on, in
+-- which case this function can be removed
+mapLeiosSeverity :: Leios.LeiosSeverity -> SeverityS
+mapLeiosSeverity = \case
+  Leios.LSDebug   -> Debug
+  Leios.LSInfo    -> Info
+  Leios.LSNotice  -> Notice
+  Leios.LSWarning -> Warning
+  Leios.LSError   -> Error
+
 -- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
 instance LogFormatting TraceLeiosKernel where
   forMachine _dtal = traceLeiosKernelToObject
-  forHuman = \case
-    MkTraceLeiosKernel msg          -> "LeiosKernel: " <> Text.pack msg
-    TraceLeiosBlockAcquired pt age  -> "EB body acquired: "        <> Text.pack (show pt) <> " age=" <> showT age
-    TraceLeiosBlockPointMissing pt  -> "EB point missing on body acquisition: " <> Text.pack (show pt)
-    TraceLeiosBlockTxsAcquired pt age -> "EB txs acquired: "       <> Text.pack (show pt) <> " age=" <> showT age
-    TraceLeiosFetchBodyArrival fab ->
-      "LeiosFetch EB body arrival (bytes): invalid=" <> showT (fabInvalid fab)
-        <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
-        <> " extra=" <> showT (fabExtra fab)
-    TraceLeiosFetchTxsArrival fab ->
-      "LeiosFetch tx batch arrival (bytes): invalid=" <> showT (fabInvalid fab)
-        <> " evicted=" <> showT (fabEvicted fab) <> " good=" <> showT (fabGood fab)
-        <> " extra=" <> showT (fabExtra fab)
-    TraceLeiosBodyHits pt ibs mempoolHits missedBoth ->
-      "EB body added to TxCache " <> Text.pack (show pt)
-        <> ": " <> showT (Leios.ibsTxsInEb ibs) <> " txs"
-        <> ", " <> showT (Leios.ibsTracked ibs) <> " already tracked"
-        <> " (" <> showT (Leios.ibsAcquired ibs) <> " acquired"
-        <> ", " <> showT (Leios.ibsValidated ibs) <> " validated)"
-        <> ", " <> showT mempoolHits <> " mempool hits"
-        <> ", " <> showT missedBoth <> " in neither"
-        <> "; cache now holds " <> showT (Leios.ibsCacheTxCount ibs) <> " txs"
-        <> ", load " <> showT (Leios.ibsCacheLoad ibs)
-    TraceLeiosBlockForged{slot, eb} ->
-      "EB forged at slot " <> showT slot <> ": " <> Text.pack (show eb)
-    TraceLeiosBlockStored{slot, eb} ->
-      "EB stored at slot " <> showT slot <> ": " <> Text.pack (show eb)
-    TraceLeiosBlockAnnounced{announcedEbPoint} ->
-      "EB announced: " <> Text.pack (show announcedEbPoint)
-    TraceLeiosBlockCertified{atSlot, certifiedPoint} ->
-      "EB certified at slot " <> showT atSlot <> ": " <> Text.pack (show certifiedPoint)
-    TraceLeiosVoted{weight}         -> "Leios voted, weight=" <> showT (fromRational @Double weight)
-    TraceLeiosVoteAcquired{}        -> "Leios vote acquired"
-    TraceLeiosCertified{rbHash}     -> "Leios cert assembled for RB " <> Text.pack (show rbHash)
-    TraceLeiosVoteScheduled{ebPoint, voteIn, deadlineIn} ->
-      "Leios vote scheduled for " <> Text.pack (show ebPoint)
-        <> " in " <> showT voteIn
-        <> ", deadline in " <> showT deadlineIn
-    TraceLeiosEbValidated{ebPoint, reapplied, applied} ->
-      "Leios EB validated " <> Text.pack (show ebPoint)
-        <> " (reapplied " <> showT reapplied
-        <> ", applied " <> showT applied <> ")"
-    TraceLeiosNotVoted{ebPoint, reason} ->
-      "Leios not voted for " <> Text.pack (show ebPoint) <> ": " <> Text.pack (show reason)
-    TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
-    TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
-    TraceLeiosCertifiedAndAnnounced{atSlot, rbHash} ->
-      "RB certified an EB and announced a new one at slot " <> showT atSlot
-        <> " (RB " <> Text.pack (show rbHash) <> ")"
-    TraceLeiosAnnouncementAccepted src equiv fields mbAge ->
-      "EB announcement accepted from " <> Text.pack (show src)
-        <> " (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields) <> " age=" <> showT mbAge
-    TraceLeiosFetchDecision d stats dec ->
-      "LeiosFetch decision took " <> showT d
-        <> "; issued " <> showT (Leios.ldsRequests dec) <> " reqs to "
-        <> showT (Leios.ldsPeers dec) <> " peers ("
-        <> showT (Leios.ldsBodyRequests dec) <> " bodies, "
-        <> showT (Leios.ldsJobs dec) <> " jobs)"
-        <> "; " <> showT (Leios.losTracked stats) <> " EBs tracked"
-        <> ", missingBodies=" <> showT (Leios.losMissingBodies stats)
-        <> ", peersInflight=" <> showT (Leios.losPeersInflight stats)
-        <> ", inflightBytesDesc=" <> showT (Leios.losInflightBytesDesc stats)
-        <> ", offersDesc=" <> showT (Leios.losOffersDesc stats)
+  forHuman = Leios.traceLeiosKernelForHuman
   asMetrics = \case
-    -- LeiosFetch arrival bytes, partitioned by prior LeiosTxCache state; each an
-    -- accumulating counter. The four per message sum to its size.
+    -- LeiosFetch arrival bytes, partitioned by prior LeiosTxCache state (node policy).
     TraceLeiosFetchBodyArrival fab ->
       [ CounterM "leiosFetchBodyInvalidBytes" (Just (fromIntegral (fabInvalid fab)))
       , CounterM "leiosFetchBodyEvictedBytes" (Just (fromIntegral (fabEvicted fab)))
@@ -2513,101 +2461,22 @@ instance LogFormatting TraceLeiosKernel where
     _ -> []
 
 instance MetaTrace TraceLeiosKernel where
-  namespaceFor MkTraceLeiosKernel{}          = Namespace [] ["Msg"]
-  namespaceFor TraceLeiosBlockAcquired{}     = Namespace [] ["BlockAcquired"]
-  namespaceFor TraceLeiosBlockPointMissing{} = Namespace [] ["BlockPointMissing"]
-  namespaceFor TraceLeiosBlockTxsAcquired{}  = Namespace [] ["BlockTxsAcquired"]
-  namespaceFor TraceLeiosFetchBodyArrival{}  = Namespace [] ["FetchBodyArrival"]
-  namespaceFor TraceLeiosFetchTxsArrival{}   = Namespace [] ["FetchTxsArrival"]
-  namespaceFor TraceLeiosBodyHits{}          = Namespace [] ["BodyHits"]
-  namespaceFor TraceLeiosBlockForged{}       = Namespace [] ["BlockForged"]
-  namespaceFor TraceLeiosBlockStored{}       = Namespace [] ["BlockStored"]
-  namespaceFor TraceLeiosBlockAnnounced{}    = Namespace [] ["BlockAnnounced"]
-  namespaceFor TraceLeiosBlockCertified{}    = Namespace [] ["BlockCertified"]
-  namespaceFor TraceLeiosVoted{}             = Namespace [] ["Voted"]
-  namespaceFor TraceLeiosVoteAcquired{}      = Namespace [] ["VoteAcquired"]
-  namespaceFor TraceLeiosCertified{}         = Namespace [] ["Certified"]
-  namespaceFor TraceLeiosNotVoted{}          = Namespace [] ["NotVoted"]
-  namespaceFor TraceLeiosVoteScheduled{}     = Namespace [] ["VoteScheduled"]
-  namespaceFor TraceLeiosEbValidated{}       = Namespace [] ["EbValidated"]
-  namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
-  namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
-  namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
-  namespaceFor TraceLeiosAnnouncementAccepted{}  = Namespace [] ["AnnouncementAccepted"]
-  namespaceFor TraceLeiosFetchDecision{}     = Namespace [] ["FetchDecision"]
-
-  severityFor (Namespace _ ["DbException"])        _ = Just Error
-  severityFor (Namespace _ ["BlockPointMissing"])  _ = Just Warning
-  -- High-frequency (once per received response); Debug keeps it out of logs
-  -- under the default Notice threshold while its metric still flows to EKG.
-  severityFor (Namespace _ ["FetchBodyArrival"])   _ = Just Debug
-  severityFor (Namespace _ ["FetchTxsArrival"])    _ = Just Debug
-  severityFor _                                    _ = Just Info
-
+  namespaceFor = Namespace [] . Leios.nsiPath . Leios.leiosKernelNSInfo . Leios.leiosKernelNSOf
+  severityFor (Namespace _ p) _ = mapLeiosSeverity . Leios.nsiSeverity <$> Leios.leiosKernelNSByPath p
   documentFor _ = Nothing
-
-  metricsDocFor (Namespace _ ["FetchBodyArrival"]) =
-    [ ("leiosFetchBodyInvalidBytes", "EB-body bytes received in a failed-validation MsgLeiosBlock.")
-    , ("leiosFetchBodyEvictedBytes", "EB-body bytes whose announcement was absent from the LeiosTxCache (assumed since evicted).")
-    , ("leiosFetchBodyGoodBytes", "EB-body bytes filling an announced-but-not-yet-held EB (the expected case).")
-    , ("leiosFetchBodyExtraBytes", "EB-body bytes for an EB already held (redundant).")
-    ]
-  metricsDocFor (Namespace _ ["FetchTxsArrival"]) =
-    [ ("leiosFetchTxsInvalidBytes", "Tx bytes received in a failed-validation MsgLeiosBlockTxs.")
-    , ("leiosFetchTxsEvictedBytes", "Tx bytes no cached body expected (prior state absent, assumed since evicted).")
-    , ("leiosFetchTxsGoodBytes", "Tx bytes a cached body expected and had not yet held (the expected case).")
-    , ("leiosFetchTxsExtraBytes", "Tx bytes already held (redundant).")
-    ]
-  metricsDocFor _ = []
-
-  allNamespaces =
-    [ Namespace [] ["Msg"]
-    , Namespace [] ["BlockAcquired"]
-    , Namespace [] ["BlockPointMissing"]
-    , Namespace [] ["BlockTxsAcquired"]
-    , Namespace [] ["BodyHits"]
-    , Namespace [] ["FetchBodyArrival"]
-    , Namespace [] ["FetchTxsArrival"]
-    , Namespace [] ["BlockForged"]
-    , Namespace [] ["BlockStored"]
-    , Namespace [] ["BlockAnnounced"]
-    , Namespace [] ["BlockCertified"]
-    , Namespace [] ["Voted"]
-    , Namespace [] ["VoteAcquired"]
-    , Namespace [] ["Certified"]
-    , Namespace [] ["NotVoted"]
-    , Namespace [] ["VoteScheduled"]
-    , Namespace [] ["EbValidated"]
-    , Namespace [] ["TxCacheEbBody"]
-    , Namespace [] ["DbException"]
-    , Namespace [] ["Db"]
-    , Namespace [] ["CertifiedAndAnnounced"]
-    , Namespace [] ["AnnouncementAccepted"]
-    , Namespace [] ["FetchDecision"]
-    ]
+  metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosKernelNSByPath p)
+  allNamespaces = Namespace [] <$> Leios.leiosKernelNSPaths
 
 instance LogFormatting TraceLeiosPeer where
   forMachine _dtal = traceLeiosPeerToObject
-  forHuman = \case
-    MkTraceLeiosPeer msg            -> "LeiosPeer: " <> Text.pack msg
-    TraceLeiosPeerDbException e     -> "Leios peer DB exception: " <> Text.pack (show e)
-    TraceLeiosPeerAnnouncement equiv fields ->
-      "EB announcement from peer (" <> Text.pack (show equiv) <> "): " <> Text.pack (show fields)
+  forHuman = Leios.traceLeiosPeerForHuman
   asMetrics _ = []
 
 instance MetaTrace TraceLeiosPeer where
-  namespaceFor MkTraceLeiosPeer{}          = Namespace [] ["Msg"]
-  namespaceFor TraceLeiosPeerDbException{} = Namespace [] ["DbException"]
-  namespaceFor TraceLeiosPeerAnnouncement{} = Namespace [] ["Announcement"]
-
-  severityFor (Namespace _ ["DbException"]) _ = Just Error
-  severityFor _ _                             = Just Info
-
+  namespaceFor = Namespace [] . Leios.nsiPath . Leios.leiosPeerNSInfo . Leios.leiosPeerNSOf
+  severityFor (Namespace _ p) _ = mapLeiosSeverity . Leios.nsiSeverity <$> Leios.leiosPeerNSByPath p
   documentFor _ = Nothing
+  metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosPeerNSByPath p)
+  allNamespaces = Namespace [] <$> Leios.leiosPeerNSPaths
 
-  allNamespaces =
-    [ Namespace [] ["Msg"]
-    , Namespace [] ["DbException"]
-    , Namespace [] ["Announcement"]
-    ]
 
