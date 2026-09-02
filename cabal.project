@@ -99,9 +99,11 @@ allow-newer:
   -- EXPERIMENT: these packages pin cardano-crypto-class to <2.6 (either
   -- ^>=2.5 or an explicit >=x.y && <2.6); let them accept the 2.6.x line
   -- so crypton can move to >= 1.1. (cardano-api's own bound is already
-  -- ^>=2.6 on the erikd/crypton+ram SRP, and cardano-node/-chairman/
+  -- ^>=2.6 on the erikd/crypton+ram SRP, cardano-node/-chairman/
   -- cardano-submit-api/cardano-testnet's own bounds were widened to
-  -- ^>=2.5||^>=2.6 directly, so none of those need an entry here.)
+  -- ^>=2.5||^>=2.6 directly, and ouroboros-consensus's own bound is already
+  -- ^>=2.5||^>=2.6 on the erikd/ram SRP, so none of those need an entry
+  -- here.)
   , cardano-cli:cardano-crypto-class
   , cardano-ledger-binary:cardano-crypto-class
   , cardano-ledger-core:cardano-crypto-class
@@ -111,7 +113,6 @@ allow-newer:
   , cardano-protocol-tpraos:cardano-crypto-class
   , kes-agent:cardano-crypto-class
   , kes-agent-crypto:cardano-crypto-class
-  , ouroboros-consensus:cardano-crypto-class
 
   -- EXPERIMENT: cardano-cli (CHaP, unmodified) pins cardano-crypto-wrapper
   -- ^>=1.7; let it accept the erikd/ram-based 1.8.0.0 SRP above.
@@ -224,6 +225,19 @@ source-repository-package
   tag: 661a7b853be392968ee7442799ee23bec6604c92
   subdir: eras/byron/crypto
 
+-- ouroboros-consensus PR #2213 (erikd/ram):
+-- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213
+-- based directly on the released ouroboros-consensus-4.1.0.0 tag (version
+-- unchanged), plus a Byron backport and "Updates for crypton/memory/ram
+-- changes", which widens its own cardano-crypto-class bound to
+-- ^>=2.5||^>=2.6 natively (no more allow-newer needed for it). The .cabal
+-- lives at the repo root (its own cabal.project says `packages: .`), so no
+-- subdir is needed.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 6a0f887a9940a283b99f7b6c2a9efedc425b2e1c
+
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
 -- now rebased onto ouroboros-consensus ^>=4.0||^>=4.1 / ouroboros-network
@@ -233,7 +247,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 59a31579ad6091973dc6ab7ee7c2fc17753a4776
+  tag: f0a61f6966ac94db41d81e00bc31a2e3ca2c9a0f
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
@@ -247,5 +261,18 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 59a31579ad6091973dc6ab7ee7c2fc17753a4776
+  tag: f0a61f6966ac94db41d81e00bc31a2e3ca2c9a0f
   subdir: cardano-rpc
+
+-- cardano-cli PR #1417 (erikd/crypton-ram):
+-- https://github.com/IntersectMBO/cardano-cli/pull/1417
+-- now properly rebased onto the released cardano-cli-11.2.2.0 tag, plus one
+-- commit adapting to unrelated upstream cardano-api API removals
+-- (closed-range eon eliminators, Data.Validation's liftError). Still pins
+-- cardano-crypto-class ^>=2.5 and cardano-crypto-wrapper ^>=1.7 natively
+-- (unchanged), so the existing allow-newer entries for those still apply.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 5ebc9398ce86226344153f24194cf954929e1150
+  subdir: cardano-cli
