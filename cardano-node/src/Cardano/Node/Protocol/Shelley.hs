@@ -39,7 +39,6 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
-import           Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),

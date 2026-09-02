@@ -92,6 +92,7 @@ import           LeiosDemoTypes (AnnouncementFields (..), FetchArrivalBytes (..)
                    TraceLeiosKernel (..), TraceLeiosPeer (..), traceLeiosKernelToObject,
                    traceLeiosPeerToObject)
 import qualified LeiosDemoTypes as Leios
+import           LeiosDemoDb.Trace (TraceLeiosDb (..), LeiosDbStats (..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -2477,6 +2478,18 @@ instance LogFormatting TraceLeiosKernel where
     TraceLeiosNotVoted{ebPoint, reason} ->
       "Leios not voted for " <> Text.pack (show ebPoint) <> ": " <> Text.pack (show reason)
     TraceLeiosDbException e         -> "Leios DB exception: " <> Text.pack (show e)
+    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
+      "Leios DB copied to the immutable partition: ebs=" <> showT copiedEbs
+        <> " txs=" <> showT copiedTxs
+    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
+      "Leios DB evicted from the volatile partition: ebs=" <> showT evictedEbs
+        <> " txs=" <> showT evictedTxs
+    TraceLeiosDb (TraceLeiosDbCopyQueueFull ebHash) ->
+      "Leios DB copy queue full, dropped " <> Text.pack ebHash
+        <> " (harmless: GC self-heal re-delivers)"
+    TraceLeiosDb (TraceLeiosDbCopyError ebHash reason) ->
+      "Leios DB copy failed for " <> Text.pack ebHash
+        <> " (the EB stays pinned and will be retried): " <> Text.pack reason
     TraceLeiosDb ev                 -> "Leios DB event: "     <> Text.pack (show ev)
     TraceLeiosCertifiedAndAnnounced{atSlot, rbHash} ->
       "RB certified an EB and announced a new one at slot " <> showT atSlot
@@ -2513,6 +2526,25 @@ instance LogFormatting TraceLeiosKernel where
       , CounterM "leiosFetchTxsGoodBytes" (Just (fromIntegral (fabGood fab)))
       , CounterM "leiosFetchTxsExtraBytes" (Just (fromIntegral (fabExtra fab)))
       ]
+    -- Sampled on a timer, so these exist from node start.
+    TraceLeiosDb (TraceLeiosDbStats (LeiosDbStats { volatileEbs, immutableEbs, walBytes })) ->
+      [ IntM "leiosDbVolatileEbs"    (fromIntegral volatileEbs)
+      , IntM "leiosDbImmutableEbs"   (fromIntegral immutableEbs)
+      , IntM "leiosDbWalBytes"  walBytes
+      ]
+    -- Accumulating counters, bumped per copier commit / GC pass.
+    TraceLeiosDb TraceLeiosDbCopiedToImmutable{copiedEbs, copiedTxs} ->
+      [ CounterM "leiosDbCopiedEbs" (Just copiedEbs)
+      , CounterM "leiosDbCopiedTxs" (Just copiedTxs)
+      ]
+    TraceLeiosDb TraceLeiosDbEvicted{evictedEbs, evictedTxs} ->
+      [ CounterM "leiosDbEvictedEbs" (Just evictedEbs)
+      , CounterM "leiosDbEvictedTxs" (Just evictedTxs)
+      ]
+    TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
+      [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
+    TraceLeiosDb TraceLeiosDbCopyError{} ->
+      [ CounterM "leiosDbCopyErrors" (Just 1) ]
     _ -> []
 
 instance MetaTrace TraceLeiosKernel where
@@ -2534,6 +2566,14 @@ instance MetaTrace TraceLeiosKernel where
   namespaceFor TraceLeiosVoteScheduled{}     = Namespace [] ["VoteScheduled"]
   namespaceFor TraceLeiosEbValidated{}       = Namespace [] ["EbValidated"]
   namespaceFor TraceLeiosDbException{}       = Namespace [] ["DbException"]
+  -- Call spans get their own namespace under Db so their severity and
+  -- frequency can be configured apart from the stats gauges (a dozen span
+  -- events per GC vs one stats event).
+  namespaceFor (TraceLeiosDb TraceLeiosDbCall{}) = Namespace [] ["Db", "Call"]
+  namespaceFor (TraceLeiosDb TraceLeiosDbCopiedToImmutable{}) = Namespace [] ["Db", "Copied"]
+  namespaceFor (TraceLeiosDb TraceLeiosDbEvicted{}) = Namespace [] ["Db", "Evicted"]
+  namespaceFor (TraceLeiosDb TraceLeiosDbCopyQueueFull{}) = Namespace [] ["Db", "CopyQueueFull"]
+  namespaceFor (TraceLeiosDb TraceLeiosDbCopyError{}) = Namespace [] ["Db", "CopyError"]
   namespaceFor TraceLeiosDb{}                = Namespace [] ["Db"]
   namespaceFor TraceLeiosCertifiedAndAnnounced{} = Namespace [] ["CertifiedAndAnnounced"]
   namespaceFor TraceLeiosAnnouncementPastHorizon{} = Namespace [] ["AnnouncementPastHorizon"]
@@ -2546,6 +2586,11 @@ instance MetaTrace TraceLeiosKernel where
   -- under the default Notice threshold while its metric still flows to EKG.
   severityFor (Namespace _ ["FetchBodyArrival"])   _ = Just Debug
   severityFor (Namespace _ ["FetchTxsArrival"])    _ = Just Debug
+  severityFor (Namespace _ ["Db", "Call"])         _ = Just Debug
+  -- Both mean the copier fell behind or failed; harmless for data (the EB
+  -- stays pinned and GC self-heal retries) but worth an operator's eye.
+  severityFor (Namespace _ ["Db", "CopyQueueFull"]) _ = Just Warning
+  severityFor (Namespace _ ["Db", "CopyError"])     _ = Just Warning
   severityFor _                                    _ = Just Info
 
   documentFor _ = Nothing
@@ -2561,6 +2606,25 @@ instance MetaTrace TraceLeiosKernel where
     , ("leiosFetchTxsEvictedBytes", "Tx bytes no cached body expected (prior state absent, assumed since evicted).")
     , ("leiosFetchTxsGoodBytes", "Tx bytes a cached body expected and had not yet held (the expected case).")
     , ("leiosFetchTxsExtraBytes", "Tx bytes already held (redundant).")
+    ]
+  metricsDocFor (Namespace _ ["Db"]) =
+    [ ("leiosDbVolatileEbs",  "LeiosDb: announced EB rows in the volatile partition (an EB copied but not yet garbage collected counts in both partitions)")
+    , ("leiosDbImmutableEbs", "LeiosDb: EBs in the immutable partition")
+    , ("leiosDbWalBytes",     "LeiosDb: current size of the volatile partition's write-ahead log in bytes")
+    ]
+  metricsDocFor (Namespace _ ["Db", "Copied"]) =
+    [ ("leiosDbCopiedEbs", "LeiosDb: EBs copied into the immutable partition")
+    , ("leiosDbCopiedTxs", "LeiosDb: transactions copied into the immutable partition")
+    ]
+  metricsDocFor (Namespace _ ["Db", "Evicted"]) =
+    [ ("leiosDbEvictedEbs", "LeiosDb: announcement rows garbage collected from the volatile partition")
+    , ("leiosDbEvictedTxs", "LeiosDb: transactions garbage collected from the volatile partition")
+    ]
+  metricsDocFor (Namespace _ ["Db", "CopyQueueFull"]) =
+    [ ("leiosDbCopyQueueFull", "LeiosDb: promotions dropped on a full copy queue (re-delivered by GC self-heal)")
+    ]
+  metricsDocFor (Namespace _ ["Db", "CopyError"]) =
+    [ ("leiosDbCopyErrors", "LeiosDb: failed copy attempts (the EB stays pinned and is retried)")
     ]
   metricsDocFor _ = []
 
@@ -2585,6 +2649,11 @@ instance MetaTrace TraceLeiosKernel where
     , Namespace [] ["TxCacheEbBody"]
     , Namespace [] ["DbException"]
     , Namespace [] ["Db"]
+    , Namespace [] ["Db", "Call"]
+    , Namespace [] ["Db", "Copied"]
+    , Namespace [] ["Db", "Evicted"]
+    , Namespace [] ["Db", "CopyQueueFull"]
+    , Namespace [] ["Db", "CopyError"]
     , Namespace [] ["CertifiedAndAnnounced"]
     , Namespace [] ["AnnouncementPastHorizon"]
     , Namespace [] ["AnnouncementAccepted"]
@@ -2615,4 +2684,3 @@ instance MetaTrace TraceLeiosPeer where
     , Namespace [] ["DbException"]
     , Namespace [] ["Announcement"]
     ]
-
