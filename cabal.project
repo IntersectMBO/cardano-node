@@ -207,7 +207,13 @@ if impl(ghc >= 9.14)
 -- 0.5.0.0, whose `crypton == 0.* || ^>= 1.0` bound is what has been blocking
 -- the crypton >= 1.1 / memory -> ram migration. This (already-merged) PR
 -- widens the crypton-x509-system bound to (>=1.6 && <1.10). TEMPORARY --
--- remove once a release with this widened bound is on Hackage.
+-- remove once a release with this widened bound is on Hackage. (Hackage's
+-- 1.1.1 revision already has this specific bound widened, but the SRP also
+-- carries later unreleased bumps -- http2, http2-tls, time-manager -- that
+-- Hackage's 1.1.1 source doesn't have; confirmed released grapesy-1.1.1
+-- fails to compile against the now-released http2-5.4.4 with a real source
+-- error in Network/GRPC/Util/HTTP2.hs, not just a bound gap, so this SRP
+-- can't be dropped yet.)
 source-repository-package
   type: git
   location: https://github.com/well-typed/grapesy.git
