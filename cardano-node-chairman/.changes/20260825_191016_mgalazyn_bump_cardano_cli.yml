@@ -1,5 +1,0 @@
-pr: 6662
-kind:
-  - maintenance
-description: |
-  Bumped the `cardano-cli` dependency to `^>= 11.2.2`.

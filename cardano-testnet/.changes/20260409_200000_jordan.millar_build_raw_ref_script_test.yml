@@ -1,5 +1,0 @@
-pr: 6521
-kind:
-  - test
-description: |
-  Added integration test for spending a reference script using `transaction build-raw`

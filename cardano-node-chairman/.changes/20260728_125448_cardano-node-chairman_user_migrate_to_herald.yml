@@ -1,7 +1,0 @@
-description: 'Manage this package''s changelog with herald: entries are now added
-  as fragments under cardano-node-chairman/.changes/ and collected into the changelog
-  at release time.'
-kind:
-- maintenance
-pr: 6631
-project: cardano-node-chairman

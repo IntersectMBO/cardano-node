@@ -1,5 +1,0 @@
-pr: 6604
-kind:
-  - breaking
-description: |
-  Migrated ping support to `cardano-diffusion:ping`: `Testnet.Ping.pingNode` now returns `Either PingClientException ()`, and the local `PingClientError` type is gone in favour of a re-export of `Cardano.Network.Ping.PingClientException`.

@@ -1,7 +1,0 @@
-pr: 6604
-kind:
-  - maintenance
-description: |
-  - `Testnet.Ping` now wraps `Cardano.Network.Ping.pingClient` instead of a hand-rolled mux implementation.
-  - Threaded a filesystem handle (`SomeHasFS IO` from `fs-api`) through the `foldEpochState` call sites, via a new `mkNodeConfigFs` helper in `Testnet.Filepath`.
-  - Bumped `cardano-crypto-class` to `^>= 2.5`.
