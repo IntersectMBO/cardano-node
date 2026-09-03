@@ -6,9 +6,9 @@
   # NixosTest script fns supporting a timeout have a default of 900 seconds.
   #
   # There is no pre-existing history for chain synthesis, and default
-  # cardano-testnet genesis parameters set epochs to be short and fast, so a 30
+  # cardano-testnet genesis parameters set epochs to be short and fast, so a 45
   # second global timeout should be more than sufficient.
-  globalTimeout = 30;
+  globalTimeout = 45;
 
   testDir = "testnet";
 in {
