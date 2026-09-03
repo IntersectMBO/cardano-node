@@ -11,13 +11,12 @@ module Cardano.Node.Tracing.Consistency
   , checkNodeTraceConfiguration
   , checkNodeTraceConfiguration'
   , checkNodeTraceConfigurationWith
-  , namespaceInventoryDiff
   , DocTracer
   ) where
 
 
 import           Cardano.Logging
-import           Cardano.Logging.DocuGenerator (DocTracer, docuResultsToNamespaces, dtWarnings)
+import           Cardano.Logging.DocuGenerator (DocTracer, dtWarnings)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
@@ -111,7 +110,6 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic,
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import qualified Codec.CBOR.Term as CBOR
-import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
@@ -152,25 +150,6 @@ checkNodeTraceConfiguration' trConfig =
   checkTraceConfiguration'
     trConfig
     getAllNamespaces
-
--- | Compare the namespace inventory of the configuration consistency check
--- ('getAllNamespaces') against the namespaces of the documented tracers
--- (the 'DocTracer' produced by 'docTracersFirstPhase').  Metrics are not part
--- of the comparison; datapoint namespaces are.
---
--- Returns @(documentedButNotChecked, checkedButNotDocumented)@, both sorted.
--- Both lists are empty exactly when the two hand-written tracer inventories
--- in "Cardano.Node.Tracing.Documentation" and this module agree.
-namespaceInventoryDiff :: DocTracer -> ([T.Text], [T.Text])
-namespaceInventoryDiff dt =
-    ( Set.toAscList (documented `Set.difference` checked)
-    , Set.toAscList (checked `Set.difference` documented) )
-  where
-    documented = Set.fromList (T.lines (docuResultsToNamespaces dt))
-    checked    = Set.fromList
-                   [ T.intercalate "." (outer <> inner)
-                   | (outer, inner) <- getAllNamespaces ]
-
 
 -- | Returns a list of all namespaces from all tracers
 getAllNamespaces :: [([T.Text],[T.Text])]

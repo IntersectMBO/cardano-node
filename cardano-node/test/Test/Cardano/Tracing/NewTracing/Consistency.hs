@@ -4,12 +4,16 @@
 -- | Check namespace consistencies agains configurations
 module Test.Cardano.Tracing.NewTracing.Consistency (tests) where
 
-import           Cardano.Node.Tracing.Consistency (DocTracer, checkNodeTraceConfigurationWith,
-                   namespaceInventoryDiff)
+import           Cardano.Node.Tracing.Consistency (DocTracer, checkNodeTraceConfigurationWith, getAllNamespaces)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 
+import           Cardano.Logging.DocuGenerator (docuResultsToNamespaces)
+
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Data.Text
+import           Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Set as Set
+
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -18,6 +22,8 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
+
+
 
 tests :: MonadIO m => m Bool
 tests = do
@@ -94,11 +100,29 @@ knownUndocumented =
   , "Net.Mux.Remote.Channel"
   ]
 
+-- | Compare the namespace inventory of the configuration consistency check
+-- ('getAllNamespaces') against the namespaces of the documented tracers
+-- (the 'DocTracer' produced by 'docTracersFirstPhase').  Metrics are not part
+-- of the comparison; datapoint namespaces are.
+--
+-- Returns @(documentedButNotChecked, checkedButNotDocumented)@, both sorted.
+-- Both lists are empty exactly when the two hand-written tracer inventories
+-- in "Cardano.Node.Tracing.Documentation" and this module agree.
+namespaceInventoryDiff :: DocTracer -> ([T.Text], [T.Text])
+namespaceInventoryDiff dt =
+    ( Set.toAscList (documented `Set.difference` checked)
+    , Set.toAscList (checked `Set.difference` documented) )
+  where
+    documented = Set.fromList (T.lines (docuResultsToNamespaces dt))
+    checked    = Set.fromList
+                   [ T.intercalate "." (outer <> inner)
+                   | (outer, inner) <- getAllNamespaces ]
+
 -- | The namespace inventory of the configuration consistency check
 -- ('getAllNamespaces') must agree with the namespaces of the documented
 -- tracers ('docTracersFirstPhase').  Both are written out by hand and are not
 -- type-checked against each other, so they can drift apart silently
--- (issue #6667); this property catches any divergence between the two.
+-- (issue#6667); this property catches any divergence between the two.
 prop_namespaceInventory :: DocTracer -> Property
 prop_namespaceInventory docTracer =
   H.withTests 1 $ H.withShrinks 0 $ H.property $ do
@@ -115,9 +139,12 @@ prop_namespaceInventory docTracer =
     staleEntries knownUnchecked documentedNotChecked
       <> staleEntries knownUndocumented checkedNotDocumented H.=== []
   where
-    covers prefix ns = prefix == ns || (prefix <> ".") `isPrefixOf` ns
+    covers :: Text -> Text -> Bool
+    covers prefix ns = prefix == ns || (prefix <> ".") `T.isPrefixOf` ns
+    withoutKnown :: [Text] -> [Text] -> [Text]
     withoutKnown allowed =
       Prelude.filter (\ns -> not (Prelude.any (`covers` ns) allowed))
+    staleEntries :: [Text] -> [Text] -> [Text]
     staleEntries allowed diffs =
       Prelude.filter (\prefix -> not (Prelude.any (covers prefix) diffs)) allowed
 
