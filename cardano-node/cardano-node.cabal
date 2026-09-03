@@ -240,6 +240,7 @@ test-suite cardano-node-test
                       , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
                       , cardano-node
                       , cardano-slotting
+                      , containers
                       , contra-tracer
                       , directory
                       , filepath
@@ -252,6 +253,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
+                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml

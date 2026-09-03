@@ -1459,9 +1459,6 @@ updateSchemaForNamespaceWithWarning emitWarning config msgOutDir typeOutDir nsMa
 fallbackCtorForNamespace :: [String] -> Maybe ConstructorName
 fallbackCtorForNamespace parts
   | ["Net", "Handshake"] `isListPrefixOf` parts = Just diffusionHandshakeCtor
-  | ["BlockFetch", "Decision"] `isListPrefixOf` parts
-  , lastMay parts == Just "EmptyPeersFetch" =
-      Just listEmptyCtor
   | ["Net", "ConnectionManager"] `isListPrefixOf` parts
   , lastMay parts == Just "UnexpectedlyFalseAssertion" =
       Just connectionManagerUnexpectedlyFalseAssertionCtor

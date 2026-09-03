@@ -2,6 +2,19 @@
 
 ## Next version
 
+- Fix `BlockFetch.Decision` trace namespace drift: documentation and the
+  configuration consistency check now use the runtime `TraceDecisionEvent`
+  type, so the documented message namespaces are
+  `BlockFetch.Decision.PeersFetch` and `BlockFetch.Decision.PeerStarvedUs`
+  instead of the stale `BlockFetch.Decision.{Accept,Decline,EmptyPeersFetch}`,
+  and both can now be configured. `BlockFetch.Client.ClientMetrics` is now
+  accepted by the consistency check. Removed the obsolete
+  `[TraceLabelPeer peer (FetchDecision [Point header])]` tracer instances,
+  including the never-emitted `connectedPeers` metric documentation. Added a
+  regression test comparing the documented namespaces against the consistency
+  check's namespace inventory.
+  ([#6667](https://github.com/IntersectMBO/cardano-node/issues/6667))
+
 ## 11.1.0 -- August 2026
 
 - **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
