@@ -415,8 +415,8 @@ instance FromJSON PartialNodeConfiguration where
       pncRpcConfig <-
         RpcConfig
           <$> (Last <$> v .:? "EnableRpc")
-          <*> (Last <$> v .:? "RpcSocketPath")
           <*> pure mempty
+          <*> (Last <$> v .:? "RpcSocketPath")
 
       txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
       let parseInitDelay =
@@ -501,8 +501,7 @@ instance FromJSON PartialNodeConfiguration where
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
+                   zip [ void mTopLevelSnapInterval, void mTopLevelSnapNum]
                        ["SnapshotInterval", "NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 

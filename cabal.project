@@ -13,18 +13,18 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-14T13:38:07Z
+  , hackage.haskell.org 2026-09-02T14:05:07Z
   , cardano-haskell-packages 2026-09-03T10:20:53Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
-  -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
-  , any.crypton-x509-system < 1.6.8 || >= 1.7
-
+  , any.crypton-x509-system < 1.6.8 || > 1.6.8
   -- haskell.nix tries to use 0.7.1.5 for some reason
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
   , any.alfred-margaret < 2.1.1.0 || > 2.1.1.0
+  -- Force cardano-crypto-class 2.6.x to avoid backtracking into 2.5.x
+  , any.cardano-crypto-class ^>= 2.6
 
 -- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
 -- which sidesteps the GHC type-checker plugin incompatibility with
@@ -48,9 +48,8 @@ packages:
   bench/trace-schemas/scripts/schema-gen
   trace-forward
 
--- Shipped as a release binary but not a dependency of any local package, so it
--- has to be added to the install plan explicitly.
-extra-packages: dmq-node >= 0.7.0.0
+-- Needed when cross compiling
+extra-packages: alex, dmq-node >= 0.4.2.0
 
 program-options
   ghc-options: -Werror
@@ -65,14 +64,8 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
-package snap-server
-  flags: -openssl
-
 package bitvec
   flags: -simd
-
-package cardano-diffusion
-  flags: +optparse-applicative-fork
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
@@ -81,88 +74,108 @@ package plutus-scripts-bench
 -- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
 -- that can be worked around with the following allow-newer stanzas
 allow-newer:
+  -- cborg-0.2.10.0 bounds base < 4.22 but GHC 9.14 ships base-4.22
+  , cborg:base
   , io-sim:time
   , io-classes:time
-
--- cabal-allow-newer begin
-if impl(ghc >= 9.14)
-  allow-newer:
-    , async-timer:unliftio-core
-    , attoparsec-iso8601:time
-    , bytestring-trie:base
-    , canonical-json:containers
-    , cborg:base
-    , cborg:containers
-    , cborg-json:aeson
-    , cborg-json:base
-    , compact:base
-    , crypton-connection:tls
-    , dependent-map:containers
-    , diff-containers:base
-    , dictionary-sharing:containers
-    , dmq-node:containers
-    , dmq-node:time
-    , ekg-json:aeson
-    , ekg-json:text
-    , ekg-prometheus-adapter:containers
-    , ekg-wai:time
-    , errors:transformers-compat
-    , fs-sim:QuickCheck
-    , grapesy:aeson
-    , grapesy:base
-    , grapesy:containers
-    , grapesy:time-manager
-    , grapesy:tls
-    , grpc-spec:aeson
-    , grpc-spec:base
-    , grpc-spec:containers
-    , iohk-monitoring:contra-tracer
-    , lens-family:containers
-    , lens-family-core:containers
-    , locli:ouroboros-network
-    , microstache:aeson
-    , monad-control:transformers-compat
-    , nothunks:containers
-    , nothunks:time
-    , optparse-generic:time
-    , partial-order:containers
-    , pipes-safe:containers
-    , pipes-safe:mtl
-    , pipes-safe:primitive
-    , pipes-safe:transformers
-    , prometheus:containers
-    , safe-wild-cards:template-haskell
-    , serdoc-core:template-haskell
-    , serialise:base
-    , serialise:containers
-    , serialise:time
-    , servant:QuickCheck
-    , servant:base
-    , servant-server:aeson
-    , servant-server:attoparsec
-    , servant-server:base
-    , servant-server:base-compat
-    , servant-server:base64-bytestring
-    , servant-server:bytestring
-    , servant-server:containers
-    , servant-server:http-api-data
-    , servant-server:http-types
-    , servant-server:network
-    , servant-server:servant
-    , servant-server:text
-    , servant-server:transformers
-    , servant-server:warp
-    , strict-checked-vars:io-classes
-    , strict-stm:base
-    , strict-stm:io-classes
-    , tdigest:base
-    , time-locale-compat:time
-    , tracer-transformers:contra-tracer
-    , vary:aeson
-    , with-utf8:base
--- cabal-allow-newer end
+  , cardano-ping:network-mux
+  -- dmq-node-0.7.0.0 bounds ouroboros-consensus ^>=4.0 but we have 4.1
+  , dmq-node:ouroboros-consensus
+  , grapesy:aeson
+  , grapesy:crypton-x509
+  , grapesy:crypton-x509-store
+  , grapesy:crypton-x509-system
+  , grapesy:crypton-x509-validation
+  , grapesy:http2
+  , grapesy:http2-tls
+  , grapesy:network-run
+  , grapesy:tls
+  , grpc-spec:aeson
+  , http-api-data:text-iso8601
+  -- kes-agent bounds cardano-crypto-class ^>=2.5 but we have a newer version
+  , kes-agent:cardano-crypto-class
+  , kes-agent-crypto:cardano-crypto-class
+  -- plutus-scripts-bench bounds cardano-api ^>=11.5 but we have 11.6
+  , plutus-scripts-bench:cardano-api
+  -- plutus-scripts-bench bounds plutus-* ^>=1.65 but we have 1.68
+  , plutus-scripts-bench:plutus-ledger-api
+  , plutus-scripts-bench:plutus-tx
+  , plutus-scripts-bench:plutus-tx-plugin
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 620d2e31ad263bcfab4ad1516a9549c7b53c3ef6
+  --sha256: sha256-LI0zqi99UaXksj+op2rLFL0aY+Ayt7EmxvQtUlJvHDg=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/plutus-preprocessor
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-base.git
+  --sha256: sha256-WUBluY6UqvBkS5cNsJnKMOaW+1dTfL3mg8iq/kVPV0o=
+  tag: d92e2e3841eaad354c5e1ef77b458b347f471271
+  subdir: cardano-crypto-leios
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 4ee752860daff98f218ace65f828b1244a831055
+  --sha256: sha256-rno71IrjiOfEeOVDqesedJ+3eAWXIBhy/OwtnS44po4=
+  subdir:
+    .
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 4a072645b1a85ee195d28abb252e1e430c1dda4e
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 7236b7f746d8e909cb12f9a1cf8fd0fb230735ab
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-addresses
+  tag: f59608374d955b653624822429685114f41e2db2
+  --sha256: sha256-HgLfcxlz+VC2ENmS5dP4S4dCtF6y9I9sjnd0EbDWo8k=
+
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/grapesy
+  tag: bd6af64f69ff89e3a8fc02e2c81262e648f4715d
+  --sha256: sha256-4F+bUoytvrgOcQ8aIWbOY9uYsPoTZwQOlmh7ckgyK9M=
+  subdir:
+    grapesy
+    grpc-spec

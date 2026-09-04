@@ -56,14 +56,10 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpIn
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (NumObjectsProcessed (..),
-                   TraceObjectDiffusionInbound (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound
+                   (TraceObjectDiffusionInbound (..))
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound
                    (TraceObjectDiffusionOutbound (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
-                   (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
-                   (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -993,10 +989,6 @@ instance MetaTrace SanityCheckIssue where
   allNamespaces = [Namespace [] ["SanityCheckIssue"]]
 
 instance LogFormatting SanityCheckIssue where
-  forMachine _dtal (InconsistentSecurityParam e) =
-    mconcat [ "kind" .= String "InconsistentSecurityParam"
-            , "error" .= String (Text.pack $ show e)
-            ]
   forMachine _dtal (SnapshotDelayRangeInverted mn mx) =
     mconcat [ "kind" .= String "SnapshotDelayRangeInverted"
             , "minimumDelay" .= show mn
@@ -1019,6 +1011,10 @@ instance LogFormatting SanityCheckIssue where
   forMachine _dtal (SnapshotIntervalNotDivisorOfEpoch interval) =
     mconcat [ "kind" .= String "SnapshotIntervalNotDivisorOfEpoch"
             , "interval" .= toJSON interval
+            ]
+  forMachine _dtal issue =
+    mconcat [ "kind" .= String "SanityCheckIssue"
+            , "issue" .= String (Text.pack $ show issue)
             ]
   forHuman = Text.pack . displayException
 
@@ -1097,7 +1093,7 @@ instance
           .= map
             ( \(tx, err) ->
                 Aeson.object $
-                  [ "tx" .= forMachine dtal (txForgetValidated tx)
+                  [ "tx" .= forMachine dtal tx
                   ] <>
                   [ "err" .= forMachine dtal err
                   | dtal >= DDetailed
@@ -1110,7 +1106,7 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
-      , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
+      , "txsInvalidated" .= map (forMachine dtal) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolSyncNotNeeded t) =
@@ -2284,14 +2280,6 @@ instance MetaTrace KESAgentClientTrace where
 --       ToObject instance. This is likely in an incorrect place. Fix
 --       duplication.
 
--- | Object diffusion is instantiated once per diffused object kind: Peras
--- certificates and Peras votes. EKG metric names don't carry the tracer
--- namespace, so each kind supplies its own prefix here; sharing one would
--- make cert and vote metrics overwrite each other.
-perasCertMetricsPrefix, perasVoteMetricsPrefix :: Text.Text
-perasCertMetricsPrefix = "perasCert"
-perasVoteMetricsPrefix = "perasVote"
-
 forMachineObjectDiffusionInbound ::
      TraceObjectDiffusionInbound objectId object
   -> Aeson.Object
@@ -2321,30 +2309,6 @@ forMachineObjectDiffusionInbound = \case
       [ "kind" .= String "TraceObjectDiffusionInboundCannotRequestMoreObjects"
       , "payload" .= String (Text.pack . show $ payload)
       ]
-
-asMetricsObjectDiffusionInbound ::
-     Text.Text
-  -> TraceObjectDiffusionInbound objectId object
-  -> [Metric]
-asMetricsObjectDiffusionInbound prefix = \case
-  TraceObjectDiffusionInboundCollectedObjects collected ->
-    [IntM (prefix <> "ObjectsCollected") (fromIntegral collected)]
-  TraceObjectDiffusionInboundAddedObjects (NumObjectsProcessed added) ->
-    [CounterM (prefix <> "ObjectsAdded") (Just (fromIntegral added))]
-  _ -> []
-
-metricsDocForObjectDiffusionInbound ::
-     Text.Text
-  -> Namespace a
-  -> [(Text.Text, Text.Text)]
-metricsDocForObjectDiffusionInbound prefix = \case
-  Namespace _ ["TraceObjectDiffusionInboundCollectedObjects"] ->
-    [( prefix <> "ObjectsCollected"
-     , "number of objects about to be inserted into the pool")]
-  Namespace _ ["TraceObjectDiffusionInboundAddedObjects"] ->
-    [( prefix <> "ObjectsAdded"
-     , "total number of objects accepted into the pool")]
-  _ -> []
 
 namespaceForObjectDiffusionInbound ::
      TraceObjectDiffusionInbound objectId object
@@ -2379,26 +2343,15 @@ allNamespacesObjectDiffusionInbound =
   , Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
   ]
 
-instance LogFormatting (TracePerasCertDiffusionInbound blk) where
+instance LogFormatting (TraceObjectDiffusionInbound objectId object) where
   forMachine _ = forMachineObjectDiffusionInbound
-  asMetrics = asMetricsObjectDiffusionInbound perasCertMetricsPrefix
+  asMetrics _ = []
 
-instance MetaTrace (TracePerasCertDiffusionInbound blk) where
+instance MetaTrace (TraceObjectDiffusionInbound objectId object) where
   namespaceFor = namespaceForObjectDiffusionInbound
   severityFor ns _ = severityForObjectDiffusionInbound ns
   documentFor _ = Nothing
-  metricsDocFor = metricsDocForObjectDiffusionInbound perasCertMetricsPrefix
-  allNamespaces = allNamespacesObjectDiffusionInbound
-
-instance LogFormatting (TracePerasVoteDiffusionInbound blk) where
-  forMachine _ = forMachineObjectDiffusionInbound
-  asMetrics = asMetricsObjectDiffusionInbound perasVoteMetricsPrefix
-
-instance MetaTrace (TracePerasVoteDiffusionInbound blk) where
-  namespaceFor = namespaceForObjectDiffusionInbound
-  severityFor ns _ = severityForObjectDiffusionInbound ns
-  documentFor _ = Nothing
-  metricsDocFor = metricsDocForObjectDiffusionInbound perasVoteMetricsPrefix
+  metricsDocFor _ = []
   allNamespaces = allNamespacesObjectDiffusionInbound
 
 forMachineObjectDiffusionOutbound ::
@@ -2433,25 +2386,6 @@ forMachineObjectDiffusionOutbound = \case
       [ "kind" .= String "TraceObjectDiffusionOutboundTerminated"
       ]
 
-asMetricsObjectDiffusionOutbound ::
-     Text.Text
-  -> TraceObjectDiffusionOutbound objectId object
-  -> [Metric]
-asMetricsObjectDiffusionOutbound prefix = \case
-  TraceObjectDiffusionOutboundSendMsgReplyObjects objects ->
-    [CounterM (prefix <> "ObjectsSent") (Just (length objects))]
-  _ -> []
-
-metricsDocForObjectDiffusionOutbound ::
-     Text.Text
-  -> Namespace a
-  -> [(Text.Text, Text.Text)]
-metricsDocForObjectDiffusionOutbound prefix = \case
-  Namespace _ ["TraceObjectDiffusionOutboundSendMsgReplyObjects"] ->
-    [( prefix <> "ObjectsSent"
-     , "total number of objects served to peers")]
-  _ -> []
-
 namespaceForObjectDiffusionOutbound ::
      TraceObjectDiffusionOutbound objectId object
   -> Namespace a
@@ -2485,26 +2419,14 @@ allNamespacesObjectDiffusionOutbound =
   , Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
   ]
 
-instance Show (PerasCert blk)
-      => LogFormatting (TracePerasCertDiffusionOutbound blk) where
+instance (Show objectId, Show object)
+      => LogFormatting (TraceObjectDiffusionOutbound objectId object) where
   forMachine _ = forMachineObjectDiffusionOutbound
-  asMetrics = asMetricsObjectDiffusionOutbound perasCertMetricsPrefix
+  asMetrics _ = []
 
-instance MetaTrace (TracePerasCertDiffusionOutbound blk) where
+instance MetaTrace (TraceObjectDiffusionOutbound objectId object) where
   namespaceFor = namespaceForObjectDiffusionOutbound
   severityFor ns _ = severityForObjectDiffusionOutbound ns
   documentFor _ = Nothing
-  metricsDocFor = metricsDocForObjectDiffusionOutbound perasCertMetricsPrefix
-  allNamespaces = allNamespacesObjectDiffusionOutbound
-
-instance Show (PerasVote blk)
-      => LogFormatting (TracePerasVoteDiffusionOutbound blk) where
-  forMachine _ = forMachineObjectDiffusionOutbound
-  asMetrics = asMetricsObjectDiffusionOutbound perasVoteMetricsPrefix
-
-instance MetaTrace (TracePerasVoteDiffusionOutbound blk) where
-  namespaceFor = namespaceForObjectDiffusionOutbound
-  severityFor ns _ = severityForObjectDiffusionOutbound ns
-  documentFor _ = Nothing
-  metricsDocFor = metricsDocForObjectDiffusionOutbound perasVoteMetricsPrefix
+  metricsDocFor _ = []
   allNamespaces = allNamespacesObjectDiffusionOutbound

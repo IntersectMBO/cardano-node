@@ -56,9 +56,9 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 import           Data.Aeson (Object, ToJSON, Value (Object, String), object, toJSON, (.=))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -258,6 +258,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -314,6 +318,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    privacyFor (Namespace out tl) (Just ev')
+  privacyFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -370,6 +378,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("PerasCertDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (PerasCertDB.TraceEvent blk)) Nothing
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) (Just (ChainDB.TracePerasVoteDbEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("PerasVoteDbEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (PerasVoteDB.TraceEvent blk)) Nothing
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) (Just (ChainDB.TraceAddPerasCertEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddPerasCertEvent" : tl)) Nothing =
@@ -462,6 +474,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "PerasCertDbEvent")
                   (allNamespaces :: [Namespace (PerasCertDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "PerasVoteDbEvent")
+                  (allNamespaces :: [Namespace (PerasVoteDB.TraceEvent blk)])
           ++ map  (nsPrependInner "AddPerasCertEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddPerasCertEvent blk)])
             )
@@ -1894,23 +1908,23 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
          ]
     documentFor (Namespace _ ["DeletedSnapshot"]) = Just
           "A snapshot was deleted from the disk."
+    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
+          "A snapshot request was delayed."
+    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
+          "A snapshot request was completed."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just $ mconcat
          [ "An on disk snapshot was invalid. Unless it was suffixed or"
          , " seems to be from an old node or different backend, it will"
          , " be deleted"
          ]
-    documentFor (Namespace _ ["SnapshotRequestDelayed"]) = Just
-        "A delayed snapshot request was issued. The snapshot will be initiated at the specified timestamp, with the specified delay and for the specified slots"
-    documentFor (Namespace _ ["SnapshotRequestCompleted"]) = Just
-        "The delayed snapshot request was completed"
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
-      , Namespace [] ["InvalidSnapshot"]
       , Namespace [] ["SnapshotRequestDelayed"]
       , Namespace [] ["SnapshotRequestCompleted"]
+      , Namespace [] ["InvalidSnapshot"]
       ]
 
 --------------------------------------------------------------------------------

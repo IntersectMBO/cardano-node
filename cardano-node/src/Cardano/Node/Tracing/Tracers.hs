@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,7 +23,6 @@ import           Cardano.Network.NodeToClient (LocalAddress)
 import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Network.NodeToNode.Version ()
-import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
@@ -59,12 +59,19 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
+import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
+import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
 
+
+-- | Wrap a tracing effect as a Tracer.
+-- 'emit' from contra-tracer returns TracerA, not Tracer; 'arrow' wraps it.
+mkT :: Applicative m => (a -> m ()) -> Tracer m a
+mkT = arrow . emit
 
 -- | Construct tracers for all system components.
 --
@@ -171,26 +178,26 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
 
     pure Tracers
       {
-        chainDBTracer = mkTracer (traceWith chainDBTr')
-                      <> mkTracer (traceWith replayBlockTr')
-                      <> mkTracer (SR.traceNodeStateChainDB nodeStateDP)
+        chainDBTracer = mkT(traceWith chainDBTr')
+                      <> mkT(traceWith replayBlockTr')
+                      <> mkT(SR.traceNodeStateChainDB nodeStateDP)
       , consensusTracers = consensusTr
-      , churnModeTracer = mkTracer (traceWith churnModeTr)
+      , churnModeTracer = mkT(traceWith churnModeTr)
       , nodeToClientTracers = nodeToClientTr
       , nodeToNodeTracers = nodeToNodeTr
       , diffusionTracers = diffusionTr
-      , startupTracer   = mkTracer (traceWith startupTr)
-                         <> mkTracer (SR.traceNodeStateStartup nodeStateDP)
-      , shutdownTracer  = mkTracer (traceWith shutdownTr)
-                         <> mkTracer (SR.traceNodeStateShutdown nodeStateDP)
-      , nodeInfoTracer  = mkTracer (traceWith nodeInfoDP)
-      , nodeStartupInfoTracer = mkTracer (traceWith nodeStartupInfoDP)
-      , nodeStateTracer = mkTracer (traceWith stateTr)
-                          <> mkTracer (traceWith nodeStateDP)
-      , nodeVersionTracer = mkTracer (traceWith nodeVersionTr)
-      , resourcesTracer = mkTracer (traceWith resourcesTr)
-      , ledgerMetricsTracer = mkTracer (traceWith ledgerMetricsTr)
-      , rpcTracer = mkTracer (traceWith rpcTr)
+      , startupTracer   = mkT(traceWith startupTr)
+                         <> mkT(SR.traceNodeStateStartup nodeStateDP)
+      , shutdownTracer  = mkT(traceWith shutdownTr)
+                         <> mkT(SR.traceNodeStateShutdown nodeStateDP)
+      , nodeInfoTracer  = mkT(traceWith nodeInfoDP)
+      , nodeStartupInfoTracer = mkT(traceWith nodeStartupInfoDP)
+      , nodeStateTracer = mkT(traceWith stateTr)
+                          <> mkT(traceWith nodeStateDP)
+      , nodeVersionTracer = mkT(traceWith nodeVersionTr)
+      , resourcesTracer = mkT(traceWith resourcesTr)
+      , ledgerMetricsTracer = mkT(traceWith ledgerMetricsTr)
+      , rpcTracer = mkT(traceWith rpcTr)
     }
 
 mkConsensusTracers :: forall blk.
@@ -352,82 +359,64 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["txCounters", "Remote"]
     configureTracers configReflection trConfig [txCountersTracer]
 
-    !txPerasCertIn  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Inbound"]
-    configureTracers configReflection trConfig [txPerasCertIn]
-
-    !txPerasCertOut  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Outbound"]
-    configureTracers configReflection trConfig [txPerasCertOut]
-
-    !txPerasVoteIn  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Inbound"]
-    configureTracers configReflection trConfig [txPerasVoteIn]
-
-    !txPerasVoteOut  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Outbound"]
-    configureTracers configReflection trConfig [txPerasVoteOut]
-
     pure $ Consensus.Tracers
-      { Consensus.chainSyncClientTracer = mkTracer $
+      { Consensus.chainSyncClientTracer = mkT$
           traceWith chainSyncClientTr
-      , Consensus.chainSyncServerHeaderTracer = mkTracer $
+      , Consensus.chainSyncServerHeaderTracer = mkT$
             traceWith chainSyncServerHeaderTr
            <> traceWith chainSyncServerHeaderMetricsTr
-      , Consensus.chainSyncServerBlockTracer = mkTracer $
+      , Consensus.chainSyncServerBlockTracer = mkT$
           traceWith chainSyncServerBlockTr
-      , Consensus.consensusSanityCheckTracer = mkTracer $
+      , Consensus.consensusSanityCheckTracer = mkT$
           traceWith consensusSanityCheckTr
-      , Consensus.blockFetchDecisionTracer = mkTracer $
+      , Consensus.blockFetchDecisionTracer = mkT$
           traceWith blockFetchDecisionTr
-      , Consensus.blockFetchClientTracer = mkTracer $
+      , Consensus.blockFetchClientTracer = mkT$
           traceWith blockFetchClientTr
            <> traceWith blockFetchClientMetricsTr
-      , Consensus.blockFetchServerTracer = mkTracer $
+      , Consensus.blockFetchServerTracer = mkT$
           traceWith blockFetchServerTr
           <> traceWith servedBlockLatestTr
-      , Consensus.forgeStateInfoTracer = mkTracer $
+      , Consensus.forgeStateInfoTracer = mkT$
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
-      , Consensus.gddTracer = mkTracer $
+      , Consensus.gddTracer = mkT$
           traceWith consensusGddTr
-      , Consensus.txInboundTracer = mkTracer $
+      , Consensus.txInboundTracer = mkT$
            traceWith txInboundTr
-      , Consensus.txOutboundTracer = mkTracer $
+      , Consensus.txOutboundTracer = mkT$
           traceWith txOutboundTr
-      , Consensus.localTxSubmissionServerTracer = mkTracer $
+      , Consensus.localTxSubmissionServerTracer = mkT$
           traceWith localTxSubmissionServerTr
-      , Consensus.mempoolTracer = mkTracer $
+      , Consensus.mempoolTracer = mkT$
           traceWith mempoolTr
       , Consensus.forgeTracer =
-           mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
+           mkT (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
            <>
-           mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
-      , Consensus.blockchainTimeTracer = mkTracer $
+           mkT (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
+      , Consensus.blockchainTimeTracer = mkT$
           traceWith blockchainTimeTr
-      , Consensus.keepAliveClientTracer = mkTracer $
+      , Consensus.keepAliveClientTracer = mkT$
           traceWith keepAliveClientTr
-      , Consensus.consensusErrorTracer = mkTracer $
+      , Consensus.consensusErrorTracer = mkT$
           traceWith consensusStartupErrorTr . ConsensusStartupException
-      , Consensus.gsmTracer = mkTracer $
+      , Consensus.gsmTracer = mkT$
           traceWith consensusGsmTr
-      , Consensus.csjTracer = mkTracer $
+      , Consensus.csjTracer = mkT$
           traceWith consensusCsjTr
-      , Consensus.dbfTracer = mkTracer $
+      , Consensus.dbfTracer = mkT$
           traceWith consensusDbfTr
-      , Consensus.kesAgentTracer = mkTracer $
+      , Consensus.kesAgentTracer = mkT$
           traceWith consensusKesAgentTr
-      , Consensus.txLogicTracer = mkTracer $
+      , Consensus.txLogicTracer = mkT$
           traceWith txLogicTracer
-      , Consensus.txCountersTracer = mkTracer $
+      , Consensus.txCountersTracer = mkT$
           traceWith txCountersTracer
-      , Consensus.perasCertDiffusionInboundTracer = mkTracer $ traceWith txPerasCertIn
-      , Consensus.perasCertDiffusionOutboundTracer = mkTracer $ traceWith txPerasCertOut
-      , Consensus.perasVoteDiffusionInboundTracer = mkTracer $ traceWith txPerasVoteIn
-      , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $ traceWith txPerasVoteOut
+      , Consensus.perasCertDiffusionInboundTracer = nullTracer
+      , Consensus.perasCertDiffusionOutboundTracer = nullTracer
+      , Consensus.perasVoteDiffusionInboundTracer = nullTracer
+      , Consensus.perasVoteDiffusionOutboundTracer = nullTracer
+      , Consensus.perasCertInclusionTracer = nullTracer
+      , Consensus.perasVoteForgingTracer = nullTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -465,13 +454,13 @@ mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trC
     configureTracers configReflection trConfig [stateQueryTr]
 
     pure $ NtC.Tracers
-      { NtC.tChainSyncTracer = mkTracer $
+      { NtC.tChainSyncTracer = mkT$
           traceWith chainSyncTr
-      , NtC.tTxMonitorTracer = mkTracer $
+      , NtC.tTxMonitorTracer = mkT$
           traceWith txMonitorTr
-      , NtC.tTxSubmissionTracer = mkTracer $
+      , NtC.tTxSubmissionTracer = mkT$
           traceWith txSubmissionTr
-      , NtC.tStateQueryTracer = mkTracer $
+      , NtC.tStateQueryTracer = mkT$
           traceWith stateQueryTr
       }
 
@@ -522,35 +511,23 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
-    !txPerasCertDiffusion  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Remote"]
-    configureTracers configReflection trConfig [txPerasCertDiffusion]
-
-    !txPerasVoteDiffusion  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Remote"]
-    configureTracers configReflection trConfig [txPerasVoteDiffusion]
-
     pure $ NtN.Tracers
-      { NtN.tChainSyncTracer = mkTracer $
+      { NtN.tChainSyncTracer = mkT$
           traceWith chainSyncTracer
-      , NtN.tChainSyncSerialisedTracer = mkTracer $
+      , NtN.tChainSyncSerialisedTracer = mkT$
           traceWith chainSyncSerialisedTr
-      , NtN.tBlockFetchTracer = mkTracer $
+      , NtN.tBlockFetchTracer = mkT$
           traceWith blockFetchTr
-      , NtN.tBlockFetchSerialisedTracer = mkTracer $
+      , NtN.tBlockFetchSerialisedTracer = mkT$
           traceWith blockFetchSerialisedTr
-      , NtN.tTxSubmission2Tracer = mkTracer $
+      , NtN.tTxSubmission2Tracer = mkT$
           traceWith txSubmission2Tracer
-      , NtN.tKeepAliveTracer = mkTracer $
+      , NtN.tPerasCertDiffusionTracer = nullTracer
+      , NtN.tPerasVoteDiffusionTracer = nullTracer
+      , NtN.tKeepAliveTracer = mkT$
           traceWith keepAliveTracer
-      , NtN.tPeerSharingTracer = mkTracer $
+      , NtN.tPeerSharingTracer = mkT$
           traceWith peerSharingTracer
-      , NtN.tPerasCertDiffusionTracer = mkTracer $
-          traceWith txPerasCertDiffusion
-      , NtN.tPerasVoteDiffusionTracer = mkTracer $
-          traceWith txPerasVoteDiffusion
       }
 
 mkDiffusionTracers ::
@@ -695,54 +672,54 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     configureTracers configReflection trConfig [dtDnsTr]
 
     pure $ Diffusion.Tracers
-       { Diffusion.dtMuxTracer = mkTracer $
+       { Diffusion.dtMuxTracer = mkT$
            traceWith dtMuxTr
-       , Diffusion.dtChannelTracer = mkTracer $
+       , Diffusion.dtChannelTracer = mkT$
            traceWith dtChannelTracer
-       , Diffusion.dtBearerTracer = mkTracer $
+       , Diffusion.dtBearerTracer = mkT$
            traceWith dtBearerTracer
-       , Diffusion.dtHandshakeTracer = mkTracer $
+       , Diffusion.dtHandshakeTracer = mkT$
            traceWith dtHandshakeTracer
-       , Diffusion.dtLocalMuxTracer = mkTracer $
+       , Diffusion.dtLocalMuxTracer = mkT$
            traceWith dtLocalMuxTr
-       , Diffusion.dtLocalChannelTracer = mkTracer $
+       , Diffusion.dtLocalChannelTracer = mkT$
            traceWith dtLocalChannelTracer
-       , Diffusion.dtLocalBearerTracer = mkTracer $
+       , Diffusion.dtLocalBearerTracer = mkT$
            traceWith dtLocalBearerTracer
-       , Diffusion.dtLocalHandshakeTracer = mkTracer $
+       , Diffusion.dtLocalHandshakeTracer = mkT$
            traceWith dtLocalHandshakeTracer
-       , Diffusion.dtDiffusionTracer = mkTracer $
+       , Diffusion.dtDiffusionTracer = mkT$
            traceWith dtDiffusionInitializationTr
-       , Diffusion.dtTraceLocalRootPeersTracer = mkTracer $
+       , Diffusion.dtTraceLocalRootPeersTracer = mkT$
            traceWith localRootPeersTr
-       , Diffusion.dtTracePublicRootPeersTracer = mkTracer $
+       , Diffusion.dtTracePublicRootPeersTracer = mkT$
            traceWith publicRootPeersTr
-       , Diffusion.dtTracePeerSelectionTracer = mkTracer $
+       , Diffusion.dtTracePeerSelectionTracer = mkT$
            traceWith peerSelectionTr
-       , Diffusion.dtDebugPeerSelectionTracer = mkTracer $
+       , Diffusion.dtDebugPeerSelectionTracer = mkT$
            traceWith debugPeerSelectionTr
-       , Diffusion.dtTracePeerSelectionCounters = mkTracer $
+       , Diffusion.dtTracePeerSelectionCounters = mkT$
            traceWith peerSelectionCountersTr
-       , Diffusion.dtPeerSelectionActionsTracer = mkTracer $
+       , Diffusion.dtPeerSelectionActionsTracer = mkT$
            traceWith peerSelectionActionsTr
-       , Diffusion.dtConnectionManagerTracer = mkTracer $
+       , Diffusion.dtConnectionManagerTracer = mkT$
            traceWith connectionManagerTr
-       , Diffusion.dtConnectionManagerTransitionTracer = mkTracer $
+       , Diffusion.dtConnectionManagerTransitionTracer = mkT$
            traceWith connectionManagerTransitionsTr
-       , Diffusion.dtServerTracer = mkTracer $
+       , Diffusion.dtServerTracer = mkT$
            traceWith serverTr
-       , Diffusion.dtInboundGovernorTracer = mkTracer $
+       , Diffusion.dtInboundGovernorTracer = mkT$
            traceWith inboundGovernorTr
-       , Diffusion.dtLocalInboundGovernorTracer = mkTracer $
+       , Diffusion.dtLocalInboundGovernorTracer = mkT$
            traceWith localInboundGovernorTr
-       , Diffusion.dtInboundGovernorTransitionTracer = mkTracer $
+       , Diffusion.dtInboundGovernorTransitionTracer = mkT$
            traceWith inboundGovernorTransitionsTr
-       , Diffusion.dtLocalConnectionManagerTracer =  mkTracer $
+       , Diffusion.dtLocalConnectionManagerTracer = mkT$
            traceWith localConnectionManagerTr
-       , Diffusion.dtLocalServerTracer = mkTracer $
+       , Diffusion.dtLocalServerTracer = mkT$
            traceWith localServerTr
-       , Diffusion.dtTraceLedgerPeersTracer = mkTracer $
+       , Diffusion.dtTraceLedgerPeersTracer = mkT$
            traceWith dtLedgerPeersTr
-       , Diffusion.dtDnsTracer = mkTracer $
+       , Diffusion.dtDnsTracer = mkT$
            traceWith dtDnsTr
        }

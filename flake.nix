@@ -23,7 +23,7 @@
     customConfig.url = "github:input-output-hk/empty-flake";
 
     CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=index-only";
       flake = false;
     };
 
@@ -67,6 +67,35 @@
     # Changing the tag alone only relocks mithril itself, leaving its
     # transitive pins on an old release.
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
+
+    cardano-ledger-src = {
+      url = "github:IntersectMBO/cardano-ledger/koslambrou/prepare-11.2";
+      flake = false;
+    };
+    cardano-base-src = {
+      url = "github:IntersectMBO/cardano-base/master";
+      flake = false;
+    };
+    ouroboros-consensus-src = {
+      url = "github:IntersectMBO/ouroboros-consensus/4ee752860daff98f218ace65f828b1244a831055";
+      flake = false;
+    };
+    cardano-api-src = {
+      url = "github:input-output-hk/cardano-api/4a072645b1a85ee195d28abb252e1e430c1dda4e";
+      flake = false;
+    };
+    cardano-cli-src = {
+      url = "github:input-output-hk/cardano-cli/7236b7f746d8e909cb12f9a1cf8fd0fb230735ab";
+      flake = false;
+    };
+    cardano-addresses-src = {
+      url = "github:IntersectMBO/cardano-addresses/f59608374d955b653624822429685114f41e2db2";
+      flake = false;
+    };
+    grapesy-src = {
+      url = "github:well-typed/grapesy/bd6af64f69ff89e3a8fc02e2c81262e648f4715d";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -528,6 +557,13 @@
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
+            cardano-ledger-src = input.cardano-ledger-src;
+            cardano-base-src = input.cardano-base-src;
+            ouroboros-consensus-src = input.ouroboros-consensus-src;
+            cardano-api-src = input.cardano-api-src;
+            cardano-cli-src = input.cardano-cli-src;
+            cardano-addresses-src = input.cardano-addresses-src;
+            grapesy-src = input.grapesy-src;
             macOS-security = macOS-security (final.pkgs);
             # buildPlatform, not hostPlatform: herald is a developer tool that
             # runs on the machine, so cross shells (e.g. windows) must not try

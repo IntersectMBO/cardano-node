@@ -490,7 +490,6 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       liftIOAnnotated $ appendFile logFile ""
 
       let socketPath = H.sprocketSystemName . NEL.head $ testnetSprockets testnetRuntime
-
       fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
 
       void $ asyncRegister_ . runExceptT $
