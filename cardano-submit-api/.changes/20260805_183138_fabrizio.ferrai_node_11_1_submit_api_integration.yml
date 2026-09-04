@@ -1,9 +1,0 @@
-pr: 6604
-kind:
-  - maintenance
-  - documentation
-description: |
-  - Replaced the legacy `iohk-monitoring` example in `config/tx-submit-mainnet-config.yaml` with a new-tracing configuration.
-  - Rewrote the README and dropped the unmaintained `swagger.yaml`, which documented an API version the server no longer serves.
-  - Passed the configuration file path as `FromFile`, following the `readConfigurationWithDefault` signature change.
-  - Bumped `cardano-crypto-class` to `^>= 2.5`.

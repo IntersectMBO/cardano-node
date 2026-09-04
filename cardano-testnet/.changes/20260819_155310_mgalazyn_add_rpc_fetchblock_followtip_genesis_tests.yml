@@ -1,9 +1,0 @@
-pr: 6655
-kind:
-  - test
-description: |
-  - Added `hprop_rpc_fetch_block` integration test for the UTxO RPC `SyncService.FetchBlock` method, comparing blocks fetched by slot and hash against blocks observed independently via `foldBlocks`, including transactions with minted assets and Plutus scripts.
-  - Added `hprop_rpc_follow_tip` integration test for the UTxO RPC `SyncService.FollowTip` streaming method, verifying tip updates are streamed as new blocks are produced.
-  - Added `hprop_rpc_read_genesis` integration test for the UTxO RPC `QueryService.ReadGenesis` method, verifying the returned genesis parameters match the testnet's configuration.
-  - Updated the `SearchUtxos` and `Transaction` RPC tests to use the shared `exactAddressPredicate` and `txoRefUtxoRpcToTxIn` helpers instead of local copies of the equivalent code.
-  - Adapted `foldBlocks` call sites to `cardano-api` 11.5, which now requires an explicit `SomeHasFS IO` argument (built via `mkNodeConfigFs`).

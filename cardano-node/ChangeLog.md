@@ -15,6 +15,12 @@
   check's namespace inventory.
   ([#6667](https://github.com/IntersectMBO/cardano-node/issues/6667))
 
+- Bump `ouroboros-consensus` to 4.2.0.1, `cardano-api` to 11.6, `cardano-cli` to
+  11.2 and `cardano-rpc` to 11.2.
+
+- Call `protocolInfo` only once at startup, avoiding needless recomputation of
+  the initial ledger state.
+
 ## 11.1.0 -- August 2026
 
 - **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a

@@ -1,6 +1,0 @@
-pr: 6604
-kind:
-  - maintenance
-description: |
-  - Adapted to `contra-tracer`'s abstract `Tracer` (`mkTracer`/`traceWith` in place of the `Tracer` constructor and `runTracer`) and to `Cardano.Api.protocolInfo` becoming monadic.
-  - Dropped the `cardano` sublibrary from the `ouroboros-consensus` dependency, and bumped `cardano-crypto-class` to `^>= 2.5` in the test suite.
