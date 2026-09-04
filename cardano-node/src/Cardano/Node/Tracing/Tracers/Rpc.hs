@@ -44,6 +44,10 @@ instance LogFormatting TraceRpc where
                   [ "queryName" .= String "ReadGenesis"
                   , spanToObject s
                   ]
+                TraceRpcQueryReadEraSummarySpan s ->
+                  [ "queryName" .= String "ReadEraSummary"
+                  , spanToObject s
+                  ]
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
@@ -79,6 +83,7 @@ instance LogFormatting TraceRpc where
     TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
     TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" Nothing]
     TraceRpcQuery (TraceRpcQueryReadGenesisSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadGenesis" Nothing]
+    TraceRpcQuery (TraceRpcQueryReadEraSummarySpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadEraSummary" Nothing]
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
     TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
@@ -98,6 +103,7 @@ instance MetaTrace TraceRpc where
             TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
             TraceRpcQuerySearchUtxosSpan _ -> ["SearchUtxos", "Span"]
             TraceRpcQueryReadGenesisSpan _ -> ["ReadGenesis", "Span"]
+            TraceRpcQueryReadEraSummarySpan _ -> ["ReadEraSummary", "Span"]
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of
@@ -128,6 +134,7 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadUtxos", "Span"] -> Just Debug
     ["QueryService", "SearchUtxos", "Span"] -> Just Debug
     ["QueryService", "ReadGenesis", "Span"] -> Just Debug
+    ["QueryService", "ReadEraSummary", "Span"] -> Just Debug
     ["SubmitService", "SubmitTx", "Span"] -> Just Debug
     ["SubmitService", "EvalTx", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
@@ -150,6 +157,7 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadUtxos", "Span"] -> Just "Span for the ReadUtxos UTXORPC method."
     ["QueryService", "SearchUtxos", "Span"] -> Just "Span for the SearchUtxos UTXORPC method."
     ["QueryService", "ReadGenesis", "Span"] -> Just "Span for the ReadGenesis UTXORPC method."
+    ["QueryService", "ReadEraSummary", "Span"] -> Just "Span for the ReadEraSummary UTXORPC method."
     ["SubmitService", "SubmitTx", "Span"] -> Just "Span for the SubmitTx UTXORPC method."
     ["SubmitService", "EvalTx", "Span"] -> Just "Span for the EvalTx UTXORPC method."
     ["SubmitService", "N2cConnectionError"] ->
@@ -176,6 +184,8 @@ instance MetaTrace TraceRpc where
       [("rpc.request.QueryService.SearchUtxos", "Span for the SearchUtxos UTXORPC method.")]
     ["QueryService", "ReadGenesis", "Span"] ->
       [("rpc.request.QueryService.ReadGenesis", "Span for the ReadGenesis UTXORPC method.")]
+    ["QueryService", "ReadEraSummary", "Span"] ->
+      [("rpc.request.QueryService.ReadEraSummary", "Span for the ReadEraSummary UTXORPC method.")]
     ["SubmitService", "SubmitTx", "Span"] ->
       [("rpc.request.SubmitService.SubmitTx", "Span for the SubmitTx UTXORPC method.")]
     ["SubmitService", "EvalTx", "Span"] ->
@@ -207,6 +217,7 @@ instance MetaTrace TraceRpc where
           , ["SyncService", "ReadTip", "Span"]
           , ["SyncService", "FollowTip", "Span"]
           , ["QueryService", "ReadGenesis", "Span"]
+          , ["QueryService", "ReadEraSummary", "Span"]
           , ["NodeKernelAccess", "UnsupportedBlockType"]
           , ["ServerListening"]
           ]
