@@ -1,0 +1,751 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveLift #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE PackageImports #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskellQuotes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html"><span class="hs-identifier">System.OsString.Internal.Types</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier">WindowsString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WS"><span class="hs-identifier">WS</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#unWS"><span class="hs-identifier">unWS</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier">PosixString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#unPS"><span class="hs-identifier">unPS</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PS"><span class="hs-identifier">PS</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformString"><span class="hs-identifier">PlatformString</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier">WindowsChar</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#unWW"><span class="hs-identifier">unWW</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WW"><span class="hs-identifier">WW</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier">PosixChar</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#unPW"><span class="hs-identifier">unPW</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PW"><span class="hs-identifier">PW</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformChar"><span class="hs-identifier">PlatformChar</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier">OsString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier">OsChar</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#coercionToPlatformTypes"><span class="hs-identifier">coercionToPlatformTypes</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Coerce.html"><span class="hs-identifier">Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Type.Coercion.html"><span class="hs-identifier">Data.Type.Coercion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Coercion</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">coerceWith</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 914
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Language.Haskell.TH.Lift</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Lift</span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../template-haskell-2.23.0.0-inplace/src/Language.Haskell.TH.Syntax.html"><span class="hs-identifier">Language.Haskell.TH.Syntax</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Lift</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if !MIN_VERSION_base(4,11,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Semigroup</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.OsString.Encoding.Internal.html"><span class="hs-identifier">System.OsString.Encoding.Internal</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.OsString.Data.ByteString.Short.html"><span class="hs-identifier">System.OsString.Data.ByteString.Short</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.OsString.Data.ByteString.Short.Word16.html"><span class="hs-identifier">System.OsString.Data.ByteString.Short.Word16</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS16</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- Using unpinned bytearrays to avoid Heap fragmentation and</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- which are reasonably cheap to pass to FFI calls</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- wrapped with typeclass-friendly types allowing to avoid CPP</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- Note that, while unpinned bytearrays incur a memcpy on each</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- FFI call, this overhead is generally much preferable to</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- the memory fragmentation of pinned bytearrays</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | Commonly used windows string as wide character bytes.</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">newtype</span><span> </span><span id="WindowsString"><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-var">WindowsString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WindowsString"><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-var">WindowsString</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getWindowsString"><span class="annot"><span class="annottext">WindowsString -&gt; ShortByteString
+</span><a href="System.OsString.Internal.Types.html#getWindowsString"><span class="hs-identifier hs-var hs-var">getWindowsString</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077196"><span id="local-6989586621679077201"><span class="annot"><span class="annottext">WindowsString -&gt; WindowsString -&gt; Bool
+(WindowsString -&gt; WindowsString -&gt; Bool)
+-&gt; (WindowsString -&gt; WindowsString -&gt; Bool) -&gt; Eq WindowsString
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: WindowsString -&gt; WindowsString -&gt; Bool
+== :: WindowsString -&gt; WindowsString -&gt; Bool
+$c/= :: WindowsString -&gt; WindowsString -&gt; Bool
+/= :: WindowsString -&gt; WindowsString -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077210"><span id="local-6989586621679077215"><span id="local-6989586621679077219"><span id="local-6989586621679077223"><span id="local-6989586621679077227"><span id="local-6989586621679077231"><span id="local-6989586621679077235"><span class="annot"><span class="annottext">Eq WindowsString
+Eq WindowsString =&gt;
+(WindowsString -&gt; WindowsString -&gt; Ordering)
+-&gt; (WindowsString -&gt; WindowsString -&gt; Bool)
+-&gt; (WindowsString -&gt; WindowsString -&gt; Bool)
+-&gt; (WindowsString -&gt; WindowsString -&gt; Bool)
+-&gt; (WindowsString -&gt; WindowsString -&gt; Bool)
+-&gt; (WindowsString -&gt; WindowsString -&gt; WindowsString)
+-&gt; (WindowsString -&gt; WindowsString -&gt; WindowsString)
+-&gt; Ord WindowsString
+WindowsString -&gt; WindowsString -&gt; Bool
+WindowsString -&gt; WindowsString -&gt; Ordering
+WindowsString -&gt; WindowsString -&gt; WindowsString
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: WindowsString -&gt; WindowsString -&gt; Ordering
+compare :: WindowsString -&gt; WindowsString -&gt; Ordering
+$c&lt; :: WindowsString -&gt; WindowsString -&gt; Bool
+&lt; :: WindowsString -&gt; WindowsString -&gt; Bool
+$c&lt;= :: WindowsString -&gt; WindowsString -&gt; Bool
+&lt;= :: WindowsString -&gt; WindowsString -&gt; Bool
+$c&gt; :: WindowsString -&gt; WindowsString -&gt; Bool
+&gt; :: WindowsString -&gt; WindowsString -&gt; Bool
+$c&gt;= :: WindowsString -&gt; WindowsString -&gt; Bool
+&gt;= :: WindowsString -&gt; WindowsString -&gt; Bool
+$cmax :: WindowsString -&gt; WindowsString -&gt; WindowsString
+max :: WindowsString -&gt; WindowsString -&gt; WindowsString
+$cmin :: WindowsString -&gt; WindowsString -&gt; WindowsString
+min :: WindowsString -&gt; WindowsString -&gt; WindowsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077247"><span id="local-6989586621679077252"><span id="local-6989586621679077256"><span class="annot"><span class="annottext">NonEmpty WindowsString -&gt; WindowsString
+WindowsString -&gt; WindowsString -&gt; WindowsString
+(WindowsString -&gt; WindowsString -&gt; WindowsString)
+-&gt; (NonEmpty WindowsString -&gt; WindowsString)
+-&gt; (forall b. Integral b =&gt; b -&gt; WindowsString -&gt; WindowsString)
+-&gt; Semigroup WindowsString
+forall b. Integral b =&gt; b -&gt; WindowsString -&gt; WindowsString
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: WindowsString -&gt; WindowsString -&gt; WindowsString
+&lt;&gt; :: WindowsString -&gt; WindowsString -&gt; WindowsString
+$csconcat :: NonEmpty WindowsString -&gt; WindowsString
+sconcat :: NonEmpty WindowsString -&gt; WindowsString
+$cstimes :: forall b. Integral b =&gt; b -&gt; WindowsString -&gt; WindowsString
+stimes :: forall b. Integral b =&gt; b -&gt; WindowsString -&gt; WindowsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077268"><span id="local-6989586621679077273"><span id="local-6989586621679077277"><span class="annot"><span class="annottext">Semigroup WindowsString
+WindowsString
+Semigroup WindowsString =&gt;
+WindowsString
+-&gt; (WindowsString -&gt; WindowsString -&gt; WindowsString)
+-&gt; ([WindowsString] -&gt; WindowsString)
+-&gt; Monoid WindowsString
+[WindowsString] -&gt; WindowsString
+WindowsString -&gt; WindowsString -&gt; WindowsString
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: WindowsString
+mempty :: WindowsString
+$cmappend :: WindowsString -&gt; WindowsString -&gt; WindowsString
+mappend :: WindowsString -&gt; WindowsString -&gt; WindowsString
+$cmconcat :: [WindowsString] -&gt; WindowsString
+mconcat :: [WindowsString] -&gt; WindowsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077283"><span id="local-6989586621679077285"><span class="annot"><span class="annottext">(forall x. WindowsString -&gt; Rep WindowsString x)
+-&gt; (forall x. Rep WindowsString x -&gt; WindowsString)
+-&gt; Generic WindowsString
+forall x. Rep WindowsString x -&gt; WindowsString
+forall x. WindowsString -&gt; Rep WindowsString x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. WindowsString -&gt; Rep WindowsString x
+from :: forall x. WindowsString -&gt; Rep WindowsString x
+$cto :: forall x. Rep WindowsString x -&gt; WindowsString
+to :: forall x. Rep WindowsString x -&gt; WindowsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077291"><span class="annot"><span class="annottext">WindowsString -&gt; ()
+(WindowsString -&gt; ()) -&gt; NFData WindowsString
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: WindowsString -&gt; ()
+rnf :: WindowsString -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077299"><span id="local-6989586621679077306"><span class="annot"><span class="annottext">(forall (m :: * -&gt; *). Quote m =&gt; WindowsString -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *).
+    Quote m =&gt;
+    WindowsString -&gt; Code m WindowsString)
+-&gt; Lift WindowsString
+forall t.
+(forall (m :: * -&gt; *). Quote m =&gt; t -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *). Quote m =&gt; t -&gt; Code m t) -&gt; Lift t
+forall (m :: * -&gt; *). Quote m =&gt; WindowsString -&gt; m Exp
+forall (m :: * -&gt; *).
+Quote m =&gt;
+WindowsString -&gt; Code m WindowsString
+$clift :: forall (m :: * -&gt; *). Quote m =&gt; WindowsString -&gt; m Exp
+lift :: forall (m :: * -&gt; *). Quote m =&gt; WindowsString -&gt; m Exp
+$cliftTyped :: forall (m :: * -&gt; *).
+Quote m =&gt;
+WindowsString -&gt; Code m WindowsString
+liftTyped :: forall (m :: * -&gt; *).
+Quote m =&gt;
+WindowsString -&gt; Code m WindowsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Lift</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | Decodes as UCS-2.</span></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077314"><span id="local-6989586621679077319"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-type">WindowsString</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- cWcharsToChars_UCS2 is total</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679077326"><span class="annot"><span class="annottext">show :: WindowsString -&gt; String
+</span><a href="#local-6989586621679077326"><span class="hs-identifier hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; (WindowsString -&gt; String) -&gt; WindowsString -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Word16] -&gt; String
+</span><a href="System.OsString.Encoding.Internal.html#cWcharsToChars_UCS2"><span class="hs-identifier hs-var">cWcharsToChars_UCS2</span></a></span><span> </span><span class="annot"><span class="annottext">([Word16] -&gt; String)
+-&gt; (WindowsString -&gt; [Word16]) -&gt; WindowsString -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; [Word16]
+</span><a href="System.OsString.Data.ByteString.Short.Word16.html#unpack"><span class="hs-identifier hs-var">BS16.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; [Word16])
+-&gt; (WindowsString -&gt; ShortByteString) -&gt; WindowsString -&gt; [Word16]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">WindowsString -&gt; ShortByteString
+</span><a href="System.OsString.Internal.Types.html#getWindowsString"><span class="hs-identifier hs-var">getWindowsString</span></a></span><span class="hs-cpp">
+
+#if defined(__MHS__)
+</span><span class="hs-comment">-- No record pattern synonyms in MicroHs</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">WS</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">WindowsString</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">WS</span><span> </span><span class="hs-identifier">s</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">WindowsString</span><span> </span><span class="hs-identifier">s</span><span>
+</span><span id="line-75"></span><span class="hs-identifier">unWS</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">WindowsString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span>
+</span><span id="line-76"></span><span class="hs-identifier">unWS</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">WS</span><span> </span><span class="hs-identifier">s</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">s</span><span class="hs-cpp">
+#else
+</span><span class="annot"><span class="hs-comment">-- | Just a short bidirectional synonym for 'WindowsString' constructor.</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WS"><span class="hs-identifier hs-type">WS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-type">WindowsString</span></a></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">pattern</span><span> </span><span id="WS"><span id="%24mWS"><span id="%24bWS"><span class="annot"><span class="annottext">$mWS :: forall {r}.
+WindowsString -&gt; (ShortByteString -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bWS :: ShortByteString -&gt; WindowsString
+</span><a href="System.OsString.Internal.Types.html#WS"><span class="hs-identifier hs-var hs-var hs-var">WS</span></a></span></span></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unWS"><span class="annot"><span class="annottext">WindowsString -&gt; ShortByteString
+</span><a href="System.OsString.Internal.Types.html#unWS"><span class="hs-identifier hs-var hs-var hs-var">unWS</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-type">WindowsString</span></a></span><span> </span><span id="local-6989586621679077333"><span class="annot"><a href="#local-6989586621679077333"><span class="hs-identifier hs-var">unWS</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="System.OsString.Internal.Types.html#WS"><span class="hs-identifier hs-var">WS</span></a></span><span> </span><span id="local-6989586621679077334"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077334"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; WindowsString
+</span><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-var">WindowsString</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077334"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 802
+</span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WS"><span class="hs-pragma hs-type">WS</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#endif /* defined(__MHS__) */
+</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Commonly used Posix string as uninterpreted @char[]@</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- array.</span><span>
+</span><span id="line-89"></span><span class="hs-keyword">newtype</span><span> </span><span id="PosixString"><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-var">PosixString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PosixString"><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-var">PosixString</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getPosixString"><span class="annot"><span class="annottext">PosixString -&gt; ShortByteString
+</span><a href="System.OsString.Internal.Types.html#getPosixString"><span class="hs-identifier hs-var hs-var">getPosixString</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077338"><span id="local-6989586621679077342"><span class="annot"><span class="annottext">PosixString -&gt; PosixString -&gt; Bool
+(PosixString -&gt; PosixString -&gt; Bool)
+-&gt; (PosixString -&gt; PosixString -&gt; Bool) -&gt; Eq PosixString
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PosixString -&gt; PosixString -&gt; Bool
+== :: PosixString -&gt; PosixString -&gt; Bool
+$c/= :: PosixString -&gt; PosixString -&gt; Bool
+/= :: PosixString -&gt; PosixString -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077349"><span id="local-6989586621679077353"><span id="local-6989586621679077357"><span id="local-6989586621679077361"><span id="local-6989586621679077365"><span id="local-6989586621679077369"><span id="local-6989586621679077373"><span class="annot"><span class="annottext">Eq PosixString
+Eq PosixString =&gt;
+(PosixString -&gt; PosixString -&gt; Ordering)
+-&gt; (PosixString -&gt; PosixString -&gt; Bool)
+-&gt; (PosixString -&gt; PosixString -&gt; Bool)
+-&gt; (PosixString -&gt; PosixString -&gt; Bool)
+-&gt; (PosixString -&gt; PosixString -&gt; Bool)
+-&gt; (PosixString -&gt; PosixString -&gt; PosixString)
+-&gt; (PosixString -&gt; PosixString -&gt; PosixString)
+-&gt; Ord PosixString
+PosixString -&gt; PosixString -&gt; Bool
+PosixString -&gt; PosixString -&gt; Ordering
+PosixString -&gt; PosixString -&gt; PosixString
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PosixString -&gt; PosixString -&gt; Ordering
+compare :: PosixString -&gt; PosixString -&gt; Ordering
+$c&lt; :: PosixString -&gt; PosixString -&gt; Bool
+&lt; :: PosixString -&gt; PosixString -&gt; Bool
+$c&lt;= :: PosixString -&gt; PosixString -&gt; Bool
+&lt;= :: PosixString -&gt; PosixString -&gt; Bool
+$c&gt; :: PosixString -&gt; PosixString -&gt; Bool
+&gt; :: PosixString -&gt; PosixString -&gt; Bool
+$c&gt;= :: PosixString -&gt; PosixString -&gt; Bool
+&gt;= :: PosixString -&gt; PosixString -&gt; Bool
+$cmax :: PosixString -&gt; PosixString -&gt; PosixString
+max :: PosixString -&gt; PosixString -&gt; PosixString
+$cmin :: PosixString -&gt; PosixString -&gt; PosixString
+min :: PosixString -&gt; PosixString -&gt; PosixString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077378"><span id="local-6989586621679077382"><span id="local-6989586621679077386"><span class="annot"><span class="annottext">NonEmpty PosixString -&gt; PosixString
+PosixString -&gt; PosixString -&gt; PosixString
+(PosixString -&gt; PosixString -&gt; PosixString)
+-&gt; (NonEmpty PosixString -&gt; PosixString)
+-&gt; (forall b. Integral b =&gt; b -&gt; PosixString -&gt; PosixString)
+-&gt; Semigroup PosixString
+forall b. Integral b =&gt; b -&gt; PosixString -&gt; PosixString
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: PosixString -&gt; PosixString -&gt; PosixString
+&lt;&gt; :: PosixString -&gt; PosixString -&gt; PosixString
+$csconcat :: NonEmpty PosixString -&gt; PosixString
+sconcat :: NonEmpty PosixString -&gt; PosixString
+$cstimes :: forall b. Integral b =&gt; b -&gt; PosixString -&gt; PosixString
+stimes :: forall b. Integral b =&gt; b -&gt; PosixString -&gt; PosixString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077395"><span id="local-6989586621679077399"><span id="local-6989586621679077403"><span class="annot"><span class="annottext">Semigroup PosixString
+PosixString
+Semigroup PosixString =&gt;
+PosixString
+-&gt; (PosixString -&gt; PosixString -&gt; PosixString)
+-&gt; ([PosixString] -&gt; PosixString)
+-&gt; Monoid PosixString
+[PosixString] -&gt; PosixString
+PosixString -&gt; PosixString -&gt; PosixString
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: PosixString
+mempty :: PosixString
+$cmappend :: PosixString -&gt; PosixString -&gt; PosixString
+mappend :: PosixString -&gt; PosixString -&gt; PosixString
+$cmconcat :: [PosixString] -&gt; PosixString
+mconcat :: [PosixString] -&gt; PosixString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077408"><span id="local-6989586621679077410"><span class="annot"><span class="annottext">(forall x. PosixString -&gt; Rep PosixString x)
+-&gt; (forall x. Rep PosixString x -&gt; PosixString)
+-&gt; Generic PosixString
+forall x. Rep PosixString x -&gt; PosixString
+forall x. PosixString -&gt; Rep PosixString x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PosixString -&gt; Rep PosixString x
+from :: forall x. PosixString -&gt; Rep PosixString x
+$cto :: forall x. Rep PosixString x -&gt; PosixString
+to :: forall x. Rep PosixString x -&gt; PosixString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077413"><span class="annot"><span class="annottext">PosixString -&gt; ()
+(PosixString -&gt; ()) -&gt; NFData PosixString
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: PosixString -&gt; ()
+rnf :: PosixString -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077418"><span id="local-6989586621679077424"><span class="annot"><span class="annottext">(forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *).
+    Quote m =&gt;
+    PosixString -&gt; Code m PosixString)
+-&gt; Lift PosixString
+forall t.
+(forall (m :: * -&gt; *). Quote m =&gt; t -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *). Quote m =&gt; t -&gt; Code m t) -&gt; Lift t
+forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; m Exp
+forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; Code m PosixString
+$clift :: forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; m Exp
+lift :: forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; m Exp
+$cliftTyped :: forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; Code m PosixString
+liftTyped :: forall (m :: * -&gt; *). Quote m =&gt; PosixString -&gt; Code m PosixString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Lift</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Prints the raw bytes without decoding.</span></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077431"><span id="local-6989586621679077436"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679077440"><span class="annot"><span class="annottext">show :: PosixString -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var">show</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span><span> </span><span id="local-6989586621679077441"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077441"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077441"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-cpp">
+
+#if defined(__MHS__)
+</span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">PS</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">PosixString</span><span>
+</span><span id="line-98"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">PS</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">PosixString</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-99"></span><span class="hs-identifier">unPS</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">PosixString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span>
+</span><span id="line-100"></span><span class="hs-identifier">unPS</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">PS</span><span> </span><span class="hs-identifier">a</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">a</span><span class="hs-cpp">
+#else
+</span><span class="annot"><span class="hs-comment">-- | Just a short bidirectional synonym for 'PosixString' constructor.</span></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PS"><span class="hs-identifier hs-type">PS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">pattern</span><span> </span><span id="PS"><span id="%24mPS"><span id="%24bPS"><span class="annot"><span class="annottext">$mPS :: forall {r}.
+PosixString -&gt; (ShortByteString -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bPS :: ShortByteString -&gt; PosixString
+</span><a href="System.OsString.Internal.Types.html#PS"><span class="hs-identifier hs-var hs-var hs-var">PS</span></a></span></span></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unPS"><span class="annot"><span class="annottext">PosixString -&gt; ShortByteString
+</span><a href="System.OsString.Internal.Types.html#unPS"><span class="hs-identifier hs-var hs-var hs-var">unPS</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span><span> </span><span id="local-6989586621679077444"><span class="annot"><a href="#local-6989586621679077444"><span class="hs-identifier hs-var">unPS</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><a href="System.OsString.Internal.Types.html#PS"><span class="hs-identifier hs-var">PS</span></a></span><span> </span><span id="local-6989586621679077445"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077445"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; PosixString
+</span><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-var">PosixString</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679077445"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 802
+</span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PS"><span class="hs-pragma hs-type">PS</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#endif /* defined(__MHS__) */
+</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+</span><span class="hs-keyword">type</span><span> </span><span class="hs-identifier">PlatformString</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">WindowsString</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">type</span><span> </span><span id="PlatformString"><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformString"><span class="hs-identifier hs-var">PlatformString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-117"></span><span class="hs-keyword">newtype</span><span> </span><span id="WindowsChar"><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-var">WindowsChar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WindowsChar"><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-var">WindowsChar</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getWindowsChar"><span class="annot"><span class="annottext">WindowsChar -&gt; Word16
+</span><a href="System.OsString.Internal.Types.html#getWindowsChar"><span class="hs-identifier hs-var hs-var">getWindowsChar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077449"><span id="local-6989586621679077454"><span class="annot"><span class="annottext">WindowsChar -&gt; WindowsChar -&gt; Bool
+(WindowsChar -&gt; WindowsChar -&gt; Bool)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; Bool) -&gt; Eq WindowsChar
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: WindowsChar -&gt; WindowsChar -&gt; Bool
+== :: WindowsChar -&gt; WindowsChar -&gt; Bool
+$c/= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+/= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077461"><span id="local-6989586621679077466"><span id="local-6989586621679077470"><span id="local-6989586621679077474"><span id="local-6989586621679077478"><span id="local-6989586621679077482"><span id="local-6989586621679077486"><span class="annot"><span class="annottext">Eq WindowsChar
+Eq WindowsChar =&gt;
+(WindowsChar -&gt; WindowsChar -&gt; Ordering)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; Bool)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; Bool)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; Bool)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; Bool)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; WindowsChar)
+-&gt; (WindowsChar -&gt; WindowsChar -&gt; WindowsChar)
+-&gt; Ord WindowsChar
+WindowsChar -&gt; WindowsChar -&gt; Bool
+WindowsChar -&gt; WindowsChar -&gt; Ordering
+WindowsChar -&gt; WindowsChar -&gt; WindowsChar
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: WindowsChar -&gt; WindowsChar -&gt; Ordering
+compare :: WindowsChar -&gt; WindowsChar -&gt; Ordering
+$c&lt; :: WindowsChar -&gt; WindowsChar -&gt; Bool
+&lt; :: WindowsChar -&gt; WindowsChar -&gt; Bool
+$c&lt;= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+&lt;= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+$c&gt; :: WindowsChar -&gt; WindowsChar -&gt; Bool
+&gt; :: WindowsChar -&gt; WindowsChar -&gt; Bool
+$c&gt;= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+&gt;= :: WindowsChar -&gt; WindowsChar -&gt; Bool
+$cmax :: WindowsChar -&gt; WindowsChar -&gt; WindowsChar
+max :: WindowsChar -&gt; WindowsChar -&gt; WindowsChar
+$cmin :: WindowsChar -&gt; WindowsChar -&gt; WindowsChar
+min :: WindowsChar -&gt; WindowsChar -&gt; WindowsChar
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077491"><span id="local-6989586621679077493"><span class="annot"><span class="annottext">(forall x. WindowsChar -&gt; Rep WindowsChar x)
+-&gt; (forall x. Rep WindowsChar x -&gt; WindowsChar)
+-&gt; Generic WindowsChar
+forall x. Rep WindowsChar x -&gt; WindowsChar
+forall x. WindowsChar -&gt; Rep WindowsChar x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. WindowsChar -&gt; Rep WindowsChar x
+from :: forall x. WindowsChar -&gt; Rep WindowsChar x
+$cto :: forall x. Rep WindowsChar x -&gt; WindowsChar
+to :: forall x. Rep WindowsChar x -&gt; WindowsChar
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077496"><span class="annot"><span class="annottext">WindowsChar -&gt; ()
+(WindowsChar -&gt; ()) -&gt; NFData WindowsChar
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: WindowsChar -&gt; ()
+rnf :: WindowsChar -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077502"><span id="local-6989586621679077507"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-type">WindowsChar</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621679077511"><span class="annot"><span class="annottext">show :: WindowsChar -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var">show</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-type">WindowsChar</span></a></span><span> </span><span id="local-6989586621679077512"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679077512"><span class="hs-identifier hs-var">wc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679077512"><span class="hs-identifier hs-var">wc</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">newtype</span><span> </span><span id="PosixChar"><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-var">PosixChar</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="PosixChar"><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-var">PosixChar</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getPosixChar"><span class="annot"><span class="annottext">PosixChar -&gt; Word8
+</span><a href="System.OsString.Internal.Types.html#getPosixChar"><span class="hs-identifier hs-var hs-var">getPosixChar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077516"><span id="local-6989586621679077521"><span class="annot"><span class="annottext">PosixChar -&gt; PosixChar -&gt; Bool
+(PosixChar -&gt; PosixChar -&gt; Bool)
+-&gt; (PosixChar -&gt; PosixChar -&gt; Bool) -&gt; Eq PosixChar
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PosixChar -&gt; PosixChar -&gt; Bool
+== :: PosixChar -&gt; PosixChar -&gt; Bool
+$c/= :: PosixChar -&gt; PosixChar -&gt; Bool
+/= :: PosixChar -&gt; PosixChar -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077528"><span id="local-6989586621679077533"><span id="local-6989586621679077537"><span id="local-6989586621679077541"><span id="local-6989586621679077545"><span id="local-6989586621679077549"><span id="local-6989586621679077553"><span class="annot"><span class="annottext">Eq PosixChar
+Eq PosixChar =&gt;
+(PosixChar -&gt; PosixChar -&gt; Ordering)
+-&gt; (PosixChar -&gt; PosixChar -&gt; Bool)
+-&gt; (PosixChar -&gt; PosixChar -&gt; Bool)
+-&gt; (PosixChar -&gt; PosixChar -&gt; Bool)
+-&gt; (PosixChar -&gt; PosixChar -&gt; Bool)
+-&gt; (PosixChar -&gt; PosixChar -&gt; PosixChar)
+-&gt; (PosixChar -&gt; PosixChar -&gt; PosixChar)
+-&gt; Ord PosixChar
+PosixChar -&gt; PosixChar -&gt; Bool
+PosixChar -&gt; PosixChar -&gt; Ordering
+PosixChar -&gt; PosixChar -&gt; PosixChar
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: PosixChar -&gt; PosixChar -&gt; Ordering
+compare :: PosixChar -&gt; PosixChar -&gt; Ordering
+$c&lt; :: PosixChar -&gt; PosixChar -&gt; Bool
+&lt; :: PosixChar -&gt; PosixChar -&gt; Bool
+$c&lt;= :: PosixChar -&gt; PosixChar -&gt; Bool
+&lt;= :: PosixChar -&gt; PosixChar -&gt; Bool
+$c&gt; :: PosixChar -&gt; PosixChar -&gt; Bool
+&gt; :: PosixChar -&gt; PosixChar -&gt; Bool
+$c&gt;= :: PosixChar -&gt; PosixChar -&gt; Bool
+&gt;= :: PosixChar -&gt; PosixChar -&gt; Bool
+$cmax :: PosixChar -&gt; PosixChar -&gt; PosixChar
+max :: PosixChar -&gt; PosixChar -&gt; PosixChar
+$cmin :: PosixChar -&gt; PosixChar -&gt; PosixChar
+min :: PosixChar -&gt; PosixChar -&gt; PosixChar
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077558"><span id="local-6989586621679077560"><span class="annot"><span class="annottext">(forall x. PosixChar -&gt; Rep PosixChar x)
+-&gt; (forall x. Rep PosixChar x -&gt; PosixChar) -&gt; Generic PosixChar
+forall x. Rep PosixChar x -&gt; PosixChar
+forall x. PosixChar -&gt; Rep PosixChar x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PosixChar -&gt; Rep PosixChar x
+from :: forall x. PosixChar -&gt; Rep PosixChar x
+$cto :: forall x. Rep PosixChar x -&gt; PosixChar
+to :: forall x. Rep PosixChar x -&gt; PosixChar
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077563"><span class="annot"><span class="annottext">PosixChar -&gt; ()
+(PosixChar -&gt; ()) -&gt; NFData PosixChar
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: PosixChar -&gt; ()
+rnf :: PosixChar -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077569"><span id="local-6989586621679077574"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679077578"><span class="annot"><span class="annottext">show :: PosixChar -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var">show</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span><span> </span><span id="local-6989586621679077579"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679077579"><span class="hs-identifier hs-var">pc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679077579"><span class="hs-identifier hs-var">pc</span></a></span><span class="hs-cpp">
+
+#if defined(__MHS__)
+</span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">WW</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Word16</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">WindowsChar</span><span>
+</span><span id="line-131"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">WW</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">WindowsChar</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-132"></span><span class="hs-identifier">unWW</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">WindowsChar</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">Word16</span><span>
+</span><span id="line-133"></span><span class="hs-identifier">unWW</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">WW</span><span> </span><span class="hs-identifier">a</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">PW</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Word8</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">PosixChar</span><span>
+</span><span id="line-136"></span><span class="hs-keyword">pattern</span><span> </span><span class="hs-identifier">PW</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">PosixChar</span><span> </span><span class="hs-identifier">a</span><span>
+</span><span id="line-137"></span><span class="hs-identifier">unPW</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">PosixChar</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">Word8</span><span>
+</span><span id="line-138"></span><span class="hs-identifier">unPW</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">PW</span><span> </span><span class="hs-identifier">a</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">a</span><span class="hs-cpp">
+#else
+</span><span class="annot"><span class="hs-comment">-- | Just a short bidirectional synonym for 'WindowsChar' constructor.</span></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WW"><span class="hs-identifier hs-type">WW</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-type">WindowsChar</span></a></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">pattern</span><span> </span><span id="WW"><span id="%24mWW"><span id="%24bWW"><span class="annot"><span class="annottext">$mWW :: forall {r}. WindowsChar -&gt; (Word16 -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bWW :: Word16 -&gt; WindowsChar
+</span><a href="System.OsString.Internal.Types.html#WW"><span class="hs-identifier hs-var hs-var hs-var">WW</span></a></span></span></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unWW"><span class="annot"><span class="annottext">WindowsChar -&gt; Word16
+</span><a href="System.OsString.Internal.Types.html#unWW"><span class="hs-identifier hs-var hs-var hs-var">unWW</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-type">WindowsChar</span></a></span><span> </span><span id="local-6989586621679077582"><span class="annot"><a href="#local-6989586621679077582"><span class="hs-identifier hs-var">unWW</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="System.OsString.Internal.Types.html#WW"><span class="hs-identifier hs-var">WW</span></a></span><span> </span><span id="local-6989586621679077583"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679077583"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; WindowsChar
+</span><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-var">WindowsChar</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679077583"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 802
+</span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WW"><span class="hs-pragma hs-type">WW</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-148"></span><span class="annot"><span class="hs-comment">-- | Just a short bidirectional synonym for 'PosixChar' constructor.</span></span><span>
+</span><span id="line-149"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PW"><span class="hs-identifier hs-type">PW</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">pattern</span><span> </span><span id="PW"><span id="%24mPW"><span id="%24bPW"><span class="annot"><span class="annottext">$mPW :: forall {r}. PosixChar -&gt; (Word8 -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bPW :: Word8 -&gt; PosixChar
+</span><a href="System.OsString.Internal.Types.html#PW"><span class="hs-identifier hs-var hs-var hs-var">PW</span></a></span></span></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unPW"><span class="annot"><span class="annottext">PosixChar -&gt; Word8
+</span><a href="System.OsString.Internal.Types.html#unPW"><span class="hs-identifier hs-var hs-var hs-var">unPW</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span><span> </span><span id="local-6989586621679077586"><span class="annot"><a href="#local-6989586621679077586"><span class="hs-identifier hs-var">unPW</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><a href="System.OsString.Internal.Types.html#PW"><span class="hs-identifier hs-var">PW</span></a></span><span> </span><span id="local-6989586621679077587"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679077587"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; PosixChar
+</span><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-var">PosixChar</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679077587"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 802
+</span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PW"><span class="hs-pragma hs-type">PW</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#endif /* defined(__MHS__) */
+</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+</span><span class="hs-keyword">type</span><span> </span><span class="hs-identifier">PlatformChar</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">WindowsChar</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">type</span><span> </span><span id="PlatformChar"><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformChar"><span class="hs-identifier hs-var">PlatformChar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- | Newtype representing short operating system specific strings.</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- Internally this is either 'WindowsString' or 'PosixString',</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- depending on the platform. Both use unpinned</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- 'ShortByteString' for efficiency.</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- The constructor is only exported via &quot;System.OsString.Internal.Types&quot;, since</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- dealing with the internals isn't generally recommended, but supported</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- in case you need to write platform specific code.</span><span>
+</span><span id="line-173"></span><span class="hs-keyword">newtype</span><span> </span><span id="OsString"><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-var">OsString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OsString"><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-var">OsString</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getOsString"><span class="annot"><span class="annottext">OsString -&gt; PosixString
+</span><a href="System.OsString.Internal.Types.html#getOsString"><span class="hs-identifier hs-var hs-var">getOsString</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformString"><span class="hs-identifier hs-type">PlatformString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077591"><span id="local-6989586621679077593"><span class="annot"><span class="annottext">(forall x. OsString -&gt; Rep OsString x)
+-&gt; (forall x. Rep OsString x -&gt; OsString) -&gt; Generic OsString
+forall x. Rep OsString x -&gt; OsString
+forall x. OsString -&gt; Rep OsString x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. OsString -&gt; Rep OsString x
+from :: forall x. OsString -&gt; Rep OsString x
+$cto :: forall x. Rep OsString x -&gt; OsString
+to :: forall x. Rep OsString x -&gt; OsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077596"><span class="annot"><span class="annottext">OsString -&gt; ()
+(OsString -&gt; ()) -&gt; NFData OsString
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: OsString -&gt; ()
+rnf :: OsString -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077601"><span id="local-6989586621679077607"><span class="annot"><span class="annottext">(forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; Code m OsString)
+-&gt; Lift OsString
+forall t.
+(forall (m :: * -&gt; *). Quote m =&gt; t -&gt; m Exp)
+-&gt; (forall (m :: * -&gt; *). Quote m =&gt; t -&gt; Code m t) -&gt; Lift t
+forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; m Exp
+forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; Code m OsString
+$clift :: forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; m Exp
+lift :: forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; m Exp
+$cliftTyped :: forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; Code m OsString
+liftTyped :: forall (m :: * -&gt; *). Quote m =&gt; OsString -&gt; Code m OsString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Lift</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="annot"><span class="hs-comment">-- | On windows, decodes as UCS-2. On unix prints the raw bytes without decoding.</span></span><span>
+</span><span id="line-177"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077614"><span id="local-6989586621679077619"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>  </span><span id="local-6989586621679077622"><span class="annot"><span class="annottext">show :: OsString -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var">show</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span id="local-6989586621679077623"><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077623"><span class="hs-identifier hs-var">os</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077623"><span class="hs-identifier hs-var">os</span></a></span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="annot"><span class="hs-comment">-- | Byte equality of the internal representation.</span></span><span>
+</span><span id="line-181"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077626"><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span id="local-6989586621679077630"><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077630"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679077631"><span class="annot"><span class="annottext">== :: OsString -&gt; OsString -&gt; Bool
+</span><span class="hs-operator hs-var hs-var hs-var">==</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span id="local-6989586621679077632"><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077632"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077630"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PosixString -&gt; PosixString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077632"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="annot"><span class="hs-comment">-- | Byte ordering of the internal representation.</span></span><span>
+</span><span id="line-185"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077637"><span id="local-6989586621679077641"><span id="local-6989586621679077644"><span id="local-6989586621679077647"><span id="local-6989586621679077650"><span id="local-6989586621679077653"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-186"></span><span>  </span><span id="local-6989586621679077656"><span class="annot"><span class="annottext">compare :: OsString -&gt; OsString -&gt; Ordering
+</span><span class="hs-identifier hs-var hs-var hs-var">compare</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span id="local-6989586621679077657"><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077657"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span id="local-6989586621679077658"><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077658"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixString -&gt; PosixString -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077657"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PosixString
+</span><a href="#local-6989586621679077658"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- | \&quot;String-Concatenation\&quot; for 'OsString'. This is __not__ the same</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- as '(&lt;/&gt;)'.</span><span>
+</span><span id="line-191"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077665"><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-192"></span><span>    </span><span id="local-6989586621679077669"><span class="annot"><span class="annottext">mempty :: OsString
+</span><span class="hs-identifier hs-var hs-var hs-var">mempty</span></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; OsString
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#empty"><span class="hs-identifier hs-var">BS.empty</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_base(4,11,0)
+</span><span>    </span><span id="local-6989586621679077672"><span class="annot"><span class="annottext">mappend :: OsString -&gt; OsString -&gt; OsString
+</span><span class="hs-identifier hs-var hs-var hs-var">mappend</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString -&gt; OsString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(&lt;&gt;)</span></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-identifier">mappend</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">coerce</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">mappend</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">BS.ShortByteString</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,11,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077675"><span id="local-6989586621679077678"><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-201"></span><span>    </span><span id="local-6989586621679077684"><span class="annot"><span class="annottext">&lt;&gt; :: OsString -&gt; OsString -&gt; OsString
+</span><span class="hs-operator hs-var hs-var hs-var">(&lt;&gt;)</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; ShortByteString -&gt; ShortByteString)
+-&gt; OsString -&gt; OsString -&gt; OsString
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; ShortByteString -&gt; ShortByteString
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">mappend</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Short.Internal.html#ShortByteString"><span class="hs-identifier hs-type">BS.ShortByteString</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- | Newtype representing a code unit.</span><span>
+</span><span id="line-205"></span><span class="hs-comment">--</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- On Windows, this is restricted to two-octet codepoints 'Word16',</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- on POSIX one-octet ('Word8').</span><span>
+</span><span id="line-208"></span><span class="hs-keyword">newtype</span><span> </span><span id="OsChar"><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-var">OsChar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OsChar"><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-var">OsChar</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getOsChar"><span class="annot"><span class="annottext">OsChar -&gt; PosixChar
+</span><a href="System.OsString.Internal.Types.html#getOsChar"><span class="hs-identifier hs-var hs-var">getOsChar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PlatformChar"><span class="hs-identifier hs-type">PlatformChar</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077688"><span id="local-6989586621679077690"><span class="annot"><span class="annottext">(forall x. OsChar -&gt; Rep OsChar x)
+-&gt; (forall x. Rep OsChar x -&gt; OsChar) -&gt; Generic OsChar
+forall x. Rep OsChar x -&gt; OsChar
+forall x. OsChar -&gt; Rep OsChar x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. OsChar -&gt; Rep OsChar x
+from :: forall x. OsChar -&gt; Rep OsChar x
+$cto :: forall x. Rep OsChar x -&gt; OsChar
+to :: forall x. Rep OsChar x -&gt; OsChar
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077693"><span class="annot"><span class="annottext">OsChar -&gt; ()
+(OsChar -&gt; ()) -&gt; NFData OsChar
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: OsChar -&gt; ()
+rnf :: OsChar -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077698"><span id="local-6989586621679077703"><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-212"></span><span>  </span><span id="local-6989586621679077706"><span class="annot"><span class="annottext">show :: OsChar -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var">show</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span id="local-6989586621679077707"><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077707"><span class="hs-identifier hs-var">pc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixChar -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077707"><span class="hs-identifier hs-var">pc</span></a></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="annot"><span class="hs-comment">-- | Byte equality of the internal representation.</span></span><span>
+</span><span id="line-215"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077710"><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span id="local-6989586621679077714"><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077714"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679077715"><span class="annot"><span class="annottext">== :: OsChar -&gt; OsChar -&gt; Bool
+</span><span class="hs-operator hs-var hs-var hs-var">==</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span id="local-6989586621679077716"><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077716"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077714"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PosixChar -&gt; PosixChar -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077716"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="annot"><span class="hs-comment">-- | Byte ordering of the internal representation.</span></span><span>
+</span><span id="line-219"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077721"><span id="local-6989586621679077725"><span id="local-6989586621679077728"><span id="local-6989586621679077731"><span id="local-6989586621679077734"><span id="local-6989586621679077737"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-220"></span><span>  </span><span id="local-6989586621679077740"><span class="annot"><span class="annottext">compare :: OsChar -&gt; OsChar -&gt; Ordering
+</span><span class="hs-identifier hs-var hs-var hs-var">compare</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span id="local-6989586621679077741"><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077741"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span id="local-6989586621679077742"><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077742"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PosixChar -&gt; PosixChar -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077741"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PosixChar
+</span><a href="#local-6989586621679077742"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- | This is a type-level evidence that 'OsChar' is a newtype wrapper</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- over 'WindowsChar' or 'PosixChar' and 'OsString' is a newtype wrapper</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- over 'WindowsString' or 'PosixString'. If you pattern match on</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- 'coercionToPlatformTypes', GHC will know that relevant types</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- are coercible to each other. This helps to avoid CPP in certain scenarios.</span><span>
+</span><span id="line-227"></span><span class="annot"><a href="System.OsString.Internal.Types.html#coercionToPlatformTypes"><span class="hs-identifier hs-type">coercionToPlatformTypes</span></a></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Coercion</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsChar"><span class="hs-identifier hs-type">WindowsChar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Coercion</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#WindowsString"><span class="hs-identifier hs-type">WindowsString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Coercion</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsChar"><span class="hs-identifier hs-type">OsChar</span></a></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixChar"><span class="hs-identifier hs-type">PosixChar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Coercion</span></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#OsString"><span class="hs-identifier hs-type">OsString</span></a></span><span> </span><span class="annot"><a href="System.OsString.Internal.Types.html#PosixString"><span class="hs-identifier hs-type">PosixString</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-identifier">coercionToPlatformTypes</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">Left</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Coercion</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">Coercion</span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span id="coercionToPlatformTypes"><span class="annot"><span class="annottext">coercionToPlatformTypes :: Either
+  (Coercion OsChar WindowsChar, Coercion OsString WindowsString)
+  (Coercion OsChar PosixChar, Coercion OsString PosixString)
+</span><a href="System.OsString.Internal.Types.html#coercionToPlatformTypes"><span class="hs-identifier hs-var hs-var">coercionToPlatformTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Coercion OsChar PosixChar, Coercion OsString PosixString)
+-&gt; Either
+     (Coercion OsChar WindowsChar, Coercion OsString WindowsString)
+     (Coercion OsChar PosixChar, Coercion OsString PosixString)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coercion OsChar PosixChar
+forall {k} (a :: k) (b :: k). Coercible a b =&gt; Coercion a b
+</span><span class="hs-identifier hs-var">Coercion</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coercion OsString PosixString
+forall {k} (a :: k) (b :: k). Coercible a b =&gt; Coercion a b
+</span><span class="hs-identifier hs-var">Coercion</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span></pre></body></html>

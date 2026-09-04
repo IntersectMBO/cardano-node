@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LINE 1 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-1"></span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LINE 2 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CApiFFI #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LINE 4 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html"><span class="hs-identifier">Data.Time.Clock.Internal.CTimespec</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LINE 10 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Foreign.html"><span class="hs-identifier">Foreign</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Foreign.C.html"><span class="hs-identifier">Foreign.C</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/System.IO.Unsafe.html"><span class="hs-identifier">System.IO.Unsafe</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/System.Posix.Types.html"><span class="hs-identifier">System.Posix.Types</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">type</span><span> </span><span id="ClockID"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-var">ClockID</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CClockId</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="CTimespec"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-var">CTimespec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkCTimespec"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#MkCTimespec"><span class="hs-identifier hs-var">MkCTimespec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CTime</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CLong</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679103760"><span id="local-6989586621679103763"><span id="local-6989586621679103766"><span id="local-6989586621679103769"><span class="annot"><span class="hs-identifier hs-type">Storable</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679103774"><span class="annot"><span class="annottext">sizeOf :: CTimespec -&gt; Int
+</span><a href="#local-6989586621679103774"><span class="hs-identifier hs-var hs-var hs-var">sizeOf</span></a></span></span><span> </span><span class="annot"><span class="annottext">CTimespec
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-pragma">{-# LINE 24 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-identifier">alignment</span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">alignment</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">undefined</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">CLong</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621679103789"><span class="annot"><span class="annottext">peek :: Ptr CTimespec -&gt; IO CTimespec
+</span><a href="#local-6989586621679103789"><span class="hs-identifier hs-var hs-var hs-var">peek</span></a></span></span><span> </span><span id="local-6989586621679103791"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103791"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>        </span><span id="local-6989586621679103792"><span class="annot"><a href="#local-6989586621679103792"><span class="hs-identifier hs-var">s</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679103793"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103793"><span class="hs-identifier hs-var">hsc_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; Int -&gt; IO CTime
+forall b. Ptr b -&gt; Int -&gt; IO CTime
+forall a b. Storable a =&gt; Ptr b -&gt; Int -&gt; IO a
+</span><span class="hs-identifier hs-var">peekByteOff</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103793"><span class="hs-identifier hs-var">hsc_ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103791"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-pragma">{-# LINE 27 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-27"></span><span>        </span><span id="local-6989586621679103795"><span class="annot"><a href="#local-6989586621679103795"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679103796"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103796"><span class="hs-identifier hs-var">hsc_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; Int -&gt; IO CLong
+forall b. Ptr b -&gt; Int -&gt; IO CLong
+forall a b. Storable a =&gt; Ptr b -&gt; Int -&gt; IO a
+</span><span class="hs-identifier hs-var">peekByteOff</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103796"><span class="hs-identifier hs-var">hsc_ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679103791"><span class="hs-identifier hs-type">p</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-pragma">{-# LINE 28 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-28"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#MkCTimespec"><span class="hs-identifier hs-type">MkCTimespec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103792"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679103795"><span class="hs-identifier hs-type">ns</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>    </span><span id="local-6989586621679103800"><span class="annot"><span class="annottext">poke :: Ptr CTimespec -&gt; CTimespec -&gt; IO ()
+</span><a href="#local-6989586621679103800"><span class="hs-identifier hs-var hs-var hs-var">poke</span></a></span></span><span> </span><span id="local-6989586621679103802"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103802"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#MkCTimespec"><span class="hs-identifier hs-type">MkCTimespec</span></a></span><span> </span><span id="local-6989586621679103803"><span class="annot"><span class="annottext">CTime
+</span><a href="#local-6989586621679103803"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679103804"><span class="annot"><span class="annottext">CLong
+</span><a href="#local-6989586621679103804"><span class="hs-identifier hs-var">ns</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-30"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679103805"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103805"><span class="hs-identifier hs-var">hsc_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; Int -&gt; CTime -&gt; IO ()
+forall b. Ptr b -&gt; Int -&gt; CTime -&gt; IO ()
+forall a b. Storable a =&gt; Ptr b -&gt; Int -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">pokeByteOff</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103805"><span class="hs-identifier hs-var">hsc_ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103802"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">CTime
+</span><a href="#local-6989586621679103803"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-pragma">{-# LINE 31 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-31"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679103807"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103807"><span class="hs-identifier hs-var">hsc_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; Int -&gt; CLong -&gt; IO ()
+forall b. Ptr b -&gt; Int -&gt; CLong -&gt; IO ()
+forall a b. Storable a =&gt; Ptr b -&gt; Int -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">pokeByteOff</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103807"><span class="hs-identifier hs-var">hsc_ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103802"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">CLong
+</span><a href="#local-6989586621679103804"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-pragma">{-# LINE 32 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-pragma">{-# LINE 41 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-keyword">capi</span></span><span> </span><span class="annot"><span class="hs-keyword">unsafe</span></span><span> </span><span class="annot"><span class="hs-string">&quot;time.h clock_gettime&quot;</span></span><span>
+</span><span id="line-43"></span><span>    </span><span id="clock_gettime"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clock_gettime"><span class="hs-identifier hs-var">clock_gettime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ptr</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CInt</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-keyword">capi</span></span><span> </span><span class="annot"><span class="hs-keyword">unsafe</span></span><span> </span><span class="annot"><span class="hs-string">&quot;time.h clock_getres&quot;</span></span><span>
+</span><span id="line-45"></span><span>    </span><span id="clock_getres"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clock_getres"><span class="hs-identifier hs-var">clock_getres</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ptr</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CInt</span></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-pragma">{-# LINE 48 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | Get the resolution of the given clock.</span></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetRes"><span class="hs-identifier hs-type">clockGetRes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Errno</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span id="clockGetRes"><span class="annot"><span class="annottext">clockGetRes :: ClockID -&gt; IO (Either Errno CTimespec)
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetRes"><span class="hs-identifier hs-var hs-var">clockGetRes</span></a></span></span><span> </span><span id="local-6989586621679103811"><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103811"><span class="hs-identifier hs-var">clockid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Ptr CTimespec -&gt; IO (Either Errno CTimespec))
+-&gt; IO (Either Errno CTimespec)
+forall a b. Storable a =&gt; (Ptr a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">alloca</span></span><span> </span><span class="annot"><span class="annottext">((Ptr CTimespec -&gt; IO (Either Errno CTimespec))
+ -&gt; IO (Either Errno CTimespec))
+-&gt; (Ptr CTimespec -&gt; IO (Either Errno CTimespec))
+-&gt; IO (Either Errno CTimespec)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679103813"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103813"><span class="hs-identifier hs-var">ptspec</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679103814"><span class="annot"><a href="#local-6989586621679103814"><span class="hs-identifier hs-var">rc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ClockID -&gt; Ptr CTimespec -&gt; IO CInt
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clock_getres"><span class="hs-identifier hs-var">clock_getres</span></a></span><span> </span><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103811"><span class="hs-identifier hs-var">clockid</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103813"><span class="hs-identifier hs-var">ptspec</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679103814"><span class="hs-identifier hs-type">rc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">CInt
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>            </span><span id="local-6989586621679103815"><span class="annot"><a href="#local-6989586621679103815"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; IO CTimespec
+forall a. Storable a =&gt; Ptr a -&gt; IO a
+</span><span class="hs-identifier hs-var">peek</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103813"><span class="hs-identifier hs-var">ptspec</span></a></span><span>
+</span><span id="line-56"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><a href="#local-6989586621679103815"><span class="hs-identifier hs-type">res</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">CInt
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>            </span><span id="local-6989586621679103816"><span class="annot"><a href="#local-6989586621679103816"><span class="hs-identifier hs-var">errno</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Errno
+</span><span class="hs-identifier hs-var">getErrno</span></span><span>
+</span><span id="line-59"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><a href="#local-6989586621679103816"><span class="hs-identifier hs-type">errno</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><span class="hs-comment">-- | Get the current time from the given clock.</span></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetTime"><span class="hs-identifier hs-type">clockGetTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span>
+</span><span id="line-63"></span><span id="clockGetTime"><span class="annot"><span class="annottext">clockGetTime :: ClockID -&gt; IO CTimespec
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetTime"><span class="hs-identifier hs-var hs-var">clockGetTime</span></a></span></span><span> </span><span id="local-6989586621679103819"><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103819"><span class="hs-identifier hs-var">clockid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Ptr CTimespec -&gt; IO CTimespec) -&gt; IO CTimespec
+forall a b. Storable a =&gt; (Ptr a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">alloca</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679103820"><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103820"><span class="hs-identifier hs-var">ptspec</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; IO CInt -&gt; IO ()
+forall a. (Eq a, Num a) =&gt; String -&gt; IO a -&gt; IO ()
+</span><span class="hs-identifier hs-var">throwErrnoIfMinus1_</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;clock_gettime&quot;</span></span><span> </span><span class="annot"><span class="annottext">(IO CInt -&gt; IO ()) -&gt; IO CInt -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ClockID -&gt; Ptr CTimespec -&gt; IO CInt
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clock_gettime"><span class="hs-identifier hs-var">clock_gettime</span></a></span><span> </span><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103819"><span class="hs-identifier hs-var">clockid</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103820"><span class="hs-identifier hs-var">ptspec</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Ptr CTimespec -&gt; IO CTimespec
+forall a. Storable a =&gt; Ptr a -&gt; IO a
+</span><span class="hs-identifier hs-var">peek</span></span><span> </span><span class="annot"><span class="annottext">Ptr CTimespec
+</span><a href="#local-6989586621679103820"><span class="hs-identifier hs-var">ptspec</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-pragma">{-# LINE 73 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-keyword">capi</span></span><span> </span><span class="annot"><span class="hs-keyword">unsafe</span></span><span> </span><span class="annot"><span class="hs-string">&quot;HsTime.h value HS_CLOCK_REALTIME&quot;</span></span><span> </span><span id="clock_REALTIME"><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clock_REALTIME"><span class="hs-identifier hs-var">clock_REALTIME</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-pragma">{-# LINE 75 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clock_TAI"><span class="hs-identifier hs-type">clock_TAI</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span>
+</span><span id="line-77"></span><span id="clock_TAI"><span class="annot"><span class="annottext">clock_TAI :: Maybe ClockID
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clock_TAI"><span class="hs-identifier hs-var hs-var">clock_TAI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-pragma">{-# LINE 79 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-identifier">Just</span><span> </span><span class="hs-number">11</span><span>
+</span><span id="line-80"></span><span class="hs-pragma">{-# LINE 80 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-pragma">{-# LINE 83 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#realtimeRes"><span class="hs-identifier hs-type">realtimeRes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span>
+</span><span id="line-85"></span><span id="realtimeRes"><span class="annot"><span class="annottext">realtimeRes :: CTimespec
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#realtimeRes"><span class="hs-identifier hs-var hs-var">realtimeRes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO CTimespec -&gt; CTimespec
+forall a. IO a -&gt; a
+</span><span class="hs-identifier hs-var">unsafePerformIO</span></span><span> </span><span class="annot"><span class="annottext">(IO CTimespec -&gt; CTimespec) -&gt; IO CTimespec -&gt; CTimespec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679103826"><span class="annot"><a href="#local-6989586621679103826"><span class="hs-identifier hs-var">mres</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ClockID -&gt; IO (Either Errno CTimespec)
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetRes"><span class="hs-identifier hs-var">clockGetRes</span></a></span><span> </span><span class="annot"><span class="annottext">ClockID
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clock_REALTIME"><span class="hs-identifier hs-var">clock_REALTIME</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679103826"><span class="hs-identifier hs-type">mres</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679103827"><span class="annot"><span class="annottext">Errno
+</span><a href="#local-6989586621679103827"><span class="hs-identifier hs-var">errno</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IOError -&gt; IO CTimespec
+forall a. HasCallStack =&gt; IOError -&gt; IO a
+</span><span class="hs-identifier hs-var">ioError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Errno -&gt; Maybe Handle -&gt; Maybe String -&gt; IOError
+</span><span class="hs-identifier hs-var">errnoToIOError</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;clock_getres&quot;</span></span><span> </span><span class="annot"><span class="annottext">Errno
+</span><a href="#local-6989586621679103827"><span class="hs-identifier hs-var">errno</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Handle
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679103830"><span class="annot"><span class="annottext">CTimespec
+</span><a href="#local-6989586621679103830"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CTimespec -&gt; IO CTimespec
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">CTimespec
+</span><a href="#local-6989586621679103830"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#clockResolution"><span class="hs-identifier hs-type">clockResolution</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#ClockID"><span class="hs-identifier hs-type">ClockID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Data.Time.Clock.Internal.CTimespec.html#CTimespec"><span class="hs-identifier hs-type">CTimespec</span></a></span><span>
+</span><span id="line-92"></span><span id="clockResolution"><span class="annot"><span class="annottext">clockResolution :: ClockID -&gt; Maybe CTimespec
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clockResolution"><span class="hs-identifier hs-var hs-var">clockResolution</span></a></span></span><span> </span><span id="local-6989586621679103832"><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103832"><span class="hs-identifier hs-var">clockid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe CTimespec) -&gt; Maybe CTimespec
+forall a. IO a -&gt; a
+</span><span class="hs-identifier hs-var">unsafePerformIO</span></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe CTimespec) -&gt; Maybe CTimespec)
+-&gt; IO (Maybe CTimespec) -&gt; Maybe CTimespec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679103833"><span class="annot"><a href="#local-6989586621679103833"><span class="hs-identifier hs-var">mres</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ClockID -&gt; IO (Either Errno CTimespec)
+</span><a href="Data.Time.Clock.Internal.CTimespec.html#clockGetRes"><span class="hs-identifier hs-var">clockGetRes</span></a></span><span> </span><span class="annot"><span class="annottext">ClockID
+</span><a href="#local-6989586621679103832"><span class="hs-identifier hs-var">clockid</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679103833"><span class="hs-identifier hs-type">mres</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Errno
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe CTimespec -&gt; IO (Maybe CTimespec)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">Maybe CTimespec
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679103834"><span class="annot"><span class="annottext">CTimespec
+</span><a href="#local-6989586621679103834"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe CTimespec -&gt; IO (Maybe CTimespec)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(Maybe CTimespec -&gt; IO (Maybe CTimespec))
+-&gt; Maybe CTimespec -&gt; IO (Maybe CTimespec)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">CTimespec -&gt; Maybe CTimespec
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">CTimespec
+</span><a href="#local-6989586621679103834"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-pragma">{-# LINE 99 &quot;libraries/time/lib/Data/Time/Clock/Internal/CTimespec.hsc&quot; #-}</span><span>
+</span><span id="line-99"></span></pre></body></html>

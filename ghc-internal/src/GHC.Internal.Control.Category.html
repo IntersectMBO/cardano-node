@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE Trustworthy #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-inline-rule-shadowing #-}</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- The RULES for the methods of class Category may never fire</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- e.g. identity/left, identity/right, association;  see #10528</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Module      :  GHC.Internal.Control.Category</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Copyright   :  (c) Ashley Yakeley 2007</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- License     :  BSD-style (see the LICENSE file in the distribution)</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Maintainer  :  ashley@semantic.org</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Stability   :  stable</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Portability :  portable</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- https://gitlab.haskell.org/ghc/ghc/issues/1773</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html"><span class="hs-identifier">GHC.Internal.Control.Category</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Base.html#id"><span class="hs-identifier">id</span></a></span><span class="hs-special">,</span><span class="annot"><a href="GHC.Internal.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Type.Coercion.html"><span class="hs-identifier">GHC.Internal.Data.Type.Coercion</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Type.Equality.html"><span class="hs-identifier">GHC.Internal.Data.Type.Equality</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Coerce.html"><span class="hs-identifier">GHC.Internal.Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier">coerce</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">9</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-type">.</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">1</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-type">&gt;&gt;&gt;</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#%3C%3C%3C"><span class="hs-operator hs-type">&lt;&lt;&lt;</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- | A class for categories.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- In mathematics, a /category/ is defined as a collection of /objects/ and a collection</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- of /morphisms/ between objects, together with an /identity morphism/ 'id' for every</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- object and an operation '(.)' that /composes/ compatible morphisms.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- This class is defined in an analogous way. The collection of morphisms is represented</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- by a type parameter @cat@, which has kind @k -&gt; k -&gt; 'Data.Kind.Type'@ for some kind variable @k@</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- that represents the collection of objects; most of the time the choice of @k@ will be</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- 'Data.Kind.Type'.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- ==== __Examples__</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- As the method names suggest, there's a category of functions:</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- instance Category '(-&gt;)' where</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   id = \\x -&gt; x</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--   f . g = \\x -&gt; f (g x)</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- Isomorphisms form a category as well:</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- data Iso a b = Iso (a -&gt; b) (b -&gt; a)</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- instance Category Iso where</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   id = Iso id id</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   Iso f1 g1 . Iso f2 g2 = Iso (f1 . f2) (g2 . g1)</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- Natural transformations are another important example:</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- newtype f ~&gt; g = NatTransform (forall x. f x -&gt; g x)</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- instance Category (~&gt;) where</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--   id = NatTransform id</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--   NatTransform f . NatTransform g = NatTransform (f . g)</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Using the `TypeData` language extension, we can also make a category where `k` isn't</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- `Type`, but a custom kind `Door` instead:</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- type data Door = DoorOpen | DoorClosed</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- data Action (before :: Door) (after :: Door) where</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--   DoNothing :: Action door door</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--   OpenDoor :: Action start DoorClosed -&gt; Action start DoorOpen</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--   CloseDoor :: Action start DoorOpen -&gt; Action start DoorClosed</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- instance Category Action where</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--   id = DoNothing</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--   DoNothing . action = action</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   OpenDoor rest . action = OpenDoor (rest . action)</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   CloseDoor rest . action = CloseDoor (rest . action)</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-keyword">class</span><span> </span><span id="Category"><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-var">Category</span></a></span></span><span> </span><span id="local-6989586621679748466"><span class="annot"><a href="#local-6989586621679748466"><span class="hs-identifier hs-type">cat</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- | The identity morphism. Implementations should satisfy two laws:</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- [Right identity] @f '.' 'id'  =  f@</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- [Left identity]  @'id' '.' f  =  f@</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- These essentially state that 'id' should &quot;do nothing&quot;.</span><span>
+</span><span id="line-98"></span><span>    </span><span id="id"><span class="annot"><a href="GHC.Internal.Control.Category.html#id"><span class="hs-identifier hs-type">id</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679748460"><span class="annot"><a href="#local-6989586621679748466"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748460"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748460"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">-- | Morphism composition. Implementations should satisfy the law:</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- [Associativity]  @f '.' (g '.' h)  =  (f '.' g) '.' h@</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- This means that the way morphisms are grouped is irrelevant, so it is unambiguous</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- to write a composition of morphisms as @f '.' g '.' h@, without parentheses.</span><span>
+</span><span id="line-106"></span><span>    </span><span id="."><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-type">(.)</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679748461"><span id="local-6989586621679748462"><span id="local-6989586621679748463"><span class="annot"><a href="#local-6989586621679748466"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748461"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748462"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748466"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748463"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748461"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748466"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748463"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748462"><span class="hs-identifier hs-type">c</span></a></span></span></span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-pragma">{-# RULES</span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-pragma">&quot;identity/left&quot;</span></span><span> </span><span class="hs-pragma">forall</span><span> </span><span id="local-6989586621679748524"><span class="annot"><a href="#local-6989586621679748524"><span class="hs-pragma hs-var">p</span></a></span></span><span> </span><span class="hs-pragma">.</span><span>
+</span><span id="line-110"></span><span>                </span><span class="annot"><a href="GHC.Internal.Control.Category.html#id"><span class="hs-pragma hs-type">id</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748524"><span class="hs-pragma hs-type">p</span></a></span><span> </span><span class="hs-pragma">=</span><span> </span><span class="annot"><a href="#local-6989586621679748524"><span class="hs-pragma hs-type">p</span></a></span><span>
+</span><span id="line-111"></span><span class="annot"><span class="hs-pragma">&quot;identity/right&quot;</span></span><span>        </span><span class="hs-pragma">forall</span><span> </span><span id="local-6989586621679748525"><span class="annot"><a href="#local-6989586621679748525"><span class="hs-pragma hs-var">p</span></a></span></span><span> </span><span class="hs-pragma">.</span><span>
+</span><span id="line-112"></span><span>                </span><span class="annot"><a href="#local-6989586621679748525"><span class="hs-pragma hs-type">p</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#id"><span class="hs-pragma hs-type">id</span></a></span><span> </span><span class="hs-pragma">=</span><span> </span><span class="annot"><a href="#local-6989586621679748525"><span class="hs-pragma hs-type">p</span></a></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-pragma">&quot;association&quot;</span></span><span>   </span><span class="hs-pragma">forall</span><span> </span><span id="local-6989586621679748526"><span class="annot"><a href="#local-6989586621679748526"><span class="hs-pragma hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679748527"><span class="annot"><a href="#local-6989586621679748527"><span class="hs-pragma hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679748528"><span class="annot"><a href="#local-6989586621679748528"><span class="hs-pragma hs-var">r</span></a></span></span><span> </span><span class="hs-pragma">.</span><span>
+</span><span id="line-114"></span><span>                </span><span class="hs-pragma">(</span><span class="annot"><a href="#local-6989586621679748526"><span class="hs-pragma hs-type">p</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748527"><span class="hs-pragma hs-type">q</span></a></span><span class="hs-pragma">)</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748528"><span class="hs-pragma hs-type">r</span></a></span><span> </span><span class="hs-pragma">=</span><span> </span><span class="annot"><a href="#local-6989586621679748526"><span class="hs-pragma hs-type">p</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="hs-pragma">(</span><span class="annot"><a href="#local-6989586621679748527"><span class="hs-pragma hs-type">q</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#."><span class="hs-pragma hs-type">.</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748528"><span class="hs-pragma hs-type">r</span></a></span><span class="hs-pragma">)</span><span>
+</span><span id="line-115"></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | @since base-3.0</span></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-&gt;</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679748533"><span class="annot"><span class="annottext">id :: forall a. a -&gt; a
+</span><a href="GHC.Internal.Control.Category.html#id"><span class="hs-identifier hs-var hs-var hs-var">id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. a -&gt; a
+</span><a href="GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">GHC.Internal.Base.id</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679748534"><span class="annot"><span class="annottext">. :: forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var hs-var hs-var">(.)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="GHC.Internal.Base.html#."><span class="hs-operator hs-var">(GHC.Internal.Base..)</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><span class="hs-comment">-- | @since base-4.7.0.0</span></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Data.Type.Equality.html#%3A~%3A"><span class="hs-operator hs-type">(:~:)</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679748538"><span class="annot"><span class="annottext">id :: forall (a :: k). a :~: a
+</span><a href="GHC.Internal.Control.Category.html#id"><span class="hs-identifier hs-var hs-var hs-var">id</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a :~: a
+forall k (a :: k). a :~: a
+</span><a href="GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">b :~: c
+</span><a href="GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span> </span><span id="local-6989586621679748541"><span class="annot"><span class="annottext">. :: forall (b :: k) (c :: k) (a :: k).
+(b :~: c) -&gt; (a :~: b) -&gt; a :~: c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var hs-var hs-var">.</span></a></span></span><span> </span><span class="annot"><span class="annottext">a :~: b
+</span><a href="GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a :~: c
+a :~: a
+forall k (a :: k). a :~: a
+</span><a href="GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><span class="hs-comment">-- | @since base-4.10.0.0</span></span><span>
+</span><span id="line-128"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Data.Type.Equality.html#%3A~~%3A"><span class="hs-operator hs-type">(:~~:)</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679748546"><span class="annot"><span class="annottext">id :: forall (a :: k). a :~~: a
+</span><a href="GHC.Internal.Control.Category.html#id"><span class="hs-identifier hs-var hs-var hs-var">id</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a :~~: a
+forall k (a :: k). a :~~: a
+</span><a href="GHC.Internal.Data.Type.Equality.html#HRefl"><span class="hs-identifier hs-var">HRefl</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">b :~~: c
+</span><a href="GHC.Internal.Data.Type.Equality.html#HRefl"><span class="hs-identifier hs-var">HRefl</span></a></span><span> </span><span id="local-6989586621679748550"><span class="annot"><span class="annottext">. :: forall (b :: k) (c :: k) (a :: k).
+(b :~~: c) -&gt; (a :~~: b) -&gt; a :~~: c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var hs-var hs-var">.</span></a></span></span><span> </span><span class="annot"><span class="annottext">a :~~: b
+</span><a href="GHC.Internal.Data.Type.Equality.html#HRefl"><span class="hs-identifier hs-var">HRefl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a :~~: c
+a :~~: a
+forall k (a :: k). a :~~: a
+</span><a href="GHC.Internal.Data.Type.Equality.html#HRefl"><span class="hs-identifier hs-var">HRefl</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><span class="hs-comment">-- | @since base-4.7.0.0</span></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Data.Type.Coercion.html#Coercion"><span class="hs-identifier hs-type">Coercion</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679748557"><span class="annot"><span class="annottext">id :: forall (a :: k). Coercion a a
+</span><a href="GHC.Internal.Control.Category.html#id"><span class="hs-identifier hs-var hs-var hs-var">id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coercion a a
+forall {k} (a :: k) (b :: k). Coercible a b =&gt; Coercion a b
+</span><a href="GHC.Internal.Data.Type.Coercion.html#Coercion"><span class="hs-identifier hs-var">Coercion</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679748559"><span class="annot"><span class="annottext">. :: forall (b :: k) (c :: k) (a :: k).
+Coercion b c -&gt; Coercion a b -&gt; Coercion a c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var hs-var hs-var">(.)</span></a></span></span><span> </span><span class="annot"><span class="annottext">Coercion b c
+</span><a href="GHC.Internal.Data.Type.Coercion.html#Coercion"><span class="hs-identifier hs-var">Coercion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coercion a b -&gt; Coercion a c
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier hs-var">coerce</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- | Right-to-left composition. This is a synonym for '(.)', but it can be useful to make</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- the order of composition more apparent.</span><span>
+</span><span id="line-139"></span><span id="local-6989586621679748499"><span id="local-6989586621679748500"><span id="local-6989586621679748501"><span id="local-6989586621679748502"><span class="annot"><a href="GHC.Internal.Control.Category.html#%3C%3C%3C"><span class="hs-operator hs-type">(&lt;&lt;&lt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748499"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748499"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748500"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748501"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748499"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748502"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748500"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748499"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748502"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748501"><span class="hs-identifier hs-type">c</span></a></span></span></span></span></span><span>
+</span><span id="line-140"></span><span id="%3C%3C%3C"><span class="annot"><span class="annottext">&lt;&lt;&lt; :: forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="GHC.Internal.Control.Category.html#%3C%3C%3C"><span class="hs-operator hs-var hs-var">(&lt;&lt;&lt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">cat b c -&gt; cat a b -&gt; cat a c
+forall (b :: k) (c :: k) (a :: k). cat b c -&gt; cat a b -&gt; cat a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var">(.)</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | Left-to-right composition. This is useful if you want to write a morphism as a</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- pipeline going from left to right.</span><span>
+</span><span id="line-144"></span><span id="local-6989586621679748509"><span id="local-6989586621679748510"><span id="local-6989586621679748511"><span id="local-6989586621679748512"><span class="annot"><a href="GHC.Internal.Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-type">(&gt;&gt;&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748509"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748509"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748510"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748511"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748509"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748511"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748512"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679748509"><span class="hs-identifier hs-type">cat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748510"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679748512"><span class="hs-identifier hs-type">c</span></a></span></span></span></span></span><span>
+</span><span id="line-145"></span><span id="local-6989586621679748567"><span class="annot"><span class="annottext">cat a b
+</span><a href="#local-6989586621679748567"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="%3E%3E%3E"><span class="annot"><span class="annottext">&gt;&gt;&gt; :: forall {k} (cat :: k -&gt; k -&gt; *) (a :: k) (b :: k) (c :: k).
+Category cat =&gt;
+cat a b -&gt; cat b c -&gt; cat a c
+</span><a href="GHC.Internal.Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-var hs-var">&gt;&gt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679748568"><span class="annot"><span class="annottext">cat b c
+</span><a href="#local-6989586621679748568"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">cat b c
+</span><a href="#local-6989586621679748568"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">cat b c -&gt; cat a b -&gt; cat a c
+forall (b :: k) (c :: k) (a :: k). cat b c -&gt; cat a b -&gt; cat a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">cat a b
+</span><a href="#local-6989586621679748567"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-146"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-comment">-- see Note [INLINE on &gt;&gt;&gt;]</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">{- Note [INLINE on &gt;&gt;&gt;]
+~~~~~~~~~~~~~~~~~~~~~~~
+It&#8217;s crucial that we include an INLINE pragma on &gt;&gt;&gt;, which may be
+surprising. After all, its unfolding is tiny, so GHC will be extremely
+keen to inline it even without the pragma. Indeed, it is actually
+/too/ keen: unintuitively, the pragma is needed to rein in inlining,
+not to encourage it.
+
+How is that possible? The difference lies entirely in whether GHC will
+inline unsaturated calls. With no pragma at all, we get the following
+unfolding guidance:
+    ALWAYS_IF(arity=3,unsat_ok=True,boring_ok=True)
+But with the pragma, we restrict inlining to saturated calls:
+    ALWAYS_IF(arity=3,unsat_ok=False,boring_ok=True)
+Why does this matter? Because the programmer may have put an INLINE
+pragma on (.):
+
+    instance Functor f =&gt; Category (Blah f) where
+      id = ...
+      Blah f . Blah g = buildBlah (\x -&gt; ...)
+      {-# INLINE (.) #-}
+
+The intent here is to inline (.) at all saturated call sites. Perhaps
+there is a RULE on buildBlah the programmer wants to fire, or maybe
+they just expect the inlining to expose further simplifications.
+Either way, code that uses &gt;&gt;&gt; should not defeat this inlining, but if
+we inline unsaturated calls, it might! Consider:
+
+    let comp = (&gt;&gt;&gt;) ($fCategoryBlah $dFunctor) in f `comp` (g `comp` h)
+
+While simplifying this expression, we&#8217;ll start with the RHS of comp.
+Without the INLINE pragma on &gt;&gt;&gt;, we&#8217;ll inline it immediately, even
+though it isn&#8217;t saturated:
+
+    let comp = \f g -&gt; $fCategoryBlah_$c. $dFunctor g f
+     in f `comp` (g `comp` h)
+
+Now `$fCategoryBlah_$c. $dFunctor g f` /is/ a fully-saturated call, so
+it will get inlined immediately, too:
+
+    let comp = \(Blah g) (Blah f) -&gt; buildBlah (\x -&gt; ...)
+     in f `comp` (g `comp` h)
+
+All okay so far. But if the RHS of (.) is large, comp won&#8217;t be inlined
+at its use sites, and any RULEs on `buildBlah` will never fire. Bad!
+
+What happens differently with the INLINE pragma on &gt;&gt;&gt;? Well, we won&#8217;t
+inline &gt;&gt;&gt; immediately, since it isn&#8217;t saturated, which means comp&#8217;s
+unfolding will be tiny. GHC will inline it at both use sites:
+
+    (&gt;&gt;&gt;) ($fCategoryBlah $dFunctor) f
+          ((&gt;&gt;&gt;) ($fCategoryBlah $dFunctor) g h)
+
+And now the calls to &gt;&gt;&gt; are saturated, so they&#8217;ll be inlined,
+followed by (.), and any RULEs can fire as desired. Problem solved.
+
+This situation might seem academic --- who would ever write a
+definition like comp? Probably nobody, but GHC generates such
+definitions when desugaring proc notation, which causes real problems
+(see #18013). That could be fixed by changing the proc desugaring, but
+fixing it this way is the Right Thing, it might benefit other programs
+in more subtle ways too, and it&#8217;s easier to boot. -}</span><span>
+</span><span id="line-210"></span></pre></body></html>

@@ -1,0 +1,2 @@
+let periodNotice = 42 in
+kesPeriodsRemaining now <= periodNotice

@@ -1,0 +1,629 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html"><span class="hs-identifier">Testnet.EpochStateProcessing</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier">unsafeEraFromSbe</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier">maybeExtractGovernanceActionIndex</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionExpiry"><span class="hs-identifier">maybeExtractGovernanceActionExpiry</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier">waitForGovActionVotes</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.html"><span class="hs-identifier">Cardano.Api.Experimental</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier">Era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier">obtainCommonConstraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#sbeToEra"><span class="hs-identifier">sbeToEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-slotting-0.2.1.0-3cc47a459817c70ceac22145550a583a5eb0cee97a4c31c325b514304d081459/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier">GovActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier">newEpochStateGovStateL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/transformers-0.6.3.0-inplace/src/Control.Monad.Trans.Maybe.html"><span class="hs-identifier">Control.Monad.Trans.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/transformers-0.6.3.0-inplace/src/Control.Monad.Trans.Maybe.html#runMaybeT"><span class="hs-identifier">runMaybeT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/containers-0.7-inplace/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word16"><span class="hs-identifier">Word16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Lens.Micro</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">to</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(^.)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Components.Query.html"><span class="hs-identifier">Testnet.Components.Query</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Components.Query.html#EpochStateView"><span class="hs-identifier">EpochStateView</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Components.Query.html#TestnetWaitPeriod"><span class="hs-identifier">TestnetWaitPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>                   </span><span class="annot"><a href="Testnet.Components.Query.html#getEpochStateDetails"><span class="hs-identifier">getEpochStateDetails</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Components.Query.html#retryUntilJustM"><span class="hs-identifier">retryUntilJustM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Hedgehog.Extras</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadAssertion</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier hs-type">maybeExtractGovernanceActionIndex</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ transaction id searched for</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-42"></span><span id="maybeExtractGovernanceActionIndex"><span class="annot"><span class="annottext">maybeExtractGovernanceActionIndex :: HasCallStack =&gt; TxId -&gt; AnyNewEpochState -&gt; Maybe Word16
+</span><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier hs-var hs-var">maybeExtractGovernanceActionIndex</span></a></span></span><span> </span><span id="local-6989586621679710382"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679710382"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span> </span><span id="local-6989586621679710386"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710386"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679710387"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679710387"><span class="hs-identifier hs-var">newEpochState</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerTables (CardanoBlock StandardCrypto) ValuesMK
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Maybe Word16) -&gt; Maybe Word16
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Era era
+forall era. HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era
+</span><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier hs-var">unsafeEraFromSbe</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710386"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Maybe Word16) -&gt; Maybe Word16)
+-&gt; (EraCommonConstraints era =&gt; Maybe Word16) -&gt; Maybe Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679710409"><span class="annot"><span class="annottext">proposals :: Proposals (LedgerEra era)
+</span><a href="#local-6989586621679710409"><span class="hs-identifier hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+NewEpochState (LedgerEra era)
+</span><a href="#local-6989586621679710387"><span class="hs-identifier hs-var">newEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (LedgerEra era)
+-&gt; Getting
+     (Proposals (LedgerEra era))
+     (NewEpochState (LedgerEra era))
+     (Proposals (LedgerEra era))
+-&gt; Proposals (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">(GovState (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (GovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era))
+(ConwayGovState (LedgerEra era)
+ -&gt; Const
+      (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">L.newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGovState (LedgerEra era)
+  -&gt; Const
+       (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+ -&gt; NewEpochState (LedgerEra era)
+ -&gt; Const
+      (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era)))
+-&gt; ((Proposals (LedgerEra era)
+     -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+    -&gt; ConwayGovState (LedgerEra era)
+    -&gt; Const
+         (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+-&gt; Getting
+     (Proposals (LedgerEra era))
+     (NewEpochState (LedgerEra era))
+     (Proposals (LedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+-&gt; GovState (LedgerEra era)
+-&gt; Const (Proposals (LedgerEra era)) (GovState (LedgerEra era))
+(Proposals (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+-&gt; ConwayGovState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era))
+forall era.
+ConwayEraGov era =&gt;
+Lens' (GovState era) (Proposals era)
+Lens' (GovState (LedgerEra era)) (Proposals (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.html#proposalsGovStateL"><span class="hs-identifier hs-var">L.proposalsGovStateL</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">(Maybe Word16
+ -&gt; GovActionId -&gt; GovActionState (LedgerEra era) -&gt; Maybe Word16)
+-&gt; Maybe Word16
+-&gt; Map GovActionId (GovActionState (LedgerEra era))
+-&gt; Maybe Word16
+forall a k b. (a -&gt; k -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#foldlWithKey%27"><span class="hs-identifier hs-var">Map.foldlWithKey'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId
+-&gt; Maybe Word16
+-&gt; GovActionId
+-&gt; GovActionState (LedgerEra era)
+-&gt; Maybe Word16
+forall {p}.
+TxId -&gt; Maybe Word16 -&gt; GovActionId -&gt; p -&gt; Maybe Word16
+</span><a href="#local-6989586621679710413"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679710382"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Map GovActionId (GovActionState (LedgerEra era)) -&gt; Maybe Word16)
+-&gt; Map GovActionId (GovActionState (LedgerEra era)) -&gt; Maybe Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals (LedgerEra era)
+-&gt; Map GovActionId (GovActionState (LedgerEra era))
+forall era. Proposals era -&gt; Map GovActionId (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActionsMap"><span class="hs-identifier hs-var">L.proposalsActionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals (LedgerEra era)
+</span><a href="#local-6989586621679710409"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679710413"><span class="annot"><span class="annottext">compareWithTxId :: TxId -&gt; Maybe Word16 -&gt; GovActionId -&gt; p -&gt; Maybe Word16
+</span><a href="#local-6989586621679710413"><span class="hs-identifier hs-var hs-var">compareWithTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621679710418"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679710418"><span class="hs-identifier hs-var">ti1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-core-1.21.0.0-0d7aca3ca8a702baf2860c19974eaf46a2f868512298d93c5e1fd31c20398f87/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">L.TxId</span></a></span><span> </span><span id="local-6989586621679710421"><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679710421"><span class="hs-identifier hs-var">ti2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionIx"><span class="hs-identifier hs-type">L.GovActionIx</span></a></span><span> </span><span id="local-6989586621679710423"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679710423"><span class="hs-identifier hs-var">gai</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679710418"><span class="hs-identifier hs-var">ti1</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+-&gt; Hash HASH EraIndependentTxBody -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-core-1.21.0.0-0d7aca3ca8a702baf2860c19974eaf46a2f868512298d93c5e1fd31c20398f87/share/doc/html/src/Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">L.extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679710421"><span class="hs-identifier hs-var">ti2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Maybe Word16
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679710423"><span class="hs-identifier hs-var">gai</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="#local-6989586621679710413"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679710425"><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="#local-6989586621679710425"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="#local-6989586621679710425"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | Look up the @gasExpiresAfter@ epoch for the governance action submitted</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- by the given transaction id. Returns 'Nothing' if the proposal is not</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- present in the current proposals map (either because it has not yet been</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- recorded or because it has already been removed).</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- The ledger removes an expired proposal at the start of epoch</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- @gasExpiresAfter + 1@ (via the RATIFY rule), so callers that want to</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- observe the proposal gone should wait until @currentEpoch &gt; expiresAfter@.</span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionExpiry"><span class="hs-identifier hs-type">maybeExtractGovernanceActionExpiry</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ transaction id searched for</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-slotting-0.2.1.0-3cc47a459817c70ceac22145550a583a5eb0cee97a4c31c325b514304d081459/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-64"></span><span id="maybeExtractGovernanceActionExpiry"><span class="annot"><span class="annottext">maybeExtractGovernanceActionExpiry :: HasCallStack =&gt; TxId -&gt; AnyNewEpochState -&gt; Maybe EpochNo
+</span><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionExpiry"><span class="hs-identifier hs-var hs-var">maybeExtractGovernanceActionExpiry</span></a></span></span><span> </span><span id="local-6989586621679710427"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679710427"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span> </span><span id="local-6989586621679710430"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710430"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679710431"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679710431"><span class="hs-identifier hs-var">newEpochState</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerTables (CardanoBlock StandardCrypto) ValuesMK
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Maybe EpochNo) -&gt; Maybe EpochNo
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Era era
+forall era. HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era
+</span><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier hs-var">unsafeEraFromSbe</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710430"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Maybe EpochNo) -&gt; Maybe EpochNo)
+-&gt; (EraCommonConstraints era =&gt; Maybe EpochNo) -&gt; Maybe EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679710452"><span class="annot"><span class="annottext">proposals :: Proposals (LedgerEra era)
+</span><a href="#local-6989586621679710452"><span class="hs-identifier hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+NewEpochState (LedgerEra era)
+</span><a href="#local-6989586621679710431"><span class="hs-identifier hs-var">newEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (LedgerEra era)
+-&gt; Getting
+     (Proposals (LedgerEra era))
+     (NewEpochState (LedgerEra era))
+     (Proposals (LedgerEra era))
+-&gt; Proposals (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">(GovState (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (GovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era))
+(ConwayGovState (LedgerEra era)
+ -&gt; Const
+      (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">L.newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGovState (LedgerEra era)
+  -&gt; Const
+       (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+ -&gt; NewEpochState (LedgerEra era)
+ -&gt; Const
+      (Proposals (LedgerEra era)) (NewEpochState (LedgerEra era)))
+-&gt; ((Proposals (LedgerEra era)
+     -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+    -&gt; ConwayGovState (LedgerEra era)
+    -&gt; Const
+         (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era)))
+-&gt; Getting
+     (Proposals (LedgerEra era))
+     (NewEpochState (LedgerEra era))
+     (Proposals (LedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+-&gt; GovState (LedgerEra era)
+-&gt; Const (Proposals (LedgerEra era)) (GovState (LedgerEra era))
+(Proposals (LedgerEra era)
+ -&gt; Const (Proposals (LedgerEra era)) (Proposals (LedgerEra era)))
+-&gt; ConwayGovState (LedgerEra era)
+-&gt; Const
+     (Proposals (LedgerEra era)) (ConwayGovState (LedgerEra era))
+forall era.
+ConwayEraGov era =&gt;
+Lens' (GovState era) (Proposals era)
+Lens' (GovState (LedgerEra era)) (Proposals (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.html#proposalsGovStateL"><span class="hs-identifier hs-var">L.proposalsGovStateL</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">(Maybe EpochNo
+ -&gt; GovActionId -&gt; GovActionState (LedgerEra era) -&gt; Maybe EpochNo)
+-&gt; Maybe EpochNo
+-&gt; Map GovActionId (GovActionState (LedgerEra era))
+-&gt; Maybe EpochNo
+forall a k b. (a -&gt; k -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#foldlWithKey%27"><span class="hs-identifier hs-var">Map.foldlWithKey'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId
+-&gt; Maybe EpochNo
+-&gt; GovActionId
+-&gt; GovActionState (LedgerEra era)
+-&gt; Maybe EpochNo
+forall {era}.
+TxId
+-&gt; Maybe EpochNo
+-&gt; GovActionId
+-&gt; GovActionState era
+-&gt; Maybe EpochNo
+</span><a href="#local-6989586621679710453"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679710427"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Map GovActionId (GovActionState (LedgerEra era)) -&gt; Maybe EpochNo)
+-&gt; Map GovActionId (GovActionState (LedgerEra era))
+-&gt; Maybe EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals (LedgerEra era)
+-&gt; Map GovActionId (GovActionState (LedgerEra era))
+forall era. Proposals era -&gt; Map GovActionId (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActionsMap"><span class="hs-identifier hs-var">L.proposalsActionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals (LedgerEra era)
+</span><a href="#local-6989586621679710452"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621679710453"><span class="annot"><span class="annottext">compareWithTxId :: TxId
+-&gt; Maybe EpochNo
+-&gt; GovActionId
+-&gt; GovActionState era
+-&gt; Maybe EpochNo
+</span><a href="#local-6989586621679710453"><span class="hs-identifier hs-var hs-var">compareWithTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621679710455"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679710455"><span class="hs-identifier hs-var">ti1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-core-1.21.0.0-0d7aca3ca8a702baf2860c19974eaf46a2f868512298d93c5e1fd31c20398f87/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">L.TxId</span></a></span><span> </span><span id="local-6989586621679710456"><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679710456"><span class="hs-identifier hs-var">ti2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionIx
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679710457"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621679710457"><span class="hs-identifier hs-var">govActionState</span></a></span></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679710455"><span class="hs-identifier hs-var">ti1</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+-&gt; Hash HASH EraIndependentTxBody -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-core-1.21.0.0-0d7aca3ca8a702baf2860c19974eaf46a2f868512298d93c5e1fd31c20398f87/share/doc/html/src/Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">L.extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679710456"><span class="hs-identifier hs-var">ti2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; Maybe EpochNo
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; Maybe EpochNo) -&gt; EpochNo -&gt; Maybe EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; EpochNo
+forall era. GovActionState era -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasExpiresAfter"><span class="hs-identifier hs-var">L.gasExpiresAfter</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621679710457"><span class="hs-identifier hs-var">govActionState</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="#local-6989586621679710453"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679710459"><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621679710459"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621679710459"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><span class="hs-comment">-- | Wait for the last gov action proposal in the list to have DRep or SPO votes.</span></span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier hs-type">waitForGovActionVotes</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679710293"><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadAssertion</span></span><span> </span><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Testnet.Components.Query.html#EpochStateView"><span class="hs-identifier hs-type">EpochStateView</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-slotting-0.2.1.0-3cc47a459817c70ceac22145550a583a5eb0cee97a4c31c325b514304d081459/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-type">EpochInterval</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The maximum wait time in epochs.</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span id="waitForGovActionVotes"><span class="annot"><span class="annottext">waitForGovActionVotes :: forall (m :: * -&gt; *).
+(HasCallStack, MonadAssertion m, MonadTest m, MonadIO m) =&gt;
+EpochStateView -&gt; EpochInterval -&gt; m ()
+</span><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier hs-var hs-var">waitForGovActionVotes</span></a></span></span><span> </span><span id="local-6989586621679710472"><span class="annot"><span class="annottext">EpochStateView
+</span><a href="#local-6989586621679710472"><span class="hs-identifier hs-var">epochStateView</span></a></span></span><span> </span><span id="local-6989586621679710473"><span class="annot"><span class="annottext">EpochInterval
+</span><a href="#local-6989586621679710473"><span class="hs-identifier hs-var">maxWait</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">m () -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EpochStateView -&gt; TestnetWaitPeriod -&gt; m (Maybe ()) -&gt; m ()
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadIO m, MonadTest m, MonadAssertion m) =&gt;
+EpochStateView -&gt; TestnetWaitPeriod -&gt; m (Maybe a) -&gt; m a
+</span><a href="Testnet.Components.Query.html#retryUntilJustM"><span class="hs-identifier hs-var">retryUntilJustM</span></a></span><span> </span><span class="annot"><span class="annottext">EpochStateView
+</span><a href="#local-6989586621679710472"><span class="hs-identifier hs-var">epochStateView</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochInterval -&gt; TestnetWaitPeriod
+</span><a href="Testnet.Components.Query.html#WaitForEpochs"><span class="hs-identifier hs-var">WaitForEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInterval
+</span><a href="#local-6989586621679710473"><span class="hs-identifier hs-var">maxWait</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m (Maybe ()) -&gt; m ()) -&gt; m (Maybe ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">EpochStateView -&gt; m (AnyNewEpochState, SlotNo, BlockNo)
+forall (m :: * -&gt; *).
+(HasCallStack, MonadAssertion m, MonadTest m, MonadIO m) =&gt;
+EpochStateView -&gt; m (AnyNewEpochState, SlotNo, BlockNo)
+</span><a href="Testnet.Components.Query.html#getEpochStateDetails"><span class="hs-identifier hs-var">getEpochStateDetails</span></a></span><span> </span><span class="annot"><span class="annottext">EpochStateView
+</span><a href="#local-6989586621679710472"><span class="hs-identifier hs-var">epochStateView</span></a></span><span> </span><span class="annot"><span class="annottext">m (AnyNewEpochState, SlotNo, BlockNo)
+-&gt; ((AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ()))
+-&gt; m (Maybe ())
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; (AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+(AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+</span><a href="#local-6989586621679710495"><span class="hs-identifier hs-var">checkForVotes</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="#local-6989586621679710495"><span class="hs-identifier hs-type">checkForVotes</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-slotting-0.2.1.0-3cc47a459817c70ceac22145550a583a5eb0cee97a4c31c325b514304d081459/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-slotting-0.2.1.0-3cc47a459817c70ceac22145550a583a5eb0cee97a4c31c325b514304d081459/share/doc/html/src/Cardano.Slotting.Block.html#BlockNo"><span class="hs-identifier hs-type">BlockNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679710293"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679710495"><span class="annot"><span class="annottext">checkForVotes :: HasCallStack =&gt; (AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+</span><a href="#local-6989586621679710495"><span class="hs-identifier hs-var hs-var">checkForVotes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span> </span><span id="local-6989586621679710499"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710499"><span class="hs-identifier hs-var">actualEra</span></a></span></span><span> </span><span id="local-6989586621679710500"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679710500"><span class="hs-identifier hs-var">newEpochState</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerTables (CardanoBlock StandardCrypto) ValuesMK
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockNo
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ())
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ()))
+-&gt; (HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MaybeT m () -&gt; m (Maybe ())
+forall (m :: * -&gt; *) a. MaybeT m a -&gt; m (Maybe a)
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/transformers-0.6.3.0-inplace/src/Control.Monad.Trans.Maybe.html#runMaybeT"><span class="hs-identifier hs-var">runMaybeT</span></a></span><span> </span><span class="annot"><span class="annottext">(MaybeT m () -&gt; m (Maybe ())) -&gt; MaybeT m () -&gt; m (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">Era era -&gt; (EraCommonConstraints era =&gt; MaybeT m ()) -&gt; MaybeT m ()
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Era era
+forall era. HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era
+</span><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier hs-var">unsafeEraFromSbe</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679710499"><span class="hs-identifier hs-var">actualEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; MaybeT m ()) -&gt; MaybeT m ())
+-&gt; (EraCommonConstraints era =&gt; MaybeT m ()) -&gt; MaybeT m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679710541"><span class="annot"><span class="annottext">proposals :: [GovActionState (LedgerEra era)]
+</span><a href="#local-6989586621679710541"><span class="hs-identifier hs-var hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+NewEpochState (LedgerEra era)
+</span><a href="#local-6989586621679710500"><span class="hs-identifier hs-var">newEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (LedgerEra era)
+-&gt; Getting
+     [GovActionState (LedgerEra era)]
+     (NewEpochState (LedgerEra era))
+     [GovActionState (LedgerEra era)]
+-&gt; [GovActionState (LedgerEra era)]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">(GovState (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (GovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (NewEpochState (LedgerEra era))
+(ConwayGovState (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era)))
+-&gt; NewEpochState (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (NewEpochState (LedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-shelley-1.19.0.1-86dbb0e68464e5b42d57eb728f6831a1227844c75e531b686443d2dd0ae5c881/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGovState (LedgerEra era)
+  -&gt; Const
+       [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era)))
+ -&gt; NewEpochState (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (NewEpochState (LedgerEra era)))
+-&gt; (([GovActionState (LedgerEra era)]
+     -&gt; Const
+          [GovActionState (LedgerEra era)] [GovActionState (LedgerEra era)])
+    -&gt; ConwayGovState (LedgerEra era)
+    -&gt; Const
+         [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era)))
+-&gt; Getting
+     [GovActionState (LedgerEra era)]
+     (NewEpochState (LedgerEra era))
+     [GovActionState (LedgerEra era)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (Proposals (LedgerEra era)))
+-&gt; ConwayGovState (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Proposals era -&gt; f (Proposals era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.html#cgsProposalsL"><span class="hs-identifier hs-var">L.cgsProposalsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Proposals (LedgerEra era)
+  -&gt; Const
+       [GovActionState (LedgerEra era)] (Proposals (LedgerEra era)))
+ -&gt; ConwayGovState (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era)))
+-&gt; (([GovActionState (LedgerEra era)]
+     -&gt; Const
+          [GovActionState (LedgerEra era)] [GovActionState (LedgerEra era)])
+    -&gt; Proposals (LedgerEra era)
+    -&gt; Const
+         [GovActionState (LedgerEra era)] (Proposals (LedgerEra era)))
+-&gt; ([GovActionState (LedgerEra era)]
+    -&gt; Const
+         [GovActionState (LedgerEra era)] [GovActionState (LedgerEra era)])
+-&gt; ConwayGovState (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (ConwayGovState (LedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap GovActionId (GovActionState (LedgerEra era))
+ -&gt; Const
+      [GovActionState (LedgerEra era)]
+      (OMap GovActionId (GovActionState (LedgerEra era))))
+-&gt; Proposals (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (Proposals (LedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(OMap GovActionId (GovActionState era)
+ -&gt; f (OMap GovActionId (GovActionState era)))
+-&gt; Proposals era -&gt; f (Proposals era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Proposals.html#pPropsL"><span class="hs-identifier hs-var">L.pPropsL</span></a></span><span> </span><span class="annot"><span class="annottext">((OMap GovActionId (GovActionState (LedgerEra era))
+  -&gt; Const
+       [GovActionState (LedgerEra era)]
+       (OMap GovActionId (GovActionState (LedgerEra era))))
+ -&gt; Proposals (LedgerEra era)
+ -&gt; Const
+      [GovActionState (LedgerEra era)] (Proposals (LedgerEra era)))
+-&gt; (([GovActionState (LedgerEra era)]
+     -&gt; Const
+          [GovActionState (LedgerEra era)] [GovActionState (LedgerEra era)])
+    -&gt; OMap GovActionId (GovActionState (LedgerEra era))
+    -&gt; Const
+         [GovActionState (LedgerEra era)]
+         (OMap GovActionId (GovActionState (LedgerEra era))))
+-&gt; ([GovActionState (LedgerEra era)]
+    -&gt; Const
+         [GovActionState (LedgerEra era)] [GovActionState (LedgerEra era)])
+-&gt; Proposals (LedgerEra era)
+-&gt; Const
+     [GovActionState (LedgerEra era)] (Proposals (LedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap GovActionId (GovActionState (LedgerEra era))
+ -&gt; [GovActionState (LedgerEra era)])
+-&gt; SimpleGetter
+     (OMap GovActionId (GovActionState (LedgerEra era)))
+     [GovActionState (LedgerEra era)]
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><span class="hs-identifier hs-var">to</span></span><span> </span><span class="annot"><span class="annottext">OMap GovActionId (GovActionState (LedgerEra era))
+-&gt; [Item (OMap GovActionId (GovActionState (LedgerEra era)))]
+OMap GovActionId (GovActionState (LedgerEra era))
+-&gt; [GovActionState (LedgerEra era)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; MaybeT m ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Control.Monad.html#guard"><span class="hs-identifier hs-var">guard</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; Bool -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionState (LedgerEra era)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionState (LedgerEra era)]
+</span><a href="#local-6989586621679710541"><span class="hs-identifier hs-var">proposals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679710546"><span class="annot"><span class="annottext">lastProposal :: GovActionState (LedgerEra era)
+</span><a href="#local-6989586621679710546"><span class="hs-identifier hs-var hs-var">lastProposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[GovActionState (LedgerEra era)] -&gt; GovActionState (LedgerEra era)
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.List.html#last"><span class="hs-identifier hs-var">last</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionState (LedgerEra era)]
+</span><a href="#local-6989586621679710541"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-95"></span><span>            </span><span id="local-6989586621679710548"><span class="annot"><span class="annottext">hasDRepVotes :: Bool
+</span><a href="#local-6989586621679710548"><span class="hs-identifier hs-var hs-var">hasDRepVotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; (Map (Credential DRepRole) Vote -&gt; Bool)
+-&gt; Map (Credential DRepRole) Vote
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential DRepRole) Vote -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential DRepRole) Vote -&gt; Bool)
+-&gt; Map (Credential DRepRole) Vote -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (LedgerEra era)
+</span><a href="#local-6989586621679710546"><span class="hs-identifier hs-var">lastProposal</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (LedgerEra era)
+-&gt; Getting
+     (Map (Credential DRepRole) Vote)
+     (GovActionState (LedgerEra era))
+     (Map (Credential DRepRole) Vote)
+-&gt; Map (Credential DRepRole) Vote
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (Credential DRepRole) Vote)
+  (GovActionState (LedgerEra era))
+  (Map (Credential DRepRole) Vote)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential DRepRole) Vote
+ -&gt; f (Map (Credential DRepRole) Vote))
+-&gt; GovActionState era -&gt; f (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasDRepVotesL"><span class="hs-identifier hs-var">L.gasDRepVotesL</span></a></span><span>
+</span><span id="line-96"></span><span>            </span><span id="local-6989586621679710551"><span class="annot"><span class="annottext">hasSpoVotes :: Bool
+</span><a href="#local-6989586621679710551"><span class="hs-identifier hs-var hs-var">hasSpoVotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; (Map (KeyHash StakePool) Vote -&gt; Bool)
+-&gt; Map (KeyHash StakePool) Vote
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash StakePool) Vote -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash StakePool) Vote -&gt; Bool)
+-&gt; Map (KeyHash StakePool) Vote -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (LedgerEra era)
+</span><a href="#local-6989586621679710546"><span class="hs-identifier hs-var">lastProposal</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (LedgerEra era)
+-&gt; Getting
+     (Map (KeyHash StakePool) Vote)
+     (GovActionState (LedgerEra era))
+     (Map (KeyHash StakePool) Vote)
+-&gt; Map (KeyHash StakePool) Vote
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (KeyHash StakePool) Vote)
+  (GovActionState (LedgerEra era))
+  (Map (KeyHash StakePool) Vote)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (KeyHash StakePool) Vote -&gt; f (Map (KeyHash StakePool) Vote))
+-&gt; GovActionState era -&gt; f (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-ledger-conway-1.23.0.0-7d17d7078e47cea5b7d70bdd1ff2f6997550f427ee9cece75f32eb17b418e246/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasStakePoolVotesL"><span class="hs-identifier hs-var">L.gasStakePoolVotesL</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; MaybeT m ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Control.Monad.html#guard"><span class="hs-identifier hs-var">guard</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679710548"><span class="hs-identifier hs-var">hasDRepVotes</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679710551"><span class="hs-identifier hs-var">hasSpoVotes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Unsafely convert a 'ShelleyBasedEra' witness to an experimental 'Era' witness.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- Throws an 'error' for deprecated (pre-Conway) eras.</span><span>
+</span><span id="line-101"></span><span id="local-6989586621679710254"><span class="annot"><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier hs-type">unsafeEraFromSbe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679710254"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679710254"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-102"></span><span id="unsafeEraFromSbe"><span class="annot"><span class="annottext">unsafeEraFromSbe :: forall era. HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era
+</span><a href="Testnet.EpochStateProcessing.html#unsafeEraFromSbe"><span class="hs-identifier hs-var hs-var">unsafeEraFromSbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era)
+-&gt; ShelleyBasedEra era -&gt; Era era
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era)
+ -&gt; ShelleyBasedEra era -&gt; Era era)
+-&gt; (HasCallStack =&gt; ShelleyBasedEra era -&gt; Era era)
+-&gt; ShelleyBasedEra era
+-&gt; Era era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DeprecatedEra era -&gt; Era era)
+-&gt; (Era era -&gt; Era era)
+-&gt; Either (DeprecatedEra era) (Era era)
+-&gt; Era era
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Era era
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Era era)
+-&gt; (DeprecatedEra era -&gt; [Char]) -&gt; DeprecatedEra era -&gt; Era era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Doc (ZonkAny 0) -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc (ZonkAny 0) -&gt; [Char])
+-&gt; (DeprecatedEra era -&gt; Doc (ZonkAny 0))
+-&gt; DeprecatedEra era
+-&gt; [Char]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DeprecatedEra era -&gt; Doc (ZonkAny 0)
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. DeprecatedEra era -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Era era -&gt; Era era
+forall a. a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (DeprecatedEra era) (Era era) -&gt; Era era)
+-&gt; (ShelleyBasedEra era -&gt; Either (DeprecatedEra era) (Era era))
+-&gt; ShelleyBasedEra era
+-&gt; Era era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Either (DeprecatedEra era) (Era era)
+forall era (m :: * -&gt; *).
+MonadError (DeprecatedEra era) m =&gt;
+ShelleyBasedEra era -&gt; m (Era era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.6.0.0-e65bbd38e35f12c725da213548e6e436ed957358720a8fddbe7e032d62234dbe/share/doc/html/src/Cardano.Api.Experimental.Era.html#sbeToEra"><span class="hs-identifier hs-var">sbeToEra</span></a></span><span>
+</span><span id="line-103"></span></pre></body></html>

@@ -1,0 +1,1 @@
+avg_over_time netdata_statsd_cardano_node_ping_latency_ms_gauge_value_average[now - 5m; now] > 500

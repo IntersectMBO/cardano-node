@@ -1,0 +1,1 @@
+rate cardano_node_metrics_slotsMissedNum_int[now - 5m; now] > 0.5

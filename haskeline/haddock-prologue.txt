@@ -1,0 +1,6 @@
+Haskeline provides a user interface for line input in command-line
+programs.  This library is similar in purpose to readline, but since
+it is written in Haskell it is (hopefully) more easily used in other
+Haskell programs.
+
+Haskeline runs both on POSIX-compatible systems and on Windows.

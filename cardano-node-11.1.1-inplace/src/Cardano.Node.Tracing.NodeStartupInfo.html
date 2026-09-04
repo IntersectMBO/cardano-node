@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.NodeStartupInfo.html"><span class="hs-identifier">Cardano.Node.Tracing.NodeStartupInfo</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">NodeStartupInfo</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.Logging.Types.NodeStartupInfo</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NodeStartupInfo</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.Logging.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MetaTrace</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Namespace</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SeverityS</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680489082"><span id="local-6989586621680489086"><span id="local-6989586621680489090"><span class="annot"><span class="hs-identifier hs-type">MetaTrace</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NodeStartupInfo</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>  </span><span id="local-6989586621680489096"><span class="annot"><span class="annottext">namespaceFor :: NodeStartupInfo -&gt; Namespace NodeStartupInfo
+</span><a href="#local-6989586621680489096"><span class="hs-identifier hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NodeStartupInfo</span></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>  </span><span class="hs-glyph">=</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace NodeStartupInfo
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NodeStartupInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-13"></span><span>  </span><span id="local-6989586621680489103"><span class="annot"><span class="annottext">severityFor :: Namespace NodeStartupInfo
+-&gt; Maybe NodeStartupInfo -&gt; Maybe SeverityS
+</span><a href="#local-6989586621680489103"><span class="hs-identifier hs-var hs-var hs-var">severityFor</span></a></span></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NodeStartupInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe NodeStartupInfo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Info</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span id="local-6989586621680489106"><span class="annot"><span class="annottext">Namespace NodeStartupInfo
+</span><a href="#local-6989586621680489106"><span class="hs-identifier hs-var">_ns</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe NodeStartupInfo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="annottext">Maybe SeverityS
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span id="local-6989586621680489110"><span class="annot"><span class="annottext">documentFor :: Namespace NodeStartupInfo -&gt; Maybe Text
+</span><a href="#local-6989586621680489110"><span class="hs-identifier hs-var hs-var hs-var">documentFor</span></a></span></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NodeStartupInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Startup information about this node, required for RTView\
+        \\n\
+        \\n _suiEra_: Name of the current era. \
+        \\n _suiSlotLength_: Slot length, in seconds. \
+        \\n _suiEpochLength_: Epoch length, in slots. \
+        \\n _suiSlotsPerKESPeriod_: KES period length, in slots.&quot;</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span id="local-6989586621680489112"><span class="annot"><span class="annottext">Namespace NodeStartupInfo
+</span><a href="#local-6989586621680489112"><span class="hs-identifier hs-var">_ns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>     </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621680489114"><span class="annot"><span class="annottext">allNamespaces :: [Namespace NodeStartupInfo]
+</span><a href="#local-6989586621680489114"><span class="hs-identifier hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace NodeStartupInfo
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NodeStartupInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span></pre></body></html>
