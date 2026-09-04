@@ -15,16 +15,11 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.Consensus
-  ( -- * ClientMetrics
+  (
     initialClientMetrics
   , calculateBlockFetchClientMetrics
   , servedBlockLatest
   , ClientMetrics
-    -- * Leios Metrics
-  , initialLeiosMetrics
-  , calculateLeiosMetrics
-  , LeiosMetrics
-    -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
   , impliesMempoolTimeoutSoft
@@ -88,9 +83,8 @@ import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
-import           LeiosDemoTypes (AnnouncementFields (..), TraceLeiosKernel (..), TraceLeiosPeer (..),
+import           LeiosDemoTypes (TraceLeiosKernel (..), TraceLeiosPeer (..),
                    traceLeiosKernelToObject, traceLeiosPeerToObject)
-import           LeiosDemoLogic.Announcements.ElBimap (ElId(..))
 import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
@@ -2297,132 +2291,6 @@ instance MetaTrace KESAgentClientTrace where
 --------------------------------------------------------------------------------
 -- Leios
 --------------------------------------------------------------------------------
-
--- | Leios metrics which construct CDFs for EB announcements.
-data LeiosMetrics' c = LeiosMetrics {
-    lmCdfState     :: Cdf.State SlotNo
-    -- ^ internal state which collects all data points
-  , lmCdf200msVar  :: !c
-    -- ^ count EB announcements which arrived within 200ms
-  , lmCdf400msVar  :: !c
-    -- ^ count EB announcements which arrived within 400ms
-  , lmCdf600msVar  :: !c
-    -- ^ count EB announcements which arrived within 600ms
-  , lmCdf800msVar  :: !c
-    -- ^ count EB announcements which arrived within 800ms
-  , lmCdf1000msVar :: !c
-    -- ^ count EB announcements which arrived within 1000ms
-  , lmCdf1200msVar :: !c
-    -- ^ count EB announcements which arrived within 1200ms
-  , lmCdf1400msVar :: !c
-    -- ^ count EB announcements which arrived within 1400ms
-  , lmCdf1600msVar :: !c
-    -- ^ count EB announcements which arrived within 1600ms
-  , lmCdf1800msVar :: !c
-    -- ^ count EB announcements which arrived within 1800ms
-  , lmCdf2000msVar :: !c
-    -- ^ count EB announcements which arrived within 2000ms
-  , lmDelay        :: Double
-    -- ^ last EM announcement delay value
-  , lmTraceVars    :: Bool
-  , lmTraceIt      :: Bool
-  }
-  deriving Functor
-
-type LeiosMetrics = LeiosMetrics' Cdf.Counter
-
-initialLeiosMetrics :: LeiosMetrics
-initialLeiosMetrics = LeiosMetrics {
-    lmCdfState     = Cdf.empty
-  , lmCdf200msVar  = Cdf.Counter 0.2 0
-  , lmCdf400msVar  = Cdf.Counter 0.4 0
-  , lmCdf600msVar  = Cdf.Counter 0.6 0
-  , lmCdf800msVar  = Cdf.Counter 0.8 0
-  , lmCdf1000msVar = Cdf.Counter 1.0 0
-  , lmCdf1200msVar = Cdf.Counter 1.2 0
-  , lmCdf1400msVar = Cdf.Counter 1.4 0
-  , lmCdf1600msVar = Cdf.Counter 1.6 0
-  , lmCdf1800msVar = Cdf.Counter 1.8 0
-  , lmCdf2000msVar = Cdf.Counter 2.0 0
-  , lmDelay        = 0
-  , lmTraceIt      = False
-  , lmTraceVars    = False
-  }
-
-calculateLeiosMetrics ::
-     LeiosMetrics
-  -> LoggingContext
-  -> TraceLeiosKernel
-  -> LeiosMetrics
-calculateLeiosMetrics lm@LeiosMetrics {..} _lc (TraceLeiosAnnouncementAccepted _ _ fields (Just annDelay)) =
-    case announcementElection fields of
-      MkElId slotNo@(SlotNo slotNo_) _ ->
-        if Cdf.null lmCdfState
-          then nothingToDo
-          else
-            case Cdf.processDataPoint
-                   Cdf.defaultConfig -- should come from config file
-                   (fromIntegral slotNo_, slotNo, annDelay)
-                   lmCdfState
-                   lm
-                   of
-              Nothing -> nothingToDo
-              Just (lm', lmCdfState') ->
-                lm' { lmCdfState    = lmCdfState'
-                    }
-  where
-    nothingToDo = lm {lmTraceIt = False}
-
-calculateLeiosMetrics lm _lc _ = lm
-
-instance LogFormatting LeiosMetrics where
-  forMachine _dtal _ = mempty
-  asMetrics LeiosMetrics {lmTraceIt=False} = []
-  asMetrics LeiosMetrics {..} =
-       lateAnnouncementsAllMetric
-    ++ if lmTraceVars
-        then [ cdfMetric "leios.eb.announcement.delay.cdf200ms"  lmCdf200msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf400ms"  lmCdf400msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf600ms"  lmCdf600msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf800ms"  lmCdf800msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf1000ms" lmCdf1000msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf1200ms" lmCdf1200msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf1400ms" lmCdf1400msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf1600ms" lmCdf1600msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf1800ms" lmCdf1800msVar
-             , cdfMetric "leios.eb.announcement.delay.cdf2000ms" lmCdf2000msVar
-             ]
-        else []
-    where
-      size                   = Cdf.size lmCdfState
-      cdfMetric name var     = DoubleM name (fromIntegral (Cdf.counter var) / fromIntegral size)
-      lateAnnouncementsAllMetric = [ CounterM "leios.eb.announcement.late" Nothing | lmDelay > 2 ]
-
-instance MetaTrace LeiosMetrics where
-  namespaceFor _ = Namespace [] ["LeiosMetrics"]
-  severityFor _ _ = Just Debug
-  documentFor _ = Just ""
-
-  metricsDocFor (Namespace _ ["LeiosMetrics"]) =
-      [ ("leios.eb.announcement.delay.cdf200ms", "probability for EB announcemement to complete within 200ms")
-      , ("leios.eb.announcement.delay.cdf400ms", "probability for EB announcemement to complete within 400ms")
-      , ("leios.eb.announcement.delay.cdf600ms", "probability for EB announcemement to complete within 600ms")
-      , ("leios.eb.announcement.delay.cdf800ms", "probability for EB announcemement to complete within 800ms")
-      , ("leios.eb.announcement.delay.cdf1000ms", "probability for EB announcemement to complete within 1000ms")
-      , ("leios.eb.announcement.delay.cdf1200ms", "probability for EB announcemement to complete within 1200ms")
-      , ("leios.eb.announcement.delay.cdf1400ms", "probability for EB announcemement to complete within 1400ms")
-      , ("leios.eb.announcement.delay.cdf1600ms", "probability for EB announcemement to complete within 1600ms")
-      , ("leios.eb.announcement.delay.cdf1800ms", "probability for EB announcemement to complete within 1800ms")
-      , ("leios.eb.announcement.delay.cdf2000ms", "probability for EB announcemement to complete within 2000ms")
-      , ("leios.eb.announcement.late", "number of late EB announcements that took longer than 2s")
-      ]
-  metricsDocFor _ = []
-
-  allNamespaces = [
-          Namespace [] ["LeiosMetrics"]
-        ]
-
-
 
 -- 'forMachine' delegates to 'traceLeiosKernelToObject' so the JSON shape matches
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).

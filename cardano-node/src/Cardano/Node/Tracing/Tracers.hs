@@ -58,8 +58,6 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 
-import           LeiosDemoTypes (TraceLeiosKernel (..))
-
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (mkTracer)
@@ -362,15 +360,6 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "LeiosKernel"]
     configureTracers configReflection trConfig [leiosKernelTr]
 
-    !leiosMetricsTr <- do
-      tr1 <- foldTraceM (\cm lc -> pure . calculateLeiosMetrics cm lc) initialLeiosMetrics
-                (metricsFormatter
-                  (mkMetricsTracer mbTrEKG))
-      pure $ filterTrace (\(_, msg) -> case msg of 
-                         TraceLeiosAnnouncementAccepted{} -> True
-                         _ -> False)
-               tr1
-
     !leiosPeerTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "LeiosPeer"]
@@ -432,7 +421,6 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txCountersTracer
       , Consensus.leiosKernelTracer = mkTracer $
           traceWith leiosKernelTr
-          <> traceWith leiosMetricsTr
       , Consensus.leiosPeerTracer = mkTracer $
           traceWith leiosPeerTr
       }
