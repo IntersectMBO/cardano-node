@@ -1,0 +1,5 @@
+pr: 6668
+kind:
+  - maintenance
+description: |
+  Bumped cardano-api to 11.7 and cardano-rpc to 11.3.
