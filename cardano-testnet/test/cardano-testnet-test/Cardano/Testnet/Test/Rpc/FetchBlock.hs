@@ -98,12 +98,12 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
 
     -- Call FetchBlock via gRPC
     let blockRef = def & U5c.slot .~ slot & U5c.hash .~ tipHash
-        request = def & U5c.ref .~ blockRef
+        request = def & U5c.ref .~ [blockRef]
 
     response <- H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "fetchBlock")) request
 
-    let block = response ^. U5c.block
+    [block] <- H.noteShow $ response ^. U5c.block
 
     -- Verify nativeBytes is non-empty
     let rawBytes = block ^. U5c.nativeBytes
@@ -134,7 +134,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
           result <-
             H.evalIO . try . Rpc.withConnection def rpcServer $ \conn ->
               Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "fetchBlock")) $
-                def & U5c.ref .~ ref
+                def & U5c.ref .~ [ref]
           case result of
             Left GrpcException{grpcError}
               | grpcError == expectedError -> pure ()
@@ -252,11 +252,12 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     H.note_ "Fetch the block containing the submitted transaction and verify its transactions"
 
     let txBlockRef = def & U5c.slot .~ txBlockSlot & U5c.hash .~ txBlockHash
-        txBlockRequest = def & U5c.ref .~ txBlockRef
+        txBlockRequest = def & U5c.ref .~ [txBlockRef]
     txBlockResponse <- H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "fetchBlock")) txBlockRequest
 
-    let fetchedTxs = txBlockResponse ^. U5c.block . U5c.cardano . U5c.body . U5c.tx
+    [txBlock] <- H.noteShow $ txBlockResponse ^. U5c.block
+    let fetchedTxs = txBlock ^. U5c.cardano . U5c.body . U5c.tx
     H.note_ "Ensure the fetched block contains all transactions of the block"
     length fetchedTxs H.=== txBlockTxCount
 
@@ -383,11 +384,12 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     H.note_ "Fetch the block containing the minting transaction and verify the minted assets"
 
     let mintBlockRef = def & U5c.slot .~ mintBlockSlot & U5c.hash .~ mintBlockHash
-        mintBlockRequest = def & U5c.ref .~ mintBlockRef
+        mintBlockRequest = def & U5c.ref .~ [mintBlockRef]
     mintBlockResponse <- H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "fetchBlock")) mintBlockRequest
 
-    let mintFetchedTxs = mintBlockResponse ^. U5c.block . U5c.cardano . U5c.body . U5c.tx
+    [mintBlock] <- H.noteShow $ mintBlockResponse ^. U5c.block
+    let mintFetchedTxs = mintBlock ^. U5c.cardano . U5c.body . U5c.tx
     H.note_ "Ensure the fetched block contains all transactions of the block"
     length mintFetchedTxs H.=== mintBlockTxCount
 

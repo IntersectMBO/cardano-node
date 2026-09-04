@@ -14,6 +14,7 @@ import           Cardano.Api.Pretty
 import           Cardano.Logging hiding (nsInner)
 import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcNodeKernelAccess (..),
                    TraceRpcQuery (..), TraceRpcSubmit (..), TraceRpcSync (..), TraceSpanEvent (..))
+import           Cardano.Rpc.Server.Config ()
 
 import           Data.Aeson (Object, Value (..), (.=))
 
@@ -64,6 +65,10 @@ instance LogFormatting TraceRpc where
             ["kind" .= String "NodeKernelAccess"]
               <> case nodeKernelAccessTrace of
                 TraceRpcUnsupportedBlockType blockType -> ["blockType" .= String blockType]
+          TraceRpcServerListening endpoint ->
+            [ "kind" .= String "ServerListening"
+            , "endpoint" .= docToText (pretty endpoint)
+            ]
 
   forHuman = docToText . pretty
 
@@ -114,6 +119,7 @@ instance MetaTrace TraceRpc where
         "NodeKernelAccess"
           : case nodeKernelAccessTrace of
             TraceRpcUnsupportedBlockType _ -> ["UnsupportedBlockType"]
+      TraceRpcServerListening _ -> ["ServerListening"]
 
   severityFor (Namespace _ nsInner) _ = case nsInner of
     ["FatalError"] -> Just Error -- RPC server startup errors
@@ -134,6 +140,7 @@ instance MetaTrace TraceRpc where
     ["SyncService", "ReadTip", "Span"] -> Just Debug
     ["SyncService", "FollowTip", "Span"] -> Just Debug
     ["NodeKernelAccess", "UnsupportedBlockType"] -> Just Warning
+    ["ServerListening"] -> Just Notice -- one-off startup event, must be visible with default config
     _ -> Nothing
 
   documentFor (Namespace _ nsInner) = case nsInner of
@@ -157,6 +164,7 @@ instance MetaTrace TraceRpc where
     ["SyncService", "ReadTip", "Span"] -> Just "Span for the ReadTip SyncService method."
     ["SyncService", "FollowTip", "Span"] -> Just "Span for the FollowTip SyncService method."
     ["NodeKernelAccess", "UnsupportedBlockType"] -> Just "The block type is not supported by the RPC server."
+    ["ServerListening"] -> Just "RPC server is starting to listen on the configured endpoint."
     _ -> Nothing
 
   metricsDocFor (Namespace _ nsInner) = case nsInner of
@@ -200,6 +208,7 @@ instance MetaTrace TraceRpc where
           , ["SyncService", "FollowTip", "Span"]
           , ["QueryService", "ReadGenesis", "Span"]
           , ["NodeKernelAccess", "UnsupportedBlockType"]
+          , ["ServerListening"]
           ]
 
 -- helper functions

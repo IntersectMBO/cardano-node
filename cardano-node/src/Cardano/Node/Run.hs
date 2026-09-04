@@ -141,7 +141,7 @@ import           Data.Bits
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
 import           Data.Functor.Identity (Identity (..))
-import           Data.IP (toSockAddr)
+import           Data.IP (IP (..), isMatchedTo, makeAddrRange, toIPv4, toIPv6, toSockAddr)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
@@ -156,7 +156,9 @@ import qualified Data.Text.IO as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, doesFileExist,
+                   makeAbsolute)
+import           System.Environment (lookupEnv)
 import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
@@ -378,6 +380,12 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
                                             (readTVar useLedgerVar)
                                             (const . pure $ ())
     rpcConfigVar <- newTVarIO (ncRpcConfig nc)
+
+    let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = ncRpcConfig nc
+    when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles nc) && not (ncStartAsNonProducingNode nc)) $
+      traceWith (startupTracer tracers) RpcEnabledOnBlockProducer
+    when rpcIsEnabled $
+      warnRpcEndpointSecurity (startupTracer tracers) rpcEndpointConfig
 
     let nodeArgs = RunNodeArgs
           { rnGenesisConfig  = ncGenesisConfig nc
@@ -801,13 +809,19 @@ updateRpcConfiguration tracer cmdPc rpcConfigVar = do
     Left err ->
       -- reload failure, we don't do anything this time
       traceWith tracer (RpcConfigUpdateError $ pack (Exception.displayException err))
-    Right NodeConfiguration{ncRpcConfig=newConfig} ->
+    Right newNc@NodeConfiguration{ncRpcConfig=newConfig} ->
       join . atomically $ do
         oldConfig <- readTVar rpcConfigVar
         if oldConfig /= newConfig
           then do
             writeTVar rpcConfigVar newConfig
-            pure . traceWith tracer . RpcConfigUpdate . pack $ show newConfig
+            let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = newConfig
+            pure $ do
+              traceWith tracer . RpcConfigUpdate . pack $ show newConfig
+              when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles newNc) && not (ncStartAsNonProducingNode newNc)) $
+                traceWith tracer RpcEnabledOnBlockProducer
+              when rpcIsEnabled $
+                warnRpcEndpointSecurity tracer rpcEndpointConfig
           else
             pure $ pure ()
 #endif
@@ -868,6 +882,59 @@ checkVRFFilePermissions _ (File vrfPrivKey) = do
   hasPermission fModeA fModeB = fModeA .&. fModeB /= gENERIC_NONE
 #endif
 
+-- | Warn about security-relevant aspects of the configured RPC endpoint:
+-- listening on a non-loopback address, TLS session key-log tracing enabled
+-- via 'SSLKEYLOGFILE', and an overly permissive TLS private key file.
+-- Unlike 'checkVRFFilePermissions' none of these ever refuse to start the
+-- node - a misconfigured RPC endpoint is not as sensitive as the
+-- block-producer's VRF key.
+warnRpcEndpointSecurity :: Tracer IO (StartupTrace blk) -> RpcEndpoint -> IO ()
+warnRpcEndpointSecurity tracer endpoint = do
+  warnIfRpcListensPublicly tracer endpoint
+  case endpoint of
+    RpcEndpointHttps _ _ tlsFiles -> do
+      warnIfTlsKeyLogEnabled tracer
+      checkRpcTlsPrivateKeyPermissions tracer tlsFiles
+    _otherEndpoint -> pure ()
+
+-- | Non-loopback predicate for 'IP' addresses (127.0.0.0/8 for IPv4, ::1 for
+-- IPv6).
+isLoopbackIp :: IP -> Bool
+isLoopbackIp (IPv4 ip4) = ip4 `isMatchedTo` makeAddrRange (toIPv4 [127, 0, 0, 0]) 8
+isLoopbackIp (IPv6 ip6) = ip6 == toIPv6 [0, 0, 0, 0, 0, 0, 0, 1]
+
+-- | Warn if the RPC endpoint is bound to a non-loopback address: the RPC
+-- server is unauthenticated, so anyone who can reach it can query the node
+-- and submit transactions.
+warnIfRpcListensPublicly :: Tracer IO (StartupTrace blk) -> RpcEndpoint -> IO ()
+warnIfRpcListensPublicly tracer = \case
+  RpcEndpointUnixSocket{} -> pure ()
+  endpoint@(RpcEndpointHttp ip _) ->
+    unless (isLoopbackIp ip) . traceWith tracer $ RpcListeningOnPublicAddress endpoint
+  endpoint@(RpcEndpointHttps ip _ _) ->
+    unless (isLoopbackIp ip) . traceWith tracer $ RpcListeningOnPublicAddress endpoint
+
+-- | Warn if 'SSLKEYLOGFILE' is set: the node will write TLS session key-log
+-- material for the RPC TLS listener to that file.
+warnIfTlsKeyLogEnabled :: Tracer IO (StartupTrace blk) -> IO ()
+warnIfTlsKeyLogEnabled tracer = do
+  mKeyLogFile <- lookupEnv "SSLKEYLOGFILE"
+  forM_ mKeyLogFile $ traceWith tracer . RpcTlsKeyLogEnabled . pack
+
+-- | Warn if the RPC TLS private key file is readable by group or others.
+-- Silently does nothing if the file does not exist: grapesy already fails
+-- loudly when it can't load the TLS credentials.
+checkRpcTlsPrivateKeyPermissions :: Tracer IO (StartupTrace blk) -> RpcTlsFiles -> IO ()
+#ifdef UNIX
+checkRpcTlsPrivateKeyPermissions tracer RpcTlsFiles{privateKeyFile = File keyPath} = do
+  exists <- doesFileExist keyPath
+  when exists $ do
+    fm <- fileMode <$> getFileStatus keyPath
+    when (fm `intersectFileModes` (groupModes `unionFileModes` otherModes) /= nullFileMode) $
+      traceWith tracer . RpcTlsPrivateKeyPermissive $ pack keyPath
+#else
+checkRpcTlsPrivateKeyPermissions _ _ = pure ()
+#endif
 
 mkDiffusionConfiguration
   :: Maybe SocketOrSocketInfo -- ^ ipv4

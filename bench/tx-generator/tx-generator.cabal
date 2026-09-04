@@ -116,7 +116,7 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.6
+                      , cardano-api ^>= 11.7
                       , cardano-binary
                       , cardano-cli ^>= 11.2.2
                       , cardano-crypto-class
