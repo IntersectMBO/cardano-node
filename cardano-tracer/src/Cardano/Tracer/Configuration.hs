@@ -11,6 +11,14 @@
 
 module Cardano.Tracer.Configuration
   ( Address
+  , AlarmFilterConfig (..)
+  , AlarmsAuthConfig (..)
+  , AlarmsConfig (..)
+  , AlarmsConsumerConfig (..)
+  , AlarmsLimitsConfig (..)
+  , AlarmsRetentionConfig (..)
+  , AlarmsTimeseriesRuleConfig (..)
+  , AlarmsTraceRuleConfig (..)
   , Certificate (..)
   , Net.HowToConnect (..)
   , Endpoint (..)
@@ -20,18 +28,22 @@ module Cardano.Tracer.Configuration
   , LogMode (..)
   , LoggingParams (..)
   , Network (..)
+  , ProducerCredentialConfig (..)
+  , ReaderCredentialConfig (..)
   , RotationParams (..)
   , TracerConfig (..)
   , Verbosity (..)
+  , alarmSeverityToText
+  , parseAlarmSeverityText
   , readTracerConfig
   ) where
 
-import           Cardano.Logging.Types (HowToConnect)
+import           Cardano.Logging.Types (HowToConnect, SeverityS (..))
 import qualified Cardano.Logging.Types as Log
 import qualified Cardano.Logging.Types as Net
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.:?), (.=))
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
@@ -41,7 +53,7 @@ import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Strict (Map)
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -106,6 +118,224 @@ instance FromJSON RotationParams where
     rpKeepFilesNum  <- o .: "rpKeepFilesNum"
     pure RotationParams{..}
 
+-- | A conjunctive selection over alarm events, used both for a static
+--   consumer's configuration and for a reader credential's allowed
+--   (ceiling) or requested filter.
+data AlarmFilterConfig = AlarmFilterConfig
+  { afcSource      :: !(Maybe Text)
+  , afcRuleId      :: !(Maybe Text)
+  , afcMinSeverity :: !(Maybe SeverityS)
+  , afcScope       :: !(Maybe (Map Text Text))
+  , afcLabels      :: !(Maybe (Map Text Text))
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromJSON AlarmFilterConfig where
+  parseJSON = withObject "AlarmFilterConfig" \o -> do
+    afcSource          <- o .:? "source"
+    afcRuleId          <- o .:? "ruleId"
+    afcMinSeverityText <- o .:? "minSeverity"
+    afcMinSeverity     <- traverse parseSeverityOrFail afcMinSeverityText
+    afcScope           <- o .:? "scope"
+    afcLabels          <- o .:? "labels"
+    pure AlarmFilterConfig{..}
+   where
+    parseSeverityOrFail t =
+      maybe (fail ("unknown severity: " <> Text.unpack t)) pure (parseAlarmSeverityText t)
+
+instance ToJSON AlarmFilterConfig where
+  toJSON AlarmFilterConfig{..} = object $ catMaybes
+    [ ("source" .=) <$> afcSource
+    , ("ruleId" .=) <$> afcRuleId
+    , ("minSeverity" .=) . alarmSeverityToText <$> afcMinSeverity
+    , ("scope" .=) <$> afcScope
+    , ("labels" .=) <$> afcLabels
+    ]
+
+-- | A statically configured alarm dispatch target. The only variant
+--   implemented so far is @log@; @webhook@/@email@ are the obvious follow-up
+--   extension (see @Cardano.Tracer.Handlers.Alarms.Consumers@).
+data AlarmsConsumerConfig = AlarmsConsumerLog
+  { aclName    :: !Text
+  , aclEnabled :: !Bool
+  , aclFilter  :: !(Maybe AlarmFilterConfig)
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromJSON AlarmsConsumerConfig where
+  parseJSON = withObject "AlarmsConsumerConfig" \o -> do
+    consumerType :: Text <- o .: "type"
+    case consumerType of
+      "log" -> AlarmsConsumerLog
+                 <$> o .: "name"
+                 <*> (fromMaybe True <$> o .:? "enabled")
+                 <*> o .:? "filter"
+      other -> fail ("unknown alarm consumer type: " <> Text.unpack other)
+
+instance ToJSON AlarmsConsumerConfig where
+  toJSON AlarmsConsumerLog{..} = object
+    [ "type"    .= ("log" :: Text)
+    , "name"    .= aclName
+    , "enabled" .= aclEnabled
+    , "filter"  .= aclFilter
+    ]
+
+-- | A producer credential: a bearer token (read once from @pcTokenFile@) that
+--   authenticates alarm ingress requests as coming from @pcSource@. The
+--   source is never taken from the request body itself.
+data ProducerCredentialConfig = ProducerCredentialConfig
+  { pcName      :: !Text
+  , pcTokenFile :: !FilePath
+  , pcSource    :: !Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+-- | A reader credential: a bearer token that grants history access, capped
+--   by an allowed (ceiling) filter that a caller's requested filter may
+--   only narrow.
+data ReaderCredentialConfig = ReaderCredentialConfig
+  { rcName         :: !Text
+  , rcTokenFile    :: !FilePath
+  , rcAllowHistory :: !(Maybe Bool)
+  , rcFilter       :: !(Maybe AlarmFilterConfig)
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data AlarmsAuthConfig = AlarmsAuthConfig
+  { aacProducers :: ![ProducerCredentialConfig]
+  , aacReaders   :: ![ReaderCredentialConfig]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data AlarmsRetentionConfig = AlarmsRetentionConfig
+  { arcMaxAgeSeconds :: !(Maybe Word64)
+  , arcMaxEvents     :: !(Maybe Word64)
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+newtype AlarmsLimitsConfig = AlarmsLimitsConfig
+  { alcMaxEventBytes :: Maybe Word64
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+-- | A rule that raises an alarm for every received trace message whose
+--   severity is at or above @threshold@. @suppressForSecs@ (default 300)
+--   bounds the alarm frequency: within one window, repeated matches from the
+--   same node and namespace collapse into a single alarm via the store's
+--   idempotency key (see @Cardano.Tracer.Handlers.Alarms.TraceRules@).
+data AlarmsTraceRuleConfig = AlarmsTraceRuleConfig
+  { atrRuleId          :: !Text
+  , atrSummary         :: !(Maybe Text)
+  , atrThreshold       :: !SeverityS
+  , atrSuppressForSecs :: !(Maybe Word64)
+  , atrLabels          :: !(Maybe (Map Text Text))
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromJSON AlarmsTraceRuleConfig where
+  parseJSON = withObject "AlarmsTraceRuleConfig" \o -> do
+    atrRuleId          <- o .: "ruleId"
+    atrSummary         <- o .:? "summary"
+    thresholdText      <- o .: "threshold"
+    atrThreshold       <- parseSeverityOrFail thresholdText
+    atrSuppressForSecs <- o .:? "suppressForSecs"
+    atrLabels          <- o .:? "labels"
+    pure AlarmsTraceRuleConfig{..}
+   where
+    parseSeverityOrFail t =
+      maybe (fail ("unknown severity: " <> Text.unpack t)) pure (parseAlarmSeverityText t)
+
+instance ToJSON AlarmsTraceRuleConfig where
+  toJSON AlarmsTraceRuleConfig{..} = object $
+    [ "ruleId"    .= atrRuleId
+    , "threshold" .= alarmSeverityToText atrThreshold
+    ] <> catMaybes
+    [ ("summary" .=)         <$> atrSummary
+    , ("suppressForSecs" .=) <$> atrSuppressForSecs
+    , ("labels" .=)          <$> atrLabels
+    ]
+
+-- | A rule that periodically evaluates a @cardano-timeseries-io@ query and
+--   raises an alarm when the query returns 'Truth' (or a truthy
+--   'InstantVector' entry) for at least @for@ seconds. The @sourceEventId@
+--   embeds the rule id and a canonical series key from the sample's labels
+--   so per-series edges are deduplicated by the store.
+data AlarmsTimeseriesRuleConfig = AlarmsTimeseriesRuleConfig
+  { atsRuleId        :: !Text
+  , atsSummary       :: !(Maybe Text)
+  , atsSeverity      :: !SeverityS
+  , atsQuery         :: !Text
+  , atsEvaluateEvery :: !Word64                 -- ^ seconds between evaluations
+  , atsFor           :: !(Maybe Word64)         -- ^ seconds the sample must stay truthy before publishing
+  , atsRepeatEvery   :: !(Maybe Word64)         -- ^ seconds between reminder alarms while still true
+  , atsLabels        :: !(Maybe (Map Text Text))
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromJSON AlarmsTimeseriesRuleConfig where
+  parseJSON = withObject "AlarmsTimeseriesRuleConfig" \o -> do
+    atsRuleId        <- o .: "ruleId"
+    atsSummary       <- o .:? "summary"
+    severityText     <- o .: "severity"
+    atsSeverity      <- maybe (fail ("unknown severity: " <> Text.unpack severityText)) pure
+                              (parseAlarmSeverityText severityText)
+    atsQuery         <- o .: "query"
+    atsEvaluateEvery <- o .: "evaluateEvery"
+    atsFor           <- o .:? "for"
+    atsRepeatEvery   <- o .:? "repeatEvery"
+    atsLabels        <- o .:? "labels"
+    pure AlarmsTimeseriesRuleConfig{..}
+
+instance ToJSON AlarmsTimeseriesRuleConfig where
+  toJSON AlarmsTimeseriesRuleConfig{..} = object $
+    [ "ruleId"        .= atsRuleId
+    , "severity"      .= alarmSeverityToText atsSeverity
+    , "query"         .= atsQuery
+    , "evaluateEvery" .= atsEvaluateEvery
+    ] <> catMaybes
+    [ ("summary" .=)     <$> atsSummary
+    , ("for" .=)         <$> atsFor
+    , ("repeatEvery" .=) <$> atsRepeatEvery
+    , ("labels" .=)      <$> atsLabels
+    ]
+
+-- | Configuration for the alarm subsystem (see
+--   @cardano-tracer/docs/alarm-system-concept.md@). @Nothing@ for the
+--   enclosing 'Maybe' in 'TracerConfig' is the on/off switch for the whole
+--   subsystem; every field below is only meaningful once it's turned on.
+data AlarmsConfig = AlarmsConfig
+  { alEndpoint        :: !Endpoint
+  , alAllowInsecure   :: !(Maybe Bool)
+  , alRetention       :: !(Maybe AlarmsRetentionConfig)
+  , alLimits          :: !(Maybe AlarmsLimitsConfig)
+  , alAuthentication  :: !AlarmsAuthConfig
+  , alConsumers       :: ![AlarmsConsumerConfig]
+  , alTraceRules      :: !(Maybe [AlarmsTraceRuleConfig])
+  , alTimeseriesRules :: !(Maybe [AlarmsTimeseriesRuleConfig])
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+-- | The alarm envelope's wire form uses lowercase severity names (e.g.
+--   @"critical"@), unlike 'SeverityS'\'s own derived 'FromJSON'\/'ToJSON'
+--   instances (from @trace-dispatcher@), which serialise the capitalised
+--   constructor name (@"Critical"@). Every place a severity crosses the
+--   alarm system's wire boundary -- the 'AlarmEvent' envelope, YAML
+--   'AlarmFilterConfig', and the @minSeverity=@ query parameter -- must go
+--   through these two functions instead of 'SeverityS'\'s own instances, or
+--   producers/consumers will silently disagree on casing.
+alarmSeverityToText :: SeverityS -> Text
+alarmSeverityToText = Text.toLower . Text.pack . show
+
+parseAlarmSeverityText :: Text -> Maybe SeverityS
+parseAlarmSeverityText t =
+  lookup (Text.toLower t) [(alarmSeverityToText s, s) | s <- [minBound .. maxBound]]
+
 -- | Logging mode.
 data LogMode
   = FileMode    -- ^ Store items in log file.
@@ -164,6 +394,7 @@ data TracerConfig = TracerConfig
   , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
   , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasTimeseries    :: !(Maybe Endpoint)
+  , alarms           :: !(Maybe AlarmsConfig)      -- ^ Alarm subsystem configuration; 'Nothing' disables it.
   , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
     -- Third member of the triplet is the forwarder config.
@@ -205,6 +436,8 @@ wellFormed TracerConfig
   { network
   , hasEKG
   , hasPrometheus
+  , hasTimeseries
+  , alarms
   , logging
   } =
   if null problems
@@ -220,14 +453,33 @@ wellFormed TracerConfig
     , check "duplicate ports in config" $ hasDuplicates ports
     , check "no host(s) in hasEKG"     . nullEndpoint =<< hasEKG
     , check "no host in hasPrometheus" . nullEndpoint =<< hasPrometheus
+    , check "no host in hasTimeseries" . nullEndpoint =<< hasTimeseries
+    , check "no host in alarms endpoint" . nullEndpoint . alEndpoint =<< alarms
+    , check "alarms: no producer or reader credentials configured" . noCredentials =<< alarms
+    , check "alarms: duplicate consumer names" . hasDuplicateConsumerNames =<< alarms
     ]
 
+  -- NB. every internal service's endpoint port is included here, including
+  -- 'hasTimeseries' and 'alarms' (the former was previously missing from
+  -- this check).
   ports :: [Port]
-  ports = epPort <$> catMaybes [hasEKG, hasPrometheus]
+  ports = epPort <$> catMaybes
+    [hasEKG, hasPrometheus, hasTimeseries, alEndpoint <$> alarms]
 
   check :: String -> Bool -> Maybe String
   check msg True  = Just msg
   check _   False = Nothing
+
+  noCredentials :: AlarmsConfig -> Bool
+  noCredentials AlarmsConfig{alAuthentication = AlarmsAuthConfig{aacProducers, aacReaders}} =
+    null aacProducers && null aacReaders
+
+  hasDuplicateConsumerNames :: AlarmsConfig -> Bool
+  hasDuplicateConsumerNames AlarmsConfig{alConsumers} =
+    hasDuplicates (map consumerName alConsumers)
+
+  consumerName :: AlarmsConsumerConfig -> Text
+  consumerName AlarmsConsumerLog{aclName} = aclName
 
   nullAddress :: Address -> Bool
   nullAddress (Net.LocalPipe address)       = null address

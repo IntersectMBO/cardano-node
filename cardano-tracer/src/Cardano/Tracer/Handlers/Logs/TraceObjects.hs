@@ -10,12 +10,14 @@ module Cardano.Tracer.Handlers.Logs.TraceObjects
 import           Cardano.Logging (TraceObject)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Alarms.Registry (checkTraceObjectsForAlarms)
 import           Cardano.Tracer.Handlers.Logs.File
 import           Cardano.Tracer.Handlers.Logs.Journal
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 import           Control.Concurrent.Async (forConcurrently_)
+import           Data.Foldable (for_)
 import qualified Data.Map as Map
 import           System.IO (Handle, hClose)
 
@@ -37,6 +39,8 @@ traceObjectsHandler tracerEnv nodeId traceObjects = do
              loggingParams nodeName teCurrentLogLock traceObjects
         JournalMode ->
           writeTraceObjectsToJournal logFormat nodeName traceObjects
+  for_ teAlarmRegistry \alarmRegistry ->
+    checkTraceObjectsForAlarms alarmRegistry nodeName traceObjects
   teReforwardTraceObjects traceObjects where
     TracerEnv
       { teConfig = TracerConfig{ logging, verbosity }
@@ -44,6 +48,7 @@ traceObjectsHandler tracerEnv nodeId traceObjects = do
       , teReforwardTraceObjects
       , teRegistry
       , teTracer
+      , teAlarmRegistry
       } = tracerEnv
 
 deregisterNodeId :: TracerEnv -> NodeId -> IO ()
