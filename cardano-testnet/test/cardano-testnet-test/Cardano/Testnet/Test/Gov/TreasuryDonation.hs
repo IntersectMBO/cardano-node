@@ -41,8 +41,7 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Donation/"'@
 hprop_ledger_events_treasury_donation :: Property
 hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-donation" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
-    <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway

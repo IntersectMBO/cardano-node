@@ -59,7 +59,7 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Committee Add New/"'@
 hprop_constitutional_committee_add_new :: Property
 hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

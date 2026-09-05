@@ -45,7 +45,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

@@ -66,7 +66,7 @@ import qualified Hedgehog.Extras as H
 hprop_ledger_events_propose_new_constitution :: Property
 hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "propose-new-constitution" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

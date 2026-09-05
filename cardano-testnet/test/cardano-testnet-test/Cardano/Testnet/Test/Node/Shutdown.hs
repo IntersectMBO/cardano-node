@@ -65,7 +65,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
 hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       logDir' = makeLogDir $ tempAbsPath conf
@@ -202,7 +202,7 @@ hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let maxSlot = 150
       epochLength = 300
@@ -254,7 +254,7 @@ hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let creationOptions = def
         { creationGenesisOptions = def { genesisEpochLength = 300 }

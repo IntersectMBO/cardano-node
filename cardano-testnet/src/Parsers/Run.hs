@@ -84,7 +84,7 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   { createEnvCreationOptions=creationOptions
   , createEnvOutputDir=outputDir
   } = do
-      conf <- mkConfigAbs outputDir
+      conf <- mkConfigAbsolute outputDir
       void $ createTestnetEnv
         creationOptions
         -- Do not add hashes to the main config file, so that genesis files
@@ -98,7 +98,7 @@ runCardanoOptions = \case
     -- It is not necessary to update timestamps here, because
     -- the genesis files will be created with up-to-date stamps already.
     let dirName = fromMaybe "testnet" noEnvOutputDir
-    conf <- mkConfigAbs dirName
+    conf <- mkConfigAbsolute dirName
     runSimpleApp . runResourceT $ do
       logInfo $ "Creating environment: " <> display (tempAbsPath conf)
       createTestnetEnv noEnvCreationOptions conf
@@ -110,7 +110,7 @@ runCardanoOptions = \case
     -- Run cardano-testnet in the sandbox provided by the user
     let dirName = envPath fromEnvOptions
     unlessM (doesDirectoryExist dirName) $ error $ "The provided path does not exist or is not a directory: " <> dirName
-    conf <- mkConfigAbs dirName
+    conf <- mkConfigAbsolute dirName
     nodes <- readNodesWithOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
     runSimpleApp . runResourceT $ do
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)

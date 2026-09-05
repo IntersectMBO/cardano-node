@@ -38,7 +38,7 @@ import qualified Hedgehog.Extras.Test as H
 prop_check_if_treasury_is_growing :: H.Property
 prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasury" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start testnet
-  conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
+  let conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} = TN.mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
   let era = ConwayEra

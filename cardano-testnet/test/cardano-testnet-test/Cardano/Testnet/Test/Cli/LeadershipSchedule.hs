@@ -64,7 +64,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       ceo = ConwayEraOnwardsConway
       sbe = convert ceo

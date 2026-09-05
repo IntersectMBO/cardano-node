@@ -51,7 +51,7 @@ hprop_check_pparam_fails_spo :: Property
 hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

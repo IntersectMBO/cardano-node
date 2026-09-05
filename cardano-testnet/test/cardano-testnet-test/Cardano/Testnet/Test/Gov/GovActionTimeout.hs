@@ -42,7 +42,7 @@ hprop_check_gov_action_timeout :: Property
 hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout" $ \tempAbsBasePath' ->
                                  H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

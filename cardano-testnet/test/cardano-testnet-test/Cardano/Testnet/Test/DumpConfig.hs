@@ -41,7 +41,7 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
       shelleyGenesisFile = tmpDir </> "shelley-genesis.json"
 
   -- Generate the sandbox
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
 
   liftToIntegration $ createTestnetEnv
     creationOptions

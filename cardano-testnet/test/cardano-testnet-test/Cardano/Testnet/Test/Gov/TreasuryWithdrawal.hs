@@ -57,7 +57,7 @@ import qualified Hedgehog.Extras as H
 
 hprop_ledger_events_treasury_withdrawal:: Property
 hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury-withdrawal" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf@Conf { tempAbsPath } <- H.noteShow $ mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

@@ -56,7 +56,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- @TASTY_PATTERN='/RPC SearchUtxos/' cabal test cardano-testnet-test@
 hprop_rpc_search_utxos :: Property
 hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}

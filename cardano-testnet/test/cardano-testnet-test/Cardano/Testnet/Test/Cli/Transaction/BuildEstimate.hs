@@ -40,7 +40,7 @@ import qualified Hedgehog.Extras as H
 hprop_tx_build_estimate :: Property
 hprop_tx_build_estimate = integrationRetryWorkspace 2 "transaction-build-estimate" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
