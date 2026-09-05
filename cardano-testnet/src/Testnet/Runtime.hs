@@ -510,9 +510,9 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             -> SlotNo
             -> BlockNo
             -> StateT (Maybe AnyNewEpochState) IO ConditionResult
-    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo') = handleException $ do
+    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNumber) = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
-          blockLabel = "#### BLOCK " <> show blockNo' <> " ####"
+          blockLabel = "#### BLOCK " <> show blockNumber <> " ####"
       liftIOAnnotated . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
 
       -- store epoch state for logging of differences

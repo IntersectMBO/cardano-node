@@ -140,7 +140,7 @@ EOF
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
-        supervisorctl      start                  $node
+        supervisorctl -c "$dir"/supervisor/supervisord.conf start $node
         backend_supervisor wait-node       "$dir" $node
         backend_supervisor save-child-pids "$dir"
         ;;
@@ -150,7 +150,7 @@ EOF
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
-        supervisorctl stop $node
+        supervisorctl -c "$dir"/supervisor/supervisord.conf stop $node
         ;;
 
     wait-node )
@@ -185,10 +185,10 @@ EOF
         if test -n "$honor_autostart"
         then for node in ${nodes[*]}
              do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
-                     supervisorctl start $node &
+                     supervisorctl -c "$dir"/supervisor/supervisord.conf start $node &
              done
              wait
-        else supervisorctl start ${nodes[*]}; fi
+        else supervisorctl -c "$dir"/supervisor/supervisord.conf start ${nodes[*]}; fi
 
         for node in ${nodes[*]}
         do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
@@ -228,7 +228,7 @@ EOF
             true
         else
             if jqtest '.node.tracing_backend == "trace-dispatcher"' "$dir"/profile.json
-            then if ! supervisorctl start tracer
+            then if ! supervisorctl -c "$dir"/supervisor/supervisord.conf start tracer
                  then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
                       echo "$(red config.json) -------------------------------------" >&2
                       cat "$dir"/tracer/config.json
@@ -264,7 +264,7 @@ EOF
                * ) break;; esac; shift; done
 
         ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
-        if ! supervisorctl start healthcheck
+        if ! supervisorctl -c "$dir"/supervisor/supervisord.conf start healthcheck
         then progress "supervisor" "$(red fatal: failed to start) $(white healthcheck)"
              echo "$(red healthcheck stdout) -----------------------------------" >&2
              cat "$dir"/healthcheck/stdout
@@ -285,7 +285,7 @@ EOF
                * ) break;; esac; shift; done
 
         ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
-        if ! supervisorctl start generator
+        if ! supervisorctl -c "$dir"/supervisor/supervisord.conf start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
              echo "$(red run-script.json) ------------------------------------" >&2
              cat "$dir"/generator/run-script.json
@@ -308,7 +308,7 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        if ! supervisorctl start "${workload}"
+        if ! supervisorctl -c "$dir"/supervisor/supervisord.conf start "${workload}"
         then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
              echo "$(red "${workload}" workload stdout) ----------------------" >&2
              cat "$dir"/workloads/"${workload}"/stdout
@@ -326,7 +326,7 @@ EOF
 
         progress_ne "supervisor" "waiting until $node stops:  ....."
         local i=0
-        while supervisorctl status $node > /dev/null
+        while supervisorctl -c "$dir"/supervisor/supervisord.conf status $node > /dev/null
         do echo -ne "\b\b\b\b\b"; printf "%5d" $i >&2; i=$((i+1)); sleep 1
         done >&2
         echo -e "\b\b\b\b\bdone, after $(with_color white $i) seconds" >&2
@@ -344,7 +344,7 @@ EOF
             while \
                 ! test -f "${dir}"/flag/cluster-stopping \
                 && \
-                supervisorctl status "node-${pool_ix}" > /dev/null
+                supervisorctl -c "${dir}"/supervisor/supervisord.conf status "node-${pool_ix}" > /dev/null
             do
                 echo -ne "\b\b\b\b\b\b"
                 printf "%6d" "$(($(date +%s) - start_time))"
@@ -378,7 +378,7 @@ EOF
             while \
                 ! test -f "${dir}"/flag/cluster-stopping \
                 && \
-                supervisorctl status "${workload}" > /dev/null
+                supervisorctl -c "${dir}"/supervisor/supervisord.conf status "${workload}" > /dev/null
             do
                 echo -ne "\b\b\b\b\b\b"
                 printf "%6d" "$(($(date +%s) - start_time))"
@@ -405,7 +405,7 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        supervisorctl stop all || true
+        supervisorctl -c "$dir"/supervisor/supervisord.conf stop all || true
         ;;
 
     fetch-logs )
@@ -459,7 +459,7 @@ EOF
         for node in $(jq_tolist keys "$dir"/node-specs.json)
         do ## supervisord's service PID is the immediately invoked binary,
            ## ..which isn't necessarily 'cardano-node', but could be 'time' or 'cabal' or..
-           local service_pid=$(supervisorctl pid $node)
+           local service_pid=$(supervisorctl -c "$dir"/supervisor/supervisord.conf pid $node)
            if   test $service_pid = '0'
            then continue
            elif test -z "$(pgrep -P $service_pid)" ## Any children?

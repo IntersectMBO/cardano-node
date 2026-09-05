@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,13 +13,15 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (SignedTx (..))
 import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.TxGenerator.Types
 
-import           Data.Maybe (fromJust)
 import           GHC.Stack
+import           Lens.Micro ((^.))
 
 
 -- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
@@ -65,23 +68,17 @@ includeChange fee spend have = case compare changeValue 0 of
   where changeValue = sum have - sum spend - fee
 
 
+txIdFromSignedTx :: SignedTx era -> TxId
+txIdFromSignedTx (SignedTx tx) =
+  fromShelleyTxId $ Ledger.txIdTxBody (tx ^. Ledger.bodyTxL)
+
 -- some convenience constructors
-
--- | `mkTxFee` reinterprets the `Either` returned by
--- `txFeesExplicitInEra` with `TxFee` constructors.
-mkTxFee :: IsShelleyBasedEra era => L.Coin -> TxFee era
-mkTxFee = TxFeeExplicit shelleyBasedEra
-
--- | `mkTxValidityUpperBound` rules out needing the
--- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
-mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
-mkTxValidityUpperBound slotNo =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
-mkTxInModeCardano = TxInMode shelleyBasedEra
+mkTxInModeCardano :: forall era. IsShelleyBasedEra era => SignedTx era -> TxInMode
+mkTxInModeCardano (SignedTx tx) =
+  TxInMode (shelleyBasedEra @era) (ShelleyTx (shelleyBasedEra @era) tx)
 
 -- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
 -- Partial. Useful in tests.

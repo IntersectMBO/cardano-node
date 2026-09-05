@@ -14,6 +14,7 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
@@ -35,7 +36,7 @@ type TxAdditionalSize     = Int
 type TPSRate              = Double
 
 
-type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either TxGenError (Tx era, TxId)
+type TxGenerator era = [Fund] -> [Exp.TxOut (ShelleyLedgerEra era)] -> Either TxGenError (Exp.SignedTx era, TxId)
 
 type FundSource m       = m (Either TxGenError [Fund])
 type FundToStore m      = Fund -> m ()

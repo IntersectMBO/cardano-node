@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Use uncurry" -}
 {-# LANGUAGE GADTs #-}
@@ -8,13 +7,15 @@ module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
 import           Cardano.Api
+import           Cardano.Api.Compatible (CompatibleTxBodyContent (..), createCompatibleTx,
+                   defaultCompatibleTxBodyContent)
+import           Cardano.Api.Experimental (AnyWitness (..))
 
 import           Cardano.TxGenerator.Utils
 
 import           Prelude
 
 import qualified Data.ByteString as BS
-import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 
@@ -59,7 +60,7 @@ prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijks
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [
       (   1 , 0)          -- An empty map of metadata has the same cost as TxMetadataNone.
-    , (   1 , firstEntry) -- Using Metadata costs 37 or 39 bytes  (first map entry).
+    , (   1 , firstEntry) -- First map entry: 37 (Shelley), 39 (Allegra/Mary) or 42 (Alonzo onwards) bytes.
     , (  22 , 2)          -- The next 22 entries cost 2 bytes each.
     , ( 233 , 3)          -- 233 entries at 3 bytes.
     , ( 744 , 4)          -- 744 entries at 4 bytes.
@@ -114,21 +115,28 @@ measureBSCosts era = map (metadataSize era . Just . bsMetadata) [0..maxBSSize]
 metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
-dummyTxSizeInEra :: IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createTransactionBody shelleyBasedEra dummyTx of
-  Right b -> BS.length $ serialiseToCBOR b
-  Left err -> error $ "metaDataSize " ++ show err
+-- | Serialised size of a throwaway transaction carrying the given metadata.
+-- Callers only ever compare two sizes (see 'metadataSize'), so it doesn't
+-- matter that 'createCompatibleTx' returns a whole 'Tx era' - the constant
+-- body/witness-set overhead cancels out.
+-- Built with 'Cardano.Api.Compatible.Tx.createCompatibleTx' for every era.
+dummyTxSizeInEra :: forall era . IsShelleyBasedEra era => TxMetadataInEra era -> Int
+dummyTxSizeInEra metadata =
+  shelleyBasedEraConstraints sbe $
+    case createCompatibleTx sbe bodyContent of
+      Right tx -> BS.length $ serialiseToCBOR tx
+      Left err -> error $ "dummyTxSizeInEra: " ++ show err
  where
-  dummyTx = defaultTxBodyContent shelleyBasedEra
-    & setTxIns
-      [ ( mkTxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
-        , BuildTxWith $ KeyWitness KeyWitnessForSpending
-        )
-      ]
-    & setTxFee (mkTxFee 0)
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (mkTxValidityUpperBound 0)
-    & setTxMetadata metadata
+  sbe = shelleyBasedEra @era
+
+  expInputs :: [(TxIn, AnyWitness (ShelleyLedgerEra era))]
+  expInputs = [(mkTxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0", AnyKeyWitnessPlaceholder)]
+
+  bodyContent :: CompatibleTxBodyContent era
+  bodyContent = (defaultCompatibleTxBodyContent sbe)
+    { compatibleTxIns = expInputs
+    , compatibleTxMetadata = metadata
+    }
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m

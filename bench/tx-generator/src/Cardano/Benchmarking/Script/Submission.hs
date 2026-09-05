@@ -23,7 +23,7 @@ module Cardano.Benchmarking.Script.Submission
   , traceProgress
   ) where
 
-import           Cardano.Api (Tx)
+import           Cardano.Api.Experimental (SignedTx)
 
 import           Cardano.Benchmarking.LogTypes (BenchTracers (..), TraceBenchTxSubmit (..))
 import           Cardano.Benchmarking.Script.Env (ActionM, getBenchTracers, liftTxGenError,
@@ -49,7 +49,7 @@ import           Streaming
 -- The rejection type @e@ is the backend's own; this module never inspects
 -- it, only renders it.
 newtype SubmitTransport era e = SubmitTransport
-  { submitOne :: Tx era -> IO (Either e Text) }
+  { submitOne :: SignedTx era -> IO (Either e Text) }
 
 -- | How to proceed when the endpoint rejects a transaction.
 data OnRejection

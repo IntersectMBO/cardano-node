@@ -19,7 +19,7 @@ module Cardano.Benchmarking.GeneratorTx
   , waitBenchmark
   ) where
 
-import           Cardano.Api hiding (txFee, label)
+import           Cardano.Api hiding (label, txFee)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission

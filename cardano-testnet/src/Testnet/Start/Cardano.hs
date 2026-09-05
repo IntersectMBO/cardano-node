@@ -463,9 +463,9 @@ cardanoTestnet
           QuickValidation
           (EpochNo maxBound)
           minBound
-          $ \_ slotNo blockNo' -> do
+          $ \_ slotNo blockNumber -> do
             put slotNo
-            pure $ if blockNo' >= 1
+            pure $ if blockNumber >= 1
                then ConditionMet -- we got one block
                else ConditionNotMet
 

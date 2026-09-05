@@ -11,6 +11,7 @@ effect, like 'createAndStore' and 'mangle'.
 -}
 module Cardano.Benchmarking.Wallet where
 import           Cardano.Api hiding (txId)
+import           Cardano.Api.Experimental (SignedTx)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue as FundQueue
@@ -38,7 +39,7 @@ type WalletRef = MVar FundQueue
 -- @
 -- type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)
 -- @
-type TxStream m era = Stream (Of (Either TxGenError (Tx era))) m ()
+type TxStream m era = Stream (Of (Either TxGenError (SignedTx era))) m ()
 
 -- | 'createAndStore' hides its 3rd argument in the 'CreateAndStore'
 -- type alias. The sole uses are in "Cardano.Benchmarking.Script.Core",

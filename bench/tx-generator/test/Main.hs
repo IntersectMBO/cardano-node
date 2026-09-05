@@ -3,11 +3,13 @@
 
 module Main (main) where
 
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
+
 import           Prelude
+
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
 import           TestnetDiscoveryTest (testnetDiscoveryTests)
 
 main :: IO ()
@@ -34,4 +36,8 @@ sizedMetadata = testGroup "properties of the CBOR encoding relevant for generati
   , testCase "Babbage metadata ByteString costs"   $ assertBool "metadata ByteString costs" prop_bsCostsBabbage
   , testCase "Conway metadata map costs"           $ assertBool "metadata map costs" prop_mapCostsConway
   , testCase "Conway metadata ByteString costs"    $ assertBool "metadata ByteString costs" prop_bsCostsConway
+  -- TODO: enable when cardano-api's shelleyBasedEraConstraints supports Dijkstra
+  -- (the compatible transaction path errors at runtime there until then)
+  -- , testCase "Dijkstra metadata map costs"         $ assertBool "metadata map costs" prop_mapCostsDijkstra
+  -- , testCase "Dijkstra metadata ByteString costs"  $ assertBool "metadata ByteString costs" prop_bsCostsDijkstra
   ]
