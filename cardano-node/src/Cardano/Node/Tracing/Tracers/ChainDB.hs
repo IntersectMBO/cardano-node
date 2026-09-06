@@ -2898,6 +2898,9 @@ instance LogFormatting LeiosExtValidationError where
               , "announcedEb" .= String (Text.pack (show point))
               , "certificate" .= String (Text.pack (show cert))
               ]
+    forMachine _ LeiosMissingThreshold =
+      mconcat [ "kind" .= String "LeiosMissingThreshold"
+              ]
     forMachine _ (LeiosCertificateAfterGenesis cert point) =
       mconcat [ "kind" .= String "LeiosCertificateAfterGenesis"
               , "certificate" .= String (Text.pack (show cert))
@@ -2917,6 +2920,8 @@ instance LogFormatting LeiosExtValidationError where
     forHuman (LeiosMissingCommittee point cert) =
       "CertRB for " <> Text.pack (show point)
         <> " but there is no Leios committee to verify its certificate: " <> Text.pack (show cert)
+    forHuman LeiosMissingThreshold =
+      "CertRB validation, but no quorum stake threshold in pparams"
     forHuman (LeiosCertificateAfterGenesis cert point) =
       "CertRB for " <> Text.pack (show point)
         <> " has no announcing ranking block (would certify at genesis): " <> Text.pack (show cert)

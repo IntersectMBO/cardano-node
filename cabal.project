@@ -122,7 +122,8 @@ source-repository-package
     libs/cardano-ledger-core
     libs/cardano-protocol
     libs/cardano-protocol-tpraos
-    eras/byron/crypto
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
     eras/shelley/impl
     eras/shelley/test-suite
     eras/shelley-ma/test-suite
@@ -149,8 +150,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: c4dceef8ba64f136d8c0cf0a9246f956fe98337f
-  --sha256: sha256-W4E67uUbCZnIbEKH739uPm7zM7RkiwyXO/HN9r1MX4k=
+  tag: e32d8c07035283233fbdca4beeafbd78abc66512
+  --sha256: sha256-yYKuOUoIOvJy6872Sj3CruRT+UXfoQsqqaHXcYu8N1A=
   subdir:
     cardano-api
     cardano-api-gen
@@ -160,8 +161,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 3afebb903a87df55e5f9d78ab39eecfb5c67640f
-  --sha256: sha256-3i1RQaGjXuUOiQmgNwFk+fGpBYw+mJAqbWJXGiGd9Sk=
+  tag: 517ffe9ed02bba2b9ed644454a74c280ad62c2fa
+  --sha256: sha256-vNw0fqUF/dboMVVOgUs1eKGEdT36xN5lJEbJ2tRV1EI=
   subdir:
     cardano-cli
 
