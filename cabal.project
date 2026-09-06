@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-07-15T21:58:35Z
-  , cardano-haskell-packages 2026-07-27T20:44:57Z
+  , cardano-haskell-packages 2026-09-02T08:49:12Z
 
 constraints:
   -- cardano-crypto-class is pinned back to crypton ^>=1.0 (the memory line) in the SRP; a
@@ -92,12 +92,36 @@ allow-older:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- TEMPORARY, for the LeiosDb candidate-probe A/B on the dozen-devnet.
+--
+-- A local package rather than the SRP below: a source-repository-package is
+-- extracted once into dist-newstyle and then silently shadows sibling edits.
+-- ../oc-probe is a git worktree on ch1bo/leios-db-candidate-probe, i.e.
+-- o-c leios-prototype plus the one commit under test ("only look up the txs
+-- the tx cache cannot vouch for") and its bench companion. Note the SRP tag
+-- below is 3 commits behind leios-prototype, so this node also picks up two
+-- LeiosNotify announcement-dating fixes and a PastHorizon sync fix -- keep
+-- that in mind when comparing against a node built from the tag.
+--
+-- One path covers consensus, -cardano, -diffusion and -protocol: consensus is
+-- now a single package with public sublibraries ("packages: ." in its own
+-- cabal.project).
+--
+-- To revert: drop this stanza and uncomment the one below.
+--
+-- 2026-09-01: switched from ../oc-probe (candidate-probe A/B) to the main
+-- checkout, which is on ch1bo/leios-committee-from-ledger: the Leios committee
+-- now comes from the ledger state instead of being rebuilt per call.
+packages:
+  ../ouroboros-consensus
+
 -- Points to ouroboros-consensus/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a8807432d7fc93e8eb5857e3d65e163359526400
-  --sha256: sha256-QMPQHj1CDa3FSJPccVKvNUrMUGY1ZuddCqAUSt+pZnY=
+-- source-repository-package
+--   type: git
+--   location: https://github.com/IntersectMBO/ouroboros-consensus
+--   tag: 28b43c277997b4091
+--   f49a50828dbe009e41735b4
+--   --sha256: sha256-5kqqAFUkKl8P7/nBqBe0qzGqeU1t3iiiozc5wiWhw18=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -108,30 +132,33 @@ source-repository-package
   subdir:
     typed-protocols
 
+-- LOCAL ITERATION, DO NOT COMMIT: the ledger comes from the sibling
+-- cardano-ledger checkout (see cabal.project.local); the pin below is
+-- three commits behind and has no nesLeiosCommittee at all.
 -- Points to ouroboros-ledger/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger
-  tag: f3104f00f9819ba94de119c38bc3e0109982821f
-  --sha256: sha256-PESnjqXXQTD5C9tvE6AfADSkymvj+edu3BhX3sQYjRk=
-  subdir:
-    libs/cardano-data
-    libs/cardano-ledger-api
-    libs/small-steps
-    libs/cardano-ledger-binary
-    libs/cardano-ledger-core
-    libs/cardano-protocol-tpraos
-    eras/byron/crypto
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/test-suite
-    eras/mary/impl
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/conway/impl
-    eras/dijkstra/impl
+-- source-repository-package
+--   type: git
+--   location: https://github.com/IntersectMBO/cardano-ledger
+--   tag: f3104f00f9819ba94de119c38bc3e0109982821f
+--   --sha256: sha256-PESnjqXXQTD5C9tvE6AfADSkymvj+edu3BhX3sQYjRk=
+--   subdir:
+--     libs/cardano-data
+--     libs/cardano-ledger-api
+--     libs/small-steps
+--     libs/cardano-ledger-binary
+--     libs/cardano-ledger-core
+--     libs/cardano-protocol-tpraos
+--     eras/byron/crypto
+--     eras/shelley/impl
+--     eras/shelley/test-suite
+--     eras/shelley-ma/test-suite
+--     eras/mary/impl
+--     eras/allegra/impl
+--     eras/alonzo/impl
+--     eras/alonzo/test-suite
+--     eras/babbage/impl
+--     eras/conway/impl
+--     eras/dijkstra/impl
 
 -- Points to ouroboros-network/leios-prototype
 source-repository-package
@@ -179,14 +206,17 @@ source-repository-package
   tag: 85470ae7e8fac9711682234ed39a36eec3d45a9b
   --sha256: sha256-yk67GraJUsFi5mSETnaeuKNSnNRLOri6FK5yzmRLzxU=
 
+-- LOCAL ITERATION, DO NOT COMMIT: cardano-base comes from the sibling
+-- checkout (see cabal.project.local), which is ahead of this pin --
+-- cardano-crypto-leios 0.3 there against 0.2 here.
 -- Points to ch1bo/mk-committee
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-base
-  tag: 9c6078d9c39c542abcb5912d0d7c222b7ba8a03d
-  --sha256: sha256-FfzoMXitbX/pzEJDQExQikGef6FcantzGWvqu2g19ho=
-  subdir:
-    cardano-binary
-    cardano-crypto-class
-    cardano-crypto-leios
-    cardano-crypto-praos
+-- source-repository-package
+--   type: git
+--   location: https://github.com/IntersectMBO/cardano-base
+--   tag: 9c6078d9c39c542abcb5912d0d7c222b7ba8a03d
+--   --sha256: sha256-FfzoMXitbX/pzEJDQExQikGef6FcantzGWvqu2g19ho=
+--   subdir:
+--     cardano-binary
+--     cardano-crypto-class
+--     cardano-crypto-leios
+--     cardano-crypto-praos

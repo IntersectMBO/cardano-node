@@ -11,19 +11,17 @@ module Cardano.Node.Protocol.Dijkstra
 
 import           Cardano.Api
 
+import           Cardano.Api.Genesis (dijkstraGenesisDefaults)
+
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Binary as L
-import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import qualified Cardano.Ledger.Dijkstra.Genesis as Dijkstra
-import           Cardano.Ledger.Dijkstra.PParams
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
 
 import qualified Data.ByteString.Lazy as LB
-
-import Data.Maybe (fromMaybe)
 
 readGenesisMaybe :: Maybe GenesisFile
                  -> Maybe GenesisHash
@@ -35,15 +33,10 @@ readGenesisMaybe Nothing _ = do
       genesisHash = GenesisHash (Crypto.hashWith id $ LB.toStrict $ L.serialize (L.natVersion @11) emptyDijkstraGenesis)
   return (dijkstraGenesis, genesisHash)
 
+-- | Deferring to the API's defaults keeps a node started without a Dijkstra
+-- genesis file on exactly the parameters the CLI would have written for it.
 emptyDijkstraGenesis :: DijkstraGenesis
-emptyDijkstraGenesis =
-  let upgradePParamsDef =  UpgradeDijkstraPParams
-                            { udppMaxRefScriptSizePerBlock = 1048576
-                            , udppMaxRefScriptSizePerTx = 204800
-                            , udppRefScriptCostStride = unsafeNonZero 25600
-                            , udppRefScriptCostMultiplier = fromMaybe (error "impossible") $ boundRational 1.2
-                            }
-  in DijkstraGenesis { dgUpgradePParams = upgradePParamsDef }
+emptyDijkstraGenesis = dijkstraGenesisDefaults
 
 
 readGenesis :: GenesisFile
