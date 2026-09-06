@@ -68,6 +68,7 @@ import           Data.Word (Word64)
 import           Numeric (showFFloat)
 
 import           LeiosDemoTypes (LeiosExtValidationError (..))
+import           LeiosUtils.CallTrace (SomeJsonCallTrace (..), callTraceToObject)
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -560,6 +561,8 @@ instance ( LogFormatting (Header blk)
       "Poppped request from queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.ChainSelectionLoEDebug{} =
       "ChainDB LoE debug event"
+  forHuman (ChainDB.TraceAddBlockCall ct) =
+      "AddBlockRunner call trace: " <> showT ct
   forMachine dtal (ChainDB.IgnoreBlockOlderThanImmTip pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanImmTip"
                , "block" .= forMachine dtal pt ]
@@ -682,6 +685,8 @@ instance ( LogFormatting (Header blk)
                    FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
   forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+  forMachine _dtal (ChainDB.TraceAddBlockCall (SomeJsonCallTrace ct)) =
+      callTraceToObject ct
   forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
       case loeFrag of
         ChainDB.LoEEnabled loeF ->
@@ -777,6 +782,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
   namespaceFor ChainDB.ChainSelectionLoEDebug {} =
     Namespace [] ["ChainSelectionLoEDebug"]
+  namespaceFor ChainDB.TraceAddBlockCall {} =
+    Namespace [] ["TraceAddBlockCall"]
 
   severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
@@ -809,6 +816,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   severityFor (Namespace _ ["AddedReprocessLoEBlocksToQueue"]) _ = Just Debug
   severityFor (Namespace _ ["PoppedReprocessLoEBlocksFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["ChainSelectionLoEDebug"]) _ = Just Debug
+  severityFor (Namespace _ ["TraceAddBlockCall"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.AddBlockValidation ev')) =
@@ -936,6 +944,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
   documentFor (Namespace out ("PipeliningEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk))
+  documentFor (Namespace _ ["TraceAddBlockCall"]) = Just
+    "A call-trace event emitted by the addBlockRunner thread."
   documentFor _ = Nothing
 
 
@@ -956,6 +966,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["AddedReprocessLoEBlocksToQueue"]
     , Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
     , Namespace [] ["ChainSelectionLoEDebug"]
+    , Namespace [] ["TraceAddBlockCall"]
     ]
     ++ map (nsPrependInner "PipeliningEvent")
           (allNamespaces :: [Namespace (ChainDB.TracePipeliningEvent blk)])
