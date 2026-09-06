@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-07-15T21:58:35Z
-  , cardano-haskell-packages 2026-07-27T20:44:57Z
+  , hackage.haskell.org 2026-09-02T14:05:07Z
+  , cardano-haskell-packages 2026-09-02T08:49:12Z
 
 constraints:
   -- cardano-crypto-class is pinned back to crypton ^>=1.0 (the memory line) in the SRP; a
@@ -96,8 +96,8 @@ allow-older:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a8807432d7fc93e8eb5857e3d65e163359526400
-  --sha256: sha256-QMPQHj1CDa3FSJPccVKvNUrMUGY1ZuddCqAUSt+pZnY=
+  tag: 5ed44e5f25b3abb42425d0a6e44947d9fb6f6295
+  --sha256: sha256-Q4Yrd9SOA9MU+4fGcUUFiUhbtNi1lmqaA+b/OSLPl9I=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
@@ -112,8 +112,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: f3104f00f9819ba94de119c38bc3e0109982821f
-  --sha256: sha256-PESnjqXXQTD5C9tvE6AfADSkymvj+edu3BhX3sQYjRk=
+  tag: 1587f21a7d1306dc590c2749a5c66232ef66aad0
+  --sha256: sha256-zGKFgOU+p0uMTNbIm0Em6GMYMUVZMJsJtynzXG46E58=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -148,8 +148,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: f450b736ad4942246cf4c1acd748ead5b1c6cfeb
-  --sha256: sha256-77bBgY6zJpoRHVkxizuc3l0UByIimsSp9yR3zWvVZMo=
+  tag: c4dceef8ba64f136d8c0cf0a9246f956fe98337f
+  --sha256: sha256-W4E67uUbCZnIbEKH739uPm7zM7RkiwyXO/HN9r1MX4k=
   subdir:
     cardano-api
     cardano-api-gen
@@ -159,8 +159,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: b663f6ecaa4e0e55e81ea091b1c396e6b4e8cc02
-  --sha256: sha256-UvZOCum1ofLgR7nGQS2DdVDNOO30UUpFHJUikUPj0oc=
+  tag: 3afebb903a87df55e5f9d78ab39eecfb5c67640f
+  --sha256: sha256-3i1RQaGjXuUOiQmgNwFk+fGpBYw+mJAqbWJXGiGd9Sk=
   subdir:
     cardano-cli
 
@@ -179,12 +179,12 @@ source-repository-package
   tag: 85470ae7e8fac9711682234ed39a36eec3d45a9b
   --sha256: sha256-yk67GraJUsFi5mSETnaeuKNSnNRLOri6FK5yzmRLzxU=
 
--- Points to ch1bo/mk-committee
+-- Points to cardano-base/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-base
-  tag: 9c6078d9c39c542abcb5912d0d7c222b7ba8a03d
-  --sha256: sha256-FfzoMXitbX/pzEJDQExQikGef6FcantzGWvqu2g19ho=
+  tag: fbfb3f05d8092492f000264edca2d7a1a105741a
+  --sha256: sha256-jbafzBNRARCuOtb8qsaYGZ0h8o/icnjxiNoMu0EFduU=
   subdir:
     cardano-binary
     cardano-crypto-class
