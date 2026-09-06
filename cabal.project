@@ -120,6 +120,7 @@ source-repository-package
     libs/small-steps
     libs/cardano-ledger-binary
     libs/cardano-ledger-core
+    libs/cardano-protocol
     libs/cardano-protocol-tpraos
     eras/byron/crypto
     eras/shelley/impl
