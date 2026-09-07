@@ -41,6 +41,7 @@ import qualified Cardano.Testnet.Test.Rpc.FetchBlock
 import qualified Cardano.Testnet.Test.Rpc.FollowTip
 import qualified Cardano.Testnet.Test.Rpc.Genesis
 import qualified Cardano.Testnet.Test.Rpc.Query
+import qualified Cardano.Testnet.Test.Rpc.ReadMempool
 import qualified Cardano.Testnet.Test.Rpc.SearchUtxos
 import qualified Cardano.Testnet.Test.Rpc.Transaction
 import qualified Cardano.Testnet.Test.RunTestnet
@@ -157,6 +158,7 @@ tests = do
         , ignoreOnWindows "RPC ReadGenesis" Cardano.Testnet.Test.Rpc.Genesis.hprop_rpc_read_genesis
         , ignoreOnWindows "RPC ReadEraSummary" Cardano.Testnet.Test.Rpc.EraSummary.hprop_rpc_read_era_summary
         , ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
+        , ignoreOnWindows "RPC ReadMempool" Cardano.Testnet.Test.Rpc.ReadMempool.hprop_rpc_read_mempool
         , ignoreOnWindows "RPC SearchUtxos" Cardano.Testnet.Test.Rpc.SearchUtxos.hprop_rpc_search_utxos
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx
