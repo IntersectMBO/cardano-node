@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -21,7 +20,7 @@ import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as Query
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano, items, nativeBytes, maybe'cardano)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c hiding (predicate)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPredicate)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type
