@@ -46,6 +46,8 @@ import qualified Cardano.Testnet.Test.Rpc.Query
 import qualified Cardano.Testnet.Test.Rpc.ReadMempool
 import qualified Cardano.Testnet.Test.Rpc.SearchUtxos
 import qualified Cardano.Testnet.Test.Rpc.Transaction
+import qualified Cardano.Testnet.Test.Rpc.WaitForTx
+import qualified Cardano.Testnet.Test.Rpc.WaitForTxInvalidRef
 import qualified Cardano.Testnet.Test.Rpc.WatchMempool
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck
@@ -176,6 +178,8 @@ tests = do
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx
         , ignoreOnWindows "RPC WatchMempool" Cardano.Testnet.Test.Rpc.WatchMempool.hprop_rpc_watch_mempool
+        , ignoreOnWindows "RPC WaitForTx" Cardano.Testnet.Test.Rpc.WaitForTx.hprop_rpc_wait_for_tx
+        , ignoreOnWindows "RPC WaitForTx Invalid Ref" Cardano.Testnet.Test.Rpc.WaitForTxInvalidRef.hprop_rpc_wait_for_tx_invalid_ref
         ]
     , T.testGroup "Status rules"
         [ H.testPropertyNamed "Node state" (fromString "unit_node_state")

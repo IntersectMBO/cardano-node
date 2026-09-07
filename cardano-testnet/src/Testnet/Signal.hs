@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -11,15 +12,22 @@ module Testnet.Signal
   ( hardKillProcess
   , interruptNodesOnSigINT
   , isProcessAlive
+  , pauseProcess
+  , resumeProcess
   ) where
 
 #ifdef UNIX
 import           Control.Monad
-import           System.IO.Error (isDoesNotExistError, tryIOError)
+import           Data.Foldable (traverse_)
+import           System.IO.Error (illegalOperationErrorType, isDoesNotExistError, mkIOError,
+                   tryIOError)
+import           System.Posix.Process (ProcessStatus (..), getProcessStatus)
 import           System.Posix.Signals (Handler (..), installHandler, nullSignal, raiseSignal,
-                   sigINT, sigKILL, signalProcess)
+                   sigCONT, sigINT, sigKILL, sigSTOP, signalProcess)
 import           System.Process (Pid, ProcessHandle, getPid, interruptProcessGroupOf)
+import           System.Timeout (timeout)
 #else
+import           System.IO.Error (illegalOperationErrorType, mkIOError)
 import           System.Process (Pid, ProcessHandle, terminateProcess)
 #endif
 
@@ -67,4 +75,33 @@ isProcessAlive pid
         _ -> True -- signalled, or not allowed to: either way it exists
 #else
 isProcessAlive _ = pure Nothing
+#endif
+
+-- | Freeze the process with @SIGSTOP@ and wait until the stop has taken effect.
+-- Throws an 'IOError' if the process did not stop, and on Windows, which has no
+-- equivalent.
+pauseProcess :: ProcessHandle -> IO ()
+#ifdef UNIX
+pauseProcess hProcess = getPid hProcess >>= traverse_ stopAndWait
+ where
+  stopAndWait pid = do
+    signalProcess sigSTOP pid
+    status <- timeout 10_000_000 $ getProcessStatus True True pid
+    case status of
+      Nothing -> failWith "pauseProcess: timed out waiting for the process to stop"
+      Just stopped -> unless (maybe False isStopped stopped) $ failWith "pauseProcess: process did not stop"
+  failWith message = ioError $ mkIOError illegalOperationErrorType message Nothing Nothing
+  isStopped (Stopped _) = True
+  isStopped _ = False
+#else
+pauseProcess _ = ioError $ mkIOError illegalOperationErrorType "pauseProcess: unsupported on Windows" Nothing Nothing
+#endif
+
+-- | Continue a process frozen by 'pauseProcess' with @SIGCONT@. Throws an
+-- 'IOError' on Windows.
+resumeProcess :: ProcessHandle -> IO ()
+#ifdef UNIX
+resumeProcess hProcess = getPid hProcess >>= mapM_ (signalProcess sigCONT)
+#else
+resumeProcess _ = ioError $ mkIOError illegalOperationErrorType "resumeProcess: unsupported on Windows" Nothing Nothing
 #endif
