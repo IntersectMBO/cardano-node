@@ -256,6 +256,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.ReadMempool
                         Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction
+                        Cardano.Testnet.Test.Rpc.WaitForTx
+                        Cardano.Testnet.Test.Rpc.WaitForTxInvalidRef
                         Cardano.Testnet.Test.Rpc.WatchMempool
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
@@ -295,6 +297,7 @@ test-suite cardano-testnet-test
                       , directory
                       , exceptions
                       , filepath
+                      , grapesy
                       , grpc-spec
                       , hedgehog
                       , hedgehog-extras
