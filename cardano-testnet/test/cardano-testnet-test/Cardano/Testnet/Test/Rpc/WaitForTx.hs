@@ -36,21 +36,19 @@ import           Testnet.Types
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
--- | E2E test for the WaitForTx gRPC method (SubmitService), covering AC5 of
--- cardano-rpc's mempool-methods.md.
+-- | E2E test for the WaitForTx gRPC method (SubmitService).
 --
 -- Computes the transaction id of a signed-but-not-yet-submitted transaction,
 -- opens WaitForTx for that ref /before/ submitting - the documented race
--- contract (see @WaitForTx@'s Haddock and the Notes in mempool-methods.md:
--- a tx that reaches the chain between submission and opening the stream is
--- invisible to it) - then submits, and asserts the stream eventually
--- delivers 'U5c.STAGE_CONFIRMED' for the ref and closes cleanly.
+-- contract (see @WaitForTx@'s Haddock: a tx that reaches the chain between
+-- submission and opening the stream is invisible to it) - then submits, and
+-- asserts the stream eventually delivers 'U5c.STAGE_CONFIRMED' for the ref
+-- and closes cleanly.
 --
 -- 'U5c.STAGE_MEMPOOL' is not asserted: on a single-node testnet the
 -- transaction can confirm within a slot or two, so an intermediate
--- STAGE_MEMPOOL notification is racy and may or may not arrive (see Notes,
--- "Single-node testnet timing"). Its presence is tolerated as long as it
--- precedes STAGE_CONFIRMED.
+-- STAGE_MEMPOOL notification is racy and may or may not arrive. Its
+-- presence is tolerated as long as it precedes STAGE_CONFIRMED.
 --
 -- Run with:
 -- @TASTY_PATTERN='/RPC WaitForTx/' cabal test cardano-testnet-test@
@@ -135,7 +133,7 @@ hprop_rpc_wait_for_tx = integrationRetryWorkspace 2 "rpc-wait-for-tx" $ \tempAbs
 
   submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. U5c.ref
   H.note_ "Ensure that submitTx returns the same transaction ID as the locally computed signed transaction ID"
-  txId' H.=== submittedTxId
+  txId' === submittedTxId
 
   H.note_ "The stream delivered at least one message and closed cleanly"
   H.assertWith messages $ not . null

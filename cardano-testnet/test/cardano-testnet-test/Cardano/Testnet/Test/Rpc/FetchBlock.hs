@@ -111,11 +111,11 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     H.assertWith rawBytes $ not . BS.null
 
     -- Verify cardano block header matches the requested tip
-    block ^. U5c.cardano . U5c.header . U5c.slot H.=== slot
-    block ^. U5c.cardano . U5c.header . U5c.hash H.=== tipHash
+    block ^. U5c.cardano . U5c.header . U5c.slot === slot
+    block ^. U5c.cardano . U5c.header . U5c.hash === tipHash
 
     -- height is the block number from ChainDB
-    block ^. U5c.cardano . U5c.header . U5c.height H.=== tipBlockNumber
+    block ^. U5c.cardano . U5c.header . U5c.height === tipBlockNumber
 
     -- Verify timestamp matches the slot time derived from EraHistory
     connectionInfo <- nodeConnectionInfo tr 0
@@ -225,7 +225,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf Submit.SubmitService "submitTx")) $
         def & Submit.tx .~ (def & Submit.raw .~ serialiseToRawBytes (Exp.SignedTx signedLedgerTx))
     submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. Submit.ref
-    txId' H.=== submittedTxId
+    txId' === submittedTxId
     pure (txId', txIn0, change, address0, address1, vkeyBytes0)
 
   (txBlockSlot, txBlockHash, txBlockTxCount) <- do
@@ -259,51 +259,51 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     [txBlock] <- H.noteShow $ txBlockResponse ^. U5c.block
     let fetchedTxs = txBlock ^. U5c.cardano . U5c.body . U5c.tx
     H.note_ "Ensure the fetched block contains all transactions of the block"
-    length fetchedTxs H.=== txBlockTxCount
+    length fetchedTxs === txBlockTxCount
 
     H.note_ "Ensure the fetched block contains the submitted transaction"
     protoTx : _ <- H.noteShow $ filter (\t -> t ^. U5c.hash == serialiseToRawBytes txId') fetchedTxs
     feeCoin <- H.leftFail $ protoTx ^. U5c.fee . to utxoRpcBigIntToInteger
-    feeCoin H.=== fee
+    feeCoin === fee
     H.assertWith protoTx (^. U5c.successful)
 
     H.note_ "Verify the transaction inputs"
     let TxIn inputTxId (TxIx inputIx) = txIn0
     map (\i -> (i ^. U5c.txHash, i ^. U5c.outputIndex)) (protoTx ^. U5c.inputs)
-      H.=== [(serialiseToRawBytes inputTxId, fromIntegral inputIx)]
+      === [(serialiseToRawBytes inputTxId, fromIntegral inputIx)]
 
     H.note_ "Verify the transaction outputs"
     map (\o -> (o ^. U5c.address, o ^. U5c.coin)) (protoTx ^. U5c.outputs)
-      H.=== [ (serialiseToRawBytes address1, inject amount)
+      === [ (serialiseToRawBytes address1, inject amount)
             , (serialiseToRawBytes address0, inject change)
             ]
 
     H.note_ "The transaction has no reference inputs and no certificates"
-    protoTx ^. U5c.referenceInputs H.=== []
-    protoTx ^. U5c.certificates H.=== []
+    protoTx ^. U5c.referenceInputs === []
+    protoTx ^. U5c.certificates === []
 
     H.note_ "The transaction has no auxiliary data and no proposals"
-    protoTx ^. U5c.maybe'auxiliary H.=== Nothing
-    protoTx ^. U5c.proposals H.=== []
+    protoTx ^. U5c.maybe'auxiliary === Nothing
+    protoTx ^. U5c.proposals === []
 
     H.note_ "Verify the transaction validity interval"
-    protoTx ^. U5c.validity . U5c.start H.=== 0
-    protoTx ^. U5c.validity . U5c.ttl H.=== validityUpperBound
+    protoTx ^. U5c.validity . U5c.start === 0
+    protoTx ^. U5c.validity . U5c.ttl === validityUpperBound
 
     H.note_ "The transaction mints nothing and has no withdrawals or collateral"
-    protoTx ^. U5c.mint H.=== []
-    protoTx ^. U5c.withdrawals H.=== []
-    protoTx ^. U5c.maybe'collateral H.=== Nothing
+    protoTx ^. U5c.mint === []
+    protoTx ^. U5c.withdrawals === []
+    protoTx ^. U5c.maybe'collateral === Nothing
 
     H.note_ "Verify the witness set contains only the wallet key witness"
     let witnessSet = protoTx ^. U5c.witnesses
     [vkeyWitness] <- H.noteShow $ witnessSet ^. U5c.vkeywitness
-    vkeyWitness ^. U5c.vkey H.=== vkeyBytes0
-    BS.length (vkeyWitness ^. U5c.signature) H.=== 64
-    witnessSet ^. U5c.script H.=== []
-    witnessSet ^. U5c.bootstrapWitnesses H.=== []
-    witnessSet ^. U5c.plutusDatums H.=== []
-    witnessSet ^. U5c.redeemers H.=== []
+    vkeyWitness ^. U5c.vkey === vkeyBytes0
+    BS.length (vkeyWitness ^. U5c.signature) === 64
+    witnessSet ^. U5c.script === []
+    witnessSet ^. U5c.bootstrapWitnesses === []
+    witnessSet ^. U5c.plutusDatums === []
+    witnessSet ^. U5c.redeemers === []
 
   -- An "anyone can mint" policy: a native script requiring an empty set of conditions
   let mintScript :: Exp.SimpleScript (Exp.LedgerEra Exp.ConwayEra)
@@ -357,7 +357,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf Submit.SubmitService "submitTx")) $
         def & Submit.tx .~ (def & Submit.raw .~ serialiseToRawBytes (Exp.SignedTx mintSignedLedgerTx))
     mintSubmittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ mintSubmitResponse ^. Submit.ref
-    mintTxId H.=== mintSubmittedTxId
+    mintTxId === mintSubmittedTxId
     pure mintTxId
 
   (mintBlockSlot, mintBlockHash, mintBlockTxCount) <- do
@@ -391,12 +391,12 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     [mintBlock] <- H.noteShow $ mintBlockResponse ^. U5c.block
     let mintFetchedTxs = mintBlock ^. U5c.cardano . U5c.body . U5c.tx
     H.note_ "Ensure the fetched block contains all transactions of the block"
-    length mintFetchedTxs H.=== mintBlockTxCount
+    length mintFetchedTxs === mintBlockTxCount
 
     H.note_ "Ensure the fetched block contains the minting transaction"
     mintProtoTx : _ <- H.noteShow $ filter (\t -> t ^. U5c.hash == serialiseToRawBytes mintTxId) mintFetchedTxs
     mintFeeCoin <- H.leftFail $ mintProtoTx ^. U5c.fee . to utxoRpcBigIntToInteger
-    mintFeeCoin H.=== fee
+    mintFeeCoin === fee
     H.assertWith mintProtoTx (^. U5c.successful)
 
     let assetsOf :: Rpc.Proto U5c.Multiasset -> [(BS.ByteString, Rpc.Proto U5c.BigInt)]
@@ -405,20 +405,20 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
 
     H.note_ "Verify the minted assets"
     [mintedPolicy] <- H.noteShow $ mintProtoTx ^. U5c.mint
-    mintedPolicy ^. U5c.policyId H.=== serialiseToRawBytes mintPolicyId
-    assetsOf mintedPolicy H.=== [(serialiseToRawBytes mintAssetName, inject mintQuantity)]
+    mintedPolicy ^. U5c.policyId === serialiseToRawBytes mintPolicyId
+    assetsOf mintedPolicy === [(serialiseToRawBytes mintAssetName, inject mintQuantity)]
 
     H.note_ "Verify the output carries the minted asset"
     [mintOutput] <- H.noteShow $ mintProtoTx ^. U5c.outputs
-    mintOutput ^. U5c.address H.=== serialiseToRawBytes address0
-    mintOutput ^. U5c.coin H.=== inject (change - fee)
+    mintOutput ^. U5c.address === serialiseToRawBytes address0
+    mintOutput ^. U5c.coin === inject (change - fee)
     map (\ma -> (ma ^. U5c.policyId, assetsOf ma)) (mintOutput ^. U5c.assets)
-      H.=== [(serialiseToRawBytes mintPolicyId, [(serialiseToRawBytes mintAssetName, inject mintQuantity)])]
+      === [(serialiseToRawBytes mintPolicyId, [(serialiseToRawBytes mintAssetName, inject mintQuantity)])]
 
     H.note_ "Verify the witness set contains the native mint script and the wallet key witness"
     let mintWitnessSet = mintProtoTx ^. U5c.witnesses
     [mintVkeyWitness] <- H.noteShow $ mintWitnessSet ^. U5c.vkeywitness
-    mintVkeyWitness ^. U5c.vkey H.=== vkeyBytes0
+    mintVkeyWitness ^. U5c.vkey === vkeyBytes0
     [mintScriptWitness] <- H.noteShow $ mintWitnessSet ^. U5c.script
     H.assertWith mintScriptWitness $ isJust . (^. U5c.maybe'native)
 

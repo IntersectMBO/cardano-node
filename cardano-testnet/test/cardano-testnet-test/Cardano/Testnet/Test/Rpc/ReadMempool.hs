@@ -49,9 +49,8 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 --
 -- Spins up a testnet, submits a transaction, and immediately reads the
 -- mempool over the same connection. On a single-node testnet the
--- transaction may already have been confirmed by the time the read happens
--- (see cardano-rpc's mempool-methods.md Notes on single-node testnet
--- timing), so an empty result is a pass; when the result is non-empty,
+-- transaction may already have been confirmed by the time the read happens,
+-- so an empty result is a pass; when the result is non-empty,
 -- every returned 'TxInMempool' entry is checked for well-formedness.
 --
 -- Run with:
@@ -142,8 +141,7 @@ hprop_rpc_read_mempool = integrationRetryWorkspace 2 "rpc-read-mempool" $ \tempA
       then
         H.note_
           "Mempool was empty at read time; the transaction most likely confirmed \
-          \before the read happened (documented single-node testnet race, see \
-          \cardano-rpc's mempool-methods.md)"
+          \before the read happened (documented single-node testnet race)"
       else
         forM_ items $ \item -> do
           H.note_ "Verify TxInMempool entry is well-formed"
