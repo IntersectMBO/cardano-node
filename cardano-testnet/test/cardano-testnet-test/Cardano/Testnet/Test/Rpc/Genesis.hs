@@ -90,17 +90,17 @@ hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempA
 
   H.note_ "genesis is the Blake2b-256 hash of the raw Shelley genesis file bytes, exactly as the node computed it at startup"
   response ^. U5c.genesis
-    H.=== Crypto.hashToBytes (Crypto.hashWith id originalGenesisBytes :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString)
+    === Crypto.hashToBytes (Crypto.hashWith id originalGenesisBytes :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString)
 
   H.note_ "caip2 is derived from the testnet's own network magic"
-  response ^. U5c.caip2 H.=== networkMagicToCaip2 (fromIntegral testnetMagic)
+  response ^. U5c.caip2 === networkMagicToCaip2 (fromIntegral testnetMagic)
 
   H.note_ "The cardano config oneof is set"
   cardanoGenesis <- H.nothingFail (response ^. U5c.maybe'cardano)
 
   H.note_ "Shelley: epochLength, networkMagic, systemStart, protocolParams"
   H.assertWith (cardanoGenesis ^. U5c.epochLength) (> 0)
-  cardanoGenesis ^. U5c.networkMagic H.=== fromIntegral testnetMagic
+  cardanoGenesis ^. U5c.networkMagic === fromIntegral testnetMagic
   H.assertWith (cardanoGenesis ^. U5c.systemStart) $ not . Text.null
   void $ H.nothingFail (cardanoGenesis ^. U5c.maybe'protocolParams)
 
@@ -129,7 +129,7 @@ hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempA
         (\(addressHex, amount) -> (,) addressHex . toInteger <$> H.nothingFail (amount ^. U5c.maybe'int))
         (Map.toList (cardanoGenesis ^. U5c.initialFunds))
 
-  actualInitialFunds H.=== expectedInitialFunds
+  actualInitialFunds === expectedInitialFunds
 
   H.note_ "Byron: protocolConsts, startTime, bootStakeholders"
   protocolConsts <- H.nothingFail (cardanoGenesis ^. U5c.maybe'protocolConsts)

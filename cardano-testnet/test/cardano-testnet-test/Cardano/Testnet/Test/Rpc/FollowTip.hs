@@ -138,7 +138,7 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
     apply3 <- nextElemFail applyElem3
 
     resetRef <- H.nothingFail (resetMsg ^. U5c.maybe'reset)
-    resetRef ^. U5c.slot H.=== 0
+    resetRef ^. U5c.slot === 0
     H.assertWith (resetRef ^. U5c.hash) BS.null
 
     tipAfterReset <- H.nothingFail (resetMsg ^. U5c.maybe'tip)
@@ -167,8 +167,8 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
     [resumeElem] <- followTipN 1 [def & U5c.slot .~ seenSlot & U5c.hash .~ seenHash]
     resumeMsg <- nextElemFail resumeElem
     resumeResetRef <- H.nothingFail (resumeMsg ^. U5c.maybe'reset)
-    resumeResetRef ^. U5c.slot H.=== seenSlot
-    resumeResetRef ^. U5c.hash H.=== seenHash
+    resumeResetRef ^. U5c.slot === seenSlot
+    resumeResetRef ^. U5c.hash === seenHash
 
   do
     H.note_ "An empty intersect list follows from the current tip: the reset lands at or after the previously observed tip"
@@ -240,7 +240,7 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf Submit.SubmitService "submitTx")) $
         def & Submit.tx .~ (def & Submit.raw .~ serialiseToRawBytes (Exp.SignedTx signedLedgerTx))
     submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. Submit.ref
-    txId' H.=== submittedTxId
+    txId' === submittedTxId
 
     H.note_ "Tailing FollowTip from the pre-submission tip until the submitted transaction appears in an apply message"
     foundTx <- followTipUntilTx [preSubmissionTip] txHash 30
@@ -250,9 +250,9 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
         H.failMessage callStack "submitted transaction did not appear in a FollowTip apply message within 30 apply messages"
 
     H.note_ "The found transaction's hash, fee and parsed inputs/outputs match what was submitted"
-    tx ^. U5c.hash H.=== txHash
+    tx ^. U5c.hash === txHash
     txFee <- H.leftFail $ tx ^. U5c.fee . to utxoRpcBigIntToInteger
-    txFee H.=== fee
+    txFee === fee
     H.assertWith (tx ^. U5c.inputs) $ not . null
     H.assertWith (tx ^. U5c.outputs) $ not . null
 
