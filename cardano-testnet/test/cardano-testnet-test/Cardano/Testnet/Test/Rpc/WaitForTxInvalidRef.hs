@@ -30,10 +30,9 @@ import           Testnet.Property.Util (integrationRetryWorkspace)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
--- | E2E test for the WaitForTx gRPC method's error path (SubmitService),
--- covering AC7 of cardano-rpc's mempool-methods.md: a malformed (wrong
--- length) transaction reference fails the stream with INVALID_ARGUMENT
--- before any message is delivered.
+-- | E2E test for the WaitForTx gRPC method's error path (SubmitService):
+-- a malformed (wrong length) transaction reference fails the stream with
+-- INVALID_ARGUMENT before any message is delivered.
 --
 -- This bypasses 'Rpc.serverStreaming': its @recv@ maps both a clean end of
 -- stream and an error-terminated stream to the same 'NextElem'/'NoNextElem'
