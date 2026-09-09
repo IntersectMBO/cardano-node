@@ -119,6 +119,20 @@ allow-newer:
   -- (cardano-api's own bound is already ^>=1.7||^>=1.8, no entry needed.)
   , cardano-cli:cardano-crypto-wrapper
 
+-- TEMPORARY: upstream cardano-node master (picked up via rebase/index-state
+-- bump) now pins ouroboros-consensus ^>=4.2.0.1, but the ouroboros-consensus
+-- PR #2213 (erikd/ram) SRP below is still self-versioned 4.2.0.0 -- the
+-- 4.2.0.1/4.2.1.0 releases are two small unrelated backports (an
+-- ioctxIOWaitMetrics flag flip, and a GetGenesisConfig decoding fix for
+-- cardano-ledger-shelley's new sgExtraConfig field) off a branch PR #2213
+-- hasn't merged in yet. A clean local merge of that backport branch onto
+-- erikd/ram has been prepared (version 4.2.1.0, crypton/ram fix untouched)
+-- but not pushed -- drop this allow-older once PR #2213 is updated to
+-- version >=4.2.0.1 and the SRP tag below is bumped to match.
+allow-older:
+  , cardano-node:ouroboros-consensus
+  , tx-generator:ouroboros-consensus
+
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
   allow-newer:
