@@ -18,7 +18,7 @@ module Main (main) where
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch, finally)
 import Control.Monad (forM_, unless, when)
-import Data.Bifunctor (first)
+import Data.Bifunctor (bimap, first)
 import Data.List (partition)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -724,7 +724,7 @@ data ProtocolParameters = ProtocolParameters
   { epochLength :: Integer
   , minFeeA     :: Integer
   , minFeeB     :: Integer
-  } 
+  }
 
 instance Aeson.FromJSON ProtocolParameters where
   parseJSON = Aeson.withObject "ProtocolParameters" $ \o -> do
@@ -947,7 +947,7 @@ mkConsensusProtocol nodeConfig =
     NodeProtocolConfigurationCardano
       byronCfg shelleyCfg alonzoCfg conwayCfg
       dijkstraCfg hardforkCfg checkpointsCfg ->
-        first show <$>
+        bimap show fst <$>
           runExceptT (mkSomeConsensusProtocolCardano
             byronCfg shelleyCfg alonzoCfg conwayCfg
             dijkstraCfg hardforkCfg checkpointsCfg Nothing)
