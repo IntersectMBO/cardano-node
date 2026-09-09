@@ -1252,7 +1252,7 @@ instance
 
 instance
   ( Ledger.Crypto crypto
-  ) => LogFormatting (Praos.PraosValidationErr crypto) where
+  ) => LogFormatting (Praos.BasePraosValidationErr pext crypto) where
   forMachine _ err' =
     case err' of
       Praos.VRFKeyUnknown unknownKeyHash ->
@@ -1315,6 +1315,20 @@ instance
       Praos.NoCounterForKeyHashOCERT stakePoolKeyHash->
         mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
                 , "stakePoolKeyHash" .= stakePoolKeyHash
+                ]
+      Praos.LeiosCertWithoutAnnouncement _proof ->
+        mconcat [ "kind" .= String "LeiosCertWithoutAnnouncement"
+                ]
+      Praos.LeiosCertTooYoung _proof announcingSlot slotNo earliestSlot ->
+        mconcat [ "kind" .= String "LeiosCertTooYoung"
+                , "announcingSlot" .= announcingSlot
+                , "slot" .= slotNo
+                , "earliestCertifyingSlot" .= earliestSlot
+                ]
+      Praos.LeiosEbTooBig _proof announcedSize maxSize ->
+        mconcat [ "kind" .= String "LeiosEbTooBig"
+                , "announcedEndorserBlockSize" .= announcedSize
+                , "maxEndorserBlockSize" .= maxSize
                 ]
 
 instance LogFormatting (Praos.PraosCannotForge crypto) where
