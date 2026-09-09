@@ -65,7 +65,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
       sbe = convert era
       anyEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
 
   TestnetRuntime
     { configurationFile

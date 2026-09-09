@@ -14,6 +14,7 @@ module Cardano.Testnet (
   TestnetRuntimeOptions(..),
   TestnetEnvOptions(..),
   RpcSupport(..),
+  RpcHttpOptions(..),
   TestnetNodesWithOptions(..),
   NodeWithOptions(..),
   cardanoDefaultTestnetNodesWithOptions,
@@ -49,9 +50,11 @@ module Cardano.Testnet (
   relayNodes,
 
   TestnetNode(..),
+  NodeRpcEndpoint(..),
   isTestnetNodeSpo,
   nodeSocketPath,
   nodeRpcSocketPath,
+  nodeGrpcServer,
   ) where
 
 import           Testnet.Components.Query

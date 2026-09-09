@@ -49,7 +49,7 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
 
   TestnetRuntime
     { testnetNodes = node0 :| _

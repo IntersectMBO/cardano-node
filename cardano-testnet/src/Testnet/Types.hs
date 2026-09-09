@@ -20,8 +20,10 @@ module Testnet.Types
   , relayNodes
   , testnetSprockets
   , TestnetNode(..)
+  , NodeRpcEndpoint(..)
   , nodeSocketPath
   , nodeRpcSocketPath
+  , nodeGrpcServer
   , nodeConnectionInfo
   , testnetNodeConnectionInfo
   , isTestnetNodeSpo
@@ -55,12 +57,15 @@ import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+import qualified Cardano.Rpc.Client as Rpc
 import           Cardano.Rpc.Server.Config (nodeSocketPathToRpcSocketPath)
 
 import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as A
+import           Data.Functor ((<&>))
+import           Data.IP (IP (..))
 import           Data.List (intercalate)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NEL
@@ -139,6 +144,7 @@ relayNodes = NEL.filter (not . isTestnetNodeSpo) . testnetNodes
 data TestnetNode = TestnetNode
   { nodeName :: !String
   , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
+  , nodeRpcEndpoint :: Maybe NodeRpcEndpoint -- ^ Nothing when RPC is disabled
   , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
@@ -147,6 +153,22 @@ data TestnetNode = TestnetNode
   , nodeStderr :: !FilePath
   , nodeProcessHandle :: !IO.ProcessHandle
   }
+
+-- | Where a testnet node's gRPC server listens
+data NodeRpcEndpoint
+  = NodeRpcUnixSocket SocketPath
+  | NodeRpcHttp IP PortNumber
+  deriving (Eq, Show)
+
+instance Pretty NodeRpcEndpoint where
+  pretty = \case
+    NodeRpcUnixSocket socketPath -> pretty ("unix socket " :: String) <> pretty (unFile socketPath)
+    NodeRpcHttp ip port ->
+      -- A URL needs brackets around an IPv6 host; grapesy's bracket-less 'show' is used for binding instead.
+      let host = case ip of
+            IPv4 _ -> pshow ip
+            IPv6 _ -> pretty ("[" :: String) <> pshow ip <> pretty ("]" :: String)
+      in pretty ("http://" :: String) <> host <> pretty (":" :: String) <> pshow port
 
 data TestnetKesAgent = TestnetKesAgent
   { kesAgentName :: !String
@@ -168,6 +190,21 @@ nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 -- | Provide a default RPC socket path
 nodeRpcSocketPath :: TestnetNode -> SocketPath
 nodeRpcSocketPath = nodeSocketPathToRpcSocketPath . nodeSocketPath
+
+-- | gRPC client connection target of the node, when RPC is enabled
+nodeGrpcServer :: TestnetNode -> Maybe Rpc.Server
+nodeGrpcServer node = nodeRpcEndpoint node <&> \case
+  NodeRpcUnixSocket socketPath -> Rpc.ServerUnix $ unFile socketPath
+  NodeRpcHttp ip port ->
+    Rpc.ServerInsecure Rpc.Address
+      { Rpc.addressHost = show ip
+      , Rpc.addressPort = port
+      -- grapesy falls back to bare 'addressHost' for the HTTP/2 ':authority' when this is
+      -- Nothing, but RFC 3986 requires an IPv6 literal to be bracketed in that position.
+      , Rpc.addressAuthority = case ip of
+          IPv4 _ -> Nothing
+          IPv6 _ -> Just $ "[" <> show ip <> "]"
+      }
 
 -- | Connection data for a node in the testnet
 nodeConnectionInfo :: MonadTest m

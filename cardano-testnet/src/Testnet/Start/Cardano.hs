@@ -51,7 +51,7 @@ import           Prelude hiding (lines)
 
 import           Control.Concurrent (myThreadId, threadDelay)
 import           Control.Exception (IOException)
-import           Control.Monad (forM, forM_, guard, unless, when)
+import           Control.Monad (forM, forM_, guard, replicateM, unless, when)
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
@@ -61,16 +61,19 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
 import           Data.Functor
+import           Data.IP (IP)
 import           Data.List (sort, stripPrefix)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
 import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
 import qualified Data.Yaml as Yaml
+import           GHC.Exts (fromList)
 import           GHC.Stack
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
@@ -81,6 +84,7 @@ import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Orphans ()
+import qualified Testnet.Ping as Ping
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
 import           Testnet.Property.Assert (assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
@@ -326,6 +330,21 @@ cardanoTestnet
 
   let portNumbersMap = Map.fromList portNumbers
 
+  rpcPortsMap <- case cardanoEnableRpc of
+    RpcEnabledHttp RpcHttpOptions{rpcHttpListenPortBase = Just base}
+      -- Compute in Integer and narrow only after the check: PortNumber's Num is Word16 and
+      -- silently wraps, so 'base + numNodes - 1' could otherwise overflow undetected.
+      | lastPort > 65_535 ->
+          throwString $ "gRPC port base " <> show base <> " plus " <> show numNodes <> " testnet node(s) would exceed the maximum port number (65535)"
+      | otherwise -> pure . fromList . zip [1..] $ [base .. fromIntegral lastPort]
+      where
+        numNodes = length allNodes
+        lastPort = toInteger base + toInteger numNodes - 1
+    RpcEnabledHttp RpcHttpOptions{rpcHttpListenPortBase = Nothing, rpcHttpListenAddress} -> do
+      ports <- pickDistinctRandomPorts (fromList $ Map.elems portNumbersMap) rpcHttpListenAddress (length allNodes)
+      pure . fromList $ zip [1..] ports
+    _ -> pure Map.empty
+
   eTestnetNodes <- forConcurrently (zip [1..] allNodes) $ \(i, (isSpo, nodeWithOptions)) -> do
     port <- case Map.lookup i portNumbersMap of
       Just p -> pure p
@@ -366,6 +385,17 @@ cardanoTestnet
           keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
       pure (Just keys, kesSourceCliArg <> shelleyCliArgs <> byronCliArgs)
 
+    (mRpcHttpEndpoint, grpcArgs) <- case cardanoEnableRpc of
+      RpcDisabled -> pure (Nothing, [])
+      RpcEnabledUnixSocket -> pure (Nothing, ["--grpc-enable"])
+      RpcEnabledHttp RpcHttpOptions{rpcHttpListenAddress} -> do
+        rpcPort <- maybe (throwString $ "gRPC port not found for node " <> show i) pure $ Map.lookup i rpcPortsMap
+        let endpoint = NodeRpcHttp rpcHttpListenAddress rpcPort
+        pure
+          ( Just endpoint
+          , ["--grpc-enable", "--grpc-listen-address", show rpcHttpListenAddress, "--grpc-listen-port", show rpcPort]
+          )
+
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeWithOptions) $
         [ "run"
@@ -375,8 +405,30 @@ cardanoTestnet
         ]
         <> spoNodeCliArgs
         <> nodeExtraCliArgs nodeWithOptions
-        <> ["--grpc-enable" | RpcEnabled <- [cardanoEnableRpc]]
-    pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
+        <> grpcArgs
+
+    -- cardano-node swallows a gRPC HTTP bind failure silently (no stderr, exit 0), so a
+    -- successfully-started node can still have a dead endpoint; probe it before trusting it.
+    when (isRight eRuntime) $
+      forM_ mRpcHttpEndpoint $ \case
+        NodeRpcUnixSocket{} -> pure () -- readiness covered by the sprocket wait
+        NodeRpcHttp ip rpcHttpPort ->
+          Ping.waitForTcpPort 120 0.2 ip rpcHttpPort >>=
+            either
+              (const . throwString $ mconcat
+                [ "gRPC HTTP endpoint of ", nodeName
+                , " did not come up on ", show ip, ":", show rpcHttpPort
+                , " - port collision?"
+                ])
+              pure
+
+    pure $ eRuntime <&> \rt -> rt
+      { poolKeys = mKeys
+      , nodeRpcEndpoint = case cardanoEnableRpc of
+          RpcDisabled -> Nothing
+          RpcEnabledUnixSocket -> Just . NodeRpcUnixSocket $ nodeRpcSocketPath rt
+          RpcEnabledHttp _ -> mRpcHttpEndpoint
+      }
 
   let (failedNodes, startedNodes) = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
@@ -504,6 +556,27 @@ idToRemoteAddressP2P portNumbersMap (NodeId i) = case Map.lookup i portNumbersMa
       port
   Nothing -> do
     throwString $ "Found node id that was unaccounted for: " ++ show i
+
+-- | Draw 'count' free ports on 'address', retrying the whole batch until distinct from each
+-- other and from 'reserved' - closed sockets return their port to the pool, so redraws can clash.
+pickDistinctRandomPorts :: ()
+  => MonadIO m
+  => HasCallStack
+  => Set.Set PortNumber -- ^ ports that must not be reused
+  -> IP
+  -> Int -- ^ how many distinct ports to draw
+  -> m [PortNumber]
+pickDistinctRandomPorts reserved address count = go (100 :: Int)
+  where
+    go attemptsLeft
+      | attemptsLeft <= 0 =
+          throwString $ "Could not find " <> show count <> " distinct free gRPC ports on " <> show address <> " after 100 attempts"
+      | otherwise = do
+          ports <- replicateM count (Ping.randomFreePort address)
+          let portsSet = fromList ports
+          if Set.size portsSet == count && Set.disjoint portsSet reserved
+            then pure ports
+            else go (attemptsLeft - 1)
 
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()

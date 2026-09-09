@@ -51,7 +51,7 @@ hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempA
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledHttp def}
 
   TestnetRuntime
     { shelleyGenesisFile
@@ -60,8 +60,7 @@ hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempA
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf
 
-  rpcSocket <- H.note . unFile $ nodeRpcSocketPath node0
-  let rpcServer = Rpc.ServerUnix rpcSocket
+  rpcServer <- H.noteShow =<< H.nothingFail (nodeGrpcServer node0)
 
   originalGenesisBytes <- H.evalIO $ BS.readFile shelleyGenesisFile
 

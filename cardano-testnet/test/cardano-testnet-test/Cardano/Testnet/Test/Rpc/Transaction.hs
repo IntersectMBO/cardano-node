@@ -49,7 +49,7 @@ hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath'
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
       addressInEra = asAddressInEra sbe
 
   TestnetRuntime
