@@ -120,20 +120,6 @@ allow-newer:
   -- (cardano-api's own bound is already ^>=1.7||^>=1.8, no entry needed.)
   , cardano-cli:cardano-crypto-wrapper
 
--- TEMPORARY: upstream cardano-node master (picked up via rebase/index-state
--- bump) now pins ouroboros-consensus ^>=4.2.0.1, but the ouroboros-consensus
--- PR #2213 (erikd/ram) SRP below is still self-versioned 4.2.0.0 -- the
--- 4.2.0.1/4.2.1.0 releases are two small unrelated backports (an
--- ioctxIOWaitMetrics flag flip, and a GetGenesisConfig decoding fix for
--- cardano-ledger-shelley's new sgExtraConfig field) off a branch PR #2213
--- hasn't merged in yet. A clean local merge of that backport branch onto
--- erikd/ram has been prepared (version 4.2.1.0, crypton/ram fix untouched)
--- but not pushed -- drop this allow-older once PR #2213 is updated to
--- version >=4.2.0.1 and the SRP tag below is bumped to match.
-allow-older:
-  , cardano-node:ouroboros-consensus
-  , tx-generator:ouroboros-consensus
-
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
   allow-newer:
@@ -231,16 +217,24 @@ source-repository-package
 
 -- ouroboros-consensus PR #2213 (erikd/ram):
 -- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213
--- based directly on the released ouroboros-consensus-4.1.0.0 tag (version
--- unchanged), plus a Byron backport and "Updates for crypton/memory/ram
--- changes", which widens its own cardano-crypto-class bound to
--- ^>=2.5||^>=2.6 natively (no more allow-newer needed for it). The .cabal
--- lives at the repo root (its own cabal.project says `packages: .`), so no
--- subdir is needed.
+-- built from the original PR #2213 tip (based on the released 4.2.0.0 tag,
+-- widens its own cardano-crypto-class bound to ^>=2.5||^>=2.6 natively --
+-- no more allow-newer needed for it) merged with the small
+-- ouroboros-consensus-4.x-backports branch (an ioctxIOWaitMetrics flag
+-- flip, and a GetGenesisConfig decoding fix for cardano-ledger-shelley's
+-- new sgExtraConfig field), landing at version 4.2.1.0 -- satisfies both
+-- cardano-node's ouroboros-consensus ^>=4.2.0.1 bound and cardano-api PR
+-- #1292's ^>=4.2 bound. (An earlier attempt rebased this PR onto current
+-- ouroboros-consensus main instead -- 163+ commits past the 4.2.0.0 tag --
+-- which pulled in unreleased Leios-prep work transitively requiring
+-- cardano-ledger-binary ^>=1.10 and cardano-crypto-leios ^>=0.3, neither of
+-- which exist in CHaP; reverted in favour of this smaller, clean merge.)
+-- The .cabal lives at the repo root (its own cabal.project says
+-- `packages: .`), so no subdir is needed.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 6a0f887a9940a283b99f7b6c2a9efedc425b2e1c
+  tag: aed5521fb4824f33421571b0623b8f4b820747e5
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
