@@ -232,8 +232,30 @@
           };
         });
 
+      projectExes = collectExes project;
+
+      # cardano-testnet only resolves cardano-node/cardano-cli via CARDANO_NODE/CARDANO_CLI
+      # (never PATH); wrap it so `nix run` is self-contained. --set-default lets an
+      # exported CARDANO_NODE/CARDANO_CLI in the caller's shell still win.
+      cardano-testnet-wrapped = pkgs.runCommand "cardano-testnet"
+        {
+          nativeBuildInputs = [pkgs.makeWrapper];
+          inherit (projectExes.cardano-testnet) meta;
+          passthru = {unwrapped = projectExes.cardano-testnet;};
+        }
+        ''
+          mkdir -p $out/bin
+          makeWrapper ${projectExes.cardano-testnet}/bin/cardano-testnet $out/bin/cardano-testnet \
+            --set-default CARDANO_NODE ${projectExes.cardano-node}/bin/cardano-node \
+            --set-default CARDANO_CLI ${projectExes.cardano-cli}/bin/cardano-cli
+        '';
+
       exes =
-        (collectExes project)
+        projectExes
+        // {
+          cardano-testnet = cardano-testnet-wrapped;
+          cardano-testnet-thin = projectExes.cardano-testnet;
+        }
         // {
           inherit (pkgs) checkCabalProject;
         }
