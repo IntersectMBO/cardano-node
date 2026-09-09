@@ -18,6 +18,7 @@ import           Cardano.Logging
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.Tracers.Consensus (mapLeiosSeverity)
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.HasIssuer
 import           Cardano.Prelude (maximumDef)
@@ -61,6 +62,7 @@ import           Data.Int (Int64)
 import           Data.SOP (All, K (..), hcmap, hcollapse)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified LeiosDemoTypes as Leios
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable, cast)
 import           Data.Void (absurd)
@@ -546,6 +548,7 @@ instance ( LogFormatting (Header blk)
         Text.concat [ "\nEvent: " <> showT e | e <- es ] <>
         "\nReason: " <> forHuman reasonForSwitch
   forHuman (ChainDB.AddBlockValidation ev') = forHuman ev'
+  forHuman (ChainDB.AddBlockLeiosEvent ev') = Leios.traceLeiosChainSelForHuman ev'
   forHuman (ChainDB.AddedBlockToVolatileDB pt _ _ enclosing) =
       case enclosing of
         RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
@@ -671,6 +674,8 @@ instance ( LogFormatting (Header blk)
 
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     forMachine dtal ev'
+  forMachine _dtal (ChainDB.AddBlockLeiosEvent ev') =
+    Leios.traceLeiosChainSelToObject ev'
   forMachine dtal (ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ enclosing) =
       mconcat $ [ "kind" .= String "AddedBlockToVolatileDB"
                 , "block" .= forMachine dtal pt
@@ -774,6 +779,11 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["ChangingSelection"]
   namespaceFor (ChainDB.AddBlockValidation ev') =
     nsPrependInner "AddBlockValidation" (namespaceFor ev')
+  namespaceFor (ChainDB.AddBlockLeiosEvent ev') =
+    Namespace []
+      ( "AddBlockLeiosEvent"
+          : Leios.nsiPath (Leios.leiosChainSelNSInfo (Leios.leiosChainSelNSOf ev'))
+      )
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
   namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue {} =
@@ -817,6 +827,8 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   severityFor (Namespace _ ["PoppedReprocessLoEBlocksFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["ChainSelectionLoEDebug"]) _ = Just Debug
   severityFor (Namespace _ ["TraceAddBlockCall"]) _ = Just Debug
+  severityFor (Namespace _ ("AddBlockLeiosEvent" : tl)) _ =
+    mapLeiosSeverity . Leios.nsiSeverity <$> Leios.leiosChainSelNSByPath tl
   severityFor _ _ = Nothing
 
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.AddBlockValidation ev')) =
@@ -972,6 +984,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
           (allNamespaces :: [Namespace (ChainDB.TracePipeliningEvent blk)])
     ++ map (nsPrependInner "AddBlockValidation")
           (allNamespaces :: [Namespace (ChainDB.TraceValidationEvent blk)])
+    ++ [ Namespace [] ("AddBlockLeiosEvent" : p)
+       | p <- Leios.leiosChainSelNSPaths
+       ]
 
 --------------------------------------------------------------------------------
 -- ChainDB TracePipeliningEvent
@@ -2889,49 +2904,10 @@ instance (   LogFormatting (LedgerError blk)
     asMetrics (ExtValidationErrorLeios err) = asMetrics err
 
 instance LogFormatting LeiosExtValidationError where
-    forMachine _ (LeiosCertificateWithoutAnnouncement cert) =
-      mconcat [ "kind" .= String "LeiosCertificateWithoutAnnouncement"
-              , "certificate" .= String (Text.pack (show cert))
-              ]
-    forMachine _ (LeiosMissingCommittee point cert) =
-      mconcat [ "kind" .= String "LeiosMissingCommittee"
-              , "announcedEb" .= String (Text.pack (show point))
-              , "certificate" .= String (Text.pack (show cert))
-              ]
-    forMachine _ LeiosMissingThreshold =
-      mconcat [ "kind" .= String "LeiosMissingThreshold"
-              ]
-    forMachine _ (LeiosCertificateAfterGenesis cert point) =
-      mconcat [ "kind" .= String "LeiosCertificateAfterGenesis"
-              , "certificate" .= String (Text.pack (show cert))
-              , "announcedEb" .= String (Text.pack (show point))
-              ]
-    forMachine _ (LeiosInvalidCertificate cert point rbHash verErr) =
-      mconcat [ "kind" .= String "LeiosInvalidCertificate"
-              , "certificate" .= String (Text.pack (show cert))
-              , "announcedEb" .= String (Text.pack (show point))
-              , "announcingRb" .= String (Text.pack (show rbHash))
-              , "verificationError" .= String (Text.pack (show verErr))
-              ]
-
-    forHuman (LeiosCertificateWithoutAnnouncement cert) =
-      "CertRB carries a Leios certificate but its predecessor announced no EB: "
-        <> Text.pack (show cert)
-    forHuman (LeiosMissingCommittee point cert) =
-      "CertRB for " <> Text.pack (show point)
-        <> " but there is no Leios committee to verify its certificate: " <> Text.pack (show cert)
-    forHuman LeiosMissingThreshold =
-      "CertRB validation, but no quorum stake threshold in pparams"
-    forHuman (LeiosCertificateAfterGenesis cert point) =
-      "CertRB for " <> Text.pack (show point)
-        <> " has no announcing ranking block (would certify at genesis): " <> Text.pack (show cert)
-    forHuman (LeiosInvalidCertificate cert point rbHash verErr) =
-      "Invalid Leios certificate for " <> Text.pack (show point)
-        <> " announced by ranking block " <> Text.pack (show rbHash) <> ": " <> Text.pack (show verErr)
-        <> " (" <> Text.pack (show cert) <> ")"
+    forMachine _ = Leios.leiosExtValidationErrorToObject
+    forHuman = Leios.leiosExtValidationErrorForHuman
 
     asMetrics _ = []
-
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where
   forMachine _dtal (PBFT.PBftInvalidSignature text) =

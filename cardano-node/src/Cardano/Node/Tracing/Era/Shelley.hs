@@ -83,6 +83,7 @@ import qualified Data.Set.NonEmpty as NonEmptySet
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text.Encoding
+import qualified LeiosDemoTypes as Leios
 
 {- HLINT ignore "Use :" -}
 
@@ -1316,20 +1317,8 @@ instance
         mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
                 , "stakePoolKeyHash" .= stakePoolKeyHash
                 ]
-      Praos.LeiosCertWithoutAnnouncement _proof ->
-        mconcat [ "kind" .= String "LeiosCertWithoutAnnouncement"
-                ]
-      Praos.LeiosCertTooYoung _proof announcingSlot slotNo earliestSlot ->
-        mconcat [ "kind" .= String "LeiosCertTooYoung"
-                , "announcingSlot" .= announcingSlot
-                , "slot" .= slotNo
-                , "earliestCertifyingSlot" .= earliestSlot
-                ]
-      Praos.LeiosEbTooBig _proof announcedSize maxSize ->
-        mconcat [ "kind" .= String "LeiosEbTooBig"
-                , "announcedEndorserBlockSize" .= announcedSize
-                , "maxEndorserBlockSize" .= maxSize
-                ]
+      Praos.LeiosHeaderErr _proof leiosErr ->
+        Leios.leiosHeaderErrToObject leiosErr
 
 instance LogFormatting (Praos.PraosCannotForge crypto) where
   forMachine _ (Praos.PraosCannotForgeKeyNotUsableYet currentKesPeriod startingKesPeriod) =
