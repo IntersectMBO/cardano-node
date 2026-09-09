@@ -23,6 +23,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , initialLeiosMetrics
   , calculateLeiosMetrics
   , LeiosMetrics
+  , mapLeiosSeverity
     -- * Tx-Submission / Mempool
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
