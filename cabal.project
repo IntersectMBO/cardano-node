@@ -238,39 +238,50 @@ source-repository-package
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
--- now rebased onto ouroboros-consensus ^>=4.0||^>=4.1 / ouroboros-network
--- ^>=1.2 (matching what's resolved above), with cardano-crypto-class
--- ^>=2.6 and cardano-crypto-wrapper ^>=1.7||^>=1.8 accepted natively, and
--- no more `memory` dependency anywhere.
+-- rebased onto current cardano-api master (11.7.0.0), picking up the TCP/TLS
+-- RPC listening feature cardano-node master now uses, the
+-- ouroboros-consensus ^>=4.2.1.0 bound bump, and the
+-- caseShelleyToBabbageOrConwayEraOnwards removal (cardano-cli PR #1417
+-- still calls this in 5 places -- needs a matching update, see PR #1417's
+-- SRP comment below). cardano-crypto-class ^>=2.6 and cardano-crypto-wrapper
+-- ^>=1.7||^>=1.8 still accepted natively, and no `memory` dependency
+-- anywhere.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: f0a61f6966ac94db41d81e00bc31a2e3ca2c9a0f
+  tag: 3db5a0310a3df10952ef1954122e2557816b5021
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
 -- cardano-rpc lives in the same repo/commit as the cardano-api SRP above
--- and needs to move in lockstep with it -- CHaP's released
--- cardano-rpc-11.1.0.0 still depends on memory and also has an unrelated
--- API drift against this cardano-api's Cardano.Api.Consensus exports
--- (byronGenesis/byronProtocolParams/cardanoLedgerTransitionConfig), both
--- of which this PR's cardano-rpc has already been updated for.
+-- and needs to move in lockstep with it -- now at 11.3.0.0, includes the
+-- TCP/TLS RPC listening feature, no `memory` dependency. One extra commit
+-- on top of the master rebase: cardano-api's own new
+-- serverExceptionToClient assignment in Cardano.Rpc.Server was written
+-- against an older grapesy (SomeException-typed field); grapesy-1.2.0
+-- (what we resolve) changed this field to ExactException. Fixed by
+-- unwrapping via the ExactException pattern before use -- unrelated to
+-- crypton/ram, just a side effect of rebasing onto real cardano-api master
+-- with a newer Hackage index-state than upstream's own CI uses.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: f0a61f6966ac94db41d81e00bc31a2e3ca2c9a0f
+  tag: 3db5a0310a3df10952ef1954122e2557816b5021
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
 -- https://github.com/IntersectMBO/cardano-cli/pull/1417
--- now properly rebased onto the released cardano-cli-11.2.2.0 tag, plus one
--- commit adapting to unrelated upstream cardano-api API removals
--- (closed-range eon eliminators, Data.Validation's liftError). Still pins
--- cardano-crypto-class ^>=2.5 and cardano-crypto-wrapper ^>=1.7 natively
--- (unchanged), so the existing allow-newer entries for those still apply.
+-- rebased onto current cardano-cli master (11.2.3.1), which now requires
+-- cardano-api ^>=11.7 (matching the cardano-api PR #1292 SRP above) and no
+-- longer calls the removed caseShelleyToBabbageOrConwayEraOnwards (replaced
+-- upstream with inEonForShelleyBasedEra; our own getStakeCred helper in
+-- Transaction/Run.hs was renamed to attachWitness by the same upstream
+-- commit, logic unchanged). Still pins cardano-crypto-class ^>=2.5 and
+-- cardano-crypto-wrapper ^>=1.7 natively (unchanged), so the existing
+-- allow-newer entries for those still apply.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 5ebc9398ce86226344153f24194cf954929e1150
+  tag: d8fe8b62e24603b01ae0590fe10d6fd1167d9b53
   subdir: cardano-cli
