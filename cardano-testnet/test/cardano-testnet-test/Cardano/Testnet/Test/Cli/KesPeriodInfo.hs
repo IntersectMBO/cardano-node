@@ -61,9 +61,8 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_kes_period_info :: Property
 hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
-    -- TODO: Move yaml filepath specification into individual node options
-    <- mkConf tempAbsBasePath'
+  -- TODO: Move yaml filepath specification into individual node options
+  let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       ceo = ConwayEraOnwardsConway

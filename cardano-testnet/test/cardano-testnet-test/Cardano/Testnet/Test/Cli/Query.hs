@@ -78,8 +78,7 @@ import           RIO (runRIO)
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
 hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
-    <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let sbe = ShelleyBasedEraConway

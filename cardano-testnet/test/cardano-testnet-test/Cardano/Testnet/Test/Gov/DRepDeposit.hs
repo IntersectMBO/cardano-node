@@ -36,7 +36,7 @@ hprop_ledger_events_drep_deposits :: Property
 hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

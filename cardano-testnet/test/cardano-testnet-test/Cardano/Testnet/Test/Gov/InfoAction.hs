@@ -54,7 +54,7 @@ hprop_ledger_events_info_action :: Property
 hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf@Conf { tempAbsPath } <- H.noteShow $ mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 

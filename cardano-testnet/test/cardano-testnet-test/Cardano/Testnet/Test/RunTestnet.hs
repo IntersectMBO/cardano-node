@@ -6,7 +6,7 @@ module Cardano.Testnet.Test.RunTestnet
   ( hprop_run_testnet
   ) where
 
-import           Cardano.Testnet (TestnetCreationOptions (..), createAndRunTestnet, mkConf)
+import           Cardano.Testnet (TestnetCreationOptions (..), createAndRunTestnet, mkConfig)
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
 import           Prelude
@@ -28,7 +28,7 @@ hprop_run_testnet = integrationRetryWorkspace 2 "run-testnet" $ \tmpDir -> H.run
         { creationGenesisOptions = def { genesisEpochLength = 200 }
         }
 
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   runtime <- createAndRunTestnet creationOptions def conf
 
   nodesProduceBlocks tmpDir runtime

@@ -45,7 +45,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- @TASTY_PATTERN='/RPC Transaction Submit/' cabal test cardano-testnet-test@
 hprop_rpc_transaction :: Property
 hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}

@@ -37,7 +37,7 @@ hprop_mainnet_params = integrationRetryWorkspace 2 "mainnet-params" $ \tmpDir ->
         }
 
   -- Generate the sandbox
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Run testnet with mainnet on-chain params

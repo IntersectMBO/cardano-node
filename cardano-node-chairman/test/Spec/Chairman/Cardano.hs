@@ -17,7 +17,7 @@ import           Spec.Chairman.Chairman (chairmanOver)
 
 hprop_chairman :: H.Property
 hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsPath'
+  let conf = mkConfig tempAbsPath'
 
   let creationOptions = def{ creationNodes = cardanoDefaultTestnetNodesWithOptions }
   allNodes <- testnetNodes <$> createAndRunTestnet creationOptions def conf

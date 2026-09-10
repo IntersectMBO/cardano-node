@@ -48,7 +48,7 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3 purposes/"'@
 hprop_plutus_purposes_v3 :: Property
 hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
@@ -198,7 +198,7 @@ hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purpos
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 transaction with two script certs/"'@
 hprop_tx_two_script_certs_v2 :: Property
 hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
