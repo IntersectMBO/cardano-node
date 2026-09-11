@@ -1,0 +1,7 @@
+pr: 6688
+kind:
+  - documentation
+description: |
+  - Restored the `cardano-testnet` usage guide into `cardano-testnet/README.md`,
+    replacing the link to the developer portal (which deleted the page), and
+    refreshed it for the current command-line interface
