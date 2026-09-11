@@ -13,7 +13,9 @@ Usage: cardano-testnet cardano
     [--output-dir DIRECTORY]
   ]
   [--enable-new-epoch-state-logging]
-  [--enable-grpc]
+  [ --enable-grpc
+  | --enable-grpc-http [--grpc-listen-address IP] [--grpc-listen-port-base PORT]
+  ]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
   

@@ -11,7 +11,9 @@ Usage: cardano-testnet cardano
     [--output-dir DIRECTORY]
   ]
   [--enable-new-epoch-state-logging]
-  [--enable-grpc]
+  [ --enable-grpc
+  | --enable-grpc-http [--grpc-listen-address IP] [--grpc-listen-port-base PORT]
+  ]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
   
@@ -60,7 +62,20 @@ Available options:
                            logs/ledger-epoch-state.log
   --enable-grpc            [EXPERIMENTAL] Enable gRPC endpoint on all of testnet
                            nodes. The listening socket file will be the same
-                           directory as node's N2C socket.
+                           directory as node's N2C socket. Listens on a unix
+                           socket.
+  --enable-grpc-http       [EXPERIMENTAL] Enable gRPC endpoint over HTTP without
+                           TLS (h2c) on all of testnet nodes. Listens on
+                           127.0.0.1 on a random port per node unless
+                           --grpc-listen-address/--grpc-listen-port-base are
+                           given.
+  --grpc-listen-address IP IP address the gRPC HTTP endpoints of all nodes
+                           listen on. Requires --enable-grpc-http.
+                           (default: 127.0.0.1)
+  --grpc-listen-port-base PORT
+                           Base port for gRPC HTTP listeners: testnet node i
+                           listens on PORT+i-1. Random free ports are used when
+                           omitted. Requires --enable-grpc-http.
   --use-kes-agent          Get Praos block forging credentials from kes-agent
                            via the default socket path
   --disable-chain-stall-watchdog

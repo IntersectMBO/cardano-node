@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Cardano
@@ -6,20 +7,24 @@ module Parsers.Cardano
   , parseNodeSpecs
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra (..))
+import           Cardano.Api (AnyShelleyBasedEra (..), (?!))
 
 import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
 import           Cardano.Prelude (readMaybe)
+import           Cardano.Rpc.Server.Config (defaultRpcListenAddress)
 
 import           Prelude
 
 import           Control.Applicative (optional, (<|>))
-import           Control.Monad (unless)
+import           Control.Monad (unless, when)
+import           Data.Char (isDigit)
 import           Data.Default.Class (def)
+import           Data.IP (IP)
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe
 import           Data.Word (Word64)
+import           Network.Socket (PortNumber)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
 import           Options.Applicative.Types (readerAsk)
@@ -99,11 +104,51 @@ pEnableNewEpochStateLogging = OA.switch
   )
 
 pEnableRpc :: Parser RpcSupport
-pEnableRpc = OA.flag RpcDisabled RpcEnabled
-  (   OA.long "enable-grpc"
-  <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket."
-  <>  OA.showDefault
-  )
+pEnableRpc =
+      OA.flag' RpcEnabledUnixSocket
+        (   OA.long "enable-grpc"
+        <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint on all of testnet nodes. The listening socket file will be the same directory as node's N2C socket. Listens on a unix socket."
+        )
+  <|> RpcEnabledHttp <$>
+        (   OA.flag' ()
+              (   OA.long "enable-grpc-http"
+              <>  OA.help "[EXPERIMENTAL] Enable gRPC endpoint over HTTP without TLS (h2c) on all of testnet nodes. Listens on 127.0.0.1 on a random port per node unless --grpc-listen-address/--grpc-listen-port-base are given."
+              )
+        *>  (   RpcHttpOptions
+            <$> OA.option ipReader
+                  (   OA.long "grpc-listen-address"
+                  <>  OA.metavar "IP"
+                  <>  OA.value defaultRpcListenAddress
+                  <>  OA.showDefault
+                  <>  OA.help "IP address the gRPC HTTP endpoints of all nodes listen on. Requires --enable-grpc-http."
+                  )
+            <*> OA.optional
+                  (   OA.option portReader
+                        (   OA.long "grpc-listen-port-base"
+                        <>  OA.metavar "PORT"
+                        <>  OA.help "Base port for gRPC HTTP listeners: testnet node i listens on PORT+i-1. Random free ports are used when omitted. Requires --enable-grpc-http."
+                        )
+                  )
+            )
+        )
+  <|> pure RpcDisabled
+
+-- | Parse an IP address, mirroring cardano-node's own @--grpc-listen-address@ parser
+ipReader :: OA.ReadM IP
+ipReader = OA.eitherReader $ \raw ->
+  maybe (Left $ "Failed to parse IP address: " <> raw) Right (readMaybe raw)
+
+-- | Parse a port number. Decimal digits only (rejecting the sign/hex/whitespace a plain
+-- 'Integer' read would otherwise accept) and in range before narrowing to 'PortNumber',
+-- since a derived 'Read' on 'PortNumber' silently wraps out-of-range values.
+portReader :: OA.ReadM PortNumber
+portReader = OA.eitherReader $ \token -> do
+  when (null token || not (all isDigit token)) $
+    Left $ "Not a valid port number: " <> token
+  port :: Integer <- readMaybe token ?! ("Not a valid port number: " <> token)
+  when (1 > port || port > 65_535) $
+    Left $ "Port number out of range (1 - 65535): " <> show port
+  pure $ fromIntegral port
 
 pKesSource :: Parser PraosCredentialsSource
 pKesSource = OA.flag UseKesKeyFile UseKesSocket

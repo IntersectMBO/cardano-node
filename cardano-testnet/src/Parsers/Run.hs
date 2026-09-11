@@ -11,9 +11,12 @@ module Parsers.Run
   , pref
   , opts
   ) where
-import           Cardano.CLI.Environment
+import           Cardano.Api (docToText, pretty)
 
-import           Control.Monad (void)
+import           Cardano.CLI.Environment
+import           Cardano.Prelude (unlessM)
+
+import           Control.Monad (forM_, void)
 import           Data.Maybe (fromMaybe)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
@@ -24,13 +27,13 @@ import           System.Directory (doesDirectoryExist)
 import           Testnet.Filepath (unTmpAbsPath)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types (TestnetNode (..))
 
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           RIO (display, forever, logInfo, runSimpleApp, threadDelay)
+import           RIO (display, forever, fromString, logInfo, runSimpleApp, threadDelay)
 import           UnliftIO.Resource (runResourceT)
-import           Cardano.Prelude (unlessM)
 
 pref :: ParserPrefs
 pref =
@@ -103,8 +106,9 @@ runCardanoOptions = \case
       logInfo $ "Creating environment: " <> display (tempAbsPath conf)
       createTestnetEnv noEnvCreationOptions conf
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-      void $ cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
+      runtime <- cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
       logInfo "Testnet started"
+      logGrpcEndpoints runtime
       waitForShutdown
   StartFromEnv StartFromEnvOptions{fromEnvOptions, fromEnvRuntimeOptions} -> do
     -- Run cardano-testnet in the sandbox provided by the user
@@ -114,11 +118,17 @@ runCardanoOptions = \case
     nodes <- readNodesWithOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
     runSimpleApp . runResourceT $ do
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-      void $ cardanoTestnet nodes fromEnvRuntimeOptions
+      runtime <- cardanoTestnet nodes fromEnvRuntimeOptions
                conf{updateTimestamps = envUpdateTimestamps fromEnvOptions}
       logInfo "Testnet started"
+      logGrpcEndpoints runtime
       waitForShutdown
   where
     waitForShutdown = do
       logInfo "Waiting for shutdown (Ctrl+C)"
       forever (threadDelay 100_000)
+
+    logGrpcEndpoints runtime =
+      forM_ (testnetNodes runtime) $ \TestnetNode{nodeName, nodeRpcEndpoint} ->
+        forM_ nodeRpcEndpoint $ \endpoint ->
+          logInfo $ "gRPC endpoint of " <> fromString nodeName <> ": " <> display (docToText (pretty endpoint))

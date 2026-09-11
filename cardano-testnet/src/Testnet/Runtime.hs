@@ -225,6 +225,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallS
     pure $ TestnetNode
       { nodeName = node
       , poolKeys = Nothing -- they're set in the function caller, if present
+      , nodeRpcEndpoint = Nothing -- set by the caller when RPC is enabled
       , nodeIpv4 = ipv4
       , nodePort = port
       , nodeSprocket = sprocket

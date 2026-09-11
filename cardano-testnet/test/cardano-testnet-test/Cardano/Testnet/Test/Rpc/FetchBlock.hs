@@ -65,7 +65,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
       sbe = convert era
       eraName = eraToString sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
 
   tr@TestnetRuntime
     { configurationFile

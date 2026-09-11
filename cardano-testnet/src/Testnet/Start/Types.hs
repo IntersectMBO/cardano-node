@@ -20,6 +20,7 @@ module Testnet.Start.Types
   , NumPools(..)
   , NumRelays(..)
   , RpcSupport(..)
+  , RpcHttpOptions(..)
   , creationNumPools
   , creationNumRelays
 
@@ -52,6 +53,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Rpc.Server.Config (defaultRpcListenAddress)
 
 import           Prelude
 
@@ -61,12 +63,14 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import           Data.IP (IP)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import qualified Network.HTTP.Simple as HTTP
+import           Network.Socket (PortNumber)
 import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
@@ -167,9 +171,19 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   } deriving (Eq, Show)
 
 data RpcSupport
-  = RpcDisabled
-  | RpcEnabled
+  = RpcDisabled -- ^ No gRPC endpoint
+  | RpcEnabledUnixSocket -- ^ gRPC over the node's default unix socket (@rpc.sock@)
+  | RpcEnabledHttp RpcHttpOptions -- ^ gRPC over HTTP\/2 without TLS (h2c)
   deriving (Eq, Show)
+
+-- | Listener options for the gRPC HTTP (h2c) endpoints
+data RpcHttpOptions = RpcHttpOptions
+  { rpcHttpListenAddress :: IP
+  , rpcHttpListenPortBase :: Maybe PortNumber -- ^ node i listens on base+i-1; random free ports when Nothing
+  } deriving (Eq, Show)
+
+instance Default RpcHttpOptions where
+  def = RpcHttpOptions defaultRpcListenAddress Nothing
 
 -- | Options for creating a testnet environment (genesis files, topology, ports).
 -- Used by both the @cardano@ and @create-env@ subcommands, and by

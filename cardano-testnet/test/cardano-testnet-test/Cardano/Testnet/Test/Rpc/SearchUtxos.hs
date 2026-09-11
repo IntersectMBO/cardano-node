@@ -60,7 +60,7 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
   let era = Exp.ConwayEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
       addressInEra = asAddressInEra sbe
 
   TestnetRuntime
