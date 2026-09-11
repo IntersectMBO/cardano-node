@@ -1,5 +1,6 @@
 {- HLINT ignore "Eta reduce" -}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.OuroborosImports
@@ -42,7 +43,9 @@ toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst <$> protocolI
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> IO (TopLevelConfig CardanoBlock)
-protocolToTopLevelConfig ptcl = pInfoConfig <$> toProtocolInfo ptcl
+protocolToTopLevelConfig ptcl = do
+  ProtocolInfo {pInfoConfig} <- toProtocolInfo ptcl
+  pure pInfoConfig
 
 protocolToCodecConfig :: SomeConsensusProtocol -> IO (CodecConfig CardanoBlock)
 protocolToCodecConfig = fmap configCodec . protocolToTopLevelConfig

@@ -499,8 +499,7 @@ instance FromJSON PartialNodeConfiguration where
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
+                   zip [ void mTopLevelSnapInterval, void mTopLevelSnapNum]
                        ["SnapshotInterval", "NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 

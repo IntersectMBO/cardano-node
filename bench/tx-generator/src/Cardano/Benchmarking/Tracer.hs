@@ -39,6 +39,7 @@ import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission
 import           Ouroboros.Network.Tracing ()
+import           Network.Mux.Tracing ()
 
 import           Control.Exception (SomeException (..))
 import           Control.Monad (forM, guard)
@@ -51,7 +52,6 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
-import           Network.Mux.Tracing ()
 import qualified Network.TypedProtocol.Codec as TypedProtocol
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
@@ -182,7 +182,7 @@ configSilent :: ConfigOption
 configSilent = ConfSeverity (SeverityF Nothing)
 
 initialTraceConfig :: TraceConfig
-initialTraceConfig = emptyTraceConfig 
+initialTraceConfig = emptyTraceConfig
     { tcOptions = Map.fromList
           [ ([], [configSilent])
           , setMaxDetail TracerNameBench
