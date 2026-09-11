@@ -1,0 +1,1173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679150718"><span id="local-6989586621679150719"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE Trustworthy #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Module      :  Data.Functor.Compose</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Copyright   :  (c) Ross Paterson 2010</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Maintainer  :  libraries@haskell.org</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Stability   :  stable</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Portability :  portable</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Composition of functors.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- @since 4.9.0.0</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html"><span class="hs-identifier">Data.Functor.Compose</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier">Compose</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html"><span class="hs-identifier">Data.Functor.Classes</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Coerce.html"><span class="hs-identifier">GHC.Internal.Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier">coerce</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Data.html"><span class="hs-identifier">GHC.Internal.Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html"><span class="hs-identifier">GHC.Internal.Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html"><span class="hs-identifier">GHC.Internal.Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Sum"><span class="hs-identifier">Sum</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#All"><span class="hs-identifier">All</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Any"><span class="hs-identifier">Any</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Product"><span class="hs-identifier">Product</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html"><span class="hs-identifier">GHC.Internal.Data.Type.Equality</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#TestEquality"><span class="hs-identifier">TestEquality</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#%3A~%3A"><span class="hs-operator">(:~:)</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Generics.html#Generic1"><span class="hs-identifier">Generic1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Text.Read.html"><span class="hs-identifier">GHC.Internal.Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#Read"><span class="hs-identifier">Read</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Text.ParserCombinators.ReadPrec.html#ReadPrec"><span class="hs-identifier">ReadPrec</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#readListDefault"><span class="hs-identifier">readListDefault</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#readListPrecDefault"><span class="hs-identifier">readListPrecDefault</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">9</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-operator hs-type hs-type">`Compose`</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- &gt;&gt;&gt; import Prelude</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Right-to-left composition of functors.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- The composition of applicative functors is always applicative,</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- but the composition of monads is not always a monad.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- ==== __Examples__</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- &gt;&gt;&gt; fmap (subtract 1) (Compose (Just [1, 2, 3]))</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- Compose (Just [0,1,2])</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- &gt;&gt;&gt; Compose (Just [1, 2, 3]) &lt;&gt; Compose Nothing</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- Compose (Just [1,2,3])</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- &gt;&gt;&gt; Compose (Just [(++ &quot;World&quot;), (++ &quot;Haskell&quot;)]) &lt;*&gt; Compose (Just [&quot;Hello, &quot;])</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- Compose (Just [&quot;Hello, World&quot;,&quot;Hello, Haskell&quot;])</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">newtype</span><span> </span><span id="Compose"><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span></span><span> </span><span id="local-6989586621679150209"><span class="annot"><a href="#local-6989586621679150209"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679150210"><span class="annot"><a href="#local-6989586621679150210"><span class="hs-identifier hs-type">g</span></a></span></span><span> </span><span id="local-6989586621679150211"><span class="annot"><a href="#local-6989586621679150211"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Compose"><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getCompose"><span class="annot"><span class="annottext">forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+Compose f g a -&gt; f (g a)
+</span><a href="Data.Functor.Compose.html#getCompose"><span class="hs-identifier hs-var hs-var">getCompose</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679150209"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150210"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679150734"><span id="local-6989586621679150737"><span id="local-6989586621679150740"><span id="local-6989586621679150742"><span id="local-6989586621679150744"><span id="local-6989586621679150750"><span id="local-6989586621679150755"><span id="local-6989586621679150758"><span id="local-6989586621679150761"><span id="local-6989586621679150764"><span id="local-6989586621679150767"><span id="local-6989586621679150770"><span id="local-6989586621679150775"><span id="local-6989586621679150780"><span class="annot"><span class="annottext">Typeable (Compose f g a)
+Typeable (Compose f g a) =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Compose f g a -&gt; c (Compose f g a))
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Compose f g a))
+-&gt; (Compose f g a -&gt; Constr)
+-&gt; (Compose f g a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Compose f g a)))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c (Compose f g a)))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Compose f g a -&gt; Compose f g a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; Compose f g a -&gt; m (Compose f g a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; Compose f g a -&gt; m (Compose f g a))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; Compose f g a -&gt; m (Compose f g a))
+-&gt; Data (Compose f g a)
+Compose f g a -&gt; Constr
+Compose f g a -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Compose f g a -&gt; Compose f g a
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Typeable (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Compose f g a -&gt; Constr
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Compose f g a -&gt; DataType
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Compose f g a -&gt; Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) u.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; u
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) u.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; [u]
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) r r'.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) r r'.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (m :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (m :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Compose f g a -&gt; c (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (t :: * -&gt; *)
+       (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Compose f g a))
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (t :: * -&gt; * -&gt; *)
+       (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Compose f g a))
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Compose f g a)
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Compose f g a -&gt; c (Compose f g a)
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Compose f g a))
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Compose f g a))
+$cgfoldl :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Compose f g a -&gt; c (Compose f g a)
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Compose f g a -&gt; c (Compose f g a)
+$cgunfold :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Compose f g a)
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Compose f g a)
+$ctoConstr :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Compose f g a -&gt; Constr
+toConstr :: Compose f g a -&gt; Constr
+$cdataTypeOf :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Compose f g a -&gt; DataType
+dataTypeOf :: Compose f g a -&gt; DataType
+$cdataCast1 :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (t :: * -&gt; *)
+       (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Compose f g a))
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Compose f g a))
+$cdataCast2 :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (t :: * -&gt; * -&gt; *)
+       (c :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Compose f g a))
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c (Compose f g a))
+$cgmapT :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Compose f g a -&gt; Compose f g a
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Compose f g a -&gt; Compose f g a
+$cgmapQl :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) r r'.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+$cgmapQr :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) r r'.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Compose f g a -&gt; r
+$cgmapQ :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) u.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; [u]
+$cgmapQi :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) u.
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a))) =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Compose f g a -&gt; u
+$cgmapM :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (m :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+$cgmapMp :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (m :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+$cgmapMo :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) (m :: * -&gt; *).
+(Typeable a, Typeable f, Typeable g, Typeable k, Typeable k,
+ Data (f (g a)), MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; Compose f g a -&gt; m (Compose f g a)
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ @since 4.9.0.0</span></span><span>
+</span><span id="line-62"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150792"><span id="local-6989586621679150794"><span class="annot"><span class="annottext">(forall x. Compose f g a -&gt; Rep (Compose f g a) x)
+-&gt; (forall x. Rep (Compose f g a) x -&gt; Compose f g a)
+-&gt; Generic (Compose f g a)
+forall x. Rep (Compose f g a) x -&gt; Compose f g a
+forall x. Compose f g a -&gt; Rep (Compose f g a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) x.
+Rep (Compose f g a) x -&gt; Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) x.
+Compose f g a -&gt; Rep (Compose f g a) x
+$cfrom :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) x.
+Compose f g a -&gt; Rep (Compose f g a) x
+from :: forall x. Compose f g a -&gt; Rep (Compose f g a) x
+$cto :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) x.
+Rep (Compose f g a) x -&gt; Compose f g a
+to :: forall x. Rep (Compose f g a) x -&gt; Compose f g a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ @since 4.9.0.0</span></span><span>
+</span><span id="line-63"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150801"><span id="local-6989586621679150804"><span class="annot"><span class="annottext">(forall (a :: k). Compose f g a -&gt; Rep1 (Compose f g) a)
+-&gt; (forall (a :: k). Rep1 (Compose f g) a -&gt; Compose f g a)
+-&gt; Generic1 (Compose f g)
+forall (a :: k). Rep1 (Compose f g) a -&gt; Compose f g a
+forall (a :: k). Compose f g a -&gt; Rep1 (Compose f g) a
+forall k (f :: k -&gt; *).
+(forall (a :: k). f a -&gt; Rep1 f a)
+-&gt; (forall (a :: k). Rep1 f a -&gt; f a) -&gt; Generic1 f
+forall (f :: * -&gt; *) k (g :: k -&gt; *) (a :: k).
+Functor f =&gt;
+Rep1 (Compose f g) a -&gt; Compose f g a
+forall (f :: * -&gt; *) k (g :: k -&gt; *) (a :: k).
+Functor f =&gt;
+Compose f g a -&gt; Rep1 (Compose f g) a
+$cfrom1 :: forall (f :: * -&gt; *) k (g :: k -&gt; *) (a :: k).
+Functor f =&gt;
+Compose f g a -&gt; Rep1 (Compose f g) a
+from1 :: forall (a :: k). Compose f g a -&gt; Rep1 (Compose f g) a
+$cto1 :: forall (f :: * -&gt; *) k (g :: k -&gt; *) (a :: k).
+Functor f =&gt;
+Rep1 (Compose f g) a -&gt; Compose f g a
+to1 :: forall (a :: k). Rep1 (Compose f g) a -&gt; Compose f g a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Generics.html#Generic1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic1</span></a></span></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since 4.9.0.0</span></span><span>
+</span><span id="line-64"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150812"><span id="local-6989586621679150816"><span id="local-6989586621679150820"><span class="annot"><span class="annottext">NonEmpty (Compose f g a) -&gt; Compose f g a
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+(Compose f g a -&gt; Compose f g a -&gt; Compose f g a)
+-&gt; (NonEmpty (Compose f g a) -&gt; Compose f g a)
+-&gt; (forall b. Integral b =&gt; b -&gt; Compose f g a -&gt; Compose f g a)
+-&gt; Semigroup (Compose f g a)
+forall b. Integral b =&gt; b -&gt; Compose f g a -&gt; Compose f g a
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Semigroup (f (g a)) =&gt;
+NonEmpty (Compose f g a) -&gt; Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Semigroup (f (g a)) =&gt;
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) b.
+(Semigroup (f (g a)), Integral b) =&gt;
+b -&gt; Compose f g a -&gt; Compose f g a
+$c&lt;&gt; :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Semigroup (f (g a)) =&gt;
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+&lt;&gt; :: Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+$csconcat :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Semigroup (f (g a)) =&gt;
+NonEmpty (Compose f g a) -&gt; Compose f g a
+sconcat :: NonEmpty (Compose f g a) -&gt; Compose f g a
+$cstimes :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k) b.
+(Semigroup (f (g a)), Integral b) =&gt;
+b -&gt; Compose f g a -&gt; Compose f g a
+stimes :: forall b. Integral b =&gt; b -&gt; Compose f g a -&gt; Compose f g a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since 4.16.0.0</span></span><span>
+</span><span id="line-65"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150834"><span id="local-6989586621679150838"><span id="local-6989586621679150842"><span class="annot"><span class="annottext">Semigroup (Compose f g a)
+Compose f g a
+Semigroup (Compose f g a) =&gt;
+Compose f g a
+-&gt; (Compose f g a -&gt; Compose f g a -&gt; Compose f g a)
+-&gt; ([Compose f g a] -&gt; Compose f g a)
+-&gt; Monoid (Compose f g a)
+[Compose f g a] -&gt; Compose f g a
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+Semigroup (Compose f g a)
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+[Compose f g a] -&gt; Compose f g a
+forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+$cmempty :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+Compose f g a
+mempty :: Compose f g a
+$cmappend :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+mappend :: Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+$cmconcat :: forall k (f :: k -&gt; *) k (g :: k -&gt; k) (a :: k).
+Monoid (f (g a)) =&gt;
+[Compose f g a] -&gt; Compose f g a
+mconcat :: [Compose f g a] -&gt; Compose f g a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ @since 4.16.0.0</span></span><span>
+</span><span id="line-66"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- Instances of Prelude classes</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><span class="hs-comment">-- | @since 4.18.0.0</span></span><span>
+</span><span id="line-71"></span><span id="local-6989586621679150323"><span id="local-6989586621679150324"><span id="local-6989586621679150325"><span id="local-6989586621679150850"><span id="local-6989586621679150854"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150323"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150324"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150325"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150323"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150324"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150325"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | @since 4.18.0.0</span></span><span>
+</span><span id="line-73"></span><span id="local-6989586621679150334"><span id="local-6989586621679150335"><span id="local-6989586621679150336"><span id="local-6989586621679150865"><span id="local-6989586621679150869"><span id="local-6989586621679150873"><span id="local-6989586621679150877"><span id="local-6989586621679150881"><span id="local-6989586621679150885"><span id="local-6989586621679150889"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150334"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150335"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150336"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150334"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150335"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150336"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-74"></span><span class="annot"><span class="hs-comment">-- | @since 4.18.0.0</span></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150347"><span id="local-6989586621679150348"><span id="local-6989586621679150349"><span id="local-6989586621679150903"><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150347"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150348"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150349"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150347"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150348"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150349"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679150911"><span class="annot"><span class="annottext">readPrec :: ReadPrec (Compose f g a)
+</span><a href="#local-6989586621679150911"><span class="hs-identifier hs-var hs-var hs-var">readPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec (f (g a)) -&gt; ReadPrec (Compose f g a)
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+ReadPrec (f (g a)) -&gt; ReadPrec (Compose f g a)
+</span><a href="Data.Functor.Compose.html#liftReadPrecCompose"><span class="hs-identifier hs-var">liftReadPrecCompose</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (f (g a))
+forall a. Read a =&gt; ReadPrec a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#readPrec"><span class="hs-identifier hs-var">readPrec</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679150915"><span class="annot"><span class="annottext">readListPrec :: ReadPrec [Compose f g a]
+</span><a href="#local-6989586621679150915"><span class="hs-identifier hs-var hs-var hs-var">readListPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec [Compose f g a]
+forall a. Read a =&gt; ReadPrec [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#readListPrecDefault"><span class="hs-identifier hs-var">readListPrecDefault</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679150918"><span class="annot"><span class="annottext">readList :: ReadS [Compose f g a]
+</span><a href="#local-6989586621679150918"><span class="hs-identifier hs-var hs-var hs-var">readList</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadS [Compose f g a]
+forall a. Read a =&gt; ReadS [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Read.html#readListDefault"><span class="hs-identifier hs-var">readListDefault</span></a></span><span>
+</span><span id="line-80"></span><span class="annot"><span class="hs-comment">-- | @since 4.18.0.0</span></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150366"><span id="local-6989586621679150367"><span id="local-6989586621679150368"><span id="local-6989586621679150923"><span id="local-6989586621679150927"><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150366"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150367"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150368"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150366"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150367"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150368"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679150931"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Compose f g a -&gt; ShowS
+</span><a href="#local-6989586621679150931"><span class="hs-identifier hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; f (g a) -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+(Int -&gt; f (g a) -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+</span><a href="Data.Functor.Compose.html#liftShowsPrecCompose"><span class="hs-identifier hs-var">liftShowsPrecCompose</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; f (g a) -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- Instances of lifted Prelude classes</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150381"><span id="local-6989586621679150382"><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150381"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150382"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150381"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150382"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>    </span><span id="local-6989586621679150946"><span class="annot"><span class="annottext">liftEq :: forall a b.
+(a -&gt; b -&gt; Bool) -&gt; Compose f g a -&gt; Compose f g b -&gt; Bool
+</span><a href="#local-6989586621679150946"><span class="hs-identifier hs-var hs-var hs-var">liftEq</span></a></span></span><span> </span><span id="local-6989586621679150948"><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><a href="#local-6989586621679150948"><span class="hs-identifier hs-var">eq</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679150949"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679150949"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679150950"><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679150950"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g a -&gt; g b -&gt; Bool) -&gt; f (g a) -&gt; f (g b) -&gt; Bool
+forall a b. (a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool
+forall (f :: * -&gt; *) a b.
+Eq1 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool
+</span><a href="Data.Functor.Classes.html#liftEq"><span class="hs-identifier hs-var">liftEq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b -&gt; Bool) -&gt; g a -&gt; g b -&gt; Bool
+forall a b. (a -&gt; b -&gt; Bool) -&gt; g a -&gt; g b -&gt; Bool
+forall (f :: * -&gt; *) a b.
+Eq1 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool
+</span><a href="Data.Functor.Classes.html#liftEq"><span class="hs-identifier hs-var">liftEq</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><a href="#local-6989586621679150948"><span class="hs-identifier hs-var">eq</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679150949"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679150950"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150392"><span id="local-6989586621679150393"><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150392"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150393"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150392"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150393"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679150968"><span class="annot"><span class="annottext">liftCompare :: forall a b.
+(a -&gt; b -&gt; Ordering) -&gt; Compose f g a -&gt; Compose f g b -&gt; Ordering
+</span><a href="#local-6989586621679150968"><span class="hs-identifier hs-var hs-var hs-var">liftCompare</span></a></span></span><span> </span><span id="local-6989586621679150970"><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679150970"><span class="hs-identifier hs-var">comp</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679150971"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679150971"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679150972"><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679150972"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">(g a -&gt; g b -&gt; Ordering) -&gt; f (g a) -&gt; f (g b) -&gt; Ordering
+forall a b. (a -&gt; b -&gt; Ordering) -&gt; f a -&gt; f b -&gt; Ordering
+forall (f :: * -&gt; *) a b.
+Ord1 f =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; f a -&gt; f b -&gt; Ordering
+</span><a href="Data.Functor.Classes.html#liftCompare"><span class="hs-identifier hs-var">liftCompare</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b -&gt; Ordering) -&gt; g a -&gt; g b -&gt; Ordering
+forall a b. (a -&gt; b -&gt; Ordering) -&gt; g a -&gt; g b -&gt; Ordering
+forall (f :: * -&gt; *) a b.
+Ord1 f =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; f a -&gt; f b -&gt; Ordering
+</span><a href="Data.Functor.Classes.html#liftCompare"><span class="hs-identifier hs-var">liftCompare</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679150970"><span class="hs-identifier hs-var">comp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679150971"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679150972"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150405"><span id="local-6989586621679150406"><span id="local-6989586621679150978"><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Classes.html#Read1"><span class="hs-identifier hs-type">Read1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150405"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Read1"><span class="hs-identifier hs-type">Read1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150406"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Read1"><span class="hs-identifier hs-type">Read1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150405"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150406"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679150991"><span class="annot"><span class="annottext">liftReadPrec :: forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Compose f g a)
+</span><a href="#local-6989586621679150991"><span class="hs-identifier hs-var hs-var hs-var">liftReadPrec</span></a></span></span><span> </span><span id="local-6989586621679150993"><span class="annot"><span class="annottext">ReadPrec a
+</span><a href="#local-6989586621679150993"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span id="local-6989586621679150994"><span class="annot"><span class="annottext">ReadPrec [a]
+</span><a href="#local-6989586621679150994"><span class="hs-identifier hs-var">rl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">ReadPrec (f (g a)) -&gt; ReadPrec (Compose f g a)
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+ReadPrec (f (g a)) -&gt; ReadPrec (Compose f g a)
+</span><a href="Data.Functor.Compose.html#liftReadPrecCompose"><span class="hs-identifier hs-var">liftReadPrecCompose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadPrec (g a) -&gt; ReadPrec [g a] -&gt; ReadPrec (f (g a))
+forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (f a)
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (f a)
+</span><a href="Data.Functor.Classes.html#liftReadPrec"><span class="hs-identifier hs-var">liftReadPrec</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (g a)
+</span><a href="#local-6989586621679150995"><span class="hs-identifier hs-var">rp'</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec [g a]
+</span><a href="#local-6989586621679150996"><span class="hs-identifier hs-var">rl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>        </span><span id="local-6989586621679150995"><span class="annot"><span class="annottext">rp' :: ReadPrec (g a)
+</span><a href="#local-6989586621679150995"><span class="hs-identifier hs-var hs-var">rp'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (g a)
+forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (g a)
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (f a)
+</span><a href="Data.Functor.Classes.html#liftReadPrec"><span class="hs-identifier hs-var">liftReadPrec</span></a></span><span>     </span><span class="annot"><span class="annottext">ReadPrec a
+</span><a href="#local-6989586621679150993"><span class="hs-identifier hs-var">rp</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec [a]
+</span><a href="#local-6989586621679150994"><span class="hs-identifier hs-var">rl</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span id="local-6989586621679150996"><span class="annot"><span class="annottext">rl' :: ReadPrec [g a]
+</span><a href="#local-6989586621679150996"><span class="hs-identifier hs-var hs-var">rl'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [g a]
+forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [g a]
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [f a]
+</span><a href="Data.Functor.Classes.html#liftReadListPrec"><span class="hs-identifier hs-var">liftReadListPrec</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec a
+</span><a href="#local-6989586621679150993"><span class="hs-identifier hs-var">rp</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec [a]
+</span><a href="#local-6989586621679150994"><span class="hs-identifier hs-var">rl</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679150999"><span class="annot"><span class="annottext">liftReadListPrec :: forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Compose f g a]
+</span><a href="Data.Functor.Classes.html#liftReadListPrec"><span class="hs-identifier hs-var hs-var hs-var">liftReadListPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Compose f g a]
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [f a]
+</span><a href="Data.Functor.Classes.html#liftReadListPrecDefault"><span class="hs-identifier hs-var">liftReadListPrecDefault</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679151002"><span class="annot"><span class="annottext">liftReadList :: forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Compose f g a]
+</span><a href="#local-6989586621679151002"><span class="hs-identifier hs-var hs-var hs-var">liftReadList</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Compose f g a]
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [f a]
+</span><a href="Data.Functor.Classes.html#liftReadListDefault"><span class="hs-identifier hs-var">liftReadListDefault</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150421"><span id="local-6989586621679150422"><span id="local-6989586621679151011"><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150421"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150422"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150421"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150422"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679151021"><span class="annot"><span class="annottext">liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+</span><a href="#local-6989586621679151021"><span class="hs-identifier hs-var hs-var hs-var">liftShowsPrec</span></a></span></span><span> </span><span id="local-6989586621679151023"><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><a href="#local-6989586621679151023"><span class="hs-identifier hs-var">sp</span></a></span></span><span> </span><span id="local-6989586621679151024"><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><a href="#local-6989586621679151024"><span class="hs-identifier hs-var">sl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>        </span><span class="annot"><span class="annottext">(Int -&gt; f (g a) -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+(Int -&gt; f (g a) -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+</span><a href="Data.Functor.Compose.html#liftShowsPrecCompose"><span class="hs-identifier hs-var">liftShowsPrecCompose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; g a -&gt; ShowS)
+-&gt; ([g a] -&gt; ShowS) -&gt; Int -&gt; f (g a) -&gt; ShowS
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; f a -&gt; ShowS
+forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; f a -&gt; ShowS
+</span><a href="Data.Functor.Classes.html#liftShowsPrec"><span class="hs-identifier hs-var">liftShowsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; g a -&gt; ShowS
+</span><a href="#local-6989586621679151025"><span class="hs-identifier hs-var">sp'</span></a></span><span> </span><span class="annot"><span class="annottext">[g a] -&gt; ShowS
+</span><a href="#local-6989586621679151026"><span class="hs-identifier hs-var">sl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>        </span><span id="local-6989586621679151025"><span class="annot"><span class="annottext">sp' :: Int -&gt; g a -&gt; ShowS
+</span><a href="#local-6989586621679151025"><span class="hs-identifier hs-var hs-var">sp'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; g a -&gt; ShowS
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; g a -&gt; ShowS
+forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; f a -&gt; ShowS
+</span><a href="Data.Functor.Classes.html#liftShowsPrec"><span class="hs-identifier hs-var">liftShowsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><a href="#local-6989586621679151023"><span class="hs-identifier hs-var">sp</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><a href="#local-6989586621679151024"><span class="hs-identifier hs-var">sl</span></a></span><span>
+</span><span id="line-112"></span><span>        </span><span id="local-6989586621679151026"><span class="annot"><span class="annottext">sl' :: [g a] -&gt; ShowS
+</span><a href="#local-6989586621679151026"><span class="hs-identifier hs-var hs-var">sl'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [g a] -&gt; ShowS
+forall a. (Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [g a] -&gt; ShowS
+forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [f a] -&gt; ShowS
+</span><a href="Data.Functor.Classes.html#liftShowList"><span class="hs-identifier hs-var">liftShowList</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><a href="#local-6989586621679151023"><span class="hs-identifier hs-var">sp</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><a href="#local-6989586621679151024"><span class="hs-identifier hs-var">sl</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- The workhorse for Compose's Read and Read1 instances.</span><span>
+</span><span id="line-115"></span><span id="local-6989586621679150352"><span id="local-6989586621679150353"><span id="local-6989586621679150354"><span class="annot"><a href="Data.Functor.Compose.html#liftReadPrecCompose"><span class="hs-identifier hs-type">liftReadPrecCompose</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Text.ParserCombinators.ReadPrec.html#ReadPrec"><span class="hs-identifier hs-type">ReadPrec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150352"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150353"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150354"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Text.ParserCombinators.ReadPrec.html#ReadPrec"><span class="hs-identifier hs-type">ReadPrec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150352"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150353"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150354"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-116"></span><span id="liftReadPrecCompose"><span class="annot"><span class="annottext">liftReadPrecCompose :: forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+ReadPrec (f (g a)) -&gt; ReadPrec (Compose f g a)
+</span><a href="Data.Functor.Compose.html#liftReadPrecCompose"><span class="hs-identifier hs-var hs-var">liftReadPrecCompose</span></a></span></span><span> </span><span id="local-6989586621679151028"><span class="annot"><span class="annottext">ReadPrec (f (g a))
+</span><a href="#local-6989586621679151028"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadPrec (Compose f g a) -&gt; ReadPrec (Compose f g a)
+forall a. ReadPrec a -&gt; ReadPrec a
+</span><a href="Data.Functor.Classes.html#readData"><span class="hs-identifier hs-var">readData</span></a></span><span> </span><span class="annot"><span class="annottext">(ReadPrec (Compose f g a) -&gt; ReadPrec (Compose f g a))
+-&gt; ReadPrec (Compose f g a) -&gt; ReadPrec (Compose f g a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (f (g a))
+-&gt; String -&gt; (f (g a) -&gt; Compose f g a) -&gt; ReadPrec (Compose f g a)
+forall a t. ReadPrec a -&gt; String -&gt; (a -&gt; t) -&gt; ReadPrec t
+</span><a href="Data.Functor.Classes.html#readUnaryWith"><span class="hs-identifier hs-var">readUnaryWith</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (f (g a))
+</span><a href="#local-6989586621679151028"><span class="hs-identifier hs-var">rp</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Compose&quot;</span></span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; Compose f g a
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- The workhorse for Compose's Show and Show1 instances.</span><span>
+</span><span id="line-119"></span><span id="local-6989586621679150371"><span id="local-6989586621679150372"><span id="local-6989586621679150373"><span class="annot"><a href="Data.Functor.Compose.html#liftShowsPrecCompose"><span class="hs-identifier hs-type">liftShowsPrecCompose</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150371"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150372"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150373"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#ShowS"><span class="hs-identifier hs-type">ShowS</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150371"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150372"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150373"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#ShowS"><span class="hs-identifier hs-type">ShowS</span></a></span></span></span></span><span>
+</span><span id="line-120"></span><span id="liftShowsPrecCompose"><span class="annot"><span class="annottext">liftShowsPrecCompose :: forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+(Int -&gt; f (g a) -&gt; ShowS) -&gt; Int -&gt; Compose f g a -&gt; ShowS
+</span><a href="Data.Functor.Compose.html#liftShowsPrecCompose"><span class="hs-identifier hs-var hs-var">liftShowsPrecCompose</span></a></span></span><span> </span><span id="local-6989586621679151031"><span class="annot"><span class="annottext">Int -&gt; f (g a) -&gt; ShowS
+</span><a href="#local-6989586621679151031"><span class="hs-identifier hs-var">sp</span></a></span></span><span> </span><span id="local-6989586621679151032"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679151032"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151033"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151033"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; f (g a) -&gt; ShowS) -&gt; String -&gt; Int -&gt; f (g a) -&gt; ShowS
+forall a. (Int -&gt; a -&gt; ShowS) -&gt; String -&gt; Int -&gt; a -&gt; ShowS
+</span><a href="Data.Functor.Classes.html#showsUnaryWith"><span class="hs-identifier hs-var">showsUnaryWith</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; f (g a) -&gt; ShowS
+</span><a href="#local-6989586621679151031"><span class="hs-identifier hs-var">sp</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Compose&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679151032"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151033"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- Functor instances</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150449"><span id="local-6989586621679150450"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150449"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150450"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150449"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150450"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679151043"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Compose f g a -&gt; Compose f g b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679151044"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679151044"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151045"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151045"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g b) -&gt; Compose f g b
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; g b) -&gt; f (g a) -&gt; f (g b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; g a -&gt; g b
+forall a b. (a -&gt; b) -&gt; g a -&gt; g b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679151044"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151045"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679151048"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151048"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679151049"><span class="annot"><span class="annottext">&lt;$ :: forall a b. a -&gt; Compose f g b -&gt; Compose f g a
+</span><a href="#local-6989586621679151049"><span class="hs-operator hs-var hs-var hs-var">&lt;$</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151051"><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151051"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; Compose f g a
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g b -&gt; g a) -&gt; f (g b) -&gt; f (g a)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151048"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; g b -&gt; g a
+forall a b. a -&gt; g b -&gt; g a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151051"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150472"><span id="local-6989586621679150473"><span id="local-6989586621679151062"><span id="local-6989586621679151066"><span id="local-6989586621679151069"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150472"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150473"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150472"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150473"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679151084"><span class="annot"><span class="annottext">fold :: forall m. Monoid m =&gt; Compose f g m -&gt; m
+</span><a href="#local-6989586621679151084"><span class="hs-identifier hs-var hs-var hs-var">fold</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151086"><span class="annot"><span class="annottext">f (g m)
+</span><a href="#local-6989586621679151086"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g m -&gt; m) -&gt; f (g m) -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">g m -&gt; m
+forall m. Monoid m =&gt; g m -&gt; m
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#fold"><span class="hs-identifier hs-var">fold</span></a></span><span> </span><span class="annot"><span class="annottext">f (g m)
+</span><a href="#local-6989586621679151086"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-132"></span><span>    </span><span id="local-6989586621679151093"><span class="annot"><span class="annottext">foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Compose f g a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var hs-var hs-var">foldMap</span></a></span></span><span> </span><span id="local-6989586621679151094"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679151094"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151095"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151095"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g a -&gt; m) -&gt; f (g a) -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; g a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; g a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679151094"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151095"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621679151101"><span class="annot"><span class="annottext">foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Compose f g a -&gt; m
+</span><a href="#local-6989586621679151101"><span class="hs-identifier hs-var hs-var hs-var">foldMap'</span></a></span></span><span> </span><span id="local-6989586621679151103"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679151103"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151104"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151104"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g a -&gt; m) -&gt; f (g a) -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap%27"><span class="hs-identifier hs-var">foldMap'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; g a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; g a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap%27"><span class="hs-identifier hs-var">foldMap'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679151103"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151104"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span id="local-6989586621679151107"><span class="annot"><span class="annottext">foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Compose f g a -&gt; b
+</span><a href="#local-6989586621679151107"><span class="hs-identifier hs-var hs-var hs-var">foldr</span></a></span></span><span> </span><span id="local-6989586621679151109"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679151109"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679151110"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151110"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151111"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151111"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g a -&gt; b -&gt; b) -&gt; b -&gt; f (g a) -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679151112"><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151112"><span class="hs-identifier hs-var">ga</span></a></span></span><span> </span><span id="local-6989586621679151113"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151113"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679151109"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151113"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151112"><span class="hs-identifier hs-var">ga</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151110"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151111"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679151116"><span class="annot"><span class="annottext">foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Compose f g a -&gt; b
+</span><a href="#local-6989586621679151116"><span class="hs-identifier hs-var hs-var hs-var">foldr'</span></a></span></span><span> </span><span id="local-6989586621679151118"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679151118"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679151119"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151119"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151120"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151120"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(g a -&gt; b -&gt; b) -&gt; b -&gt; f (g a) -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr%27"><span class="hs-identifier hs-var">foldr'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679151121"><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151121"><span class="hs-identifier hs-var">ga</span></a></span></span><span> </span><span id="local-6989586621679151122"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151122"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr%27"><span class="hs-identifier hs-var">foldr'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679151118"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151122"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151121"><span class="hs-identifier hs-var">ga</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151119"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151120"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621679151125"><span class="annot"><span class="annottext">foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Compose f g a -&gt; b
+</span><a href="#local-6989586621679151125"><span class="hs-identifier hs-var hs-var hs-var">foldl</span></a></span></span><span> </span><span id="local-6989586621679151127"><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679151127"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679151128"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151128"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151129"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151129"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; g a -&gt; b) -&gt; b -&gt; f (g a) -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679151130"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151130"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679151131"><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151131"><span class="hs-identifier hs-var">ga</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679151127"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151130"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151131"><span class="hs-identifier hs-var">ga</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151128"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151129"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679151134"><span class="annot"><span class="annottext">foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Compose f g a -&gt; b
+</span><a href="#local-6989586621679151134"><span class="hs-identifier hs-var hs-var hs-var">foldl'</span></a></span></span><span> </span><span id="local-6989586621679151136"><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679151136"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679151137"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151137"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151138"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151138"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; g a -&gt; b) -&gt; b -&gt; f (g a) -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679151139"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151139"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679151140"><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151140"><span class="hs-identifier hs-var">ga</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; g a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679151136"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151139"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">g a
+</span><a href="#local-6989586621679151140"><span class="hs-identifier hs-var">ga</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679151137"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151138"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679151146"><span class="annot"><span class="annottext">null :: forall a. Compose f g a -&gt; Bool
+</span><a href="#local-6989586621679151146"><span class="hs-identifier hs-var hs-var hs-var">null</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151148"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151148"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; Bool
+forall a. f a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151148"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">All -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#getAll"><span class="hs-identifier hs-var">getAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; All) -&gt; f (g a) -&gt; All
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; All
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#All"><span class="hs-identifier hs-var">All</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; All) -&gt; (g a -&gt; Bool) -&gt; g a -&gt; All
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; Bool
+forall a. g a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151148"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679151159"><span class="annot"><span class="annottext">length :: forall a. Compose f g a -&gt; Int
+</span><a href="#local-6989586621679151159"><span class="hs-identifier hs-var hs-var hs-var">length</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151161"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151161"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Sum Int -&gt; Int
+forall a. Sum a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#getSum"><span class="hs-identifier hs-var">getSum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; Sum Int) -&gt; f (g a) -&gt; Sum Int
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap%27"><span class="hs-identifier hs-var">foldMap'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Sum Int
+forall a. a -&gt; Sum a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Sum Int) -&gt; (g a -&gt; Int) -&gt; g a -&gt; Sum Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; Int
+forall a. g a -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151161"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679151170"><span class="annot"><span class="annottext">elem :: forall a. Eq a =&gt; a -&gt; Compose f g a -&gt; Bool
+</span><a href="#local-6989586621679151170"><span class="hs-identifier hs-var hs-var hs-var">elem</span></a></span></span><span> </span><span id="local-6989586621679151172"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151172"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151173"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151173"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Any -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#getAny"><span class="hs-identifier hs-var">getAny</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; Any) -&gt; f (g a) -&gt; Any
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Any
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Any"><span class="hs-identifier hs-var">Any</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Any) -&gt; (g a -&gt; Bool) -&gt; g a -&gt; Any
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; g a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; g a -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#elem"><span class="hs-identifier hs-var">elem</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151172"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151173"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679151184"><span class="annot"><span class="annottext">minimum :: forall a. Ord a =&gt; Compose f g a -&gt; a
+</span><a href="#local-6989586621679151184"><span class="hs-identifier hs-var hs-var hs-var">minimum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151186"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151186"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; a
+forall a. Ord a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#minimum"><span class="hs-identifier hs-var">minimum</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; a) -&gt; [a] -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; a) -&gt; [g a] -&gt; [a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; a
+forall a. Ord a =&gt; g a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#minimum"><span class="hs-identifier hs-var">minimum</span></a></span><span> </span><span class="annot"><span class="annottext">([g a] -&gt; [a]) -&gt; [g a] -&gt; [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; Bool) -&gt; [g a] -&gt; [g a]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (g a -&gt; Bool) -&gt; g a -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; Bool
+forall a. g a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([g a] -&gt; [g a]) -&gt; [g a] -&gt; [g a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; [g a]
+forall a. f a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151186"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span id="local-6989586621679151196"><span class="annot"><span class="annottext">maximum :: forall a. Ord a =&gt; Compose f g a -&gt; a
+</span><a href="#local-6989586621679151196"><span class="hs-identifier hs-var hs-var hs-var">maximum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151198"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151198"><span class="hs-identifier hs-var">fga</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; a
+forall a. Ord a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#maximum"><span class="hs-identifier hs-var">maximum</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; a) -&gt; [a] -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; a) -&gt; [g a] -&gt; [a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; a
+forall a. Ord a =&gt; g a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#maximum"><span class="hs-identifier hs-var">maximum</span></a></span><span> </span><span class="annot"><span class="annottext">([g a] -&gt; [a]) -&gt; [g a] -&gt; [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; Bool) -&gt; [g a] -&gt; [g a]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (g a -&gt; Bool) -&gt; g a -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; Bool
+forall a. g a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([g a] -&gt; [g a]) -&gt; [g a] -&gt; [g a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; [g a]
+forall a. f a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151198"><span class="hs-identifier hs-var">fga</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679151204"><span class="annot"><span class="annottext">sum :: forall a. Num a =&gt; Compose f g a -&gt; a
+</span><a href="#local-6989586621679151204"><span class="hs-identifier hs-var hs-var hs-var">sum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151206"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151206"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Sum a -&gt; a
+forall a. Sum a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#getSum"><span class="hs-identifier hs-var">getSum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; Sum a) -&gt; f (g a) -&gt; Sum a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap%27"><span class="hs-identifier hs-var">foldMap'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Sum a
+forall a. a -&gt; Sum a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Sum a) -&gt; (g a -&gt; a) -&gt; g a -&gt; Sum a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; a
+forall a. Num a =&gt; g a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151206"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679151213"><span class="annot"><span class="annottext">product :: forall a. Num a =&gt; Compose f g a -&gt; a
+</span><a href="#local-6989586621679151213"><span class="hs-identifier hs-var hs-var hs-var">product</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151215"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151215"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Product a -&gt; a
+forall a. Product a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#getProduct"><span class="hs-identifier hs-var">getProduct</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; Product a) -&gt; f (g a) -&gt; Product a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; f a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#foldMap%27"><span class="hs-identifier hs-var">foldMap'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Product a
+forall a. a -&gt; Product a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Semigroup.Internal.html#Product"><span class="hs-identifier hs-var">Product</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Product a) -&gt; (g a -&gt; a) -&gt; g a -&gt; Product a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">g a -&gt; a
+forall a. Num a =&gt; g a -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#product"><span class="hs-identifier hs-var">product</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151215"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150527"><span id="local-6989586621679150528"><span id="local-6989586621679151230"><span id="local-6989586621679151236"><span id="local-6989586621679151241"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150527"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150528"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150527"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150528"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-151"></span><span>    </span><span id="local-6989586621679151256"><span class="annot"><span class="annottext">traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Compose f g a -&gt; f (Compose f g b)
+</span><a href="#local-6989586621679151256"><span class="hs-identifier hs-var hs-var hs-var">traverse</span></a></span></span><span> </span><span id="local-6989586621679151258"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679151258"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151259"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151259"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g b) -&gt; Compose f g b
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="annot"><span class="annottext">(f (g b) -&gt; Compose f g b) -&gt; f (f (g b)) -&gt; f (Compose f g b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; f (g b)) -&gt; f (g a) -&gt; f (f (g b))
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; f a -&gt; f (f b)
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; g a -&gt; f (g b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; g a -&gt; f (g b)
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679151258"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151259"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-154"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150548"><span id="local-6989586621679150549"><span id="local-6989586621679151271"><span id="local-6989586621679151275"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150548"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150549"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150548"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150549"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621679151280"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Compose f g a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621679151281"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151281"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; Compose f g a
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">g a -&gt; f (g a)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; g a
+forall a. a -&gt; g a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679151281"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151284"><span class="annot"><span class="annottext">f (g (a -&gt; b))
+</span><a href="#local-6989586621679151284"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679151285"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Compose f g (a -&gt; b) -&gt; Compose f g a -&gt; Compose f g b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151286"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151286"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g b) -&gt; Compose f g b
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g (a -&gt; b) -&gt; g a -&gt; g b) -&gt; f (g (a -&gt; b)) -&gt; f (g a) -&gt; f (g b)
+forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">g (a -&gt; b) -&gt; g a -&gt; g b
+forall a b. g (a -&gt; b) -&gt; g a -&gt; g b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">(&lt;*&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">f (g (a -&gt; b))
+</span><a href="#local-6989586621679151284"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151286"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>    </span><span id="local-6989586621679151290"><span class="annot"><span class="annottext">liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; Compose f g a -&gt; Compose f g b -&gt; Compose f g c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#liftA2"><span class="hs-identifier hs-var hs-var hs-var">liftA2</span></a></span></span><span> </span><span id="local-6989586621679151291"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679151291"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151292"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151292"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151293"><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151293"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>      </span><span class="annot"><span class="annottext">f (g c) -&gt; Compose f g c
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(g a -&gt; g b -&gt; g c) -&gt; f (g a) -&gt; f (g b) -&gt; f (g c)
+forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c) -&gt; g a -&gt; g b -&gt; g c
+forall a b c. (a -&gt; b -&gt; c) -&gt; g a -&gt; g b -&gt; g c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679151291"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151292"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151293"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="annot"><span class="hs-comment">-- | @since 4.9.0.0</span></span><span>
+</span><span id="line-161"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150563"><span id="local-6989586621679150564"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679151308"><span class="annot"><span class="annottext">empty :: forall a. Compose f g a
+</span><a href="#local-6989586621679151308"><span class="hs-identifier hs-var hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; Compose f g a
+forall {k} {k} (f :: k -&gt; *) (g :: k -&gt; k) (a :: k).
+f (g a) -&gt; Compose f g a
+</span><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+forall a. f a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span id="local-6989586621679151310"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+</span><a href="#local-6989586621679151310"><span class="hs-operator hs-var hs-var hs-var">(&lt;|&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f (g a) -&gt; f (g a) -&gt; f (g a))
+-&gt; Compose f g a -&gt; Compose f g a -&gt; Compose f g a
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f (g a) -&gt; f (g a) -&gt; f (g a)
+forall a. f a -&gt; f a -&gt; f a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">(&lt;|&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679151314"><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151314"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span id="local-6989586621679151315"><span class="annot"><span class="annottext">some :: forall a. Compose f g a -&gt; Compose f g [a]
+</span><a href="#local-6989586621679151315"><span class="hs-identifier hs-var hs-var hs-var">some</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f (g a) -&gt; f (g [a])) -&gt; Compose f g a -&gt; Compose f g [a]
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([g a] -&gt; g [a]) -&gt; f [g a] -&gt; f (g [a])
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[g a] -&gt; g [a]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a.
+(Traversable t, Applicative f) =&gt;
+t (f a) -&gt; f (t a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; [f a] -&gt; f [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#sequenceA"><span class="hs-identifier hs-var">sequenceA</span></a></span><span> </span><span class="annot"><span class="annottext">(f [g a] -&gt; f (g [a]))
+-&gt; (f (g a) -&gt; f [g a]) -&gt; f (g a) -&gt; f (g [a])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; f [g a]
+forall a. f a -&gt; f [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151324"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679151324"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679151324"><span class="annot"><a href="#local-6989586621679151324"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151324"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679151324"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-167"></span><span>    </span><span id="local-6989586621679151325"><span class="annot"><span class="annottext">many :: forall a. Compose f g a -&gt; Compose f g [a]
+</span><a href="#local-6989586621679151325"><span class="hs-identifier hs-var hs-var hs-var">many</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f (g a) -&gt; f (g [a])) -&gt; Compose f g a -&gt; Compose f g [a]
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#coerce"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([g a] -&gt; g [a]) -&gt; f [g a] -&gt; f (g [a])
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[g a] -&gt; g [a]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a.
+(Traversable t, Applicative f) =&gt;
+t (f a) -&gt; f (t a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; [f a] -&gt; f [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Traversable.html#sequenceA"><span class="hs-identifier hs-var">sequenceA</span></a></span><span> </span><span class="annot"><span class="annottext">(f [g a] -&gt; f (g [a]))
+-&gt; (f (g a) -&gt; f [g a]) -&gt; f (g a) -&gt; f (g [a])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; f [g a]
+forall a. f a -&gt; f [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151332"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679151332"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679151332"><span class="annot"><a href="#local-6989586621679151332"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679151332"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150563"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150564"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679151332"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- | The deduction (via generativity) that if @g x :~: g y@ then @x :~: y@.</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- @since 4.14.0.0</span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150584"><span id="local-6989586621679150585"><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#TestEquality"><span class="hs-identifier hs-type">TestEquality</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150584"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#TestEquality"><span class="hs-identifier hs-type">TestEquality</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150584"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150585"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679151338"><span class="annot"><span class="annottext">testEquality :: forall (a :: k) (b :: k).
+Compose f g a -&gt; Compose f g b -&gt; Maybe (a :~: b)
+</span><a href="#local-6989586621679151338"><span class="hs-identifier hs-var hs-var hs-var">testEquality</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151340"><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151340"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span id="local-6989586621679151341"><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151341"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">f (g a) -&gt; f (g b) -&gt; Maybe (g a :~: g b)
+forall (a :: k) (b :: k). f a -&gt; f b -&gt; Maybe (a :~: b)
+forall {k} (f :: k -&gt; *) (a :: k) (b :: k).
+TestEquality f =&gt;
+f a -&gt; f b -&gt; Maybe (a :~: b)
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#testEquality"><span class="hs-identifier hs-var">testEquality</span></a></span><span> </span><span class="annot"><span class="annottext">f (g a)
+</span><a href="#local-6989586621679151340"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f (g b)
+</span><a href="#local-6989586621679151341"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-comment">-- :: Maybe (g x :~: g y)</span><span>
+</span><span id="line-176"></span><span>      </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">g a :~: g b
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a :~: b) -&gt; Maybe (a :~: b)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a :~: a
+a :~: b
+forall {k} (a :: k). a :~: a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Type.Equality.html#Refl"><span class="hs-identifier hs-var">Refl</span></a></span><span> </span><span class="hs-comment">-- :: Maybe (x :~: y)</span><span>
+</span><span id="line-177"></span><span>      </span><span class="annot"><span class="annottext">Maybe (g a :~: g b)
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (a :~: b)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="annot"><span class="hs-comment">-- | @since 4.19.0.0</span></span><span>
+</span><span id="line-180"></span><span id="local-6989586621679150598"><span id="local-6989586621679150599"><span id="local-6989586621679150600"><span id="local-6989586621679151347"><span id="local-6989586621679151351"><span id="local-6989586621679151355"><span id="local-6989586621679151359"><span id="local-6989586621679151363"><span id="local-6989586621679151367"><span id="local-6989586621679151371"><span id="local-6989586621679151375"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-type">Enum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150598"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150599"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150600"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-type">Enum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150598"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150599"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150600"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-181"></span><span class="annot"><span class="hs-comment">-- | @since 4.19.0.0</span></span><span>
+</span><span id="line-182"></span><span id="local-6989586621679150609"><span id="local-6989586621679150610"><span id="local-6989586621679150611"><span id="local-6989586621679151386"><span id="local-6989586621679151390"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150609"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150610"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150611"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150609"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150610"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150611"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-183"></span><span class="annot"><span class="hs-comment">-- | @since 4.19.0.0</span></span><span>
+</span><span id="line-184"></span><span id="local-6989586621679150620"><span id="local-6989586621679150621"><span id="local-6989586621679150622"><span id="local-6989586621679151399"><span id="local-6989586621679151403"><span id="local-6989586621679151407"><span id="local-6989586621679151411"><span id="local-6989586621679151415"><span id="local-6989586621679151419"><span id="local-6989586621679151423"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-type">Num</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150620"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150621"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150622"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-type">Num</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150620"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150621"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150622"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-185"></span><span class="annot"><span class="hs-comment">-- | @since 4.19.0.0</span></span><span>
+</span><span id="line-186"></span><span id="local-6989586621679150631"><span id="local-6989586621679150632"><span id="local-6989586621679150633"><span id="local-6989586621679151440"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-type">Real</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150631"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150632"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150633"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-type">Real</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150631"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150632"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150633"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-187"></span><span class="annot"><span class="hs-comment">-- | @since 4.19.0.0</span></span><span>
+</span><span id="line-188"></span><span id="local-6989586621679150642"><span id="local-6989586621679150643"><span id="local-6989586621679150644"><span id="local-6989586621679151455"><span id="local-6989586621679151459"><span id="local-6989586621679151463"><span id="local-6989586621679151467"><span id="local-6989586621679151471"><span id="local-6989586621679151475"><span id="local-6989586621679151479"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150642"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150643"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150644"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150642"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150643"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150644"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-189"></span><span class="annot"><span class="hs-comment">-- | @since 4.20.0.0</span></span><span>
+</span><span id="line-190"></span><span id="local-6989586621679150653"><span id="local-6989586621679150654"><span id="local-6989586621679150655"><span id="local-6989586621679151497"><span id="local-6989586621679151501"><span id="local-6989586621679151505"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Fractional"><span class="hs-identifier hs-type">Fractional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150653"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150654"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150655"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#Fractional"><span class="hs-identifier hs-type">Fractional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150653"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150654"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150655"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span><span>
+</span><span id="line-191"></span><span class="annot"><span class="hs-comment">-- | @since 4.20.0.0</span></span><span>
+</span><span id="line-192"></span><span id="local-6989586621679150671"><span id="local-6989586621679150672"><span id="local-6989586621679150673"><span id="local-6989586621679151521"><span id="local-6989586621679151527"><span id="local-6989586621679151533"><span id="local-6989586621679151539"><span id="local-6989586621679151545"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#RealFrac"><span class="hs-identifier hs-type">RealFrac</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150671"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150672"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150673"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#RealFrac"><span class="hs-identifier hs-type">RealFrac</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150671"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150672"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150673"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-193"></span><span class="annot"><span class="hs-comment">-- | @since 4.20.0.0</span></span><span>
+</span><span id="line-194"></span><span id="local-6989586621679150682"><span id="local-6989586621679150683"><span id="local-6989586621679150684"><span id="local-6989586621679151564"><span id="local-6989586621679151568"><span id="local-6989586621679151572"><span id="local-6989586621679151576"><span id="local-6989586621679151580"><span id="local-6989586621679151584"><span id="local-6989586621679151588"><span id="local-6989586621679151592"><span id="local-6989586621679151596"><span id="local-6989586621679151600"><span id="local-6989586621679151604"><span id="local-6989586621679151608"><span id="local-6989586621679151612"><span id="local-6989586621679151616"><span id="local-6989586621679151620"><span id="local-6989586621679151624"><span id="local-6989586621679151628"><span id="local-6989586621679151632"><span id="local-6989586621679151636"><span id="local-6989586621679151640"><span id="local-6989586621679151644"><span id="local-6989586621679151648"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#Floating"><span class="hs-identifier hs-type">Floating</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150682"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150683"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150684"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#Floating"><span class="hs-identifier hs-type">Floating</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150682"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150683"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150684"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-195"></span><span class="annot"><span class="hs-comment">-- | @since 4.20.0.0</span></span><span>
+</span><span id="line-196"></span><span id="local-6989586621679150693"><span id="local-6989586621679150694"><span id="local-6989586621679150695"><span id="local-6989586621679151684"><span id="local-6989586621679151688"><span id="local-6989586621679151692"><span id="local-6989586621679151696"><span id="local-6989586621679151700"><span id="local-6989586621679151704"><span id="local-6989586621679151708"><span id="local-6989586621679151712"><span id="local-6989586621679151716"><span id="local-6989586621679151720"><span id="local-6989586621679151724"><span id="local-6989586621679151728"><span id="local-6989586621679151732"><span id="local-6989586621679151736"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#RealFloat"><span class="hs-identifier hs-type">RealFloat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150693"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679150694"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150695"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#RealFloat"><span class="hs-identifier hs-type">RealFloat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150693"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150694"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679150695"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-197"></span></pre></body></html>

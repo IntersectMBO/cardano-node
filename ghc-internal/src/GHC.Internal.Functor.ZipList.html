@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679864438"><span id="local-6989586621679864439"></span></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DeriveFoldable #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html"><span class="hs-identifier">GHC.Internal.Functor.ZipList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier">ZipList</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Generics.html"><span class="hs-identifier">GHC.Internal.Generics</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.List.html"><span class="hs-identifier">GHC.Internal.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.List.html#repeat"><span class="hs-identifier">repeat</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.List.html#zipWith"><span class="hs-identifier">zipWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Read.html"><span class="hs-identifier">GHC.Internal.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Read.html#Read"><span class="hs-identifier">Read</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Show.html"><span class="hs-identifier">GHC.Internal.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Show.html#Show"><span class="hs-identifier">Show</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Foldable.html"><span class="hs-identifier">GHC.Internal.Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Traversable.html"><span class="hs-identifier">GHC.Internal.Data.Traversable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Data.Traversable.html#Traversable"><span class="hs-identifier">Traversable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Data.html"><span class="hs-identifier">GHC.Internal.Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | Lists, but with an 'Applicative' functor based on zipping.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- ==== __Examples__</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- In contrast to the 'Applicative' for 'GHC.List.List':</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- &gt;&gt;&gt; (+) &lt;$&gt; [1, 2, 3] &lt;*&gt; [4, 5, 6]</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- [5,6,7,6,7,8,7,8,9]</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- The Applicative instance of ZipList applies the operation</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- by pairing up the elements, analogous to 'zipWith'N</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- &gt;&gt;&gt; (+) &lt;$&gt; ZipList [1, 2, 3] &lt;*&gt; ZipList [4, 5, 6]</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- ZipList {getZipList = [5,7,9]}</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- &gt;&gt;&gt; (,,,) &lt;$&gt; ZipList [1, 2] &lt;*&gt; ZipList [3, 4] &lt;*&gt; ZipList [5, 6] &lt;*&gt; ZipList [7, 8]</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- ZipList {getZipList = [(1,3,5,7),(2,4,6,8)]}</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- &gt;&gt;&gt; ZipList [(+1), (^2), (/ 2)] &lt;*&gt; ZipList [5, 5, 5]</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- ZipList {getZipList = [6.0,25.0,2.5]}</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">newtype</span><span> </span><span id="ZipList"><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span></span><span> </span><span id="local-6989586621679864268"><span class="annot"><a href="#local-6989586621679864268"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ZipList"><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getZipList"><span class="annot"><span class="annottext">forall a. ZipList a -&gt; [a]
+</span><a href="GHC.Internal.Functor.ZipList.html#getZipList"><span class="hs-identifier hs-var hs-var">getZipList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679864268"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>                  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679864446"><span id="local-6989586621679864452"><span id="local-6989586621679864456"><span class="annot"><span class="annottext">Int -&gt; ZipList a -&gt; ShowS
+[ZipList a] -&gt; ShowS
+ZipList a -&gt; String
+(Int -&gt; ZipList a -&gt; ShowS)
+-&gt; (ZipList a -&gt; String)
+-&gt; ([ZipList a] -&gt; ShowS)
+-&gt; Show (ZipList a)
+forall a. Show a =&gt; Int -&gt; ZipList a -&gt; ShowS
+forall a. Show a =&gt; [ZipList a] -&gt; ShowS
+forall a. Show a =&gt; ZipList a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; ZipList a -&gt; ShowS
+showsPrec :: Int -&gt; ZipList a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; ZipList a -&gt; String
+show :: ZipList a -&gt; String
+$cshowList :: forall a. Show a =&gt; [ZipList a] -&gt; ShowS
+showList :: [ZipList a] -&gt; ShowS
+</span><a href="GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-41"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864462"><span id="local-6989586621679864467"><span class="annot"><span class="annottext">ZipList a -&gt; ZipList a -&gt; Bool
+(ZipList a -&gt; ZipList a -&gt; Bool)
+-&gt; (ZipList a -&gt; ZipList a -&gt; Bool) -&gt; Eq (ZipList a)
+forall a. Eq a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+== :: ZipList a -&gt; ZipList a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+/= :: ZipList a -&gt; ZipList a -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-42"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864478"><span id="local-6989586621679864483"><span id="local-6989586621679864487"><span id="local-6989586621679864491"><span id="local-6989586621679864495"><span id="local-6989586621679864499"><span id="local-6989586621679864503"><span class="annot"><span class="annottext">Eq (ZipList a)
+Eq (ZipList a) =&gt;
+(ZipList a -&gt; ZipList a -&gt; Ordering)
+-&gt; (ZipList a -&gt; ZipList a -&gt; Bool)
+-&gt; (ZipList a -&gt; ZipList a -&gt; Bool)
+-&gt; (ZipList a -&gt; ZipList a -&gt; Bool)
+-&gt; (ZipList a -&gt; ZipList a -&gt; Bool)
+-&gt; (ZipList a -&gt; ZipList a -&gt; ZipList a)
+-&gt; (ZipList a -&gt; ZipList a -&gt; ZipList a)
+-&gt; Ord (ZipList a)
+ZipList a -&gt; ZipList a -&gt; Bool
+ZipList a -&gt; ZipList a -&gt; Ordering
+ZipList a -&gt; ZipList a -&gt; ZipList a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (ZipList a)
+forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Ordering
+forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; ZipList a
+$ccompare :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Ordering
+compare :: ZipList a -&gt; ZipList a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+&lt; :: ZipList a -&gt; ZipList a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+&lt;= :: ZipList a -&gt; ZipList a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+&gt; :: ZipList a -&gt; ZipList a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; Bool
+&gt;= :: ZipList a -&gt; ZipList a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; ZipList a
+max :: ZipList a -&gt; ZipList a -&gt; ZipList a
+$cmin :: forall a. Ord a =&gt; ZipList a -&gt; ZipList a -&gt; ZipList a
+min :: ZipList a -&gt; ZipList a -&gt; ZipList a
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-43"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864517"><span id="local-6989586621679864521"><span id="local-6989586621679864524"><span id="local-6989586621679864534"><span class="annot"><span class="annottext">ReadPrec [ZipList a]
+ReadPrec (ZipList a)
+Int -&gt; ReadS (ZipList a)
+ReadS [ZipList a]
+(Int -&gt; ReadS (ZipList a))
+-&gt; ReadS [ZipList a]
+-&gt; ReadPrec (ZipList a)
+-&gt; ReadPrec [ZipList a]
+-&gt; Read (ZipList a)
+forall a. Read a =&gt; ReadPrec [ZipList a]
+forall a. Read a =&gt; ReadPrec (ZipList a)
+forall a. Read a =&gt; Int -&gt; ReadS (ZipList a)
+forall a. Read a =&gt; ReadS [ZipList a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (ZipList a)
+readsPrec :: Int -&gt; ReadS (ZipList a)
+$creadList :: forall a. Read a =&gt; ReadS [ZipList a]
+readList :: ReadS [ZipList a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (ZipList a)
+readPrec :: ReadPrec (ZipList a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [ZipList a]
+readListPrec :: ReadPrec [ZipList a]
+</span><a href="GHC.Internal.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-44"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864541"><span id="local-6989586621679864545"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; ZipList a -&gt; ZipList b)
+-&gt; (forall a b. a -&gt; ZipList b -&gt; ZipList a) -&gt; Functor ZipList
+forall a b. a -&gt; ZipList b -&gt; ZipList a
+forall a b. (a -&gt; b) -&gt; ZipList a -&gt; ZipList b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; ZipList a -&gt; ZipList b
+fmap :: forall a b. (a -&gt; b) -&gt; ZipList a -&gt; ZipList b
+$c&lt;$ :: forall a b. a -&gt; ZipList b -&gt; ZipList a
+&lt;$ :: forall a b. a -&gt; ZipList b -&gt; ZipList a
+</span><a href="GHC.Internal.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ @since base-2.01</span></span><span>
+</span><span id="line-45"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864551"><span id="local-6989586621679864557"><span id="local-6989586621679864563"><span id="local-6989586621679864568"><span id="local-6989586621679864571"><span id="local-6989586621679864574"><span id="local-6989586621679864577"><span id="local-6989586621679864580"><span id="local-6989586621679864583"><span id="local-6989586621679864586"><span id="local-6989586621679864589"><span id="local-6989586621679864592"><span id="local-6989586621679864595"><span id="local-6989586621679864600"><span id="local-6989586621679864605"><span id="local-6989586621679864610"><span id="local-6989586621679864615"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; ZipList m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a)
+-&gt; (forall a. ZipList a -&gt; [a])
+-&gt; (forall a. ZipList a -&gt; Bool)
+-&gt; (forall a. ZipList a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; ZipList a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; ZipList a -&gt; a)
+-&gt; (forall a. Ord a =&gt; ZipList a -&gt; a)
+-&gt; (forall a. Num a =&gt; ZipList a -&gt; a)
+-&gt; (forall a. Num a =&gt; ZipList a -&gt; a)
+-&gt; Foldable ZipList
+forall a. Eq a =&gt; a -&gt; ZipList a -&gt; Bool
+forall a. Num a =&gt; ZipList a -&gt; a
+forall a. Ord a =&gt; ZipList a -&gt; a
+forall m. Monoid m =&gt; ZipList m -&gt; m
+forall a. ZipList a -&gt; Bool
+forall a. ZipList a -&gt; Int
+forall a. ZipList a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; ZipList m -&gt; m
+fold :: forall m. Monoid m =&gt; ZipList m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; ZipList a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; ZipList a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; ZipList a -&gt; a
+$ctoList :: forall a. ZipList a -&gt; [a]
+toList :: forall a. ZipList a -&gt; [a]
+$cnull :: forall a. ZipList a -&gt; Bool
+null :: forall a. ZipList a -&gt; Bool
+$clength :: forall a. ZipList a -&gt; Int
+length :: forall a. ZipList a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; ZipList a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; ZipList a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; ZipList a -&gt; a
+maximum :: forall a. Ord a =&gt; ZipList a -&gt; a
+$cminimum :: forall a. Ord a =&gt; ZipList a -&gt; a
+minimum :: forall a. Ord a =&gt; ZipList a -&gt; a
+$csum :: forall a. Num a =&gt; ZipList a -&gt; a
+sum :: forall a. Num a =&gt; ZipList a -&gt; a
+$cproduct :: forall a. Num a =&gt; ZipList a -&gt; a
+product :: forall a. Num a =&gt; ZipList a -&gt; a
+</span><a href="GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.9.0.0</span></span><span>
+</span><span id="line-46"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864624"><span id="local-6989586621679864626"><span class="annot"><span class="annottext">(forall x. ZipList a -&gt; Rep (ZipList a) x)
+-&gt; (forall x. Rep (ZipList a) x -&gt; ZipList a)
+-&gt; Generic (ZipList a)
+forall x. Rep (ZipList a) x -&gt; ZipList a
+forall x. ZipList a -&gt; Rep (ZipList a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (ZipList a) x -&gt; ZipList a
+forall a x. ZipList a -&gt; Rep (ZipList a) x
+$cfrom :: forall a x. ZipList a -&gt; Rep (ZipList a) x
+from :: forall x. ZipList a -&gt; Rep (ZipList a) x
+$cto :: forall a x. Rep (ZipList a) x -&gt; ZipList a
+to :: forall x. Rep (ZipList a) x -&gt; ZipList a
+</span><a href="GHC.Internal.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-47"></span><span>                           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679864632"><span id="local-6989586621679864634"><span class="annot"><span class="annottext">(forall a. ZipList a -&gt; Rep1 ZipList a)
+-&gt; (forall a. Rep1 ZipList a -&gt; ZipList a) -&gt; Generic1 ZipList
+forall a. Rep1 ZipList a -&gt; ZipList a
+forall a. ZipList a -&gt; Rep1 ZipList a
+forall k (f :: k -&gt; *).
+(forall (a :: k). f a -&gt; Rep1 f a)
+-&gt; (forall (a :: k). Rep1 f a -&gt; f a) -&gt; Generic1 f
+$cfrom1 :: forall a. ZipList a -&gt; Rep1 ZipList a
+from1 :: forall a. ZipList a -&gt; Rep1 ZipList a
+$cto1 :: forall a. Rep1 ZipList a -&gt; ZipList a
+to1 :: forall a. Rep1 ZipList a -&gt; ZipList a
+</span><a href="GHC.Internal.Generics.html#Generic1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic1</span></a></span></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since base-4.7.0.0</span></span><span>
+</span><span id="line-48"></span><span>                           </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- See GHC.Internal.Data.Traversable for Traversable instance due to import loops</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><span class="hs-comment">-- | @since base-4.9.0.0</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679864645"><span id="local-6989586621679864651"><span id="local-6989586621679864656"><span class="annot"><a href="GHC.Internal.Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679864668"><span class="annot"><span class="annottext">traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; ZipList a -&gt; f (ZipList b)
+</span><a href="#local-6989586621679864668"><span class="hs-identifier hs-var hs-var hs-var">traverse</span></a></span></span><span> </span><span id="local-6989586621679864670"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679864670"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span id="local-6989586621679864671"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864671"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[b] -&gt; ZipList b
+forall a. [a] -&gt; ZipList a
+</span><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span><span> </span><span class="annot"><span class="annottext">([b] -&gt; ZipList b) -&gt; f [b] -&gt; f (ZipList b)
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="GHC.Internal.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; [a] -&gt; f [b]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679864670"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864671"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- &gt; f &lt;$&gt; ZipList xs1 &lt;*&gt; ... &lt;*&gt; ZipList xsN</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- &gt;     = ZipList (zipWithN f xs1 ... xsN)</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- where @zipWithN@ refers to the @zipWith@ function of the appropriate arity</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- (@zipWith@, @zipWith3@, @zipWith4@, ...). For example:</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- &gt; (\a b c -&gt; stimes c [a, b]) &lt;$&gt; ZipList &quot;abcd&quot; &lt;*&gt; ZipList &quot;567&quot; &lt;*&gt; ZipList [1..]</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- &gt;     = ZipList (zipWith3 (\a b c -&gt; stimes c [a, b]) &quot;abcd&quot; &quot;567&quot; [1..])</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- &gt;     = ZipList {getZipList = [&quot;a5&quot;,&quot;b6b6&quot;,&quot;c7c7c7&quot;]}</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- @since base-2.01</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679864676"><span id="local-6989586621679864681"><span id="local-6989586621679864684"><span class="annot"><a href="GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621679864687"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; ZipList a
+</span><a href="GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621679864688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679864688"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ZipList a
+forall a. [a] -&gt; ZipList a
+</span><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; [a]
+forall a. a -&gt; [a]
+</span><a href="GHC.Internal.List.html#repeat"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679864688"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679864689"><span class="annot"><span class="annottext">liftA2 :: forall a b c. (a -&gt; b -&gt; c) -&gt; ZipList a -&gt; ZipList b -&gt; ZipList c
+</span><a href="#local-6989586621679864689"><span class="hs-identifier hs-var hs-var hs-var">liftA2</span></a></span></span><span> </span><span id="local-6989586621679864691"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679864691"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span id="local-6989586621679864692"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864692"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span id="local-6989586621679864693"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679864693"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[c] -&gt; ZipList c
+forall a. [a] -&gt; ZipList a
+</span><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="GHC.Internal.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679864691"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864692"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679864693"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | @since base-4.11.0.0</span></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679864699"><span id="local-6989586621679864703"><span class="annot"><a href="GHC.Internal.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>   </span><span id="local-6989586621679864706"><span class="annot"><span class="annottext">empty :: forall a. ZipList a
+</span><a href="#local-6989586621679864706"><span class="hs-identifier hs-var hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ZipList a
+forall a. [a] -&gt; ZipList a
+</span><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>   </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span id="local-6989586621679864708"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864708"><span class="hs-identifier hs-var">xs0</span></a></span></span><span> </span><span id="local-6989586621679864709"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. ZipList a -&gt; ZipList a -&gt; ZipList a
+</span><a href="#local-6989586621679864709"><span class="hs-operator hs-var hs-var hs-var">&lt;|&gt;</span></a></span></span><span> </span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span id="local-6989586621679864711"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864711"><span class="hs-identifier hs-var">ys0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ZipList a
+forall a. [a] -&gt; ZipList a
+</span><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-var">ZipList</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; ZipList a) -&gt; [a] -&gt; ZipList a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall {a}. [a] -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679864712"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864708"><span class="hs-identifier hs-var">xs0</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864711"><span class="hs-identifier hs-var">ys0</span></a></span><span>
+</span><span id="line-76"></span><span>     </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>       </span><span id="local-6989586621679864712"><span class="annot"><span class="annottext">go :: [a] -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679864712"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679864713"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679864713"><span class="hs-identifier hs-var">x</span></a></span></span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679864714"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864714"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679864715"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864715"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679864713"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679864712"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864714"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864715"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-78"></span><span>       </span><span class="annot"><a href="#local-6989586621679864712"><span class="hs-identifier hs-var">go</span></a></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span>     </span><span id="local-6989586621679864716"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864716"><span class="hs-identifier hs-var">ys</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864716"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-79"></span><span>       </span><span class="annot"><a href="#local-6989586621679864712"><span class="hs-identifier hs-var">go</span></a></span><span>    </span><span id="local-6989586621679864717"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864717"><span class="hs-identifier hs-var">xs</span></a></span></span><span>      </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679864717"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><span class="hs-comment">-- | @since base-4.14.0.0</span></span><span>
+</span><span id="line-82"></span><span id="local-6989586621679864417"><span id="local-6989586621679864724"><span id="local-6989586621679864728"><span id="local-6989586621679864731"><span id="local-6989586621679864733"><span id="local-6989586621679864735"><span id="local-6989586621679864741"><span id="local-6989586621679864747"><span id="local-6989586621679864750"><span id="local-6989586621679864753"><span id="local-6989586621679864756"><span id="local-6989586621679864759"><span id="local-6989586621679864762"><span id="local-6989586621679864767"><span id="local-6989586621679864772"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679864417"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Functor.ZipList.html#ZipList"><span class="hs-identifier hs-type">ZipList</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679864417"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span></pre></body></html>

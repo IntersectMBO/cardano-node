@@ -1,0 +1,305 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html"><span class="hs-identifier">System.File.PlatformPath.Internal</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openBinaryFile"><span class="hs-identifier">openBinaryFile</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#withFile"><span class="hs-identifier">withFile</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#withBinaryFile"><span class="hs-identifier">withBinaryFile</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#withFile%27"><span class="hs-identifier">withFile'</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#withBinaryFile%27"><span class="hs-identifier">withBinaryFile'</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#readFile"><span class="hs-identifier">readFile</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#readFile%27"><span class="hs-identifier">readFile'</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#writeFile"><span class="hs-identifier">writeFile</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#writeFile%27"><span class="hs-identifier">writeFile'</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#appendFile"><span class="hs-identifier">appendFile</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#appendFile%27"><span class="hs-identifier">appendFile'</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openFile"><span class="hs-identifier">openFile</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openExistingFile"><span class="hs-identifier">openExistingFile</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openFileWithCloseOnExec"><span class="hs-identifier">openFileWithCloseOnExec</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openExistingFileWithCloseOnExec"><span class="hs-identifier">openExistingFileWithCloseOnExec</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#handleFinalizer"><span class="hs-identifier">OsPath.handleFinalizer</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#HandleFinalizer"><span class="hs-identifier">OsPath.HandleFinalizer</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#addHandleFinalizer"><span class="hs-identifier">OsPath.addHandleFinalizer</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#withOpenFile%27"><span class="hs-identifier">withOpenFile'</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#addFilePathToIOError"><span class="hs-identifier">addFilePathToIOError</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.PlatformPath.Internal.html#augmentError"><span class="hs-identifier">augmentError</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IOMode</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Handle</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html"><span class="hs-identifier">System.OsPath.Types</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.IO.Exception.html"><span class="hs-identifier">GHC.IO.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IOException</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html"><span class="hs-identifier">System.File.OsPath.Internal</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OsPath</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../os-string-2.0.10-inplace/src/System.OsString.Internal.Types.html"><span class="hs-identifier">System.OsString.Internal.Types</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Coerce.html"><span class="hs-identifier">Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">readFile</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">writeFile</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">appendFile</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.openBinaryFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openBinaryFile"><span class="hs-identifier hs-type">openBinaryFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span>
+</span><span id="line-41"></span><span id="openBinaryFile"><span class="annot"><span class="annottext">openBinaryFile :: PlatformPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.PlatformPath.Internal.html#openBinaryFile"><span class="hs-identifier hs-var hs-var">openBinaryFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.OsPath.Internal.html#openBinaryFile"><span class="hs-identifier hs-var">OsPath.openBinaryFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; IO Handle)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IOMode -&gt; IO Handle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.withFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-44"></span><span id="local-6989586621679057152"><span class="annot"><a href="System.File.PlatformPath.Internal.html#withFile"><span class="hs-identifier hs-type">withFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057152"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057152"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-45"></span><span id="withFile"><span class="annot"><span class="annottext">withFile :: forall r. PlatformPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.PlatformPath.Internal.html#withFile"><span class="hs-identifier hs-var hs-var">withFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall r. OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.OsPath.Internal.html#withFile"><span class="hs-identifier hs-var">OsPath.withFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r)
+-&gt; (PlatformPath -&gt; OsPath)
+-&gt; PlatformPath
+-&gt; IOMode
+-&gt; (Handle -&gt; IO r)
+-&gt; IO r
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.withBinaryFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-48"></span><span id="local-6989586621679057207"><span class="annot"><a href="System.File.PlatformPath.Internal.html#withBinaryFile"><span class="hs-identifier hs-type">withBinaryFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057207"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057207"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-49"></span><span id="withBinaryFile"><span class="annot"><span class="annottext">withBinaryFile :: forall r. PlatformPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.PlatformPath.Internal.html#withBinaryFile"><span class="hs-identifier hs-var hs-var">withBinaryFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall r. OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.OsPath.Internal.html#withBinaryFile"><span class="hs-identifier hs-var">OsPath.withBinaryFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r)
+-&gt; (PlatformPath -&gt; OsPath)
+-&gt; PlatformPath
+-&gt; IOMode
+-&gt; (Handle -&gt; IO r)
+-&gt; IO r
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.withFile'`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-52"></span><span id="local-6989586621679057210"><span class="annot"><a href="System.File.PlatformPath.Internal.html#withFile%27"><span class="hs-identifier hs-type">withFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057210"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057210"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-53"></span><span id="withFile%27"><span class="annot"><span class="annottext">withFile' :: forall r. PlatformPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.PlatformPath.Internal.html#withFile%27"><span class="hs-identifier hs-var hs-var">withFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall r. OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.OsPath.Internal.html#withFile%27"><span class="hs-identifier hs-var">OsPath.withFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r)
+-&gt; (PlatformPath -&gt; OsPath)
+-&gt; PlatformPath
+-&gt; IOMode
+-&gt; (Handle -&gt; IO r)
+-&gt; IO r
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.withBinaryFile'`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679057213"><span class="annot"><a href="System.File.PlatformPath.Internal.html#withBinaryFile%27"><span class="hs-identifier hs-type">withBinaryFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057213"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057213"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-57"></span><span id="withBinaryFile%27"><span class="annot"><span class="annottext">withBinaryFile' :: forall r. PlatformPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.PlatformPath.Internal.html#withBinaryFile%27"><span class="hs-identifier hs-var hs-var">withBinaryFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+forall r. OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r
+</span><a href="System.File.OsPath.Internal.html#withBinaryFile%27"><span class="hs-identifier hs-var">OsPath.withBinaryFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; (Handle -&gt; IO r) -&gt; IO r)
+-&gt; (PlatformPath -&gt; OsPath)
+-&gt; PlatformPath
+-&gt; IOMode
+-&gt; (Handle -&gt; IO r)
+-&gt; IO r
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.readFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#readFile"><span class="hs-identifier hs-type">readFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span>
+</span><span id="line-61"></span><span id="readFile"><span class="annot"><span class="annottext">readFile :: PlatformPath -&gt; IO ByteString
+</span><a href="System.File.PlatformPath.Internal.html#readFile"><span class="hs-identifier hs-var hs-var">readFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IO ByteString
+</span><a href="System.File.OsPath.Internal.html#readFile"><span class="hs-identifier hs-var">OsPath.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IO ByteString)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IO ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.readFile'`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#readFile%27"><span class="hs-identifier hs-type">readFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span>
+</span><span id="line-65"></span><span id="readFile%27"><span class="annot"><span class="annottext">readFile' :: PlatformPath -&gt; IO ByteString
+</span><a href="System.File.PlatformPath.Internal.html#readFile%27"><span class="hs-identifier hs-var hs-var">readFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IO ByteString
+</span><a href="System.File.OsPath.Internal.html#readFile%27"><span class="hs-identifier hs-var">OsPath.readFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IO ByteString)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IO ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.writeFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#writeFile"><span class="hs-identifier hs-type">writeFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span id="writeFile"><span class="annot"><span class="annottext">writeFile :: PlatformPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.PlatformPath.Internal.html#writeFile"><span class="hs-identifier hs-var hs-var">writeFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.OsPath.Internal.html#writeFile"><span class="hs-identifier hs-var">OsPath.writeFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; ByteString -&gt; IO ())
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.writeFile'`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#writeFile%27"><span class="hs-identifier hs-type">writeFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span id="writeFile%27"><span class="annot"><span class="annottext">writeFile' :: PlatformPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.PlatformPath.Internal.html#writeFile%27"><span class="hs-identifier hs-var hs-var">writeFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.OsPath.Internal.html#writeFile%27"><span class="hs-identifier hs-var">OsPath.writeFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; ByteString -&gt; IO ())
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.appendFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#appendFile"><span class="hs-identifier hs-type">appendFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span id="appendFile"><span class="annot"><span class="annottext">appendFile :: PlatformPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.PlatformPath.Internal.html#appendFile"><span class="hs-identifier hs-var hs-var">appendFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.OsPath.Internal.html#appendFile"><span class="hs-identifier hs-var">OsPath.appendFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; ByteString -&gt; IO ())
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.appendFile'`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#appendFile%27"><span class="hs-identifier hs-type">appendFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span id="appendFile%27"><span class="annot"><span class="annottext">appendFile' :: PlatformPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.PlatformPath.Internal.html#appendFile%27"><span class="hs-identifier hs-var hs-var">appendFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; ByteString -&gt; IO ()
+</span><a href="System.File.OsPath.Internal.html#appendFile%27"><span class="hs-identifier hs-var">OsPath.appendFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; ByteString -&gt; IO ())
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.openFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openFile"><span class="hs-identifier hs-type">openFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span>
+</span><span id="line-85"></span><span id="openFile"><span class="annot"><span class="annottext">openFile :: PlatformPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.PlatformPath.Internal.html#openFile"><span class="hs-identifier hs-var hs-var">openFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.OsPath.Internal.html#openFile"><span class="hs-identifier hs-var">OsPath.openFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; IO Handle)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IOMode -&gt; IO Handle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><span class="hs-comment">-- | Like `OsPath.openExistingFile`, but takes a `PlatformPath` instead of an `OsPath`.</span></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openExistingFile"><span class="hs-identifier hs-type">openExistingFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span>
+</span><span id="line-89"></span><span id="openExistingFile"><span class="annot"><span class="annottext">openExistingFile :: PlatformPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.PlatformPath.Internal.html#openExistingFile"><span class="hs-identifier hs-var hs-var">openExistingFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.OsPath.Internal.html#openExistingFile"><span class="hs-identifier hs-var">OsPath.openExistingFile</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; IO Handle)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IOMode -&gt; IO Handle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- | Open a file and return the 'Handle'.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- Sets @O_CLOEXEC@ on posix.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- @since 0.1.2</span><span>
+</span><span id="line-96"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openFileWithCloseOnExec"><span class="hs-identifier hs-type">openFileWithCloseOnExec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span>
+</span><span id="line-97"></span><span id="openFileWithCloseOnExec"><span class="annot"><span class="annottext">openFileWithCloseOnExec :: PlatformPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.PlatformPath.Internal.html#openFileWithCloseOnExec"><span class="hs-identifier hs-var hs-var">openFileWithCloseOnExec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.OsPath.Internal.html#openFileWithCloseOnExec"><span class="hs-identifier hs-var">OsPath.openFileWithCloseOnExec</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; IO Handle)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IOMode -&gt; IO Handle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Open an existing file and return the 'Handle'.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Sets @O_CLOEXEC@ on posix.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- @since 0.1.2</span><span>
+</span><span id="line-104"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#openExistingFileWithCloseOnExec"><span class="hs-identifier hs-type">openExistingFileWithCloseOnExec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span>
+</span><span id="line-105"></span><span id="openExistingFileWithCloseOnExec"><span class="annot"><span class="annottext">openExistingFileWithCloseOnExec :: PlatformPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.PlatformPath.Internal.html#openExistingFileWithCloseOnExec"><span class="hs-identifier hs-var hs-var">openExistingFileWithCloseOnExec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; IOMode -&gt; IO Handle
+</span><a href="System.File.OsPath.Internal.html#openExistingFileWithCloseOnExec"><span class="hs-identifier hs-var">OsPath.openExistingFileWithCloseOnExec</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IOMode -&gt; IO Handle)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IOMode -&gt; IO Handle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- ---------------------------------------------------------------------------</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- Internals</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679057160"><span class="annot"><a href="System.File.PlatformPath.Internal.html#withOpenFile%27"><span class="hs-identifier hs-type">withOpenFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOMode</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057160"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057160"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-111"></span><span id="withOpenFile%27"><span class="annot"><span class="annottext">withOpenFile' :: forall r.
+PlatformPath
+-&gt; IOMode
+-&gt; Bool
+-&gt; Bool
+-&gt; Bool
+-&gt; (Handle -&gt; IO r)
+-&gt; Bool
+-&gt; IO r
+</span><a href="System.File.PlatformPath.Internal.html#withOpenFile%27"><span class="hs-identifier hs-var hs-var">withOpenFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath
+-&gt; IOMode
+-&gt; Bool
+-&gt; Bool
+-&gt; Bool
+-&gt; (Handle -&gt; IO r)
+-&gt; Bool
+-&gt; IO r
+forall r.
+OsPath
+-&gt; IOMode
+-&gt; Bool
+-&gt; Bool
+-&gt; Bool
+-&gt; (Handle -&gt; IO r)
+-&gt; Bool
+-&gt; IO r
+</span><a href="System.File.OsPath.Internal.html#withOpenFile%27"><span class="hs-identifier hs-var">OsPath.withOpenFile'</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath
+ -&gt; IOMode
+ -&gt; Bool
+ -&gt; Bool
+ -&gt; Bool
+ -&gt; (Handle -&gt; IO r)
+ -&gt; Bool
+ -&gt; IO r)
+-&gt; (PlatformPath -&gt; OsPath)
+-&gt; PlatformPath
+-&gt; IOMode
+-&gt; Bool
+-&gt; Bool
+-&gt; Bool
+-&gt; (Handle -&gt; IO r)
+-&gt; Bool
+-&gt; IO r
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="System.File.PlatformPath.Internal.html#addFilePathToIOError"><span class="hs-identifier hs-type">addFilePathToIOError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOException</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOException</span></span><span>
+</span><span id="line-114"></span><span id="addFilePathToIOError"><span class="annot"><span class="annottext">addFilePathToIOError :: String -&gt; PlatformPath -&gt; IOException -&gt; IOException
+</span><a href="System.File.PlatformPath.Internal.html#addFilePathToIOError"><span class="hs-identifier hs-var hs-var">addFilePathToIOError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; OsPath -&gt; IOException -&gt; IOException)
+-&gt; String -&gt; PlatformPath -&gt; IOException -&gt; IOException
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; OsPath -&gt; IOException -&gt; IOException
+</span><a href="System.File.OsPath.Internal.html#addFilePathToIOError"><span class="hs-identifier hs-var">OsPath.addFilePathToIOError</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span id="local-6989586621679057163"><span class="annot"><a href="System.File.PlatformPath.Internal.html#augmentError"><span class="hs-identifier hs-type">augmentError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.OsPath.Types.html#PlatformPath"><span class="hs-identifier hs-type">PlatformPath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057163"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621679057163"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-117"></span><span id="augmentError"><span class="annot"><span class="annottext">augmentError :: forall a. String -&gt; PlatformPath -&gt; IO a -&gt; IO a
+</span><a href="System.File.PlatformPath.Internal.html#augmentError"><span class="hs-identifier hs-var hs-var">augmentError</span></a></span></span><span> </span><span id="local-6989586621679057229"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679057229"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; OsPath -&gt; IO a -&gt; IO a
+forall a. String -&gt; OsPath -&gt; IO a -&gt; IO a
+</span><a href="System.File.OsPath.Internal.html#augmentError"><span class="hs-identifier hs-var">OsPath.augmentError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679057229"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; IO a -&gt; IO a)
+-&gt; (PlatformPath -&gt; OsPath) -&gt; PlatformPath -&gt; IO a -&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PlatformPath -&gt; OsPath
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span></pre></body></html>
