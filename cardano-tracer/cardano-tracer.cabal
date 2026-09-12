@@ -61,6 +61,15 @@ library
                         Cardano.Tracer.Acceptors.Server
                         Cardano.Tracer.Acceptors.Utils
 
+                        Cardano.Tracer.Handlers.Alarms.Auth
+                        Cardano.Tracer.Handlers.Alarms.Consumers
+                        Cardano.Tracer.Handlers.Alarms.Registry
+                        Cardano.Tracer.Handlers.Alarms.Server
+                        Cardano.Tracer.Handlers.Alarms.Store
+                        Cardano.Tracer.Handlers.Alarms.TimeseriesRules
+                        Cardano.Tracer.Handlers.Alarms.TraceRules
+                        Cardano.Tracer.Handlers.Alarms.Types
+
                         Cardano.Tracer.Handlers.Logs.File
                         Cardano.Tracer.Handlers.Logs.Journal
                         Cardano.Tracer.Handlers.Logs.Rotator
@@ -276,7 +285,9 @@ test-suite cardano-tracer-test
 
   main-is:              cardano-tracer-test.hs
 
-  other-modules:        Cardano.Tracer.Test.Forwarder
+  other-modules:        Cardano.Tracer.Test.Alarms.Tests
+                        Cardano.Tracer.Test.Alarms.TimeseriesTests
+                        Cardano.Tracer.Test.Forwarder
                         Cardano.Tracer.Test.DataPoint.Tests
                         Cardano.Tracer.Test.Logs.Tests
                         Cardano.Tracer.Test.Restart.Tests
@@ -286,6 +297,7 @@ test-suite cardano-tracer-test
   build-depends:        aeson
                       , async
                       , bytestring
+                      , cardano-timeseries-io
                       , cardano-tracer
                       , cborg
                       , containers
