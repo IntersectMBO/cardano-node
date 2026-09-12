@@ -36,8 +36,7 @@ import           Testnet.Types
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
--- | E2E test for the WatchMempool gRPC method (SubmitService), covering AC4
--- of cardano-rpc's mempool-methods.md.
+-- | E2E test for the WatchMempool gRPC method (SubmitService).
 --
 -- Opens the WatchMempool stream with an absent predicate - which matches
 -- every mempool entry, see 'Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.matchesTxPredicate'
@@ -127,7 +126,7 @@ hprop_rpc_watch_mempool = integrationRetryWorkspace 2 "rpc-watch-mempool" $ \tem
 
   submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. U5c.ref
   H.note_ "Ensure that submitTx returns the same transaction ID as the locally computed signed transaction ID"
-  txId' H.=== submittedTxId
+  txId' === submittedTxId
 
   message <- case watchElem of
     NextElem message' -> pure message'
@@ -138,7 +137,7 @@ hprop_rpc_watch_mempool = integrationRetryWorkspace 2 "rpc-watch-mempool" $ \tem
   let txInMempool = message ^. U5c.tx
   H.note_ "Verify the delivered TxInMempool entry is the submitted transaction, at STAGE_MEMPOOL"
   H.assertWith (txInMempool ^. U5c.ref) (== serialiseToRawBytes txId')
-  txInMempool ^. U5c.stage H.=== Proto U5c.STAGE_MEMPOOL
+  txInMempool ^. U5c.stage === Proto U5c.STAGE_MEMPOOL
   H.assertWith (txInMempool ^. U5c.maybe'cardano) isJust
 
 asAddressInEra :: ShelleyBasedEra era -> AsType (AddressInEra era)
