@@ -180,6 +180,7 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
   tag: 6095192558ff527fc73eb06a9862da62d7fb0949
+  --sha256: sha256-6mBza4a3Plu9f3ZFfJNUufj5ckx7bNefvYW8atUz0j8=
   subdir:
     cardano-api
     cardano-rpc
@@ -188,5 +189,6 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
   tag: 4f23a71ebc79eb1cd1b36b8acc94571314dee8a1
+  --sha256: sha256-TcvIpN7bl4qVFwfmcBuLq0AGK8jfcfbimTHqwrElUiw=
   subdir:
     cardano-cli
