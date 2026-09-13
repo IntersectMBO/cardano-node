@@ -57,7 +57,7 @@ import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile (..),
                    TopologyFile (..))
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import           Cardano.Rpc.Server.Config (RpcConfigF (..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..))
 import           Data.Functor.Identity (runIdentity)
 import           Data.Monoid (Last (..))
 import           Data.Time.Clock (secondsToDiffTime)
@@ -156,7 +156,10 @@ cardanoConfigToPartialNodeConfiguration cfg =
         pncRpcConfig =
           RpcConfig
             (Last (Just (runIdentity (Cfg.enableGrpc lcc))))
-            (Last (fmap File (strictMaybeToMaybe (Cfg.grpcSocketPath lcc))))
+            -- cardano-config only models the unix socket endpoint; the HTTP and
+            -- HTTPS listeners added in 11.2 have no counterpart there yet.
+            (Last (fmap (RpcEndpointUnixSocket . File)
+                        (strictMaybeToMaybe (Cfg.grpcSocketPath lcc))))
             mempty
       , -- Backend selector, query batch size and snapshot policy are all mapped
         -- from cardano-config. 'DeprecatedOptions' has no cardano-config
