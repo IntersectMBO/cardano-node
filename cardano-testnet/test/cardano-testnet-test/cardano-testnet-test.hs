@@ -35,13 +35,18 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
+import qualified Cardano.Testnet.Test.Rpc.EraSummary
 import qualified Cardano.Testnet.Test.Rpc.Eval
 import qualified Cardano.Testnet.Test.Rpc.FetchBlock
 import qualified Cardano.Testnet.Test.Rpc.FollowTip
 import qualified Cardano.Testnet.Test.Rpc.Genesis
 import qualified Cardano.Testnet.Test.Rpc.Query
+import qualified Cardano.Testnet.Test.Rpc.ReadMempool
 import qualified Cardano.Testnet.Test.Rpc.SearchUtxos
 import qualified Cardano.Testnet.Test.Rpc.Transaction
+import qualified Cardano.Testnet.Test.Rpc.WaitForTx
+import qualified Cardano.Testnet.Test.Rpc.WaitForTxInvalidRef
+import qualified Cardano.Testnet.Test.Rpc.WatchMempool
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
@@ -154,10 +159,15 @@ tests = do
         [ ignoreOnWindows "RPC FetchBlock" Cardano.Testnet.Test.Rpc.FetchBlock.hprop_rpc_fetch_block
         , ignoreOnWindows "RPC FollowTip" Cardano.Testnet.Test.Rpc.FollowTip.hprop_rpc_follow_tip
         , ignoreOnWindows "RPC ReadGenesis" Cardano.Testnet.Test.Rpc.Genesis.hprop_rpc_read_genesis
+        , ignoreOnWindows "RPC ReadEraSummary" Cardano.Testnet.Test.Rpc.EraSummary.hprop_rpc_read_era_summary
         , ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
+        , ignoreOnWindows "RPC ReadMempool" Cardano.Testnet.Test.Rpc.ReadMempool.hprop_rpc_read_mempool
         , ignoreOnWindows "RPC SearchUtxos" Cardano.Testnet.Test.Rpc.SearchUtxos.hprop_rpc_search_utxos
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx
+        , ignoreOnWindows "RPC WatchMempool" Cardano.Testnet.Test.Rpc.WatchMempool.hprop_rpc_watch_mempool
+        , ignoreOnWindows "RPC WaitForTx" Cardano.Testnet.Test.Rpc.WaitForTx.hprop_rpc_wait_for_tx
+        , ignoreOnWindows "RPC WaitForTx Invalid Ref" Cardano.Testnet.Test.Rpc.WaitForTxInvalidRef.hprop_rpc_wait_for_tx_invalid_ref
         ]
     , T.testGroup "NodesWithOptions parser"
         [ H.testPropertyNamed "Roundtrip" (fromString "prop_parseNodeSpecs_roundtrip")
