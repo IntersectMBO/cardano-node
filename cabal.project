@@ -212,7 +212,7 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: c2f4280e30dbedd1e6d333e2780f8dc54847c4cb
+  tag: 8e0560f20e1855170acd16871a5fea673b46f737
   subdir: eras/byron/crypto
 
 -- ouroboros-consensus PR #2213 (erikd/ram):
