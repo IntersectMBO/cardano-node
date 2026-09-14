@@ -13,7 +13,10 @@ module Cardano.Node.Configuration.CardanoConfigCompare
   ) where
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Types (NodeProtocolConfiguration (..))
+import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..),
+                   ShutdownOn (..))
+import           Cardano.Node.Types (MaxConcurrencyBulkSync (..),
+                   MaxConcurrencyDeadline (..), NodeProtocolConfiguration (..))
 
 -- | Diagnose node CLI flags that cardano-config's own CLI parser rejects, in
 -- terms the operator can act on. All of these flags are deprecated: the three
@@ -59,12 +62,14 @@ compareConfigurations pom adapted =
       , cmp "DatabaseFile" ncDatabaseFile
       , cmp "StartAsNonProducingNode" ncStartAsNonProducingNode
       , cmp "ProtocolFiles" ncProtocolFiles
-      , cmp "ShutdownConfig" ncShutdownConfig
+      , cmp "ShutdownConfig" (normaliseShutdown . ncShutdownConfig)
       , cmp "SocketConfig" ncSocketConfig
       , cmp "DiffusionMode" ncDiffusionMode
       , cmp "ExperimentalProtocolsEnabled" ncExperimentalProtocolsEnabled
-      , cmp "MaxConcurrencyBulkSync" ncMaxConcurrencyBulkSync
-      , cmp "MaxConcurrencyDeadline" ncMaxConcurrencyDeadline
+      , cmp "MaxConcurrencyBulkSync"
+          (dropConsensusDefault (MaxConcurrencyBulkSync 1) . ncMaxConcurrencyBulkSync)
+      , cmp "MaxConcurrencyDeadline"
+          (dropConsensusDefault (MaxConcurrencyDeadline 1) . ncMaxConcurrencyDeadline)
       , cmp "TraceForwardSocket" ncTraceForwardSocket
       , cmp "MaybeMempoolCapacityOverride" ncMaybeMempoolCapacityOverride
       , cmp "LedgerDbConfig" ncLedgerDbConfig
@@ -102,6 +107,31 @@ compareConfigurations pom adapted =
   where
     cmp :: (Eq a, Show a) => String -> (NodeConfiguration -> a) -> [String]
     cmp label accessor = cmpValues label (accessor pom) (accessor adapted)
+
+-- | 'Nothing' and @'Just' 'NoShutdown'@ both mean do not shut down: the use site
+-- guards on @'Just' lim | lim '/=' 'NoShutdown'@. Which one the node's own parser
+-- produces depends on the entry point, as its option parser ends in
+-- @'pure' 'NoShutdown'@, so @run@ yields the latter and @resolve@ the former.
+-- Collapse them so that spelling is not reported as a divergence.
+normaliseShutdown :: ShutdownConfig -> ShutdownConfig
+normaliseShutdown sc =
+  sc {scOnSyncLimit = if scOnSyncLimit sc == Just NoShutdown then Nothing else scOnSyncLimit sc}
+
+-- | Collapse a value that merely restates the consensus default to 'Nothing',
+-- the node's way of saying "leave the default alone".
+--
+-- The node's own parser leaves @MaxConcurrency{BulkSync,Deadline}@ unset, so
+-- 'Nothing' reaches consensus and @defaultBlockFetchConfiguration@ stands.
+-- cardano-config carries an explicit @1@ for both in its @defaults@, which the
+-- adapter faithfully reports, so the two differ only in who supplies the number.
+--
+-- NOTE: this assumes @defaultBlockFetchConfiguration@ uses 1 for both. If
+-- consensus ever changes either default, this stops being a spelling difference
+-- and becomes a real one that the enveloped path would silently pin to the old
+-- value; the normalisation would then hide it. The durable fix is for
+-- cardano-config to defer to consensus rather than restate the number.
+dropConsensusDefault :: Eq a => a -> Maybe a -> Maybe a
+dropConsensusDefault dflt v = if v == Just dflt then Nothing else v
 
 -- | Report a divergence between two values of the same type.
 cmpValues :: (Eq a, Show a) => String -> a -> a -> [String]
