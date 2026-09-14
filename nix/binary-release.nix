@@ -36,10 +36,25 @@ let
         CheckpointsFile = "checkpoints.json";
       };
 
+      # Published in the dialect the environment selects, matching what iohk-nix
+      # publishes for it rather than always emitting the legacy config. The
+      # genesis paths are rewritten to the siblings copied below first, so the
+      # envelope carries the relative paths too.
+      #
+      # cardanoLib always sets configFormat, so an absent value means the
+      # iohk-nix pin moved under us. Mirror its throw rather than falling
+      # through to legacy, which would publish the wrong dialect silently.
+      relativeNodeConfig = env.nodeConfig // genesisAttrs;
+
       nodeConfig = pkgs.writeText
         "config.json"
         (builtins.toJSON
-          (env.nodeConfig // genesisAttrs));
+          (if env.configFormat == "enveloped"
+           then pkgs.cardanoLib.mkEnvelope relativeNodeConfig
+           else if env.configFormat == "legacy"
+           then relativeNodeConfig
+           else throw ("binary-release: ${name} sets configFormat = \"${env.configFormat}\";"
+                       + " expected \"enveloped\" or \"legacy\"")));
 
       submitApiConfig = pkgs.writeText
         "submit-api-config.json"
