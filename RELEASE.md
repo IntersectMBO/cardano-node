@@ -60,7 +60,8 @@ This is the release process for node releases.
 6. The community is notified of the release candidate and given time to
    provide feedback.
 7. The Release Engineer creates a draft GitHub Release and asks dev leads to
-   fill in their changelog sections.
+   fill in their changelog sections; for herald-managed packages the
+   changelog section is compiled from fragments, see Versioning.
 8. CPC, TSC, Release Engineer, and SRE Lead sign off → the release is
    published as a **GitHub pre-release**.
 9. QA runs the final integration test suite (`cardano-node-tests`).
@@ -183,6 +184,12 @@ to a full release in GitHub without any code changes or new tags.
 Example: `10.2.1` was published as a GitHub pre-release for approximately one
 month before being promoted to a full release. The tag was always `10.2.1`;
 only the GitHub release type changed.
+
+## Herald-managed packages
+
+`cardano-node-chairman`, `cardano-submit-api` and `cardano-testnet` manage changelogs with herald (see `.herald.yml`): each PR adds a fragment under the package's `.changes/` directory.
+At release time, run `herald batch <package>` (available in the nix dev shell) to compile the changelog and bump the version in the cabal file.
+It bumps relative to the current cabal version, so pass the version explicitly (`-v A.B.C.D`) if that was already bumped by hand.
 
 # Collaboration
 
