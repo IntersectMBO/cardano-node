@@ -1,113 +1,23 @@
 ################################################################################
 # Mainnet Cardano Node Configuration
-
-##### Locations #####
-
-AlonzoGenesisFile: mainnet-alonzo-genesis.json
-AlonzoGenesisHash: 7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874
-ByronGenesisFile: mainnet-byron-genesis.json
-ByronGenesisHash: 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb
-ConwayGenesisFile: mainnet-conway-genesis.json
-ConwayGenesisHash: 15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643ef62
-ShelleyGenesisFile: mainnet-shelley-genesis.json
-ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
-CheckpointsFile: mainnet-checkpoints.json
-CheckpointsFileHash: 3e6dee5bae7acc6d870187e72674b37c929be8c66e62a552cf6a876b1af31ade
-
-##### Core protocol parameters #####
-
-# The mainnet does not include the network magic into addresses. Testnets do.
-RequiresNetworkMagic: RequiresNoMagic
-
-##### Update system parameters #####
-
-# This protocol version number gets used by block producing nodes as part
-# of the system for agreeing on and synchronising protocol updates.
 #
-# See https://github.com/intersectmbo/cardano-node/blob/master/cardano-node/src/Cardano/Node/Protocol/Cardano.hs#L199
-LastKnownBlockVersion-Major: 3
-LastKnownBlockVersion-Minor: 0
-LastKnownBlockVersion-Alt: 0
-
-##### Network Configuration #####
-
-# The following control the number of outbound connections to strictly our upstream peers
-# cf. https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/topology
+# This is the cardano-config envelope form: the settings live under
+# `Configuration`, grouped by component, beneath the `$schema`, `Version` and
+# `MinNodeVersion` annotations. It is the same shape as mainnet-config.json, and
+# the two are checked for equivalence by Test.Cardano.Config.Mainnet.
 #
-# Defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
-# SyncTargetNumberOfActiveBigLedgerPeers: 30
-# SyncTargetNumberOfActivePeers: 5
-# SyncTargetNumberOfEstablishedBigLedgerPeers: 40
-# SyncTargetNumberOfEstablishedPeers: 10
-# SyncTargetNumberOfKnownBigLedgerPeers: 100
-# SyncTargetNumberOfKnownPeers: 150
-# SyncTargetNumberOfRootPeers: 0
-# TargetNumberOfActiveBigLedgerPeers: 5
-# TargetNumberOfActivePeers: 20
-# TargetNumberOfEstablishedBigLedgerPeers: 10
-# TargetNumberOfEstablishedPeers: 30
-# TargetNumberOfKnownBigLedgerPeers: 15
+# A node given an envelope resolves it with cardano-config rather than its own
+# parser, so the keys cardano-config treats as removed are not present here.
+# Notably LastKnownBlockVersion-Major/-Minor/-Alt are gone: the Byron
+# supported-protocol-version now comes from consensus defaults.
 #
-# Additionally, as of ouroboros-network `0.22.2` with cardano-node `10.6.0`,
-# the following three node config parameters which previously required
-# explicit configuration depending on whether the node is a forger are now
-# handled automatically.
-#
-# PeerSharing: false for forgers, true for non-forgers
-# TargetNumberOfKnownPeers: set according to forging status
-# TargetNumberOfRootPeers: set according to forging status
+# Commented-out examples below show the section each key belongs to, so they are
+# correct as written if uncommented.
 
-# When syncing in Genesis mode, this is the minimum number of active connections
-# to big ledger peers needed to continue:
-# MinBigLedgerPeersForTrustedState: 5
+$schema: https://raw.githubusercontent.com/IntersectMBO/cardano-config/v1/schemas/config.schema.json
 
-##### Consensus Configuration #####
-
-ConsensusMode: PraosMode
-
-# Mempool timeout parameters must be either all set or all unset.
-# When unset cardano-node will use default values.
-# Default example values are:
-# MempoolTimeoutSoft: 1.0
-# MempoolTimeoutHard: 1.5
-# MempoolTimeoutCapacity: 5.0
-
-##### Ledger Configuration #####
-
-# Additional configuration options can be found at:
-# https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating
-
-LedgerDB:
-  # When querying the store for a big range of UTxOs (such as with
-  # QueryUTxOByAddress), the store will be read in batches of this size.
-  QueryBatchSize: 100000
-
-  # The backend can either be in memory with `V2InMemory` or on disk with
-  # `V2LSM`.
-  Backend: V2InMemory
-
-  # Instead of an object with individual options, a predefined snapshot
-  # policy can be selected by name, e.g. `Snapshots: Mithril`.
-  Snapshots:
-    # The snapshot interval in slots.  Use `securityParam * 40` to provide
-    # intra-epoch snapshot redundancy while minimizing potential IOWAIT stall on some
-    # spec constrained machines during snapshot write.
-    SnapshotInterval: 86400
-
-    # Slot offset at which snapshot scheduling begins.
-    SlotOffset: 0
-
-    # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
-    # Default is 10 minutes.
-    # RateLimit: 600
-
-    # Randomised snapshot delay range, in seconds.
-    # Both Min and Max need to be specified, otherwise the default delay of (5min, 10min) will be used.
-    # MinDelay: 300
-    # MaxDelay: 600
-
-    # The number of disk snapshots to keep.
-    NumOfDiskSnapshots: 2
+# The configuration format version this document is written in.
+Version: 1
 
 ##### Version Information #####
 
@@ -115,160 +25,281 @@ LedgerDB:
 # cardano-config treats as removed.
 MinNodeVersion: "11.2.0"
 
-##### Logging configuration #####
+Configuration:
 
-# Match the metrics prefix of the legacy tracing system to minimize breaking
-# changes.
-TraceOptionMetricsPrefix: "cardano.node.metrics."
+  ##### Protocol Configuration #####
 
-# Optional node name.  Defaults to hostname if left unset. Ideally this is
-# set in downstream code where the node's name is known.
-# TraceOptionNodeName:
+  ProtocolConfig:
 
-# The frequency of resource messages.
-TraceOptionResourceFrequency: 1000
+    ##### Locations #####
 
-# Queue size control:
-# In case of a missing forwarding service consumer, trace messages will be
-# buffered. This mitigates short forwarding interruptions, or delays at
-# startup time.
-#
-# The queue capacity should thus correlate to the expected log lines per
-# second given a particular tracing configuration to avoid unnecessarily
-# increasing memory footprint.
-#
-# The maxReconnectDelay config option specifies the maximum delay in seconds
-# between (re-)connection attempts of a forwarder.
-TraceOptionForwarder:
-  connQueueSize: 64
-  disconnQueueSize: 128
-  maxReconnectDelay: 30
+    AlonzoGenesisFile: mainnet-alonzo-genesis.json
+    AlonzoGenesisHash: 7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874
+    ByronGenesisFile: mainnet-byron-genesis.json
+    ByronGenesisHash: 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb
+    ConwayGenesisFile: mainnet-conway-genesis.json
+    ConwayGenesisHash: 15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643ef62
+    ShelleyGenesisFile: mainnet-shelley-genesis.json
+    ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
+    CheckpointsFile: mainnet-checkpoints.json
+    CheckpointsFileHash: 3e6dee5bae7acc6d870187e72674b37c929be8c66e62a552cf6a876b1af31ade
 
-# Tracing options for node
-TraceOptions:
-  # The default tracer configuration
-  '':
-    backends:
-    # None, any combination, or all of the following backends can be
-    # enabled, where `EKGBackend` forwards EKG resource status to
-    # cardano-tracer, `Forwarder` forwards message traces and
-    # `PrometheusSimple` serves cardano-node metrics directly from
-    # cardano-node and defaults to use of the same port as in the legacy
-    # tracing system.
-    - EKGBackend
-    - Forwarder
-    - PrometheusSimple suffix 127.0.0.1 12798
+    ##### Core protocol parameters #####
 
-    # Only one of the following can be enabled, which determines for format
-    # of node logging to stdout.
-    - Stdout HumanFormatColoured
-    # - Stdout HumanFormatUncoloured
-    # - Stdout MachineFormat
+    # The mainnet does not include the network magic into addresses. Testnets do.
+    RequiresNetworkMagic: RequiresNoMagic
 
-    # Each tracer can specify the level of details for printing messages.
-    # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
-    # no implementation is given, `DNormal` is chosen.
-    detail: DNormal
+  ##### Consensus Configuration #####
 
-    # The severity levels, ranging from the least severe (`Debug`) to the
-    # most severe (`Emergency`), provide a framework for ignoring messages
-    # with severity levels below a globally configured severity cutoff.
+  ConsensusConfig:
+    ConsensusMode: PraosMode
+
+  ##### Network Configuration #####
+  #
+  # The following control the number of outbound connections to strictly our upstream peers
+  # cf. https://developers.cardano.org/docs/operate-a-stake-pool/node-operations/topology
+  #
+  # Defaults are provided by ouroboros-network, but can be overridden by uncommenting below:
+  # NetworkConfig:
+  #   SyncTargetNumberOfActiveBigLedgerPeers: 30
+  #   SyncTargetNumberOfActivePeers: 5
+  #   SyncTargetNumberOfEstablishedBigLedgerPeers: 40
+  #   SyncTargetNumberOfEstablishedPeers: 10
+  #   SyncTargetNumberOfKnownBigLedgerPeers: 100
+  #   SyncTargetNumberOfKnownPeers: 150
+  #   SyncTargetNumberOfRootPeers: 0
+  #   DeadlineTargetNumberOfActiveBigLedgerPeers: 5
+  #   DeadlineTargetNumberOfActivePeers: 20
+  #   DeadlineTargetNumberOfEstablishedBigLedgerPeers: 10
+  #   DeadlineTargetNumberOfEstablishedPeers: 30
+  #   DeadlineTargetNumberOfKnownBigLedgerPeers: 15
+  #
+  # Note the deadline targets were named TargetNumberOf* before the node 11.2
+  # config series; cardano-config only accepts the Deadline-prefixed names.
+  #
+  # Additionally, as of ouroboros-network `0.22.2` with cardano-node `10.6.0`,
+  # the following three node config parameters which previously required
+  # explicit configuration depending on whether the node is a forger are now
+  # handled automatically.
+  #
+  # PeerSharing: false for forgers, true for non-forgers
+  # DeadlineTargetNumberOfKnownPeers: set according to forging status
+  # DeadlineTargetNumberOfRootPeers: set according to forging status
+  #
+  # When syncing in Genesis mode, this is the minimum number of active connections
+  # to big ledger peers needed to continue:
+  # NetworkConfig:
+  #   MinBigLedgerPeersForTrustedState: 5
+
+  ##### Mempool Configuration #####
+  #
+  # Mempool timeout parameters must be either all set or all unset.
+  # When unset cardano-node will use default values.
+  # Default example values are:
+  # MempoolConfig:
+  #   MempoolTimeoutSoft: 1.0
+  #   MempoolTimeoutHard: 1.5
+  #   MempoolTimeoutCapacity: 5.0
+  #
+  # Set or unset the mempool capacity override in number of bytes.
+  #
+  # This is intended for testing, and for low-resource machines to run with a smaller mempool.
+  # Please note that running with a large mempool is NOT recommended. The mempool is a
+  # just a network communication buffer and all the advice on "buffer bloat" applies, see:
+  # https://en.wikipedia.org/wiki/Bufferbloat
+  # The default size is two blocks, which is generally enough to ensure full blocks.
+  #
+  # MempoolConfig:
+  #   MempoolCapacityBytesOverride: Integer | NoOverride
+  #
+  # Examples:
+  #   MempoolCapacityBytesOverride: 1000000 (1MB)
+  #   MempoolCapacityBytesOverride: NoOverride (default)
+
+  ##### Storage Configuration #####
+
+  StorageConfig:
+
+    # Additional configuration options can be found at:
+    # https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating
+
+    LedgerDB:
+      # When querying the store for a big range of UTxOs (such as with
+      # QueryUTxOByAddress), the store will be read in batches of this size.
+      QueryBatchSize: 100000
+
+      # The backend can either be in memory with `V2InMemory` or on disk with
+      # `V2LSM`.
+      Backend: V2InMemory
+
+      # Instead of an object with individual options, a predefined snapshot
+      # policy can be selected by name, e.g. `Snapshots: Mithril`.
+      Snapshots:
+        # The snapshot interval in slots.  Use `securityParam * 40` to provide
+        # intra-epoch snapshot redundancy while minimizing potential IOWAIT stall on some
+        # spec constrained machines during snapshot write.
+        SnapshotInterval: 86400
+
+        # Slot offset at which snapshot scheduling begins.
+        SlotOffset: 0
+
+        # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
+        # Default is 10 minutes.
+        # RateLimit: 600
+
+        # Randomised snapshot delay range, in seconds.
+        # Both Min and Max need to be specified, otherwise the default delay of (5min, 10min) will be used.
+        # MinDelay: 300
+        # MaxDelay: 600
+
+        # The number of disk snapshots to keep.
+        NumOfDiskSnapshots: 2
+
+  ##### Logging configuration #####
+  #
+  # The tracing settings are handed to trace-dispatcher as-is; cardano-config
+  # only carries them, it does not interpret their shape.
+
+  HermodTracing:
+
+    # Match the metrics prefix of the legacy tracing system to minimize breaking
+    # changes.
+    TraceOptionMetricsPrefix: "cardano.node.metrics."
+
+    # Optional node name.  Defaults to hostname if left unset. Ideally this is
+    # set in downstream code where the node's name is known.
+    # TraceOptionNodeName:
+
+    # The frequency of resource messages.
+    TraceOptionResourceFrequency: 1000
+
+    # Queue size control:
+    # In case of a missing forwarding service consumer, trace messages will be
+    # buffered. This mitigates short forwarding interruptions, or delays at
+    # startup time.
     #
-    # The full list of severities are:
-    # `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert` and
-    # `Emergency`.
+    # The queue capacity should thus correlate to the expected log lines per
+    # second given a particular tracing configuration to avoid unnecessarily
+    # increasing memory footprint.
     #
-    # To enhance severity filtering, there is also the option of `Silence`
-    # which allows for the unconditional silencing of a specific trace,
-    # essentially representing the deactivation of tracers -- a semantic
-    # continuation of the functionality in the legacy system.
-    severity: Notice
+    # The maxReconnectDelay config option specifies the maximum delay in seconds
+    # between (re-)connection attempts of a forwarder.
+    TraceOptionForwarder:
+      connQueueSize: 64
+      disconnQueueSize: 128
+      maxReconnectDelay: 30
 
-  # The following tracer configurations are configured to closely match the
-  # default logging seen in the legacy cardano-node tracing system.
-  BlockFetch.Client.CompletedBlockFetch:
-    # A frequency limit for the number of messages per second may also be
-    # provided for any tracer.
-    maxFrequency: 2.0
+    # Tracing options for node
+    TraceOptions:
+      # The default tracer configuration
+      '':
+        backends:
+        # None, any combination, or all of the following backends can be
+        # enabled, where `EKGBackend` forwards EKG resource status to
+        # cardano-tracer, `Forwarder` forwards message traces and
+        # `PrometheusSimple` serves cardano-node metrics directly from
+        # cardano-node and defaults to use of the same port as in the legacy
+        # tracing system.
+        - EKGBackend
+        - Forwarder
+        - PrometheusSimple suffix 127.0.0.1 12798
 
-  BlockFetch.Decision:
-    severity: Info
+        # Only one of the following can be enabled, which determines for format
+        # of node logging to stdout.
+        - Stdout HumanFormatColoured
+        # - Stdout HumanFormatUncoloured
+        # - Stdout MachineFormat
 
-  ChainDB:
-    severity: Info
+        # Each tracer can specify the level of details for printing messages.
+        # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
+        # no implementation is given, `DNormal` is chosen.
+        detail: DNormal
 
-  ChainDB.AddBlockEvent.AddBlockValidation:
-    severity: Silence
+        # The severity levels, ranging from the least severe (`Debug`) to the
+        # most severe (`Emergency`), provide a framework for ignoring messages
+        # with severity levels below a globally configured severity cutoff.
+        #
+        # The full list of severities are:
+        # `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert` and
+        # `Emergency`.
+        #
+        # To enhance severity filtering, there is also the option of `Silence`
+        # which allows for the unconditional silencing of a specific trace,
+        # essentially representing the deactivation of tracers -- a semantic
+        # continuation of the functionality in the legacy system.
+        severity: Notice
 
-  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
-    maxFrequency: 2.0
+      # The following tracer configurations are configured to closely match the
+      # default logging seen in the legacy cardano-node tracing system.
+      BlockFetch.Client.CompletedBlockFetch:
+        # A frequency limit for the number of messages per second may also be
+        # provided for any tracer.
+        maxFrequency: 2.0
 
-  ChainDB.AddBlockEvent.AddedBlockToQueue:
-    maxFrequency: 2.0
+      BlockFetch.Decision:
+        severity: Info
 
-  ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
-    maxFrequency: 2.0
+      ChainDB:
+        severity: Info
 
-  ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
-    maxFrequency: 2.0
+      ChainDB.AddBlockEvent.AddBlockValidation:
+        severity: Silence
 
-  ChainSync.Client:
-    severity: Warning
+      ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+        maxFrequency: 2.0
 
-  Forge.Loop:
-    severity: Info
+      ChainDB.AddBlockEvent.AddedBlockToQueue:
+        maxFrequency: 2.0
 
-  Forge.StateInfo:
-    severity: Info
+      ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
+        maxFrequency: 2.0
 
-  Mempool:
-    severity: Silence
+      ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
+        maxFrequency: 2.0
 
-  Net.ConnectionManager.Remote:
-    severity: Info
+      ChainSync.Client:
+        severity: Warning
 
-  Net.InboundGovernor:
-    severity: Warning
+      Forge.Loop:
+        severity: Info
 
-  Net.InboundGovernor.Remote:
-    severity: Info
+      Forge.StateInfo:
+        severity: Info
 
-  Net.Mux.Remote:
-    severity: Info
+      Mempool:
+        severity: Silence
 
-  Net.PeerSelection:
-    severity: Info
+      Net.ConnectionManager.Remote:
+        severity: Info
 
-  Resources:
-    severity: Silence
+      Net.InboundGovernor:
+        severity: Warning
 
-  Startup.DiffusionInit:
-    severity: Info
+      Net.InboundGovernor.Remote:
+        severity: Info
 
-  # The following messages are UTxO-HD specific. Silencing these tracers aims
-  # at having comparable log line rates in messages per second on both the
-  # UTxO-HD and earlier non-UTxO-HD nodes.  The additional high granularity
-  # mempool silences are not redundant in the case that the top level Mempool
-  # severity is switched away from silence.
-  ChainDB.LedgerEvent.Forker:
-    severity: Silence
+      Net.Mux.Remote:
+        severity: Info
 
-  Mempool.AttemptAdd:
-    severity: Silence
+      Net.PeerSelection:
+        severity: Info
 
-  Mempool.SyncNotNeeded:
-    severity: Silence
+      Resources:
+        severity: Silence
 
-# Set or unset the mempool capacity override in number of bytes.
-#
-# This is intended for testing, and for low-resource machines to run with a smaller mempool.
-# Please note that running with a large mempool is NOT recommended. The mempool is a
-# just a network communication buffer and all the advice on "buffer bloat" applies, see:
-# https://en.wikipedia.org/wiki/Bufferbloat
-# The default size is two blocks, which is generally enough to ensure full blocks.
-#
-# MempoolCapacityBytesOverride: Integer | NoOverride
-#
-# Examples:
-#   MempoolCapacityBytesOverride: 1000000 (1MB)
-#   MempoolCapacityBytesOverride: NoOverride (default)
+      Startup.DiffusionInit:
+        severity: Info
+
+      # The following messages are UTxO-HD specific. Silencing these tracers aims
+      # at having comparable log line rates in messages per second on both the
+      # UTxO-HD and earlier non-UTxO-HD nodes.  The additional high granularity
+      # mempool silences are not redundant in the case that the top level Mempool
+      # severity is switched away from silence.
+      ChainDB.LedgerEvent.Forker:
+        severity: Silence
+
+      Mempool.AttemptAdd:
+        severity: Silence
+
+      Mempool.SyncNotNeeded:
+        severity: Silence
