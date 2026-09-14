@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,6 +21,7 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
+import qualified Cardano.Configuration as Cfg
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.DocuGenerator (DocTracer (..), docTracer, docTracerDatapoint,
@@ -35,6 +37,8 @@ import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
+import           Cardano.Node.Configuration.CardanoConfigResolve (ConfigurationDialect (..),
+                   classifyConfigurationFile)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
@@ -188,6 +192,43 @@ runTraceDocumentationCmd
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
   docTracers tdcConfigFile tdcOutput tdMetricsHelp tdNamespaceList
 
+-- | Resolve the tracing configuration the way the node does at startup.
+--
+-- Handing the configuration file straight to trace-dispatcher only works for the
+-- legacy flat dialect. A cardano-config envelope nests the tracing settings at
+-- @Configuration.HermodTracing@, which trace-dispatcher's own file parser does
+-- not look for, so it fails with @key \"Options\" not found@.
+--
+-- Rather than teach this command the envelope shape, ask cardano-config for the
+-- tracing configuration it resolved. 'Cfg.resolveConfigurationFromFile' is the
+-- entry point for tools that consume a node configuration file but have no node
+-- command line of their own, which is exactly this command: it resolves against
+-- 'Cfg.defaultCliArgs', so every value comes from the file.
+--
+-- Note 'Cardano.Node.Configuration.CardanoConfigResolve.buildNodeConfiguration'
+-- is *not* usable here even though it does the same job at startup. It reads the
+-- ambient process argv via 'getArgs' and feeds it to cardano-config's flat CLI
+-- parser, which rejects this command's own flags:
+--
+--     Error in creating the NodeConfiguration: Invalid option `--output-file'
+--
+-- Legacy flat configurations keep going to trace-dispatcher's own file parser,
+-- as they always have.
+--
+-- This fixes the node only. Any other consumer that hands trace-dispatcher a
+-- whole node config hits the same wall, so the general fix is for
+-- trace-dispatcher's own @parseAsOuter@ to look under @Configuration@ as well as
+-- at the top level.
+resolveTracingConfig :: FilePath -> IO TraceConfig
+resolveTracingConfig fp =
+    classifyConfigurationFile fp >>= \case
+      LegacyDialect ->
+        readConfigurationWithDefault (FromFile fp) defaultCardanoConfig
+      CardanoConfigDialect ->
+        Cfg.resolveConfigurationFromFile fp >>= \case
+          Right (nc, _warnings) -> pure (Cfg.tracingConfiguration nc)
+          Left err -> fail ("trace-documentation: " <> show err)
+
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
@@ -214,7 +255,7 @@ docTracersFirstPhase :: forall blk peer remotePeer.
   -> IO (DocTracer, TraceConfig)
 docTracersFirstPhase condConfigFileName = do
     trConfig      <- case condConfigFileName of
-                        Just fn -> readConfigurationWithDefault (FromFile fn) defaultCardanoConfig
+                        Just fn -> resolveTracingConfig fn
                         Nothing -> pure defaultCardanoConfig
     let trBase    :: Logging.Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Logging.Trace IO FormattedMessage = docTracer Forwarder
