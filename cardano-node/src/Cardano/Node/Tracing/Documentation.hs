@@ -35,6 +35,7 @@ import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
+import           Cardano.Node.Configuration.CardanoConfigResolve (tracingConfigSource)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
@@ -187,6 +188,14 @@ runTraceDocumentationCmd
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
   docTracers tdcConfigFile tdcOutput tdMetricsHelp tdNamespaceList
 
+-- | Read the tracing configuration from a node configuration file. This command
+-- has no node, so there is no resolved configuration to use as there is at
+-- startup; 'tracingConfigSource' says how to present the file.
+resolveTracingConfig :: FilePath -> IO TraceConfig
+resolveTracingConfig fp = do
+    src <- tracingConfigSource fp
+    readConfigurationWithDefault src defaultCardanoConfig
+
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
@@ -213,7 +222,7 @@ docTracersFirstPhase :: forall blk peer remotePeer.
   -> IO (DocTracer, TraceConfig)
 docTracersFirstPhase condConfigFileName = do
     trConfig      <- case condConfigFileName of
-                        Just fn -> readConfigurationWithDefault (FromFile fn) defaultCardanoConfig
+                        Just fn -> resolveTracingConfig fn
                         Nothing -> pure defaultCardanoConfig
     let trBase    :: Logging.Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Logging.Trace IO FormattedMessage = docTracer Forwarder
