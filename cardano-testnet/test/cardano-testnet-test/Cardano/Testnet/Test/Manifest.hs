@@ -1,0 +1,47 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+module Cardano.Testnet.Test.Manifest
+  ( hprop_manifest
+  ) where
+
+import           Cardano.Testnet (createAndRunTestnet, mkConf)
+
+import           Prelude
+
+import           Control.Monad.IO.Class (liftIO)
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Default.Class (def)
+import           System.FilePath ((</>))
+
+import           Testnet.Manifest
+import           Testnet.Property.Util (integrationRetryWorkspace)
+
+import           Hedgehog (Property, evalEither, (===))
+import qualified Hedgehog.Extras as H
+
+-- | Integration test: start a default testnet, then verify that
+-- @manifest.json@ exists and can be decoded into the 'Manifest' type,
+-- and that basic counts match expectations (3 nodes, 3 wallets, magic 42).
+--
+-- Execute with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Manifest/"'@
+hprop_manifest :: Property
+hprop_manifest = integrationRetryWorkspace 0 "manifest" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
+  conf <- mkConf tmpDir
+  _runtime <- createAndRunTestnet def def conf
+
+  let manifestPath = tmpDir </> manifestFileName
+  H.assertFileExists manifestPath
+
+  bs <- liftIO $ LBS.readFile manifestPath
+  manifest :: Manifest <- evalEither $ A.eitherDecode' bs
+
+  -- The default cluster has 3 nodes (1 SPO + 2 relays)
+  length (manifestNodes manifest) === 3
+  -- The default cluster creates 3 funded wallets
+  length (manifestWallets manifest) === 3
+  -- The default testnet magic is 42
+  mnMagic (manifestNetwork manifest) === 42
