@@ -1,7 +1,5 @@
 {
   "AlonzoGenesisFile": "alonzo-genesis.json",
-  "ApplicationName": "cardano-sl",
-  "ApplicationVersion": 0,
   "ByronGenesisFile": "byron-genesis.json",
   "ConsensusMode": "PraosMode",
   "ConwayGenesisFile": "conway-genesis.json",
@@ -21,9 +19,6 @@
     }
   },
   "MaxConcurrencyDeadline": 4,
-  "MaxKnownMajorProtocolVersion": 2,
-  "PBftSignatureThreshold": 1.1,
-  "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresMagic",
   "ShelleyGenesisFile": "shelley-genesis.json",
   "TestAllegraHardForkAtEpoch": 0,
