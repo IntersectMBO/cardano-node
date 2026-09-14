@@ -343,9 +343,8 @@ There is one flag that control values that appear in the Conway genesis file and
 
 Like the Shelley flags, this flag is ignored if a sandbox environment is provided via `--node-env`.
 
-### gRPC endpoints (experimental)
-
-Every node of the testnet can expose the node's experimental gRPC interface:
+### gRPC endpoints
+Every node of the testnet can expose the node's gRPC interface:
 
 - `--enable-grpc` makes each node listen on a Unix socket, located in the same directory as the node's node-to-client socket.
 - `--enable-grpc-http` makes each node listen over HTTP without TLS (h2c) instead. By default each node listens on `127.0.0.1` on a random free port; use `--grpc-listen-address` to change the IP address, and `--grpc-listen-port-base` to assign deterministic ports (node `i` listens on `PORT + i - 1`).
