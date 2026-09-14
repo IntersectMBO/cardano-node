@@ -36,6 +36,7 @@ module Cardano.Node.Configuration.CardanoConfigResolve
     -- * Dialects
   , ConfigurationDialect (..)
   , classifyConfigurationFile
+  , tracingConfigSource
 
     -- * Command-line layers
   , nodeCliPartialConfiguration
@@ -43,6 +44,7 @@ module Cardano.Node.Configuration.CardanoConfigResolve
   , cardanoConfigCliLayer
   ) where
 
+import           Cardano.Logging.ConfigurationParser (ConfigSource (..))
 import           Cardano.Logging.Types (TraceConfig)
 import qualified Cardano.Configuration as Cfg
 import qualified Cardano.Configuration.CliArgs as CliArgs
@@ -143,6 +145,22 @@ classifyConfigurationFile fp =
   Yaml.decodeFileEither fp >>= \case
     Right (Object o) | KeyMap.member "Configuration" o -> pure CardanoConfigDialect
     _ -> pure LegacyDialect
+
+-- | How to hand a node configuration file's tracing settings to
+-- trace-dispatcher, for a tool with a file and no node to resolve it.
+--
+-- Reading a file, the library expects the tracing settings at its root. An
+-- envelope puts them at @Configuration.HermodTracing@, so hand over that object
+-- instead, which is what 'FromJSONObject' is for. Anything else goes as the
+-- file, as before.
+tracingConfigSource :: FilePath -> IO ConfigSource
+tracingConfigSource fp =
+  Yaml.decodeFileEither fp >>= \case
+    Right (Object top)
+      | Just (Object cfg) <- KeyMap.lookup "Configuration" top
+      , Just (Object tracing) <- KeyMap.lookup "HermodTracing" cfg ->
+          pure (FromJSONObject tracing)
+    _ -> pure (FromFile fp)
 
 -- | Resolve a legacy configuration with the node's own POM parser — the result
 -- the node runs on — and cross-check it against @cardano-config@'s.
