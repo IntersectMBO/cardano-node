@@ -43,7 +43,8 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration,
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..),
                    ShutdownOn (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile (..),
+import           Cardano.Node.Types (CheckpointsFile (..), CheckpointsHash (..),
+                   ConfigYamlFilePath (..), GenesisFile (..),
                    GenesisHash (..), KESSource (..), MaxConcurrencyBulkSync (..),
                    MaxConcurrencyDeadline (..),
                    NodeAlonzoProtocolConfiguration (..),
@@ -384,7 +385,16 @@ nodeProtocolConfigurationFromCardanoConfig cfg =
       , npcTestDijkstraHardForkAtVersion = strictMaybeToMaybe (Cfg.testDijkstraHardForkAtVersion testCfg)
       }
 
-  checkpointsConfig = NodeCheckpointsConfiguration Nothing Nothing
+  -- The file path is resolved relative to the configuration file, as the
+  -- genesis paths above are. The hash is optional here, unlike the genesis
+  -- hashes, so it is carried through only when the configuration pinned one.
+  checkpointsConfig =
+    case strictMaybeToMaybe (Cfg.checkpointsFile protoCfg) of
+      Nothing -> NodeCheckpointsConfiguration Nothing Nothing
+      Just mh ->
+        NodeCheckpointsConfiguration
+          (Just (CheckpointsFile (configDir </> Cfg.maybeHashed mh)))
+          (CheckpointsHash <$> strictMaybeToMaybe (Cfg.maybeHash mh))
 
   epochOf = fmap EpochNo . strictMaybeToMaybe
 
@@ -400,6 +410,4 @@ adapterGaps =
   [ "ncProtocolConfig: Byron supported-protocol-version — the LastKnownBlockVersion-*"
       <> " keys are deliberately not modelled by cardano-config (they now come from"
       <> " consensus defaults), so a fixed 1/0/0 is used here"
-  , "ncProtocolConfig: checkpoints — the CheckpointsFile/CheckpointsFileHash keys have"
-      <> " no cardano-config counterpart, so the checkpoints configuration is always empty"
   ]
