@@ -27,6 +27,7 @@ import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
+import           Cardano.Node.Configuration.CardanoConfigResolve (tracingConfigSource)
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -133,8 +134,9 @@ checkNodeTraceConfigurationWith ::
   -> FilePath
   -> IO NSWarnings
 checkNodeTraceConfigurationWith dt configFileName = do
+  src <- tracingConfigSource configFileName
   w1 <- checkTraceConfiguration
-          (FromFile configFileName)
+          src
           defaultCardanoConfig
           getAllNamespaces
   pure $ w1 <> dtWarnings dt
