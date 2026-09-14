@@ -97,16 +97,26 @@ elif [[ -n ${NETWORK:-} ]]; then
     # (ByronGenesisFile, ShelleyGenesisFile, AlonzoGenesisFile,
     # ConwayGenesisFile, CheckpointsFile, ...); matching the "File" suffix
     # keeps this working if more are added.
+    #
+    # Walked rather than applied at the top level: in the cardano-config
+    # envelope these keys live under Configuration.<Section>, so a top-level
+    # with_entries would silently rewrite nothing. Walking handles the flat and
+    # enveloped shapes alike.
     if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
       jq -S \
         --arg cfgDir "$CFG/$NETWORK" \
         --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
         '. * $deepMerge
-         | with_entries(
-             if ((.key | endswith("File"))
-                 and (.value | type == "string")
-                 and (.value | startswith("/") | not))
-             then .value = "\($cfgDir)/\(.value)"
+         | walk(
+             if type == "object"
+             then with_entries(
+                    if ((.key | endswith("File"))
+                        and (.value | type == "string")
+                        and (.value | startswith("/") | not))
+                    then .value = "\($cfgDir)/\(.value)"
+                    else .
+                    end
+                  )
              else .
              end
            )' \
