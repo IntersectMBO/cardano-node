@@ -55,11 +55,23 @@ module Cardano.Testnet (
   nodeSocketPath,
   nodeRpcSocketPath,
   nodeGrpcServer,
+
+  -- * Manifest (read-only interface; only 'cardanoTestnet' writes the file)
+  Manifest(..),
+  ManifestNetwork(..),
+  ManifestPaths(..),
+  ManifestGenesisFiles(..),
+  ManifestNode(..),
+  ManifestGrpc(..),
+  ManifestWallet(..),
+  manifestFileName,
+  cardanoTestnetVersionString,
   ) where
 
 import           Testnet.Components.Query
 import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
+import           Testnet.Manifest
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Util
 import           Testnet.Start.Cardano

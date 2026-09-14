@@ -83,6 +83,7 @@ import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
+import           Testnet.Manifest (buildManifest, removeStaleManifest, writeManifest)
 import           Testnet.Orphans ()
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.RunIO (execCli', execCli_, liftIOAnnotated, mkExecConfig)
@@ -259,6 +260,9 @@ cardanoTestnet
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
     , updateTimestamps
     } = do
+  -- Remove stale manifest from any previous run (fresh-run rule)
+  liftIOAnnotated $ removeStaleManifest tmpAbsPath
+
   let nPools = NumPools $ NEL.length cardanoSpoNodes
       allNodes = map (True,) (NEL.toList cardanoSpoNodes) ++ map (False,) cardanoRelayNodes
       nodeConfigFile = tmpAbsPath </> defaultConfigFile
@@ -485,6 +489,20 @@ cardanoTestnet
   let stakePoolsFp = tmpAbsPath </> "current-stake-pools.json"
 
   assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
+
+  -- Re-read the shelley genesis for the (potentially updated) system start time.
+  -- The in-memory 'shelleyGenesis' may be stale when timestamps were updated above.
+  systemStartBytes <- liftIOAnnotated (LBS.readFile shelleyGenesisFile)
+  finalShelleyGenesis <- case eitherDecode systemStartBytes of
+    Right sg -> return sg
+    Left err -> throwString $ "Could not read shelley genesis for manifest: " <> err
+  let systemStartTime = sgSystemStart finalShelleyGenesis
+
+  -- Build and atomically write the manifest.  The file appearing is the
+  -- ready signal — it is written only after all readiness checks pass.
+  manifest <- liftIOAnnotated $
+    buildManifest tmpAbsPath runtime (eraToString Defaults.defaultEra) systemStartTime
+  liftIOAnnotated $ writeManifest tmpAbsPath manifest
 
   when enableNewEpochStateLogging $
     TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
