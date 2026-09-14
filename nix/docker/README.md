@@ -113,16 +113,34 @@ Optional env variables and cardano-node args which can be used in custom mode
 can also be used in this mode.  Merge mode uses the same default state
 directories as custom mode.
 
+**The merge document must match the shape of the base config.** The image's
+network configs are now in the cardano-config envelope, so config keys live
+under `Configuration.<Section>` rather than at the top level, and a merge
+document written against the older flat configs no longer lands where it used
+to. Merging is a plain deep merge with no key relocation, so a flat merge
+document is not an error: it adds a top-level key the node does not recognise
+and warns about, leaving the value you meant to override untouched.
+
+To find the right path for a key, look at the base config in the image:
+```
+docker run --rm --entrypoint jq ghcr.io/intersectmbo/cardano-node:dev \
+  -r '[paths(scalars)][] | join(".")' /opt/cardano/config/mainnet/config.json \
+  | grep -i <key>
+```
+
 An example where prometheus binding is set away from localhost while preserving other defaults:
 ```
 docker run \
   -v node-ipc:/ipc \
   -v mainnet-data:/data \
   -e NETWORK=mainnet \
-  -e CARDANO_CONFIG_JSON_MERGE='{"TraceOptions":{"":{"backends":["EKGBackend","Forwarder","PrometheusSimple suffix 0.0.0.0 12798","Stdout HumanFormatColoured"]}}}' \
+  -e CARDANO_CONFIG_JSON_MERGE='{"Configuration":{"HermodTracing":{"TraceOptions":{"":{"backends":["EKGBackend","Forwarder","PrometheusSimple suffix 0.0.0.0 12798","Stdout HumanFormatColoured"]}}}}}' \
   -e CARDANO_TOPOLOGY_JSON_MERGE='{"useLedgerAfterSlot": 147000000}' \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
+
+The topology merge document is unaffected: topology files are not enveloped, so
+`CARDANO_TOPOLOGY_JSON_MERGE` keeps its flat shape as above.
 
 The resulting merged config and topology are written to a private,
 per-container runtime directory under `/tmp` (see
@@ -514,6 +532,9 @@ merged base `NETWORK` tracer config and json merge config.
 Optional env variables and cardano-tracer args which can be used in custom mode
 can also be used in this mode.  Merge mode uses the same default state
 directories as custom mode.
+
+Unlike the node image, the tracer config is not in the cardano-config envelope,
+so merge documents here keep their flat shape.
 
 An example which changes the prometheus binding address from a default of
 localhost (`127.0.0.1`) to `0.0.0.0`:

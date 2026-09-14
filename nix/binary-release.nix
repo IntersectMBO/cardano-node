@@ -36,10 +36,18 @@ let
         CheckpointsFile = "checkpoints.json";
       };
 
+      # Published in the form the environment selects, matching what iohk-nix
+      # publishes for it rather than always emitting the flat config. The
+      # genesis paths are rewritten to the siblings copied below first, so the
+      # envelope carries the relative paths too.
+      relativeNodeConfig = env.nodeConfig // genesisAttrs;
+
       nodeConfig = pkgs.writeText
         "config.json"
         (builtins.toJSON
-          (env.nodeConfig // genesisAttrs));
+          (if (env.configFormat or "flat") == "enveloped"
+           then pkgs.cardanoLib.mkEnvelope relativeNodeConfig
+           else relativeNodeConfig));
 
       submitApiConfig = pkgs.writeText
         "submit-api-config.json"
