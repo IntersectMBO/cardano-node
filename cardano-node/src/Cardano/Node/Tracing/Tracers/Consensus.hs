@@ -2444,22 +2444,7 @@ mapLeiosSeverity = \case
 -- the consensus-side tracer (per-constructor fields rather than a 'show' blob).
 instance LogFormatting TraceLeiosKernel where
   forMachine _dtal = traceLeiosKernelToObject
-  forHuman = \case
-    -- Consensus renders 'TraceLeiosDb' with 'show'; spell out the events an
-    -- operator is likely to grep for.
-    TraceLeiosDb (TraceLeiosDbCopiedToImmutable copiedEbs) ->
-      "Leios DB copied to the immutable partition: ebs=" <> showT copiedEbs
-    TraceLeiosDb (TraceLeiosDbEvicted evictedEbs) ->
-      "Leios DB evicted from the volatile partition: ebs=" <> showT evictedEbs
-    TraceLeiosDb (TraceLeiosDbGCError reason) ->
-      "Leios DB sweep pass failed (will be retried): " <> Text.pack reason
-    TraceLeiosDb (TraceLeiosDbCopyQueueFull ebHash) ->
-      "Leios DB copy queue full, dropped " <> Text.pack ebHash
-        <> " (harmless: GC self-heal re-delivers)"
-    TraceLeiosDb (TraceLeiosDbCopyError ebHash reason) ->
-      "Leios DB copy failed for " <> Text.pack ebHash
-        <> " (the EB stays pinned and will be retried): " <> Text.pack reason
-    ev -> Leios.traceLeiosKernelForHuman ev
+  forHuman = Leios.traceLeiosKernelForHuman
   asMetrics = \case
     -- LeiosFetch arrival bytes, partitioned by prior LeiosTxCache state (node policy).
     TraceLeiosFetchBodyArrival fab ->
@@ -2494,62 +2479,11 @@ instance LogFormatting TraceLeiosKernel where
     _ -> []
 
 instance MetaTrace TraceLeiosKernel where
-  -- Call spans get their own namespace under Db so their severity and
-  -- frequency can be configured apart from the stats gauges (a dozen span
-  -- events per GC vs one stats event). Consensus only knows the plain "Db"
-  -- namespace, so these sub-namespaces are carved out here.
-  namespaceFor (TraceLeiosDb TraceLeiosDbCall{}) = Namespace [] ["Db", "Call"]
-  namespaceFor (TraceLeiosDb TraceLeiosDbCopiedToImmutable{}) = Namespace [] ["Db", "Copied"]
-  namespaceFor (TraceLeiosDb TraceLeiosDbEvicted{}) = Namespace [] ["Db", "Evicted"]
-  namespaceFor (TraceLeiosDb TraceLeiosDbGCError{}) = Namespace [] ["Db", "SweepError"]
-  namespaceFor (TraceLeiosDb TraceLeiosDbCopyQueueFull{}) = Namespace [] ["Db", "CopyQueueFull"]
-  namespaceFor (TraceLeiosDb TraceLeiosDbCopyError{}) = Namespace [] ["Db", "CopyError"]
-  namespaceFor ev = Namespace [] . Leios.nsiPath . Leios.leiosKernelNSInfo . Leios.leiosKernelNSOf $ ev
-
-  severityFor (Namespace _ ["Db", "Call"])         _ = Just Debug
-  severityFor (Namespace _ ["Db", "Copied"])       _ = Just Info
-  severityFor (Namespace _ ["Db", "Evicted"])      _ = Just Info
-  -- Both mean the copier fell behind or failed; harmless for data (the EB
-  -- stays pinned and GC self-heal retries) but worth an operator's eye.
-  severityFor (Namespace _ ["Db", "CopyQueueFull"]) _ = Just Warning
-  severityFor (Namespace _ ["Db", "CopyError"])     _ = Just Warning
-  -- The sweeper drops its connection and retries, but repeated failures mean
-  -- eviction is not keeping up.
-  severityFor (Namespace _ ["Db", "SweepError"])    _ = Just Warning
+  namespaceFor = Namespace [] . Leios.nsiPath . Leios.leiosKernelNSInfo . Leios.leiosKernelNSOf
   severityFor (Namespace _ p) _ = mapLeiosSeverity . Leios.nsiSeverity <$> Leios.leiosKernelNSByPath p
-
   documentFor _ = Nothing
-  metricsDocFor (Namespace _ ["Db"]) =
-    [ ("leiosDbVolatileEbs",  "LeiosDb: announced EB rows in the volatile partition (an EB copied but not yet garbage collected counts in both partitions)")
-    , ("leiosDbImmutableEbs", "LeiosDb: EBs in the immutable partition")
-    , ("leiosDbWalBytes",     "LeiosDb: current size of the volatile partition's write-ahead log in bytes")
-    ]
-  metricsDocFor (Namespace _ ["Db", "Copied"]) =
-    [ ("leiosDbCopiedEbs", "LeiosDb: EBs copied into the immutable partition")
-    ]
-  metricsDocFor (Namespace _ ["Db", "Evicted"]) =
-    [ ("leiosDbEvictedEbs", "LeiosDb: announcement rows garbage collected from the volatile partition")
-    ]
-  metricsDocFor (Namespace _ ["Db", "CopyQueueFull"]) =
-    [ ("leiosDbCopyQueueFull", "LeiosDb: promotions dropped on a full copy queue (re-delivered by GC self-heal)")
-    ]
-  metricsDocFor (Namespace _ ["Db", "CopyError"]) =
-    [ ("leiosDbCopyErrors", "LeiosDb: failed copy attempts (the EB stays pinned and is retried)")
-    ]
-  metricsDocFor (Namespace _ ["Db", "SweepError"]) =
-    [ ("leiosDbSweepErrors", "LeiosDb: failed sweep passes (retried)")
-    ]
   metricsDocFor (Namespace _ p) = maybe [] Leios.nsiMetricsDoc (Leios.leiosKernelNSByPath p)
-
-  allNamespaces =
-    (Namespace [] <$> Leios.leiosKernelNSPaths)
-    ++ [ Namespace [] ["Db", "Call"]
-       , Namespace [] ["Db", "Copied"]
-       , Namespace [] ["Db", "Evicted"]
-       , Namespace [] ["Db", "SweepError"]
-       , Namespace [] ["Db", "CopyQueueFull"]
-       , Namespace [] ["Db", "CopyError"]
-       ]
+  allNamespaces = Namespace [] <$> Leios.leiosKernelNSPaths
 
 instance LogFormatting TraceLeiosPeer where
   forMachine _dtal = traceLeiosPeerToObject
