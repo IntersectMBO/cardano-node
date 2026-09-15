@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, ouroboros-consensus-src
 , macOS-security
 , windowsCompilerNixName
 , herald
@@ -48,6 +49,7 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
+        "https://github.com/IntersectMBO/ouroboros-consensus" = ouroboros-consensus-src;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";

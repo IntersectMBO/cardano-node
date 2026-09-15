@@ -44,6 +44,10 @@ instance LogFormatting TraceRpc where
                   [ "queryName" .= String "ReadGenesis"
                   , spanToObject s
                   ]
+                TraceRpcQueryReadEraSummarySpan s ->
+                  [ "queryName" .= String "ReadEraSummary"
+                  , spanToObject s
+                  ]
           TraceRpcSubmit submitTrace ->
             ["kind" .= String "SubmitService"]
               <> case submitTrace of
@@ -98,6 +102,7 @@ instance MetaTrace TraceRpc where
             TraceRpcQueryReadUtxosSpan _ -> ["ReadUtxos", "Span"]
             TraceRpcQuerySearchUtxosSpan _ -> ["SearchUtxos", "Span"]
             TraceRpcQueryReadGenesisSpan _ -> ["ReadGenesis", "Span"]
+            TraceRpcQueryReadEraSummarySpan _ -> ["ReadEraSummary", "Span"]
       TraceRpcSubmit submitTrace ->
         "SubmitService"
           : case submitTrace of
@@ -111,10 +116,10 @@ instance MetaTrace TraceRpc where
         "SyncService"
           : case syncTrace of
             TraceRpcFetchBlockSpan _ -> ["FetchBlock", "Span"]
-            TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
-            TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
             TraceRpcReadTipSpan _ -> ["ReadTip", "Span"]
             TraceRpcFollowTipSpan _ -> ["FollowTip", "Span"]
+            TraceRpcFetchBlockNotFound _ -> ["FetchBlockNotFound"]
+            TraceRpcNodeKernelAccessUnavailable -> ["NodeKernelAccessUnavailable"]
       TraceRpcNodeKernelAccess nodeKernelAccessTrace ->
         "NodeKernelAccess"
           : case nodeKernelAccessTrace of
@@ -135,10 +140,10 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "TxValidationError"] -> Just Debug -- request error
     ["SubmitService", "EvalTxDecodingError"] -> Just Debug -- request error
     ["SyncService", "FetchBlock", "Span"] -> Just Debug
-    ["SyncService", "FetchBlockNotFound"] -> Just Debug
-    ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
     ["SyncService", "ReadTip", "Span"] -> Just Debug
     ["SyncService", "FollowTip", "Span"] -> Just Debug
+    ["SyncService", "FetchBlockNotFound"] -> Just Debug
+    ["SyncService", "NodeKernelAccessUnavailable"] -> Just Warning
     ["NodeKernelAccess", "UnsupportedBlockType"] -> Just Warning
     ["ServerListening"] -> Just Notice -- one-off startup event, must be visible with default config
     _ -> Nothing
@@ -181,11 +186,11 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "EvalTx", "Span"] ->
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
     ["SyncService", "FetchBlock", "Span"] ->
-      [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock SyncService method.")]
+      [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock UTXORPC method.")]
     ["SyncService", "ReadTip", "Span"] ->
-      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip SyncService method.")]
+      [("rpc.request.SyncService.ReadTip", "Span for the ReadTip UTXORPC method.")]
     ["SyncService", "FollowTip", "Span"] ->
-      [("rpc.request.SyncService.FollowTip", "Span for the FollowTip SyncService method.")]
+      [("rpc.request.SyncService.FollowTip", "Span for the FollowTip UTXORPC method.")]
     _ -> []
 
   allNamespaces =
@@ -195,6 +200,7 @@ instance MetaTrace TraceRpc where
           , ["QueryService", "ReadParams", "Span"]
           , ["QueryService", "ReadUtxos", "Span"]
           , ["QueryService", "SearchUtxos", "Span"]
+          , ["QueryService", "ReadGenesis", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
           , ["SubmitService", "EvalTx", "Span"]
           , ["SubmitService", "N2cConnectionError"]
@@ -202,11 +208,10 @@ instance MetaTrace TraceRpc where
           , ["SubmitService", "TxValidationError"]
           , ["SubmitService", "EvalTxDecodingError"]
           , ["SyncService", "FetchBlock", "Span"]
-          , ["SyncService", "FetchBlockNotFound"]
-          , ["SyncService", "NodeKernelAccessUnavailable"]
           , ["SyncService", "ReadTip", "Span"]
           , ["SyncService", "FollowTip", "Span"]
-          , ["QueryService", "ReadGenesis", "Span"]
+          , ["SyncService", "FetchBlockNotFound"]
+          , ["SyncService", "NodeKernelAccessUnavailable"]
           , ["NodeKernelAccess", "UnsupportedBlockType"]
           , ["ServerListening"]
           ]

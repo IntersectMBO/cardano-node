@@ -12,7 +12,7 @@
       },
       "original": {
         "owner": "intersectmbo",
-        "ref": "repo",
+        "ref": "index-only",
         "repo": "cardano-haskell-packages",
         "type": "github"
       }
@@ -464,11 +464,11 @@
     "hackageNix_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1788442286,
-        "narHash": "sha256-GlcmaNP/TOd7svFzcxvwZhIaDg89nm71rKeq+ehNN0I=",
+        "lastModified": 1788528276,
+        "narHash": "sha256-5ytaoHJVA3yxHSbXa4KOteI6f+vOTTxT9wACZniDITQ=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "2648bf92f0188f2a135c7f662a1641c2f0d28a04",
+        "rev": "b02fea8c74a7d4d9040d443de6b43775cc9d3913",
         "type": "github"
       },
       "original": {
@@ -1142,11 +1142,11 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1787718550,
-        "narHash": "sha256-Wkevfb7P201JHWpP4sbSg3HEO4YDPuCrwvARatfF2RI=",
+        "lastModified": 1777941182,
+        "narHash": "sha256-FX3+8GIrB2z4akmcYTStELDKVJWgqy9yFt0mxwpU3Qc=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "af463a46dbe9c6e2db6b2639c0f35f5689e0c3a8",
+        "rev": "9de00113c11ba8cac908a63acf34b193cda7475b",
         "type": "github"
       },
       "original": {
@@ -1532,6 +1532,25 @@
         "type": "github"
       }
     },
+    "ouroboros-consensus-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789085254,
+        "narHash": "sha256-ZDAPypcfLn7xzUyxcI7ktHxnvUKtPEHcPR522+c04Ao=",
+        "ref": "master",
+        "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
+        "revCount": 11115,
+        "submodules": true,
+        "type": "git",
+        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
+      },
+      "original": {
+        "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
+        "submodules": true,
+        "type": "git",
+        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
+      }
+    },
     "root": {
       "inputs": {
         "CHaP": "CHaP",
@@ -1549,6 +1568,7 @@
           "haskellNix",
           "nixpkgs-unstable"
         ],
+        "ouroboros-consensus-src": "ouroboros-consensus-src",
         "utils": "utils_2"
       }
     },
