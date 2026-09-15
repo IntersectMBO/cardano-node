@@ -92,12 +92,12 @@ allow-older:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to ouroboros-consensus/leios-prototype
+-- Points to ouroboros-consensus/geo2a/leios-969-leiosdb-gc-two-files-same-tables
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 7abeda6501282c8a2491ccf66c16f051d74fb895
-  --sha256: sha256-PjIGbG4YDRoHI88r4i62paJ3ubvHFR3LEjS28s9rCAk=
+  tag: 7f53d9d80fb1e998b7bcea3b6e74e8ef8e3eb1a7
+  --sha256: sha256-GraNLMkcNX5OXwIGDg+8fij6byQfNIwwmDjRXQrplQo=
 
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
