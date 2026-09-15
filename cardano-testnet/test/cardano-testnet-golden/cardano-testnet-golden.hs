@@ -14,6 +14,8 @@ import           Data.String
 import qualified System.Environment as E
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
+import           Testnet.Property.Run (ignoreOnWindows)
+
 import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)
 import qualified Test.Tasty.Hedgehog as H
@@ -24,6 +26,7 @@ tests = pure $ T.testGroup "Golden tests"
   [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Cardano.Testnet.Test.Golden.Config.goldenDefaultConfigYaml
   , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Cardano.Testnet.Test.Golden.Help.golden_HelpAll
   , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Cardano.Testnet.Test.Golden.Help.golden_HelpCmds
+  , ignoreOnWindows "golden_HelpReadme" Cardano.Testnet.Test.Golden.Help.golden_HelpReadme
   , H.testPropertyNamed "golden_VersionCmd" (fromString "golden_VersionCmd") Cardano.Testnet.Test.Golden.Help.golden_VersionCmd
   ]
 

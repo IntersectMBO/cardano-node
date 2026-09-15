@@ -44,6 +44,14 @@ export CARDANO_NODE=path to your executable
 
 `cardano-testnet` has the following commands:
 
+<!-- The command help shown in this file is checked against the real output
+     of cardano-testnet by the golden_HelpReadme test of the
+     cardano-testnet-golden test suite: each code block that follows a
+     checked-help comment must match the output of the command named in the
+     comment. When the help changes, refresh the blocks with:
+     RECREATE_GOLDEN_FILES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpReadme/"'
+-->
+<!-- checked-help: cardano-testnet --help -->
 ```text
 Usage: cardano-testnet (cardano | create-env | version | help)
 
@@ -61,6 +69,7 @@ Available commands:
 
 To launch a local cluster, you should use the `cardano-testnet cardano` command, whose API is as follows:
 
+<!-- checked-help: cardano-testnet cardano --help -->
 ```text
 Usage: cardano-testnet cardano
   [ --node-env FILEPATH [--preserve-timestamps]
@@ -80,6 +89,7 @@ Usage: cardano-testnet cardano
   ]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
+
 
   Start a testnet and keep it running until stopped
 
@@ -243,6 +253,7 @@ We draw the reader's attention to two things:
 
 `cardano-testnet` provides the option to create a sandbox environment as described above, without launching the node network itself. This allows the modification of configuration files, Genesis or otherwise. The API of the command is as follows:
 
+<!-- checked-help: cardano-testnet create-env --help -->
 ```text
 Usage: cardano-testnet create-env
   [--nodes SPEC[,SPEC...] | --num-pool-nodes COUNT]
@@ -254,6 +265,7 @@ Usage: cardano-testnet create-env
   [--active-slots-coeff DOUBLE]
   [--params-file FILEPATH | --params-mainnet]
   --output DIRECTORY
+
 
   Create a sandbox for Cardano testnet
 
@@ -320,6 +332,7 @@ These options are also available directly on the `cardano-testnet cardano` comma
 
 There are four flags that control values specified in the Shelley genesis file:
 
+<!-- checked-help: cardano-testnet cardano --help | only: --max-lovelace-supply --epoch-length --slot-length --active-slots-coeff -->
 ```text
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
@@ -336,6 +349,7 @@ Note that all of these flags are ignored when a sandbox environment is provided 
 
 There is one flag that control values that appear in the Conway genesis file and that's the number of dreps:
 
+<!-- checked-help: cardano-testnet cardano --help | only: --num-dreps -->
 ```text
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
                            generate. (default: 3)

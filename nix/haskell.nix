@@ -310,7 +310,10 @@ let
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
+                  filteredProjectBase = incl ../. (cardanoTestnetGoldenFiles ++ [
+                    # golden_HelpReadme checks the help blocks embedded in the README:
+                    "cardano-testnet/README.md"
+                  ]);
                 in
                 ''
                   ${exportCliPath}
