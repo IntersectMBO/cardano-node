@@ -138,6 +138,13 @@ $(red USAGE:)
       $(helpopt --scenario \| -s SCENARIO)       Use the specified scenario.
                                                  See: $(helptopcmd wb scenario --help)
 
+      $(helpopt --dump-show)                     Do not submit; have the generator dump its tx stream
+                                                 as text to $(green generator/txn-stream.txt) instead.
+                                                 Implies the $(blue dump-loaded) scenario and $(blue --no-analysis).
+      $(helpopt --dump-cbor)                     Do not submit; have the generator dump its tx stream
+                                                 as CBOR to $(green generator/txn-stream.cbor) instead.
+                                                 Implies the $(blue dump-loaded) scenario and $(blue --no-analysis).
+
       $(helpopt --no-analysis)                   Do not run analysis at the run's end.
       $(helpopt --analysis-can-fail)             Do not fail on failed analysis.
       $(helpopt --filters F,F,F,F)               Comma-separated list of filters, instead of profile-specified defaults.
@@ -168,6 +175,7 @@ start() {
     local no_retry_failed_runs=t
     local no_analysis=
     local analysis_can_fail=
+    local dump_generator_args=
 
     local run_args=()
     local backend_args=()
@@ -198,6 +206,15 @@ start() {
         ## Start
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
+
+        ## Dump instead of submit: canonical filenames, relative to the
+        ## generator's own run directory (same convention as run-script.json).
+        --dump-show )                    dump_generator_args="--dump-show txn-stream.txt"
+                                         run_start_args+=(--scenario dump-loaded)
+                                         no_analysis=true;;
+        --dump-cbor )                    dump_generator_args="--dump-cbor txn-stream.cbor"
+                                         run_start_args+=(--scenario dump-loaded)
+                                         no_analysis=true;;
 
         ## Analyse
         --no-analysis )                  no_analysis=true;;
@@ -289,6 +306,10 @@ start() {
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
+
+       if test -n "$dump_generator_args"
+       then echo "$dump_generator_args" > "$current_run_path"/generator/extra-args.env
+       fi
 
        run "${run_args[@]}" start "${run_start_args[@]}" "$run"
 
