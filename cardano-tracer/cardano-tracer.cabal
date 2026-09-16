@@ -15,6 +15,7 @@ license-files:          LICENSE
 build-type:             Simple
 extra-doc-files:        README.md
                         CHANGELOG.md
+data-files:             test/alarms-smoke.sh
 
 flag systemd
   description:          Enable systemd support.
@@ -30,6 +31,7 @@ common project-config
                       , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
                       , InstanceSigs
+                      , NumericUnderscores
                       , ScopedTypeVariables
                       , StandaloneKindSignatures
                       , TypeApplications
@@ -131,6 +133,8 @@ library
                       , ekg-wai
                       , extra
                       , filepath
+                      , http-client
+                      , http-client-tls
                       , http-types
                       , mime-mail
                       , network
@@ -390,6 +394,23 @@ test-suite cardano-tracer-test-ext
   ghc-options:          -threaded
                         -rtsopts
                         -with-rtsopts=-N
+
+test-suite cardano-tracer-alarms-smoke
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       test
+  main-is:              alarms-smoke.hs
+
+  other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
+
+  build-tool-depends:   cardano-tracer:cardano-tracer
+
+  if os(windows)
+    buildable:          False
+
+  build-depends:        base
+                      , process
 
 benchmark cardano-tracer-bench
   import:               project-config

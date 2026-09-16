@@ -20,6 +20,7 @@ module Cardano.Tracer.Handlers.Alarms.Registry
   , traceHistoryRead
   , lookupProducerCredential
   , lookupReaderCredential
+  , openProducerCredential
   ) where
 
 import           Cardano.Logging.Types (TraceObject)
@@ -45,26 +46,35 @@ import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 data AlarmRegistry = AlarmRegistry
-  { arStore           :: !AlarmStoreHandle
-  , arConsumers       :: ![AlarmConsumer]         -- ^ static, fixed at startup
-  , arTraceRules      :: ![TraceAlarmRule]
-  , arTimeseriesRules :: ![TimeseriesAlarmRule]
-  , arAuth            :: !AuthTables
-  , arTracer          :: !(Trace IO TracerTrace)
+  { arStore               :: !AlarmStoreHandle
+  , arConsumers           :: ![AlarmConsumer]         -- ^ static, fixed at startup
+  , arTraceRules          :: ![TraceAlarmRule]
+  , arTimeseriesRules     :: ![TimeseriesAlarmRule]
+  , arTimeseriesStatePath :: !(Maybe FilePath)
+  , arAuth                :: !AuthTables
+  , arTracer              :: !(Trace IO TracerTrace)
   }
 
 newAlarmRegistry :: Trace IO TracerTrace -> AlarmsConfig -> IO AlarmRegistry
-newAlarmRegistry tracer AlarmsConfig{alRetention, alConsumers, alAuthentication, alTraceRules, alTimeseriesRules} = do
-  store       <- newAlarmStore (fromMaybe emptyRetention alRetention)
-  authTable   <- loadCredentials alAuthentication
-  tsRules     <- traverse timeseriesRuleFromConfig (fromMaybe [] alTimeseriesRules)
+newAlarmRegistry tracer AlarmsConfig
+  { alRetention, alConsumers, alAuthentication
+  , alTraceRules, alTimeseriesRules, alTimeseriesStatePath
+  } = do
+  store     <- newAlarmStore (fromMaybe emptyRetention alRetention)
+  authT     <- loadCredentials alAuthentication
+  consumers <- traverse consumerFromConfig alConsumers
+  tsRules   <- traverse timeseriesRuleFromConfig (fromMaybe [] alTimeseriesRules)
+  for_ alTimeseriesStatePath \path -> do
+    persisted <- loadTimeseriesState path
+    seedRuleStates persisted tsRules
   pure AlarmRegistry
-    { arStore           = store
-    , arConsumers       = map consumerFromConfig alConsumers
-    , arTraceRules      = map traceRuleFromConfig (fromMaybe [] alTraceRules)
-    , arTimeseriesRules = tsRules
-    , arAuth            = authTable
-    , arTracer          = tracer
+    { arStore               = store
+    , arConsumers           = consumers
+    , arTraceRules          = map traceRuleFromConfig (fromMaybe [] alTraceRules)
+    , arTimeseriesRules     = tsRules
+    , arTimeseriesStatePath = alTimeseriesStatePath
+    , arAuth                = authT
+    , arTracer              = tracer
     }
  where
   emptyRetention = AlarmsRetentionConfig Nothing Nothing
@@ -158,6 +168,8 @@ evaluateTimeseriesRule registry tsHandle now rule = do
       Just samples -> do
         reqs <- evaluateOnce rule now samples
         for_ reqs \req -> acceptEvent registry timeseriesAlarmSource req
+        for_ (arTimeseriesStatePath registry) \path ->
+          saveTimeseriesState path (arTimeseriesRules registry)
  where
   failed :: Text -> IO ()
   failed reason =
@@ -177,3 +189,9 @@ lookupProducerCredential registry = lookupProducer (arAuth registry)
 
 lookupReaderCredential :: AlarmRegistry -> Text -> Maybe ReaderCredential
 lookupReaderCredential registry = lookupReader (arAuth registry)
+
+-- | The open (tokenless) producer credential, if one is configured. Only
+--   for use when an ingress request carries no @Authorization@ header at
+--   all -- see 'Cardano.Tracer.Handlers.Alarms.Server.handleIngress'.
+openProducerCredential :: AlarmRegistry -> Maybe ProducerCredential
+openProducerCredential registry = openProducer (arAuth registry)

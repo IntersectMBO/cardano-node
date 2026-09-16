@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -26,6 +29,7 @@ module Cardano.Tracer.Handlers.Alarms.TimeseriesRules
   , tarRuleId
   , tarQuery
   , tarEvaluateEvery
+  , tarSeriesState
   , timeseriesAlarmSource
   , timeseriesRuleFromConfig
   , SamplePoint (..)
@@ -33,6 +37,10 @@ module Cardano.Tracer.Handlers.Alarms.TimeseriesRules
   , evaluateOnce
   , ruleRequests
   , SeriesState (..)
+  , SeriesKey (..)
+  , saveTimeseriesState
+  , loadTimeseriesState
+  , seedRuleStates
   ) where
 
 import           Cardano.Logging.Types (SeverityS)
@@ -41,8 +49,10 @@ import           Cardano.Timeseries.Domain.Instant (Instant (..))
 import           Cardano.Tracer.Configuration (AlarmsTimeseriesRuleConfig (..))
 import           Cardano.Tracer.Handlers.Alarms.Types
 
-import           Data.Aeson (object, (.=))
-import           Data.IORef (IORef, atomicModifyIORef', newIORef)
+import           Control.Exception (SomeException, try)
+import           Data.Aeson (FromJSON, ToJSON, decodeFileStrict', encodeFile, object, (.=))
+import           Data.Foldable (for_)
+import           Data.IORef (IORef, atomicModifyIORef', atomicWriteIORef, newIORef, readIORef)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
@@ -52,6 +62,9 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, diffUTCTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
+import           GHC.Generics (Generic)
+import           System.Directory (doesFileExist, renameFile)
+import           System.FilePath ((<.>))
 
 -- | Runtime form of a timeseries rule. The mutable 'IORef' holds the
 --   per-series state machines — inactive, pending-with-since, or
@@ -73,6 +86,7 @@ data TimeseriesAlarmRule = TimeseriesAlarmRule
 --   the same key.
 newtype SeriesKey = SeriesKey { unSeriesKey :: Text }
   deriving stock (Eq, Ord, Show)
+  deriving newtype (FromJSON, ToJSON)
 
 -- | Per-series state.
 data SeriesState
@@ -84,7 +98,8 @@ data SeriesState
   | Active     !UTCTime
     -- ^ Sample stayed truthy for @for@ seconds and has been published
     --   at least once; the field is @publishedAt@ (last publish time).
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | One boolean sample decoded from a query response, tagged with its
 --   labels (the source of 'SeriesKey').
@@ -259,4 +274,46 @@ evaluateOnce rule now samples =
   atomicModifyIORef' (tarSeriesState rule) \prev ->
     let (newState, reqs) = ruleRequests rule now samples prev
     in (newState, reqs)
+
+--------------------------------------------------------------------------------
+-- Persistence
+--
+-- One combined JSON file: rule id -> series key -> SeriesState. Atomic
+-- rename on write; missing/parse-errored file treated as "no state" per
+-- the concept doc's cold-start fallback.
+--------------------------------------------------------------------------------
+
+type PersistedState = Map Text (Map Text SeriesState)
+
+saveTimeseriesState :: FilePath -> [TimeseriesAlarmRule] -> IO ()
+saveTimeseriesState path rules = do
+  entries <- traverse snapshot rules
+  let persisted :: PersistedState
+      persisted = Map.fromList entries
+      tmp       = path <.> "tmp"
+  encodeFile tmp persisted
+  renameFile tmp path
+ where
+  snapshot :: TimeseriesAlarmRule -> IO (Text, Map Text SeriesState)
+  snapshot rule = do
+    m <- readIORef (tarSeriesState rule)
+    pure (unRuleId (tarRuleId rule), Map.mapKeys unSeriesKey m)
+
+loadTimeseriesState :: FilePath -> IO PersistedState
+loadTimeseriesState path = do
+  exists <- doesFileExist path
+  if not exists
+    then pure Map.empty
+    else do
+      result <- try (decodeFileStrict' path) :: IO (Either SomeException (Maybe PersistedState))
+      case result of
+        Right (Just m) -> pure m
+        _              -> pure Map.empty
+
+seedRuleStates :: PersistedState -> [TimeseriesAlarmRule] -> IO ()
+seedRuleStates persisted rules =
+  for_ rules \rule ->
+    case Map.lookup (unRuleId (tarRuleId rule)) persisted of
+      Nothing -> pure ()
+      Just m  -> atomicWriteIORef (tarSeriesState rule) (Map.mapKeys SeriesKey m)
 

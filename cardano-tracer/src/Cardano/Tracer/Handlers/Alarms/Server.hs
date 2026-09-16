@@ -128,9 +128,26 @@ alarmsApp cfg registry request send = case (requestMethod request, pathInfo requ
   ("GET",  ["alarms", "v1", "events"]) -> handleHistory registry request send
   _                                    -> send notFound
 
+-- | Resolve the producer credential for an ingress request.
+--
+-- * A request carrying an @Authorization@ header is resolved via the usual
+--   token lookup, exactly as before -- an unknown\/garbage token is
+--   rejected outright, it never falls back to the open producer. Silently
+--   treating a mistyped token as "anonymous" would mask real client
+--   misconfiguration.
+-- * A request with no @Authorization@ header at all falls back to the
+--   configured open producer, if any (see
+--   'Cardano.Tracer.Handlers.Alarms.Auth.openProducer' and 'wellFormed'\'s
+--   @allowInsecure@\/single-open-producer checks).
+resolveProducerCredential :: AlarmRegistry -> Request -> Maybe ProducerCredential
+resolveProducerCredential registry request =
+  case lookup hAuthorization (requestHeaders request) of
+    Just _  -> bearerToken request >>= lookupProducerCredential registry
+    Nothing -> openProducerCredential registry
+
 handleIngress :: AlarmsConfig -> AlarmRegistry -> Application
 handleIngress cfg registry request send =
-  case bearerToken request >>= lookupProducerCredential registry of
+  case resolveProducerCredential registry request of
     Nothing -> send unauthorized
     Just (ProducerCredential src) -> do
       readLimitedBody (maxEventBytes cfg) request >>= \case
