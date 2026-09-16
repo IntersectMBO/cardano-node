@@ -166,3 +166,11 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- cardano-ledger lehins/backport-native
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 6dc6a4e9bf95f2f19391476fdc08cb2de9596b45
+  --sha256: sha256-G4ureyS5M81fQz8mtsjcBQCNqFbh1miZvBvq5YM7FR0=
+  subdir: eras/allegra/impl
+
