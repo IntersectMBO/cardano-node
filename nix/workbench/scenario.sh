@@ -9,6 +9,11 @@ usage_scenario() {
                             Terminates after profile-implied transaction
                             amount is submitted, or other condition satisfied
 
+    $(helpcmd dump-loaded DIR)       Isolated cluster under tx-generator workload,
+                            with the generator dumping its tx stream to disk
+                            instead of submitting;
+                            Terminates as soon as the generator exits
+
     $(helpcmd chainsync DIR)         Chain syncing:
                             1. start the preset-defined chaindb-server node,
                                feeding it a generated chaindb
@@ -96,6 +101,27 @@ case "$op" in
         scenario_cleanup_termination
 
         backend stop-all             "$dir"
+        ;;
+
+    dump-loaded )
+        backend start-tracers          "$dir"
+
+        scenario_setup_exit_trap       "$dir"
+        # Trap start
+        ############
+        backend start-nodes            "$dir"
+        backend start-generator        "$dir"
+        # Armed here, not before start-nodes: start-nodes does a bare `wait`
+        # to join its own backgrounded `supervisorctl start` calls, which
+        # would otherwise also block on this watchdog's still-running sleep
+        # loop -- stalling node startup for the whole watchdog window.
+        scenario_setup_workload_termination "$dir"
+        backend wait-generator-stopped "$dir"
+        # Trap end
+        ##########
+        scenario_cleanup_termination
+
+        backend stop-all               "$dir"
         ;;
 
     chainsync )
