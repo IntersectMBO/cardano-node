@@ -1,0 +1,5 @@
+pr: 6679
+kind:
+  - test
+description: |
+  Added `hprop_rpc_read_era_summary` integration test for the UTxO RPC `QueryService.ReadEraSummary` method, verifying the returned era summaries are a prefix of the canonical era order, that every era but the last has its end boundary set, that consecutive boundaries line up, and that the first era starts at slot 0, epoch 0.
