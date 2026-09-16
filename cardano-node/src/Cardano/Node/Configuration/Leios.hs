@@ -9,7 +9,7 @@ import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Strin
                    withObject, (.:), (.=))
 
 data LeiosDbConfig = LeiosDbInMemory
-   | LeiosDbSQLite !FilePath
+   | LeiosDbSQLite !FilePath !FilePath
    deriving (Eq, Show)
 
 instance FromJSON LeiosDbConfig where
@@ -18,8 +18,9 @@ instance FromJSON LeiosDbConfig where
     case backend of
       "InMemory" -> return LeiosDbInMemory
       "SQLite" -> do
-        fp <- o .: "Filepath"
-        return $ LeiosDbSQLite fp
+        volPath <- o .: "VolatileFilepath"
+        immPath <- o .: "ImmutableFilepath"
+        return $ LeiosDbSQLite volPath immPath
       _ -> fail $ "Invalid LeiosDb backend " <> backend <> ", did you mean InMemory or SQLite?"
 
 instance ToJSON LeiosDbConfig where
@@ -27,8 +28,9 @@ instance ToJSON LeiosDbConfig where
     object
       [ "Backend" .=  String "InMemory"
       ]
-  toJSON (LeiosDbSQLite fp) =
+  toJSON (LeiosDbSQLite volPath immPath) =
     object
       [ "Backend" .= String "SQLite",
-        "Filepath" .= fp
+        "VolatileFilepath" .= volPath,
+        "ImmutableFilepath" .= immPath
       ]
