@@ -17,20 +17,27 @@ module Cardano.Tracer.Test.Alarms.Tests
 import           Cardano.Logging (DetailLevel (..), SeverityF (..), SeverityS (..),
                    TraceObject (..))
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Alarms.Auth (ProducerCredential (..), loadCredentials,
+                   lookupProducer, openProducer)
 import           Cardano.Tracer.Handlers.Alarms.Registry
 import           Cardano.Tracer.Handlers.Alarms.Store
 import           Cardano.Tracer.Handlers.Alarms.Types
 import           Cardano.Tracer.MetaTrace (TraceBundle (..), mkTraceBundle)
 
 import           Control.Concurrent.Async (forConcurrently)
+import           Control.Exception (bracket)
 import           Data.Aeson (decode, encode)
 import qualified Data.List as List
+import           Data.List.NonEmpty (NonEmpty (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as TIO
 import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import           System.Directory (getTemporaryDirectory, removeFile)
+import           System.IO (hClose, openTempFile)
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck hiding (labels)
@@ -66,6 +73,13 @@ tests = testGroup "Test.Alarms"
       [ testProperty "rule fires only at or above threshold"         propTraceRuleThreshold
       , testProperty "matches in one window collapse to one alarm"   propTraceRuleSuppression
       , testProperty "matches in a new window raise a fresh alarm"   propTraceRuleNewWindow
+      ]
+  , testGroup "producer auth"
+      [ testProperty "open producer resolves for headerless requests"      propOpenProducerHonored
+      , testProperty "unrecognised token is rejected despite open producer" propWrongTokenRejectedWithOpenProducer
+      , testProperty "wellFormed accepts a single open producer with allowInsecure" propOpenProducerAllowedWhenWellFormed
+      , testProperty "wellFormed rejects more than one open producer"      propRejectsMultipleOpenProducers
+      , testProperty "wellFormed rejects an open producer without allowInsecure" propRejectsOpenProducerWithoutAllowInsecure
       ]
   ]
 
@@ -432,3 +446,150 @@ propTraceRuleNewWindow = ioProperty $ do
   checkTraceObjectsForAlarms registry "node-1" [mkTraceObject Error (addUTCTime 60 boundary)]
   events <- readHistoryFiltered registry Nothing 10 emptyAlarmFilter
   pure (length events === 2)
+
+--------------------------------------------------------------------------------
+-- Producer auth properties
+--------------------------------------------------------------------------------
+
+-- | Write @tokenText@ to a fresh temp file for the duration of @action@,
+--   mirroring how a real token-bearing producer's @tokenFile@ is read by
+--   'loadCredentials'. Removed afterwards regardless of outcome.
+withTokenFile :: Text -> (FilePath -> IO a) -> IO a
+withTokenFile tokenText = bracket acquire removeFile
+ where
+  acquire = do
+    tmpDir      <- getTemporaryDirectory
+    (path, hdl) <- openTempFile tmpDir "alarm-producer-token"
+    TIO.hPutStr hdl tokenText
+    hClose hdl
+    pure path
+
+-- | An "open" (tokenless) producer config: 'pcTokenFile' is 'Nothing'.
+openProducerConfigWithSource :: Text -> AlarmSource -> ProducerCredentialConfig
+openProducerConfigWithSource name src = ProducerCredentialConfig
+  { pcName      = name
+  , pcTokenFile = Nothing
+  , pcSource    = unAlarmSource src
+  }
+
+-- | 'loadCredentials' resolves a configured open (tokenless) producer into
+--   'AuthTables', and 'Auth.openProducer'\/'Registry.openProducerCredential'
+--   surface it -- this is what a headerless ingress request is attributed
+--   to (see 'Cardano.Tracer.Handlers.Alarms.Server.resolveProducerCredential').
+propOpenProducerHonored :: Property
+propOpenProducerHonored = forAll genShortText \name -> forAll genSource \src -> ioProperty do
+  let authConfig = AlarmsAuthConfig
+        { aacProducers = [openProducerConfigWithSource name src]
+        , aacReaders   = []
+        }
+  tables <- loadCredentials authConfig
+  pure (openProducer tables === Just (ProducerCredential src))
+
+-- | An unrecognised bearer token must still be rejected (no producer
+--   credential resolves) even when an open producer is configured
+--   alongside a token producer -- the open-producer fallback is only for
+--   requests carrying no @Authorization@ header at all, never for a
+--   present-but-wrong one. A correctly-presented token still resolves, and
+--   the open producer remains available for headerless requests, so all
+--   three coexist correctly in the same tables.
+propWrongTokenRejectedWithOpenProducer :: Property
+propWrongTokenRejectedWithOpenProducer =
+  forAll genShortText \tokenProducerName ->
+  forAll genSource \tokenSrc ->
+  forAll genSource \openSrc ->
+  forAll genShortText \goodToken ->
+  forAll (genShortText `suchThat` (/= goodToken)) \badToken ->
+    ioProperty $ withTokenFile goodToken \tokenFile -> do
+      let authConfig = AlarmsAuthConfig
+            { aacProducers =
+                [ ProducerCredentialConfig
+                    { pcName      = tokenProducerName
+                    , pcTokenFile = Just tokenFile
+                    , pcSource    = unAlarmSource tokenSrc
+                    }
+                , openProducerConfigWithSource "open" openSrc
+                ]
+            , aacReaders = []
+            }
+      tables <- loadCredentials authConfig
+      pure $ conjoin
+        [ counterexample "correct token must resolve to its own producer"
+            (lookupProducer tables goodToken === Just (ProducerCredential tokenSrc))
+        , counterexample "unrecognised token must be rejected outright, not fall back to open"
+            (lookupProducer tables badToken === Nothing)
+        , counterexample "open producer must remain available for headerless requests"
+            (openProducer tables === Just (ProducerCredential openSrc))
+        ]
+
+--------------------------------------------------------------------------------
+-- Config validation ('wellFormed') properties
+--------------------------------------------------------------------------------
+
+-- | A minimal, otherwise-valid 'TracerConfig' wrapping the given
+--   'AlarmsConfig' -- only the fields 'wellFormed' actually inspects
+--   (network, logging, the three service endpoints, alarms) need be
+--   non-degenerate.
+tracerConfigWithAlarms :: AlarmsConfig -> TracerConfig
+tracerConfigWithAlarms alarmsCfg = TracerConfig
+  { networkMagic     = 42
+  , network          = AcceptAt (LocalPipe "cardano-tracer-test-alarms.sock")
+  , loRequestNum     = Nothing
+  , ekgRequestFreq   = Nothing
+  , hasEKG           = Nothing
+  , hasPrometheus    = Nothing
+  , hasTimeseries    = Nothing
+  , alarms           = Just alarmsCfg
+  , tlsCertificate   = Nothing
+  , hasForwarding    = Nothing
+  , logging          = LoggingParams "cardano-tracer-test-logs" FileMode ForHuman :| []
+  , rotation         = Nothing
+  , verbosity        = Nothing
+  , metricsNoSuffix  = Nothing
+  , metricsHelp      = Nothing
+  , resourceFreq     = Nothing
+  , ekgRequestFull   = Nothing
+  , prometheusLabels = Nothing
+  }
+
+-- | 'wellFormed' rejects the config, with an error mentioning @substr@.
+expectRejectedContaining :: String -> TracerConfig -> Property
+expectRejectedContaining substr cfg = case wellFormed cfg of
+  Left msg -> counterexample msg (substr `List.isInfixOf` msg)
+  Right () -> counterexample "expected wellFormed to reject this config, but it was accepted" False
+
+openProducerConfig :: Text -> ProducerCredentialConfig
+openProducerConfig name = ProducerCredentialConfig
+  { pcName = name, pcTokenFile = Nothing, pcSource = name }
+
+-- | Sanity control: a single open producer with 'alAllowInsecure' set is
+--   accepted -- without this, the two rejection properties below could
+--   pass vacuously for an unrelated reason.
+propOpenProducerAllowedWhenWellFormed :: Property
+propOpenProducerAllowedWhenWellFormed = forAll genShortText \name ->
+  let cfg = tracerConfigWithAlarms $ testAlarmsConfig
+        { alAuthentication = AlarmsAuthConfig [openProducerConfig name] []
+        }
+  in wellFormed cfg === Right ()
+
+-- | Two open (tokenless) producers are ambiguous -- an unauthenticated
+--   request could not be attributed to either -- so 'wellFormed' rejects
+--   the config outright, regardless of 'alAllowInsecure'.
+propRejectsMultipleOpenProducers :: Property
+propRejectsMultipleOpenProducers =
+  forAll genShortText \n1 -> forAll (genShortText `suchThat` (/= n1)) \n2 ->
+    expectRejectedContaining "more than one open" $
+      tracerConfigWithAlarms testAlarmsConfig
+        { alAuthentication = AlarmsAuthConfig [openProducerConfig n1, openProducerConfig n2] []
+        }
+
+-- | A single open producer still requires an explicit
+--   @allowInsecure: true@ acknowledgement; 'Nothing' and 'Just False' are
+--   both rejected.
+propRejectsOpenProducerWithoutAllowInsecure :: Property
+propRejectsOpenProducerWithoutAllowInsecure =
+  forAll genShortText \name -> forAll (elements [Nothing, Just False]) \allowInsecure ->
+    expectRejectedContaining "requires allowInsecure" $
+      tracerConfigWithAlarms testAlarmsConfig
+        { alAllowInsecure  = allowInsecure
+        , alAuthentication = AlarmsAuthConfig [openProducerConfig name] []
+        }

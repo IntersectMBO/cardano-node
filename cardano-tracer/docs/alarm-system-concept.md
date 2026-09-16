@@ -378,6 +378,18 @@ delivery when retries are enabled.
 - Refuse to start an externally reachable clear-text endpoint unless an explicit
   insecure setting is enabled.
 
+A producer credential may omit `tokenFile` entirely, making it an "open
+producer": ingress requests that carry no `Authorization` header at all are
+attributed to it with no authentication whatsoever. This is only accepted
+when `allowInsecure: true`, and at most one such producer may be configured
+(otherwise an unauthenticated request would be ambiguous as to which producer
+it belongs to); any request that does carry an `Authorization` header is
+still resolved by the usual token lookup, and an unrecognised token is still
+rejected. This relaxation is intended for a producer that runs on
+infrastructure already trusted for the alarm endpoint's operator -- the same
+trust model this document already accepts for node-to-tracer forwarding,
+which has no encryption or authentication either.
+
 The first version does not require a remote administration API. Rules, consumers,
 and credentials are managed through configuration and take effect on restart.
 Hot reload can be considered separately.

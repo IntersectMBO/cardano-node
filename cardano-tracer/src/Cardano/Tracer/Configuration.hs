@@ -36,6 +36,7 @@ module Cardano.Tracer.Configuration
   , alarmSeverityToText
   , parseAlarmSeverityText
   , readTracerConfig
+  , wellFormed
   ) where
 
 import           Cardano.Logging.Types (HowToConnect, SeverityS (..))
@@ -53,7 +54,7 @@ import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Strict (Map)
-import           Data.Maybe (catMaybes, fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe, isNothing)
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -183,9 +184,16 @@ instance ToJSON AlarmsConsumerConfig where
 -- | A producer credential: a bearer token (read once from @pcTokenFile@) that
 --   authenticates alarm ingress requests as coming from @pcSource@. The
 --   source is never taken from the request body itself.
+--
+--   @pcTokenFile = Nothing@ (the YAML field omitted, or explicit @null@)
+--   designates the "open producer": ingress requests carrying no
+--   @Authorization@ header at all are attributed to it, with no token check.
+--   This is opt-in and deliberately narrow -- see 'wellFormed', which allows
+--   at most one open producer, and only when @alAllowInsecure@ is @Just
+--   True@.
 data ProducerCredentialConfig = ProducerCredentialConfig
   { pcName      :: !Text
-  , pcTokenFile :: !FilePath
+  , pcTokenFile :: !(Maybe FilePath)
   , pcSource    :: !Text
   }
   deriving stock (Eq, Show, Generic)
@@ -457,6 +465,8 @@ wellFormed TracerConfig
     , check "no host in alarms endpoint" . nullEndpoint . alEndpoint =<< alarms
     , check "alarms: no producer or reader credentials configured" . noCredentials =<< alarms
     , check "alarms: duplicate consumer names" . hasDuplicateConsumerNames =<< alarms
+    , check "alarms: more than one open (tokenless) producer configured" . hasMultipleOpenProducers =<< alarms
+    , check "alarms: open (tokenless) producer requires allowInsecure: true" . openProducerWithoutAllowInsecure =<< alarms
     ]
 
   -- NB. every internal service's endpoint port is included here, including
@@ -473,6 +483,25 @@ wellFormed TracerConfig
   noCredentials :: AlarmsConfig -> Bool
   noCredentials AlarmsConfig{alAuthentication = AlarmsAuthConfig{aacProducers, aacReaders}} =
     null aacProducers && null aacReaders
+
+  -- | At most one producer may omit @tokenFile@: with more than one, an
+  --   unauthenticated request would be ambiguous as to which producer's
+  --   source it should be attributed to.
+  hasMultipleOpenProducers :: AlarmsConfig -> Bool
+  hasMultipleOpenProducers AlarmsConfig{alAuthentication = AlarmsAuthConfig{aacProducers}} =
+    length (filter isOpenProducer aacProducers) > 1
+
+  -- | An open (tokenless) producer relaxes the alarm ingress endpoint's
+  --   default deny-by-default authentication, so it is only accepted once an
+  --   operator has explicitly acknowledged that with @allowInsecure: true@ --
+  --   the same flag that already gates running the alarms HTTP server
+  --   without TLS.
+  openProducerWithoutAllowInsecure :: AlarmsConfig -> Bool
+  openProducerWithoutAllowInsecure AlarmsConfig{alAuthentication = AlarmsAuthConfig{aacProducers}, alAllowInsecure} =
+    any isOpenProducer aacProducers && alAllowInsecure /= Just True
+
+  isOpenProducer :: ProducerCredentialConfig -> Bool
+  isOpenProducer ProducerCredentialConfig{pcTokenFile} = isNothing pcTokenFile
 
   hasDuplicateConsumerNames :: AlarmsConfig -> Bool
   hasDuplicateConsumerNames AlarmsConfig{alConsumers} =

@@ -20,6 +20,7 @@ module Cardano.Tracer.Handlers.Alarms.Registry
   , traceHistoryRead
   , lookupProducerCredential
   , lookupReaderCredential
+  , openProducerCredential
   ) where
 
 import           Cardano.Logging.Types (TraceObject)
@@ -177,3 +178,9 @@ lookupProducerCredential registry = lookupProducer (arAuth registry)
 
 lookupReaderCredential :: AlarmRegistry -> Text -> Maybe ReaderCredential
 lookupReaderCredential registry = lookupReader (arAuth registry)
+
+-- | The open (tokenless) producer credential, if one is configured. Only
+--   for use when an ingress request carries no @Authorization@ header at
+--   all -- see 'Cardano.Tracer.Handlers.Alarms.Server.handleIngress'.
+openProducerCredential :: AlarmRegistry -> Maybe ProducerCredential
+openProducerCredential registry = openProducer (arAuth registry)
