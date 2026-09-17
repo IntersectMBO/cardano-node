@@ -1,7 +1,7 @@
 cabal-version: 3.8
 
 name:                   cardano-node
-version:                11.1.1
+version:                11.1.2
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -139,7 +139,7 @@ library
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
-                      , cardano-ledger-allegra
+                      , cardano-ledger-allegra >= 1.10.1
                       , cardano-ledger-api
                       , cardano-ledger-babbage
                       , cardano-ledger-binary >= 1.7.1
