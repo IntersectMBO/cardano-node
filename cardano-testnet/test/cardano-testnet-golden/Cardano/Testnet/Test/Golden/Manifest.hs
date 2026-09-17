@@ -13,6 +13,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Calendar (fromGregorian)
 import           Data.Time.Clock (UTCTime (..))
+import           Network.Socket (tupleToHostAddress)
 import           System.FilePath ((</>))
 
 import           Testnet.Manifest
@@ -47,7 +48,7 @@ sampleManifest = Manifest
       }
   , manifestNodes =
       [ ManifestNode
-          { mnodeName = "node1", mnodeRole = "spo", mnodeHost = "127.0.0.1"
+          { mnodeName = "node1", mnodeRole = "spo", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30001, mnodeSocketPath = "socket/node1/sock"
           , mnodeGrpc = Nothing, mnodePid = Just 12345
           , mnodePidFile = "logs/node1/node.pid"
@@ -56,7 +57,7 @@ sampleManifest = Manifest
           , mnodeStderrFile = "logs/node1/stderr.log"
           }
       , ManifestNode
-          { mnodeName = "node2", mnodeRole = "relay", mnodeHost = "127.0.0.1"
+          { mnodeName = "node2", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30002, mnodeSocketPath = "socket/node2/sock"
           , mnodeGrpc = Nothing, mnodePid = Just 12346
           , mnodePidFile = "logs/node2/node.pid"
@@ -65,7 +66,7 @@ sampleManifest = Manifest
           , mnodeStderrFile = "logs/node2/stderr.log"
           }
       , ManifestNode
-          { mnodeName = "node3", mnodeRole = "relay", mnodeHost = "127.0.0.1"
+          { mnodeName = "node3", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30003, mnodeSocketPath = "socket/node3/sock"
           , mnodeGrpc = Nothing, mnodePid = Just 12347
           , mnodePidFile = "logs/node3/node.pid"

@@ -22,25 +22,29 @@ module Testnet.Manifest
 
 import           Cardano.Api (CardanoEra (..), File (..))
 
-import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultGenesisFilepath)
+import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultNodePidFile,
+                   defaultNodeTopologyFile)
 
 import           Prelude
 
-import           Control.Exception (onException, try)
+import           Control.Exception.Safe (onException, try)
 import           Control.Monad (when)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson.Encode.Pretty as A
+import           Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.List (isPrefixOf)
+import           Data.IP (IP, IPv4, toHostAddress)
 import qualified Data.List.NonEmpty as NEL
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import           Network.Socket (HostAddress, PortNumber)
 import           System.Directory (doesFileExist, removeFile, renameFile)
 import           System.FilePath (makeRelative, normalise, (</>))
 import           System.IO (hClose)
 import qualified System.IO as IO
 import qualified System.Process as Process
+import           Text.Read (readMaybe)
 
 import           Hedgehog.Extras.Stock (sprocketSystemName)
 
@@ -98,14 +102,18 @@ data ManifestGenesisFiles = ManifestGenesisFiles
   , mgfDijkstra :: !FilePath
   } deriving (Eq, Show)
 
+-- | Node entry.  Host, ports and pid keep their domain types
+-- ('HostAddress', 'PortNumber', 'IP', 'Process.Pid'); the string/number
+-- forms exist only in the JSON instances, so the record cannot drift
+-- from the runtime values.
 data ManifestNode = ManifestNode
   { mnodeName         :: !String
   , mnodeRole         :: !String
-  , mnodeHost         :: !String
-  , mnodePort         :: !Int
+  , mnodeHost         :: !HostAddress
+  , mnodePort         :: !PortNumber
   , mnodeSocketPath   :: !FilePath
   , mnodeGrpc         :: !(Maybe ManifestGrpc)
-  , mnodePid          :: !(Maybe Int)
+  , mnodePid          :: !(Maybe Process.Pid)
   , mnodePidFile      :: !FilePath
   , mnodeTopologyFile :: !FilePath
   , mnodeStdoutFile   :: !FilePath
@@ -114,7 +122,7 @@ data ManifestNode = ManifestNode
 
 -- | gRPC endpoint descriptor: HTTP or unix-socket transport.
 data ManifestGrpc
-  = ManifestGrpcHttp !String !Int       -- ^ host, port
+  = ManifestGrpcHttp !IP !PortNumber
   | ManifestGrpcUnixSocket !FilePath    -- ^ socket path (relative)
   deriving (Eq, Show)
 
@@ -167,11 +175,11 @@ instance ToJSON ManifestNode where
   toJSON n = object
     [ "name"         .= mnodeName n
     , "role"         .= mnodeRole n
-    , "host"         .= mnodeHost n
-    , "port"         .= mnodePort n
+    , "host"         .= (showIpv4Address (mnodeHost n) :: String)
+    , "port"         .= (fromIntegral (mnodePort n) :: Int)
     , "socketPath"   .= mnodeSocketPath n
     , "grpc"         .= mnodeGrpc n     -- Nothing encodes as JSON null
-    , "pid"          .= mnodePid n      -- Nothing encodes as JSON null
+    , "pid"          .= (fromIntegral <$> mnodePid n :: Maybe Int)  -- Nothing encodes as JSON null
     , "pidFile"      .= mnodePidFile n
     , "topologyFile" .= mnodeTopologyFile n
     , "stdoutFile"   .= mnodeStdoutFile n
@@ -181,8 +189,8 @@ instance ToJSON ManifestNode where
 instance ToJSON ManifestGrpc where
   toJSON (ManifestGrpcHttp host port) = object
     [ "transport"  .= ("http" :: String)
-    , "host"       .= host
-    , "port"       .= port
+    , "host"       .= show host
+    , "port"       .= (fromIntegral port :: Int)
     ]
   toJSON (ManifestGrpcUnixSocket path) = object
     [ "transport"  .= ("unix-socket" :: String)
@@ -235,11 +243,11 @@ instance FromJSON ManifestNode where
   parseJSON = withObject "ManifestNode" $ \o -> ManifestNode
     <$> o .: "name"
     <*> o .: "role"
-    <*> o .: "host"
-    <*> o .: "port"
+    <*> (parseHostAddress =<< o .: "host")
+    <*> (parsePort =<< o .: "port")
     <*> o .: "socketPath"
     <*> o .: "grpc"
-    <*> o .: "pid"
+    <*> (fmap fromIntegral <$> (o .: "pid" :: Parser (Maybe Int)))
     <*> o .: "pidFile"
     <*> o .: "topologyFile"
     <*> o .: "stdoutFile"
@@ -249,9 +257,24 @@ instance FromJSON ManifestGrpc where
   parseJSON = withObject "ManifestGrpc" $ \o -> do
     transport <- o .: "transport"
     case (transport :: String) of
-      "http"        -> ManifestGrpcHttp <$> o .: "host" <*> o .: "port"
+      "http"        -> ManifestGrpcHttp <$> (parseIP =<< o .: "host") <*> (parsePort =<< o .: "port")
       "unix-socket" -> ManifestGrpcUnixSocket <$> o .: "socketPath"
       _             -> fail $ "Unknown gRPC transport: " <> transport
+
+-- | Parse a dotted-quad IPv4 address, e.g. @"127.0.0.1"@.
+parseHostAddress :: String -> Parser HostAddress
+parseHostAddress s =
+  maybe (fail $ "Invalid IPv4 address: " <> s) (pure . toHostAddress) (readMaybe s :: Maybe IPv4)
+
+-- | Parse an IPv4 or IPv6 address.
+parseIP :: String -> Parser IP
+parseIP s = maybe (fail $ "Invalid IP address: " <> s) pure (readMaybe s)
+
+-- | Parse a port number, checking the 0-65535 range.
+parsePort :: Int -> Parser PortNumber
+parsePort p
+  | p >= 0 && p <= 65535 = pure (fromIntegral p)
+  | otherwise            = fail $ "Port out of range: " <> show p
 
 instance FromJSON ManifestWallet where
   parseJSON = withObject "ManifestWallet" $ \o -> ManifestWallet
@@ -307,7 +330,7 @@ buildManifest
   -> String            -- ^ Era name, e.g. @\"conway\"@
   -> UTCTime           -- ^ System start time (from the shelley genesis, potentially updated)
   -> IO Manifest
-buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets} era systemStart = do
+buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets, configurationFile, shelleyGenesisFile} era systemStart = do
   now <- getCurrentTime
   nodes <- mapM (buildNode outputDir) (NEL.toList testnetNodes)
   let ws = buildWallets outputDir wallets
@@ -321,10 +344,14 @@ buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets} era 
         , mnSystemStart = systemStart
         }
     , manifestPaths                = ManifestPaths
-        { mpNodeConfigFile = defaultConfigFile
+        -- The config and shelley genesis paths come from the runtime — the
+        -- values the nodes were actually started with — so the manifest
+        -- cannot drift from them.  The other genesis files have no runtime
+        -- field, so the default constants are used.
+        { mpNodeConfigFile = relPath (unFile configurationFile)
         , mpGenesisFiles   = ManifestGenesisFiles
             { mgfByron    = defaultGenesisFilepath ByronEra
-            , mgfShelley  = defaultGenesisFilepath ShelleyEra
+            , mgfShelley  = relPath shelleyGenesisFile
             , mgfAlonzo   = defaultGenesisFilepath AlonzoEra
             , mgfConway   = defaultGenesisFilepath ConwayEra
             , mgfDijkstra = defaultGenesisFilepath DijkstraEra
@@ -333,6 +360,8 @@ buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets} era 
     , manifestNodes                = nodes
     , manifestWallets              = ws
     }
+  where
+    relPath = makeManifestRelPath outputDir
 
 buildNode :: FilePath -> TestnetNode -> IO ManifestNode
 buildNode outputDir node = do
@@ -340,24 +369,22 @@ buildNode outputDir node = do
   pure ManifestNode
     { mnodeName         = nodeName node
     , mnodeRole         = if isTestnetNodeSpo node then "spo" else "relay"
-    , mnodeHost         = showIpv4Address (nodeIpv4 node)
-    , mnodePort         = fromIntegral (nodePort node)
+    , mnodeHost         = nodeIpv4 node
+    , mnodePort         = nodePort node
     , mnodeSocketPath   = relPath (sprocketSystemName (nodeSprocket node))
-    , mnodeGrpc         = buildGrpc (nodeRpcEndpoint node)
-    , mnodePid          = fmap fromIntegral mPid
-    , mnodePidFile      = "logs" </> nodeName node </> "node.pid"
-    , mnodeTopologyFile = "node-data" </> nodeName node </> "topology.json"
+    , mnodeGrpc         = buildGrpc <$> nodeRpcEndpoint node
+    , mnodePid          = mPid
+    , mnodePidFile      = defaultNodePidFile (nodeName node)
+    , mnodeTopologyFile = defaultNodeTopologyFile (nodeName node)
     , mnodeStdoutFile   = relPath (nodeStdout node)
     , mnodeStderrFile   = relPath (nodeStderr node)
     }
   where
     relPath = makeManifestRelPath outputDir
 
-    buildGrpc Nothing = Nothing
-    buildGrpc (Just (NodeRpcUnixSocket socketPath)) =
-      Just $ ManifestGrpcUnixSocket (relPath (unFile socketPath))
-    buildGrpc (Just (NodeRpcHttp ip port)) =
-      Just $ ManifestGrpcHttp (show ip) (fromIntegral port)
+    buildGrpc (NodeRpcUnixSocket socketPath) =
+      ManifestGrpcUnixSocket (relPath (unFile socketPath))
+    buildGrpc (NodeRpcHttp ip port) = ManifestGrpcHttp ip port
 
 buildWallets :: FilePath -> [PaymentKeyInfo] -> [ManifestWallet]
 buildWallets outputDir = zipWith build [(1::Int)..]
@@ -372,8 +399,10 @@ buildWallets outputDir = zipWith build [(1::Int)..]
     relPath = makeManifestRelPath outputDir
 
 -- | Make a path relative to the output directory, normalised (no leading @./@).
--- Windows named pipes (starting with @\\.\pipe\@) are kept as-is.
+--
+-- Windows named pipes (@\\.\pipe\...@) come through unchanged without a
+-- special case: 'System.FilePath.splitDrive' treats @\\.\@ as a drive, so
+-- 'makeRelative' returns pipe paths as-is and 'normalise' keeps the prefix
+-- (checked on filepath 1.4.301.0, both the Windows and Posix flavours).
 makeManifestRelPath :: FilePath -> FilePath -> FilePath
-makeManifestRelPath outputDir path
-  | "\\\\.\\pipe\\" `isPrefixOf` path = path
-  | otherwise                          = normalise (makeRelative outputDir path)
+makeManifestRelPath outputDir = normalise . makeRelative outputDir

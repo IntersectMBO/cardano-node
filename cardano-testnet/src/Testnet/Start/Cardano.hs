@@ -42,7 +42,8 @@ import qualified Cardano.Api.Byron as Byron
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.TopologyP2P ()
-import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile, defaultPortFile,
+import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFile,
+                   defaultNodeTopologyFile, defaultNodesDataDir, defaultPortFile,
                    defaultUtxoAddrPath)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -170,7 +171,7 @@ createTestnetEnv
 
     producers <- mapM (idToRemoteAddressP2P portNumbersMap) $ NodeId <$> filter (/= i) nodeIds
     let topology = Defaults.defaultP2PTopology producers
-    liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
+    liftIOAnnotated . LBS.writeFile (tmpAbsPath </> defaultNodeTopologyFile (Defaults.defaultNodeName i)) $ A.encodePretty topology
 
     -- Write env file for nodes with custom binaries
     forM_ (nodeBin nodeOption) $ \bin -> do
@@ -303,11 +304,10 @@ cardanoTestnet
 
   -- Read port numbers from disk (written by createTestnetEnv)
   portNumbers <- forM (zip [1..] allNodes) $ \(i, _) -> do
-    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-        portPath = tmpAbsPath </> defaultPortFile i
+    let portPath = tmpAbsPath </> defaultPortFile i
     portStr <- liftIOAnnotated $ readFile portPath
     let port = read portStr :: PortNumber
-    let topologyPath = nodeDataDir </> "topology.json"
+    let topologyPath = tmpAbsPath </> defaultNodeTopologyFile (Defaults.defaultNodeName i)
     tBytes <- liftIOAnnotated $ LBS.readFile topologyPath
     case eitherDecode tBytes of
       Right (abstractTopology :: CardanoNetworkTopology) -> do
@@ -418,7 +418,7 @@ cardanoTestnet
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeWithOptions) $
         [ "run"
         , "--config", nodeConfigFile
-        , "--topology", nodeDataDir </> "topology.json"
+        , "--topology", tmpAbsPath </> defaultNodeTopologyFile nodeName
         , "--database-path", nodeDataDir </> "db"
         ]
         <> spoNodeCliArgs
@@ -652,7 +652,7 @@ retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTime
 -- and that all SPO nodes come before relay nodes.
 readNodesWithOptionsFromEnv :: HasCallStack => MonadIO m => FilePath -> m TestnetNodesWithOptions
 readNodesWithOptionsFromEnv envDir = do
-  entries <- liftIO $ IO.listDirectory (envDir </> "node-data")
+  entries <- liftIO $ IO.listDirectory (envDir </> defaultNodesDataDir)
   let nodeNums = sort $ mapMaybe parseNodeNum entries
   when (null nodeNums) $
     throwString "No node directories found in environment"
