@@ -38,9 +38,9 @@ trace-schemas-validate: ## Validate trace message schemas against meta.schema.js
 	nix run .#validate-trace-schemas
 
 testnet-manifest-validate: ## Validate manifest golden file (and optionally MANIFEST=path) against its schema
-	nix run nixpkgs#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json \
+	nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json \
 	  cardano-testnet/test/cardano-testnet-golden/files/golden/manifest.json
-	$(if $(MANIFEST),nix run nixpkgs#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json $(MANIFEST),)
+	$(if $(MANIFEST),nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json $(MANIFEST),)
 
 ###
 ### Workbench:  cluster shells
