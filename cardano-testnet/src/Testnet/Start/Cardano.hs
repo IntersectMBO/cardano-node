@@ -128,6 +128,13 @@ createTestnetEnv
     , tempAbsPath=TmpAbsolutePath tmpAbsPath
     } = do
 
+  -- Fresh-run rule: delete any manifest a previous run left in this directory,
+  -- first thing, so a script waiting for the file can never read stale data —
+  -- even if environment creation fails below.  Every entry point that creates
+  -- an environment goes through here; 'cardanoTestnet' covers the reuse of an
+  -- already-created environment.
+  liftIOAnnotated $ removeStaleManifest tmpAbsPath
+
   AnyShelleyBasedEra sbe <- pure asbe
 
   _ <- createSPOGenesisAndFiles
@@ -270,7 +277,7 @@ cardanoTestnet
       shelleyGenesisFile = tmpAbsPath </> "shelley-genesis.json"
 
   sBytes <- liftIOAnnotated (LBS.readFile shelleyGenesisFile)
-  shelleyGenesis@ShelleyGenesis{sgNetworkMagic}
+  initialShelleyGenesis@ShelleyGenesis{sgNetworkMagic}
     <- case eitherDecode sBytes of
           Right sg -> return sg
           Left err -> throwString $ "Could not decode shelley genesis file: " <> shelleyGenesisFile <> " Error: " <> err
@@ -315,22 +322,29 @@ cardanoTestnet
   -- If necessary, update the time stamps in Byron and Shelley Genesis files.
   -- This is a QoL feature so that users who edit their configuration files don't
   -- have to manually set up the start times themselves.
-  when (updateTimestamps == UpdateTimestamps) $ do
-    currentTime <- liftIOAnnotated DTC.getCurrentTime
-    let startTime = DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
+  -- The returned genesis is the one actually in effect (updated or not), so
+  -- everything below (forecast horizon, watchdog, manifest) uses it directly
+  -- instead of re-reading the file.
+  shelleyGenesis <-
+    if updateTimestamps == UpdateTimestamps
+      then do
+        currentTime <- liftIOAnnotated DTC.getCurrentTime
+        let startTime = DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
-    -- Update start time in Byron genesis file
-    eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
-    (byronGenesis', _byronHash) <-
-      case eByron of
-        Right bg -> return bg
-        Left err -> throwString $ "Could not read byron genesis data from file: " <> byronGenesisFile <> " Error: " <> show err
-    let byronGenesis = byronGenesis'{gdStartTime = startTime}
-    liftIOAnnotated . LBS.writeFile  byronGenesisFile $ canonicalEncodePretty byronGenesis
+        -- Update start time in Byron genesis file
+        eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
+        (byronGenesis', _byronHash) <-
+          case eByron of
+            Right bg -> return bg
+            Left err -> throwString $ "Could not read byron genesis data from file: " <> byronGenesisFile <> " Error: " <> show err
+        let byronGenesis = byronGenesis'{gdStartTime = startTime}
+        liftIOAnnotated . LBS.writeFile  byronGenesisFile $ canonicalEncodePretty byronGenesis
 
-    -- Update start time in Shelley genesis file (which has been read already)
-    let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
-    liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
+        -- Update start time in Shelley genesis file (which has been read already)
+        let shelleyGenesis' = initialShelleyGenesis{sgSystemStart = startTime}
+        liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
+        pure shelleyGenesis'
+      else pure initialShelleyGenesis
 
   let portNumbersMap = Map.fromList portNumbers
 
@@ -490,22 +504,15 @@ cardanoTestnet
 
   assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
-  -- Re-read the shelley genesis for the (potentially updated) system start time.
-  -- The in-memory 'shelleyGenesis' may be stale when timestamps were updated above.
-  systemStartBytes <- liftIOAnnotated (LBS.readFile shelleyGenesisFile)
-  finalShelleyGenesis <- case eitherDecode systemStartBytes of
-    Right sg -> return sg
-    Left err -> throwString $ "Could not read shelley genesis for manifest: " <> err
-  let systemStartTime = sgSystemStart finalShelleyGenesis
-
-  -- Build and atomically write the manifest.  The file appearing is the
-  -- ready signal — it is written only after all readiness checks pass.
-  manifest <- liftIOAnnotated $
-    buildManifest tmpAbsPath runtime (eraToString Defaults.defaultEra) systemStartTime
-  liftIOAnnotated $ writeManifest tmpAbsPath manifest
-
   when enableNewEpochStateLogging $
     TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
+
+  -- Build and atomically write the manifest.  The file appearing is the
+  -- ready signal — it is written only after all readiness checks pass, as
+  -- the very last step: nothing that can fail runs after it.
+  manifest <- liftIOAnnotated $
+    buildManifest tmpAbsPath runtime (eraToString Defaults.defaultEra) (sgSystemStart shelleyGenesis)
+  liftIOAnnotated $ writeManifest tmpAbsPath manifest
 
   pure runtime
   where

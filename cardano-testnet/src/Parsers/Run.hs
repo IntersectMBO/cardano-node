@@ -25,7 +25,6 @@ import qualified Prettyprinter.Internal as PPI
 import           System.Directory (doesDirectoryExist)
 
 import           Testnet.Filepath (unTmpAbsPath)
-import           Testnet.Manifest (removeStaleManifest)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (TestnetNode (..))
@@ -33,7 +32,7 @@ import           Testnet.Types (TestnetNode (..))
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           RIO (display, forever, fromString, liftIO, logInfo, runSimpleApp, threadDelay)
+import           RIO (display, forever, fromString, logInfo, runSimpleApp, threadDelay)
 import           UnliftIO.Resource (runResourceT)
 
 pref :: ParserPrefs
@@ -105,10 +104,6 @@ runCardanoOptions = \case
     conf <- mkConfigAbs dirName
     runSimpleApp . runResourceT $ do
       logInfo $ "Creating environment: " <> display (tempAbsPath conf)
-      -- Fresh-run rule: remove any manifest left by a previous run in this
-      -- directory before anything else, so a script waiting for the file can
-      -- never pick up stale data — even if environment creation fails below.
-      liftIO $ removeStaleManifest (unTmpAbsPath (tempAbsPath conf))
       createTestnetEnv noEnvCreationOptions conf
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
       runtime <- cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
