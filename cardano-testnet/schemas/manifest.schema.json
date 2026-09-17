@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://github.com/IntersectMBO/cardano-node/cardano-testnet/schemas/manifest.schema.json",
     "title": "cardano-testnet manifest",
-    "description": "Machine-readable description of a running cardano-testnet cluster, written once at startup after readiness checks pass.",
+    "description": "Machine-readable description of a running cardano-testnet cluster, written once at startup after readiness checks pass. The schema is strict: it describes schema version 1 exactly, unknown fields are an error, and any change to the manifest shape bumps schemaVersion.",
     "type": "object",
     "required": [
         "schemaVersion",
@@ -18,7 +18,7 @@
         "schemaVersion": {
             "type": "integer",
             "const": 1,
-            "description": "Schema version. New fields may be added without bumping; removals or renames bump it."
+            "description": "Schema version. Any change to the manifest shape, including new fields or values, bumps it."
         },
         "createdAt": {
             "type": "string",
@@ -36,7 +36,9 @@
             "properties": {
                 "magic": {
                     "type": "integer",
-                    "description": "Testnet magic number."
+                    "minimum": 0,
+                    "maximum": 4294967295,
+                    "description": "Testnet magic number (a 32-bit unsigned integer)."
                 },
                 "era": {
                     "type": "string",
@@ -116,8 +118,16 @@
                                 "additionalProperties": false,
                                 "properties": {
                                     "transport": { "type": "string", "const": "http" },
-                                    "host":      { "type": "string" },
-                                    "port":      { "type": "integer", "minimum": 0, "maximum": 65535 }
+                                    "host": {
+                                        "type": "string",
+                                        "description": "gRPC listen address."
+                                    },
+                                    "port": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 65535,
+                                        "description": "gRPC listen port."
+                                    }
                                 }
                             },
                             {
@@ -125,14 +135,17 @@
                                 "required": ["transport", "socketPath"],
                                 "additionalProperties": false,
                                 "properties": {
-                                    "transport":  { "type": "string", "const": "unix-socket" },
-                                    "socketPath": { "type": "string" }
+                                    "transport": { "type": "string", "const": "unix-socket" },
+                                    "socketPath": {
+                                        "type": "string",
+                                        "description": "gRPC unix socket path, relative to the manifest directory."
+                                    }
                                 }
                             }
                         ]
                     },
                     "pid": {
-                        "description": "OS process ID at start time, or null if the process handle had no PID.",
+                        "description": "OS process ID at the time the manifest was written, or null if the process handle had no PID. The pid recorded at node start time is in the pid file.",
                         "oneOf": [
                             { "type": "null" },
                             { "type": "integer" }

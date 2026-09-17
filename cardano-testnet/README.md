@@ -402,9 +402,10 @@ manifest is in. To use one: `dir(manifest) + path`. Windows named-pipe values
 **Stability promise.** The manifest (and the files it points to) is the
 supported interface. The rest of the directory layout may change between
 releases without notice. A strict JSON Schema
-(`cardano-testnet/schemas/manifest.schema.json`, draft 2020-12, unknown fields
-are an error) lives in the repository and is the contract. Fields may be added
-within a schema version; removals or renames bump the version number.
+(`cardano-testnet/schemas/manifest.schema.json`, draft 2020-12, unknown
+fields are an error) lives in the repository and is the contract. Any change
+to the manifest shape — including new fields — bumps the schema version, so
+a manifest always matches the schema of its own version exactly.
 
 **Write rules.** The file is written atomically (temp file + rename) so
 readers never see a partial file. It is written once and never modified.
