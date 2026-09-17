@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 module Cardano.Testnet.Test.Golden.Manifest
   ( golden_Manifest
   ) where
