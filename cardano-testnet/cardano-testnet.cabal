@@ -187,6 +187,7 @@ test-suite cardano-testnet-golden
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , iproute
                       , network
                       , process
                       , regex-compat

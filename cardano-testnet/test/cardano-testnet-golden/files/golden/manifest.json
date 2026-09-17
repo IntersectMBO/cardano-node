@@ -1,5 +1,5 @@
 {
-    "cardanoTestnetVersion": "11.1.1",
+    "cardanoTestnetVersion": "0.0.0.0",
     "createdAt": "2026-01-01T00:00:00Z",
     "network": {
         "era": "conway",
@@ -8,7 +8,11 @@
     },
     "nodes": [
         {
-            "grpc": null,
+            "grpc": {
+                "host": "127.0.0.1",
+                "port": 50051,
+                "transport": "http"
+            },
             "host": "127.0.0.1",
             "name": "node1",
             "pid": 12345,
@@ -21,7 +25,10 @@
             "topologyFile": "node-data/node1/topology.json"
         },
         {
-            "grpc": null,
+            "grpc": {
+                "socketPath": "socket/node2/rpc.sock",
+                "transport": "unix-socket"
+            },
             "host": "127.0.0.1",
             "name": "node2",
             "pid": 12346,
@@ -37,7 +44,7 @@
             "grpc": null,
             "host": "127.0.0.1",
             "name": "node3",
-            "pid": 12347,
+            "pid": null,
             "pidFile": "logs/node3/node.pid",
             "port": 30003,
             "role": "relay",

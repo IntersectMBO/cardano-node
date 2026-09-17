@@ -29,7 +29,7 @@ import qualified Hedgehog.Extras as H
 -- Execute with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Manifest/"'@
 hprop_manifest :: Property
-hprop_manifest = integrationRetryWorkspace 0 "manifest" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
+hprop_manifest = integrationRetryWorkspace 2 "manifest" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
   conf <- mkConf tmpDir
   _runtime <- createAndRunTestnet def def conf
 

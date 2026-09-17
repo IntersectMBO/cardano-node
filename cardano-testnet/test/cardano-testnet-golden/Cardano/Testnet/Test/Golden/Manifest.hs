@@ -9,6 +9,7 @@ import           Prelude
 import           Data.Aeson (eitherDecode)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.IP (IP (IPv4), toIPv4)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Calendar (fromGregorian)
@@ -25,12 +26,15 @@ import qualified Hedgehog.Extras.Test.Process as H
 
 -- | A fixed sample manifest for golden testing.
 -- All values are deterministic (fixed ports, PIDs, times) so the output
--- is stable across runs.
+-- is stable across runs.  The three nodes vary the optional fields so
+-- every ManifestGrpc constructor and the pid-null encoding are pinned.
 sampleManifest :: Manifest
 sampleManifest = Manifest
   { manifestSchemaVersion        = 1
   , manifestCreatedAt            = UTCTime (fromGregorian 2026 1 1) 0
-  , manifestCardanoTestnetVersion = cardanoTestnetVersionString
+    -- A fixed literal, not the live package version: the golden file must
+    -- change only when the manifest shape changes, not on version bumps.
+  , manifestCardanoTestnetVersion = "0.0.0.0"
   , manifestNetwork              = ManifestNetwork
       { mnMagic       = 42
       , mnEra         = "conway"
@@ -50,7 +54,8 @@ sampleManifest = Manifest
       [ ManifestNode
           { mnodeName = "node1", mnodeRole = "spo", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30001, mnodeSocketPath = "socket/node1/sock"
-          , mnodeGrpc = Nothing, mnodePid = Just 12345
+          , mnodeGrpc = Just (ManifestGrpcHttp (IPv4 (toIPv4 [127, 0, 0, 1])) 50051)
+          , mnodePid = Just 12345
           , mnodePidFile = "logs/node1/node.pid"
           , mnodeTopologyFile = "node-data/node1/topology.json"
           , mnodeStdoutFile = "logs/node1/stdout.log"
@@ -59,7 +64,8 @@ sampleManifest = Manifest
       , ManifestNode
           { mnodeName = "node2", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30002, mnodeSocketPath = "socket/node2/sock"
-          , mnodeGrpc = Nothing, mnodePid = Just 12346
+          , mnodeGrpc = Just (ManifestGrpcUnixSocket "socket/node2/rpc.sock")
+          , mnodePid = Just 12346
           , mnodePidFile = "logs/node2/node.pid"
           , mnodeTopologyFile = "node-data/node2/topology.json"
           , mnodeStdoutFile = "logs/node2/stdout.log"
@@ -68,7 +74,7 @@ sampleManifest = Manifest
       , ManifestNode
           { mnodeName = "node3", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30003, mnodeSocketPath = "socket/node3/sock"
-          , mnodeGrpc = Nothing, mnodePid = Just 12347
+          , mnodeGrpc = Nothing, mnodePid = Nothing
           , mnodePidFile = "logs/node3/node.pid"
           , mnodeTopologyFile = "node-data/node3/topology.json"
           , mnodeStdoutFile = "logs/node3/stdout.log"
