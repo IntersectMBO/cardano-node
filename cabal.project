@@ -16,6 +16,7 @@ index-state:
   , hackage.haskell.org 2026-09-18T01:34:09Z
   , cardano-haskell-packages 2026-09-16T23:53:07Z
 
+
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
@@ -105,6 +106,7 @@ allow-newer:
   -- ^>=2.5||^>=2.6 on the erikd/ram SRP, so none of those need an entry
   -- here.)
   , cardano-cli:cardano-crypto-class
+  , cardano-keys:cardano-crypto-class
   , cardano-ledger-binary:cardano-crypto-class
   , cardano-ledger-core:cardano-crypto-class
   , cardano-ledger-mary:cardano-crypto-class
@@ -118,6 +120,16 @@ allow-newer:
   -- ^>=1.7; let it accept the erikd/ram-based 1.8.0.0 SRP above.
   -- (cardano-api's own bound is already ^>=1.7||^>=1.8, no entry needed.)
   , cardano-cli:cardano-crypto-wrapper
+
+  -- EXPERIMENT: cardano-api PR #1292 now depends on the new cardano-keys
+  -- package (CHaP 11.0.0.0, extracted from cardano-api's own key-handling
+  -- modules -- Ed25519Bip32.hs/Mnemonic.hs/Sign.hs, the actual crypton/ram
+  -- fix targets, stayed in cardano-api; cardano-keys took the rest, e.g.
+  -- Leios.hs, which is now just a re-export). cardano-keys itself still pins
+  -- cardano-crypto-class ^>=2.5 and cardano-crypto-wrapper ^>=1.7 natively
+  -- (no memory dependency though, so not a blocker otherwise); let it accept
+  -- the widened versions.
+  , cardano-keys:cardano-crypto-wrapper
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
@@ -211,7 +223,7 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: c2f4280e30dbedd1e6d333e2780f8dc54847c4cb
+  tag: 116dab4b22e3ee21b31f6d5e7814306d660c76ac
   subdir: eras/byron/crypto
 
 -- ouroboros-consensus PR #2213 (erikd/ram):
@@ -248,13 +260,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 3db5a0310a3df10952ef1954122e2557816b5021
+  tag: 81d7655dfae5341f8d24c367b597b1a19cdaacff
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
 -- cardano-rpc lives in the same repo/commit as the cardano-api SRP above
--- and needs to move in lockstep with it -- now at 11.3.0.0, includes the
+-- and needs to move in lockstep with it -- now at 11.4.0.0, includes the
 -- TCP/TLS RPC listening feature, no `memory` dependency. One extra commit
 -- on top of the master rebase: cardano-api's own new
 -- serverExceptionToClient assignment in Cardano.Rpc.Server was written
@@ -266,7 +278,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 3db5a0310a3df10952ef1954122e2557816b5021
+  tag: 81d7655dfae5341f8d24c367b597b1a19cdaacff
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
@@ -278,9 +290,13 @@ source-repository-package
 -- Transaction/Run.hs was renamed to attachWitness by the same upstream
 -- commit, logic unchanged). Still pins cardano-crypto-class ^>=2.5 and
 -- cardano-crypto-wrapper ^>=1.7 natively (unchanged), so the existing
--- allow-newer entries for those still apply.
+-- allow-newer entries for those still apply. One extra commit on top: the
+-- cardano-api PR #1292 rebase changed cardano-protocol-tpraos's KESPeriod
+-- to derive no Integral instance; EraBased.Query.Run's
+-- opCertStartingKesPeriod called fromIntegral directly on it -- fixed by
+-- unwrapping via unKESPeriod first.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: d8fe8b62e24603b01ae0590fe10d6fd1167d9b53
+  tag: 39d02bb14b6768aed7fd5173aeaab90ac8ebe2f9
   subdir: cardano-cli
