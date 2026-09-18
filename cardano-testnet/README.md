@@ -397,3 +397,9 @@ and node from the same release tarball as this cardano-testnet.
 
 The cardano-api and cardano-cli versions this build was compiled against are
 printed by `cardano-testnet version`.
+
+## Core maintainers
+
+* [Jordan Millar](https://github.com/Jimbo4350) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
+* [Mateusz Gałażyn](https://github.com/carbolymer) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
+* [Pablo Lamela](https://github.com/palas) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
