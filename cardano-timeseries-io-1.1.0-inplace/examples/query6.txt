@@ -1,0 +1,1 @@
+avg (quantile_over_time 0.95 cardano_node_metrics_blockadoption_forgeDelay_real[now - 6h; now]) >= 4.5

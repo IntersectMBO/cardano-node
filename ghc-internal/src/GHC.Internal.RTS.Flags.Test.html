@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LINE 1 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-1"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Module with fewer dependencies than GHC.Internal.RTS.Flags</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- that allows to quickly test if some flag is set.</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.RTS.Flags.Test.html"><span class="hs-identifier">GHC.Internal.RTS.Flags.Test</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Internal.RTS.Flags.Test.html#getUserEventTracingEnabled"><span class="hs-identifier">getUserEventTracingEnabled</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LINE 13 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Ptr.html"><span class="hs-identifier">GHC.Internal.Ptr</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Foreign.C.Types.html"><span class="hs-identifier">GHC.Internal.Foreign.C.Types</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Foreign.Marshal.Utils.html"><span class="hs-identifier">GHC.Internal.Foreign.Marshal.Utils</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Foreign.Storable.html"><span class="hs-identifier">GHC.Internal.Foreign.Storable</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Data.Functor.html"><span class="hs-identifier">GHC.Internal.Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator">(&lt;$&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-keyword">ccall</span></span><span> </span><span class="annot"><span class="hs-string">&quot;&amp;RtsFlags&quot;</span></span><span> </span><span id="rtsFlagsPtr"><span class="annot"><a href="GHC.Internal.RTS.Flags.Test.html#rtsFlagsPtr"><span class="hs-identifier hs-var">rtsFlagsPtr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-pragma">{-# LINE 25 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Specialized version of 'getTraceFlags' for just checking if user</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- event tracing is enabled.</span><span>
+</span><span id="line-28"></span><span class="annot"><a href="GHC.Internal.RTS.Flags.Test.html#getUserEventTracingEnabled"><span class="hs-identifier hs-type">getUserEventTracingEnabled</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-29"></span><span id="getUserEventTracingEnabled"><span class="annot"><span class="annottext">getUserEventTracingEnabled :: IO Bool
+</span><a href="GHC.Internal.RTS.Flags.Test.html#getUserEventTracingEnabled"><span class="hs-identifier hs-var hs-var">getUserEventTracingEnabled</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-pragma">{-# LINE 34 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679805961"><span class="annot"><span class="annottext">ptr :: Ptr b
+</span><a href="#local-6989586621679805961"><span class="hs-identifier hs-var hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679805962"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679805962"><span class="hs-identifier hs-var">hsc_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621679805962"><span class="hs-identifier hs-var">hsc_ptr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; Int -&gt; Ptr b
+forall a b. Ptr a -&gt; Int -&gt; Ptr b
+</span><a href="GHC.Internal.Ptr.html#plusPtr"><span class="hs-operator hs-var">`plusPtr`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">384</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="GHC.Internal.RTS.Flags.Test.html#rtsFlagsPtr"><span class="hs-identifier hs-var">rtsFlagsPtr</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-pragma">{-# LINE 35 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-identifier">toBool</span><span> </span><span class="hs-operator">&lt;$&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-identifier">hsc_ptr</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">peekByteOff</span><span> </span><span class="hs-identifier">hsc_ptr</span><span> </span><span class="hs-number">11</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">ptr</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-identifier">CBool</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-pragma">{-# LINE 36 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-pragma">{-# LINE 37 &quot;libraries/ghc-internal/src/GHC/Internal/RTS/Flags/Test.hsc&quot; #-}</span><span>
+</span><span id="line-37"></span></pre></body></html>
