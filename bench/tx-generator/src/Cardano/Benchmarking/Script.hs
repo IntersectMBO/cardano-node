@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -15,7 +16,7 @@ import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
 import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (..), Error,
-                   getEnvThreads, runActionMEnv, traceError)
+                   getEnvThreads, runActionMEnv, traceDebug, traceError)
 import           Cardano.Benchmarking.Script.Types
 
 import           Prelude
@@ -35,6 +36,17 @@ type Script = [Action]
 -- 'Ogmios') never create one, in which case it is 'Nothing'.
 runScript :: Env.Env -> Script -> EnvConsts -> IO (Either Env.Error (), Maybe AsyncBenchmarkControl)
 runScript env script constants@EnvConsts { .. } = do
+  -- Plain 'putStrLn', not a trace: this runs before the script's own
+  -- 'StartProtocol' action (if it even has one), so BenchTracers are
+  -- not yet constructed.
+  putStrLn $ "This workload script will generate " ++
+    ( let count = countScriptTxns script in
+      if
+        | count == 0        -> "no transactions"
+        | count == maxBound -> "an infinite stream of transactions"
+        | count == (-1)     -> "an unknown number of transactions (stream is non-deterministic)"
+        | otherwise         -> "a finite stream yielding " ++ show count ++ " transactions"
+    )
   result <- go
   performGC
   threadDelay $ 150 * 1_000
@@ -60,5 +72,31 @@ runScript env script constants@EnvConsts { .. } = do
 
 shutDownLogging :: Env.ActionM ()
 shutDownLogging = do
-  Env.traceError "QRT Last Message. LoggingLayer shutting down ..."
+  Env.traceDebug "QRT Last Message. LoggingLayer shutting down ..."
   liftIO $ threadDelay $ 350 * 1_000
+
+-- Results:
+--   (-1):     somwhere in [0..Infinity] due to use of non-deterministic generator combinator
+--   maxBound: infinite txn stream
+--   n:        finite stream of n txns
+countScriptTxns :: Script -> Int
+countScriptTxns = sum . map actionTxCount
+  where
+    actionTxCount = \case
+      Submit _ _ _ gen -> genTxCount gen
+      _                -> 0
+    genTxCount = \case
+      SecureGenesis{} -> 1
+      Split{}         -> 1
+      SplitN{}        -> 1
+      NtoM{}          -> 1
+      Cycle g         -> if genTxCount g < 0 then (-1) else maxBound
+      Take i g        -> min i (genTxCount g)
+      Sequence gs     -> guardedSum $ map genTxCount gs
+      RoundRobin gs   -> guardedSum $ map genTxCount gs
+      OneOf{}         -> (-1)   -- is non-deterministic
+      where
+        guardedSum is
+          | any (< 0) is        = -1
+          | maxBound `elem` is  = maxBound
+          | otherwise           = sum is
