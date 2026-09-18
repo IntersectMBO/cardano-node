@@ -8,10 +8,9 @@ module Testnet.Manifest
   , ManifestPaths(..)
   , ManifestGenesisFiles(..)
   , ManifestNode(..)
+  , ManifestNodeRole(..)
   , ManifestGrpc(..)
   , ManifestWallet(..)
-    -- * Constants
-  , cardanoTestnetVersionString
     -- * File operations
   , writeManifest
   , removeStaleManifest
@@ -29,17 +28,17 @@ import           Prelude
 
 import           Control.Exception.Safe (onException, try)
 import           Control.Monad (when, zipWithM)
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IP (IP, IPv4, toHostAddress)
 import           Data.List (find)
-import qualified Data.List.NonEmpty as NEL
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, getCurrentTime)
-import           Data.Version (showVersion)
+import           Data.Version (Version, parseVersion, showVersion)
 import           Data.Word (Word32)
 import           Network.Socket (HostAddress, PortNumber)
 import           System.Directory (doesFileExist, removeFile, renameFile)
@@ -47,6 +46,7 @@ import           System.FilePath (makeRelative, normalise, (</>))
 import           System.IO (hClose)
 import qualified System.IO as IO
 import qualified System.Process as Process
+import           Text.ParserCombinators.ReadP (readP_to_S)
 import           Text.Read (readMaybe)
 
 import           Hedgehog.Extras.Stock (sprocketSystemName)
@@ -60,26 +60,16 @@ import           Paths_cardano_testnet (version)
 
 
 -- ---------------------------------------------------------------------------
--- Constants
--- ---------------------------------------------------------------------------
-
--- | The cardano-testnet package version as a string (e.g. @"11.1.1"@),
--- matching the output of @cardano-testnet version@.
-cardanoTestnetVersionString :: String
-cardanoTestnetVersionString = showVersion version
-
-
--- ---------------------------------------------------------------------------
 -- Manifest types
 -- ---------------------------------------------------------------------------
 
 data Manifest = Manifest
   { manifestSchemaVersion        :: !Int
   , manifestCreatedAt            :: !UTCTime
-  , manifestCardanoTestnetVersion :: !String
+  , manifestCardanoTestnetVersion :: !Version
   , manifestNetwork              :: !ManifestNetwork
   , manifestPaths                :: !ManifestPaths
-  , manifestNodes                :: ![ManifestNode]
+  , manifestNodes                :: !(NonEmpty ManifestNode)
   , manifestWallets              :: ![ManifestWallet]
   } deriving (Eq, Show)
 
@@ -108,7 +98,7 @@ data ManifestGenesisFiles = ManifestGenesisFiles
 -- from the runtime values.
 data ManifestNode = ManifestNode
   { mnodeName         :: !String
-  , mnodeRole         :: !String
+  , mnodeRole         :: !ManifestNodeRole
   , mnodeHost         :: !HostAddress
   , mnodePort         :: !PortNumber
   , mnodeSocketPath   :: !FilePath
@@ -124,6 +114,11 @@ data ManifestNode = ManifestNode
 data ManifestGrpc
   = ManifestGrpcHttp !IP !PortNumber
   | ManifestGrpcUnixSocket !FilePath    -- ^ socket path (relative)
+  deriving (Eq, Show)
+
+-- | Node role.  The schema pins the JSON values (@"spo"@/@"relay"@);
+-- adding a role bumps the schema version.
+data ManifestNodeRole = RoleSpo | RoleRelay
   deriving (Eq, Show)
 
 data ManifestWallet = ManifestWallet
@@ -142,7 +137,7 @@ instance ToJSON Manifest where
   toJSON m = object
     [ "schemaVersion"          .= manifestSchemaVersion m
     , "createdAt"              .= manifestCreatedAt m
-    , "cardanoTestnetVersion"  .= manifestCardanoTestnetVersion m
+    , "cardanoTestnetVersion"  .= showVersion (manifestCardanoTestnetVersion m)
     , "network"                .= manifestNetwork m
     , "paths"                  .= manifestPaths m
     , "nodes"                  .= manifestNodes m
@@ -197,6 +192,10 @@ instance ToJSON ManifestGrpc where
     , "socketPath" .= path
     ]
 
+instance ToJSON ManifestNodeRole where
+  toJSON RoleSpo   = "spo"
+  toJSON RoleRelay = "relay"
+
 instance ToJSON ManifestWallet where
   toJSON w = object
     [ "name"                 .= mwalletName w
@@ -214,7 +213,7 @@ instance FromJSON Manifest where
   parseJSON = withObject "Manifest" $ \o -> Manifest
     <$> o .: "schemaVersion"
     <*> o .: "createdAt"
-    <*> o .: "cardanoTestnetVersion"
+    <*> (parseVersionString =<< o .: "cardanoTestnetVersion")
     <*> o .: "network"
     <*> o .: "paths"
     <*> o .: "nodes"
@@ -261,6 +260,13 @@ instance FromJSON ManifestGrpc where
       "unix-socket" -> ManifestGrpcUnixSocket <$> o .: "socketPath"
       _             -> fail $ "Unknown gRPC transport: " <> transport
 
+instance FromJSON ManifestNodeRole where
+  parseJSON = withText "ManifestNodeRole" parseRole
+    where
+      parseRole "spo"   = pure RoleSpo
+      parseRole "relay" = pure RoleRelay
+      parseRole t       = fail $ "Unknown node role: " <> Text.unpack t
+
 -- | Parse a dotted-quad IPv4 address, e.g. @"127.0.0.1"@.
 parseHostAddress :: String -> Parser HostAddress
 parseHostAddress s =
@@ -287,6 +293,13 @@ parseAddress :: Text -> Parser AddressAny
 parseAddress t =
   maybe (fail $ "Invalid address: " <> Text.unpack t) pure $
     deserialiseAddress AsAddressAny t
+
+-- | Parse a version string, e.g. @"11.1.1"@.
+parseVersionString :: String -> Parser Version
+parseVersionString s =
+  case [v | (v, "") <- readP_to_S parseVersion s] of
+    [v] -> pure v
+    _   -> fail $ "Invalid version string: " <> s
 
 instance FromJSON ManifestWallet where
   parseJSON = withObject "ManifestWallet" $ \o -> ManifestWallet
@@ -343,12 +356,12 @@ buildManifest
   -> IO Manifest
 buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets, configurationFile, shelleyGenesisFile} era systemStart = do
   now <- getCurrentTime
-  nodes <- mapM (buildNode outputDir) (NEL.toList testnetNodes)
+  nodes <- mapM (buildNode outputDir) testnetNodes
   ws <- buildWallets outputDir wallets
   pure Manifest
     { manifestSchemaVersion        = 1
     , manifestCreatedAt            = now
-    , manifestCardanoTestnetVersion = cardanoTestnetVersionString
+    , manifestCardanoTestnetVersion = version
     , manifestNetwork              = ManifestNetwork
         { -- TestnetRuntime carries the magic as Int; the value comes from
           -- the genesis Word32, so narrowing it back cannot lose anything.
@@ -381,7 +394,7 @@ buildNode outputDir node = do
   mPid <- Process.getPid (nodeProcessHandle node)
   pure ManifestNode
     { mnodeName         = nodeName node
-    , mnodeRole         = if isTestnetNodeSpo node then "spo" else "relay"
+    , mnodeRole         = if isTestnetNodeSpo node then RoleSpo else RoleRelay
     , mnodeHost         = nodeIpv4 node
     , mnodePort         = nodePort node
     , mnodeSocketPath   = relPath (sprocketSystemName (nodeSprocket node))

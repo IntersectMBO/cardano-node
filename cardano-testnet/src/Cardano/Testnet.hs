@@ -62,10 +62,10 @@ module Cardano.Testnet (
   ManifestPaths(..),
   ManifestGenesisFiles(..),
   ManifestNode(..),
+  ManifestNodeRole(..),
   ManifestGrpc(..),
   ManifestWallet(..),
   defaultManifestFile,
-  cardanoTestnetVersionString,
   ) where
 
 import           Cardano.Node.Testnet.Paths (defaultManifestFile)

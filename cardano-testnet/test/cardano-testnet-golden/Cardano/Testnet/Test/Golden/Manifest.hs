@@ -15,12 +15,14 @@ import           Data.Aeson (eitherDecode)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IP (IP (IPv4), toIPv4)
+import           Data.List.NonEmpty (NonEmpty (..))
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Calendar (fromGregorian)
 import           Data.Time.Clock (UTCTime (..))
+import           Data.Version (makeVersion)
 import           Network.Socket (tupleToHostAddress)
 import           System.FilePath ((</>))
 
@@ -41,7 +43,7 @@ sampleManifest = Manifest
   , manifestCreatedAt            = UTCTime (fromGregorian 2026 1 1) 0
     -- A fixed literal, not the live package version: the golden file must
     -- change only when the manifest shape changes, not on version bumps.
-  , manifestCardanoTestnetVersion = "0.0.0.0"
+  , manifestCardanoTestnetVersion = makeVersion [0, 0, 0, 0]
   , manifestNetwork              = ManifestNetwork
       { mnMagic       = 42
       , mnEra         = AnyCardanoEra ConwayEra
@@ -58,8 +60,8 @@ sampleManifest = Manifest
           }
       }
   , manifestNodes =
-      [ ManifestNode
-          { mnodeName = "node1", mnodeRole = "spo", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
+      ManifestNode
+          { mnodeName = "node1", mnodeRole = RoleSpo, mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30001, mnodeSocketPath = "socket/node1/sock"
           , mnodeGrpc = Just (ManifestGrpcHttp (IPv4 (toIPv4 [127, 0, 0, 1])) 50051)
           , mnodePid = Just 12345
@@ -68,8 +70,9 @@ sampleManifest = Manifest
           , mnodeStdoutFile = "logs/node1/stdout.log"
           , mnodeStderrFile = "logs/node1/stderr.log"
           }
-      , ManifestNode
-          { mnodeName = "node2", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
+      :|
+      [ ManifestNode
+          { mnodeName = "node2", mnodeRole = RoleRelay, mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30002, mnodeSocketPath = "socket/node2/sock"
           , mnodeGrpc = Just (ManifestGrpcUnixSocket "socket/node2/rpc.sock")
           , mnodePid = Just 12346
@@ -79,7 +82,7 @@ sampleManifest = Manifest
           , mnodeStderrFile = "logs/node2/stderr.log"
           }
       , ManifestNode
-          { mnodeName = "node3", mnodeRole = "relay", mnodeHost = tupleToHostAddress (127, 0, 0, 1)
+          { mnodeName = "node3", mnodeRole = RoleRelay, mnodeHost = tupleToHostAddress (127, 0, 0, 1)
           , mnodePort = 30003, mnodeSocketPath = "socket/node3/sock"
           , mnodeGrpc = Nothing, mnodePid = Nothing
           , mnodePidFile = "logs/node3/node.pid"
