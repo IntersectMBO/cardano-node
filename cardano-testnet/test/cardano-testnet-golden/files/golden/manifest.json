@@ -67,19 +67,19 @@
     "schemaVersion": 1,
     "wallets": [
         {
-            "address": "addr_test1sample1",
+            "address": "addr_test1vzl23s7kxatqd9aqaqnxkags2ppzr7e2xnyeq9sy04p88fsgudc0e",
             "name": "utxo1",
             "signingKeyFile": "utxo-keys/utxo1/utxo.skey",
             "verificationKeyFile": "utxo-keys/utxo1/utxo.vkey"
         },
         {
-            "address": "addr_test1sample2",
+            "address": "addr_test1vq0gp4hqwt6umgcw5dqtgy8pwcyd2ddmxf5va5zuqwyrmhcgfgym4",
             "name": "utxo2",
             "signingKeyFile": "utxo-keys/utxo2/utxo.skey",
             "verificationKeyFile": "utxo-keys/utxo2/utxo.vkey"
         },
         {
-            "address": "addr_test1sample3",
+            "address": "addr_test1vzpl9plngq7r6wlx3ha2wet96n0sy8c4w4jeg6h484cqlpcdxtc9d",
             "name": "utxo3",
             "signingKeyFile": "utxo-keys/utxo3/utxo.skey",
             "verificationKeyFile": "utxo-keys/utxo3/utxo.vkey"

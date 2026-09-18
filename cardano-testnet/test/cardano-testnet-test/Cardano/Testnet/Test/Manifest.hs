@@ -5,7 +5,7 @@ module Cardano.Testnet.Test.Manifest
   ( hprop_manifest
   ) where
 
-import           Cardano.Testnet (createAndRunTestnet, mkConf)
+import           Cardano.Testnet (createAndRunTestnet, defaultManifestFile, mkConf)
 
 import           Prelude
 
@@ -32,7 +32,7 @@ hprop_manifest = integrationRetryWorkspace 2 "manifest" $ \tmpDir -> H.runWithDe
   conf <- mkConf tmpDir
   _runtime <- createAndRunTestnet def def conf
 
-  let manifestPath = tmpDir </> manifestFileName
+  let manifestPath = tmpDir </> defaultManifestFile
   H.assertFileExists manifestPath
 
   bs <- liftIO $ LBS.readFile manifestPath

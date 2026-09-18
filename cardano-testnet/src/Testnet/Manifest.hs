@@ -11,7 +11,6 @@ module Testnet.Manifest
   , ManifestGrpc(..)
   , ManifestWallet(..)
     -- * Constants
-  , manifestFileName
   , cardanoTestnetVersionString
     -- * File operations
   , writeManifest
@@ -20,24 +19,28 @@ module Testnet.Manifest
   , buildManifest
   ) where
 
-import           Cardano.Api (CardanoEra (..), File (..))
+import           Cardano.Api (AddressAny, AnyCardanoEra (..), AsType (AsAddressAny),
+                   CardanoEra (..), File (..), deserialiseAddress, serialiseAddress)
 
-import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultNodePidFile,
-                   defaultNodeTopologyFile)
+import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultManifestFile,
+                   defaultNodePidFile, defaultNodeTopologyFile)
 
 import           Prelude
 
 import           Control.Exception.Safe (onException, try)
-import           Control.Monad (when)
+import           Control.Monad (when, zipWithM)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IP (IP, IPv4, toHostAddress)
+import           Data.List (find)
 import qualified Data.List.NonEmpty as NEL
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import           Data.Word (Word32)
 import           Network.Socket (HostAddress, PortNumber)
 import           System.Directory (doesFileExist, removeFile, renameFile)
 import           System.FilePath (makeRelative, normalise, (</>))
@@ -48,6 +51,7 @@ import           Text.Read (readMaybe)
 
 import           Hedgehog.Extras.Stock (sprocketSystemName)
 
+import           Testnet.Start.Types (anyEraToString)
 import           Testnet.Types (NodeRpcEndpoint (..), PaymentKeyInfo (..), TestnetNode (..),
                    TestnetRuntime (..), isTestnetNodeSpo, showIpv4Address, signingKeyFp,
                    verificationKeyFp)
@@ -58,10 +62,6 @@ import           Paths_cardano_testnet (version)
 -- ---------------------------------------------------------------------------
 -- Constants
 -- ---------------------------------------------------------------------------
-
--- | The manifest file name, always written into the output directory root.
-manifestFileName :: FilePath
-manifestFileName = "manifest.json"
 
 -- | The cardano-testnet package version as a string (e.g. @"11.1.1"@),
 -- matching the output of @cardano-testnet version@.
@@ -84,8 +84,8 @@ data Manifest = Manifest
   } deriving (Eq, Show)
 
 data ManifestNetwork = ManifestNetwork
-  { mnMagic       :: !Int
-  , mnEra         :: !String
+  { mnMagic       :: !Word32
+  , mnEra         :: !AnyCardanoEra
   , mnSystemStart :: !UTCTime
   } deriving (Eq, Show)
 
@@ -128,7 +128,7 @@ data ManifestGrpc
 
 data ManifestWallet = ManifestWallet
   { mwalletName                :: !String
-  , mwalletAddress             :: !Text
+  , mwalletAddress             :: !AddressAny
   , mwalletSigningKeyFile      :: !FilePath
   , mwalletVerificationKeyFile :: !FilePath
   } deriving (Eq, Show)
@@ -152,7 +152,7 @@ instance ToJSON Manifest where
 instance ToJSON ManifestNetwork where
   toJSON n = object
     [ "magic"       .= mnMagic n
-    , "era"         .= mnEra n
+    , "era"         .= anyEraToString (mnEra n)
     , "systemStart" .= mnSystemStart n
     ]
 
@@ -200,7 +200,7 @@ instance ToJSON ManifestGrpc where
 instance ToJSON ManifestWallet where
   toJSON w = object
     [ "name"                 .= mwalletName w
-    , "address"              .= mwalletAddress w
+    , "address"              .= serialiseAddress (mwalletAddress w)
     , "signingKeyFile"       .= mwalletSigningKeyFile w
     , "verificationKeyFile"  .= mwalletVerificationKeyFile w
     ]
@@ -223,7 +223,7 @@ instance FromJSON Manifest where
 instance FromJSON ManifestNetwork where
   parseJSON = withObject "ManifestNetwork" $ \o -> ManifestNetwork
     <$> o .: "magic"
-    <*> o .: "era"
+    <*> (parseEra =<< o .: "era")
     <*> o .: "systemStart"
 
 instance FromJSON ManifestPaths where
@@ -276,10 +276,22 @@ parsePort p
   | p >= 0 && p <= 65535 = pure (fromIntegral p)
   | otherwise            = fail $ "Port out of range: " <> show p
 
+-- | Parse a lowercase era name, e.g. @"conway"@.
+parseEra :: String -> Parser AnyCardanoEra
+parseEra s =
+  maybe (fail $ "Unknown era name: " <> s) pure $
+    find (\e -> anyEraToString e == s) [minBound .. maxBound]
+
+-- | Parse a bech32 (or base58 byron) address.
+parseAddress :: Text -> Parser AddressAny
+parseAddress t =
+  maybe (fail $ "Invalid address: " <> Text.unpack t) pure $
+    deserialiseAddress AsAddressAny t
+
 instance FromJSON ManifestWallet where
   parseJSON = withObject "ManifestWallet" $ \o -> ManifestWallet
     <$> o .: "name"
-    <*> o .: "address"
+    <*> (parseAddress =<< o .: "address")
     <*> o .: "signingKeyFile"
     <*> o .: "verificationKeyFile"
 
@@ -293,7 +305,7 @@ instance FromJSON ManifestWallet where
 -- If writing fails, the temp file is removed rather than left behind.
 writeManifest :: FilePath -> Manifest -> IO ()
 writeManifest outputDir manifest = do
-  let manifestPath = outputDir </> manifestFileName
+  let manifestPath = outputDir </> defaultManifestFile
   -- Default permissions (not openTempFile's owner-only 0600): the manifest
   -- must be as readable as the rest of the output directory.
   (tmpFile, tmpHandle) <- IO.openTempFileWithDefaultPermissions outputDir "manifest.json.tmp"
@@ -309,7 +321,7 @@ writeManifest outputDir manifest = do
 -- | Delete any pre-existing manifest in the output directory (fresh-run rule).
 removeStaleManifest :: FilePath -> IO ()
 removeStaleManifest outputDir = do
-  let manifestPath = outputDir </> manifestFileName
+  let manifestPath = outputDir </> defaultManifestFile
   exists <- doesFileExist manifestPath
   when exists $ removeFile manifestPath
 
@@ -320,26 +332,27 @@ removeStaleManifest outputDir = do
 
 -- | Build a manifest from the data available after the testnet is ready.
 --
--- The era is passed as a string because @cardanoTestnet@ does not receive
--- the era as a parameter — both CLI paths (creation and node-env) go
--- through it.  For now the only supported era is Conway ('defaultEra'),
--- so this is always @\"conway\"@.
+-- The era is passed in because @cardanoTestnet@ does not receive it as a
+-- parameter — both CLI paths (creation and node-env) go through it.  For
+-- now the only supported era is Conway ('defaultEra').
 buildManifest
   :: FilePath          -- ^ Output directory (the @tmpAbsPath@ inside @cardanoTestnet@)
   -> TestnetRuntime    -- ^ The runtime returned after readiness checks pass
-  -> String            -- ^ Era name, e.g. @\"conway\"@
+  -> AnyCardanoEra     -- ^ The era the testnet runs in
   -> UTCTime           -- ^ System start time (from the shelley genesis, potentially updated)
   -> IO Manifest
 buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets, configurationFile, shelleyGenesisFile} era systemStart = do
   now <- getCurrentTime
   nodes <- mapM (buildNode outputDir) (NEL.toList testnetNodes)
-  let ws = buildWallets outputDir wallets
+  ws <- buildWallets outputDir wallets
   pure Manifest
     { manifestSchemaVersion        = 1
     , manifestCreatedAt            = now
     , manifestCardanoTestnetVersion = cardanoTestnetVersionString
     , manifestNetwork              = ManifestNetwork
-        { mnMagic       = testnetMagic
+        { -- TestnetRuntime carries the magic as Int; the value comes from
+          -- the genesis Word32, so narrowing it back cannot lose anything.
+          mnMagic       = fromIntegral testnetMagic
         , mnEra         = era
         , mnSystemStart = systemStart
         }
@@ -386,13 +399,18 @@ buildNode outputDir node = do
       ManifestGrpcUnixSocket (relPath (unFile socketPath))
     buildGrpc (NodeRpcHttp ip port) = ManifestGrpcHttp ip port
 
-buildWallets :: FilePath -> [PaymentKeyInfo] -> [ManifestWallet]
-buildWallets outputDir = zipWith build [(1::Int)..]
+buildWallets :: FilePath -> [PaymentKeyInfo] -> IO [ManifestWallet]
+buildWallets outputDir = zipWithM build [(1::Int)..]
   where
-    build i PaymentKeyInfo{paymentKeyInfoPair, paymentKeyInfoAddr} =
-      ManifestWallet
+    build i PaymentKeyInfo{paymentKeyInfoPair, paymentKeyInfoAddr} = do
+      -- The runtime carries the address as the raw file contents; parsing it
+      -- here means the manifest can only ever hold a valid address.
+      addr <- case deserialiseAddress AsAddressAny paymentKeyInfoAddr of
+        Just a  -> pure a
+        Nothing -> fail $ "buildManifest: invalid wallet address: " <> Text.unpack paymentKeyInfoAddr
+      pure ManifestWallet
         { mwalletName                = "utxo" <> show i
-        , mwalletAddress             = paymentKeyInfoAddr
+        , mwalletAddress             = addr
         , mwalletSigningKeyFile      = relPath (signingKeyFp paymentKeyInfoPair)
         , mwalletVerificationKeyFile = relPath (verificationKeyFp paymentKeyInfoPair)
         }

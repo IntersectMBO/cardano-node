@@ -511,7 +511,7 @@ cardanoTestnet
   -- ready signal — it is written only after all readiness checks pass, as
   -- the very last step: nothing that can fail runs after it.
   manifest <- liftIOAnnotated $
-    buildManifest tmpAbsPath runtime (eraToString Defaults.defaultEra) (sgSystemStart shelleyGenesis)
+    buildManifest tmpAbsPath runtime (AnyCardanoEra (toCardanoEra Defaults.defaultEra)) (sgSystemStart shelleyGenesis)
   liftIOAnnotated $ writeManifest tmpAbsPath manifest
 
   pure runtime

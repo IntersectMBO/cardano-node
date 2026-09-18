@@ -64,9 +64,11 @@ module Cardano.Testnet (
   ManifestNode(..),
   ManifestGrpc(..),
   ManifestWallet(..),
-  manifestFileName,
+  defaultManifestFile,
   cardanoTestnetVersionString,
   ) where
+
+import           Cardano.Node.Testnet.Paths (defaultManifestFile)
 
 import           Testnet.Components.Query
 import           Testnet.EpochStateProcessing

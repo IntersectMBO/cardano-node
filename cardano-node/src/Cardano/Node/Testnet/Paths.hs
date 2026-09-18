@@ -11,6 +11,7 @@ module Cardano.Node.Testnet.Paths
   , defaultNamedNodeDataDir
   , defaultNodeTopologyFile
   , defaultConfigFile
+  , defaultManifestFile
   , defaultPortFile
   , defaultNodeEnvFile
     -- * Socket paths
@@ -73,6 +74,11 @@ import           System.FilePath ((</>))
 -- | Testnet configuration file name: @"configuration.yaml"@
 defaultConfigFile :: FilePath
 defaultConfigFile = "configuration.yaml"
+
+-- | The manifest file name, always written into the output directory root:
+-- @"manifest.json"@
+defaultManifestFile :: FilePath
+defaultManifestFile = "manifest.json"
 
 -- | Directory name component for a node, e.g. @"node1"@, @"node2"@
 defaultNodeName :: Int -> String

@@ -6,12 +6,17 @@ module Cardano.Testnet.Test.Golden.Manifest
   ( golden_Manifest
   ) where
 
+import           Cardano.Api (AddressAny, AnyCardanoEra (..), AsType (AsAddressAny),
+                   CardanoEra (..), deserialiseAddress)
+
 import           Prelude
 
 import           Data.Aeson (eitherDecode)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IP (IP (IPv4), toIPv4)
+import           Data.Maybe (fromMaybe)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Calendar (fromGregorian)
@@ -39,7 +44,7 @@ sampleManifest = Manifest
   , manifestCardanoTestnetVersion = "0.0.0.0"
   , manifestNetwork              = ManifestNetwork
       { mnMagic       = 42
-      , mnEra         = "conway"
+      , mnEra         = AnyCardanoEra ConwayEra
       , mnSystemStart = UTCTime (fromGregorian 2025 12 31) 43200
       }
   , manifestPaths                = ManifestPaths
@@ -84,14 +89,23 @@ sampleManifest = Manifest
           }
       ]
   , manifestWallets =
-      [ ManifestWallet "utxo1" "addr_test1sample1"
+      [ ManifestWallet "utxo1"
+          (sampleAddress "addr_test1vzl23s7kxatqd9aqaqnxkags2ppzr7e2xnyeq9sy04p88fsgudc0e")
           "utxo-keys/utxo1/utxo.skey" "utxo-keys/utxo1/utxo.vkey"
-      , ManifestWallet "utxo2" "addr_test1sample2"
+      , ManifestWallet "utxo2"
+          (sampleAddress "addr_test1vq0gp4hqwt6umgcw5dqtgy8pwcyd2ddmxf5va5zuqwyrmhcgfgym4")
           "utxo-keys/utxo2/utxo.skey" "utxo-keys/utxo2/utxo.vkey"
-      , ManifestWallet "utxo3" "addr_test1sample3"
+      , ManifestWallet "utxo3"
+          (sampleAddress "addr_test1vzpl9plngq7r6wlx3ha2wet96n0sy8c4w4jeg6h484cqlpcdxtc9d")
           "utxo-keys/utxo3/utxo.skey" "utxo-keys/utxo3/utxo.vkey"
       ]
   }
+
+-- | Parse a fixture address, failing loudly on a typo in the literal.
+sampleAddress :: Text -> AddressAny
+sampleAddress t =
+  fromMaybe (error $ "sampleManifest: bad fixture address: " <> Text.unpack t) $
+    deserialiseAddress AsAddressAny t
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_Manifest/"'@
