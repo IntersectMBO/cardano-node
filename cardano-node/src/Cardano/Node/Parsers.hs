@@ -419,7 +419,11 @@ parseBlsKeyFilePath =
   strOption
     ( long "shelley-bls-key"
         <> metavar "FILEPATH"
-        <> help "Path to the BLS (Leios) signing key."
+        <> help
+             ( "Path to the BLS (Leios) signing key: a single text envelope, "
+            <> "or a JSON array of them to vote with every key that holds a "
+            <> "committee seat (e.g. a rotation pair, or a bundle of pool keys)."
+             )
         <> completer (bashCompleter "file")
     )
 

@@ -53,10 +53,10 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import           System.Directory (getFileSize)
+import           System.FilePath (takeDirectory)
 import           System.FS.API (SomeHasFS (..))
 import           System.FS.API.Types (MountPoint (MountPoint))
 import           System.FS.IO (ioHasFS)
-import           System.FilePath (takeDirectory)
 import qualified System.IO.MMap as MMap
 
 
@@ -190,11 +190,9 @@ readLeaderCredentialsSingleton
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
 
-    -- The BLS (Leios) key is optional: only block producers participating in
-    -- Leios supply one alongside their VRF/KES/opcert credentials.
-    blsSKey <-
-      firstExceptT FileError $
-        traverse (\blsFile -> newExceptT $ readFileTextEnvelope (File blsFile)) mBlsFile
+    -- The BLS (Leios) keys are optional: only block producers participating in
+    -- Leios supply any alongside their VRF/KES/opcert credentials.
+    blsSKeys <- maybe (pure []) readBlsSigningKeys mBlsFile
 
     (credentialsSource, vkey) <- case kesSource of
       KESKeyFilePath kesFile -> do
@@ -209,7 +207,7 @@ readLeaderCredentialsSingleton
         OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
         pure (PraosCredentialsAgent socketFile, vkey)
 
-    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey blsSKey]
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey blsSKeys]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
@@ -259,8 +257,8 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      KesSigningKey kesKey <- parseEnvelope scKes
      let credentialsSource = PraosCredentialsUnsound opCert kesKey
      vrfSKey <- parseEnvelope scVrf
-     -- Bulk credentials files do not carry a BLS (Leios) key.
-     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey Nothing
+     -- Bulk credentials files do not carry BLS (Leios) keys.
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey []
 
    readBulkFile
      :: Maybe FilePath
@@ -285,25 +283,41 @@ mkPraosLeaderCredentials ::
      PraosCredentialsSource StandardCrypto
   -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
-  -> Maybe (SigningKey BlsKey)
+  -> [SigningKey BlsKey]
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
     credentialsSource
     (StakePoolVerificationKey vkey)
     (VrfSigningKey vrfKey)
-    mBlsKey =
+    blsKeys =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
           praosCanBeLeaderCredentialsSource = credentialsSource,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
           praosCanBeLeaderSignKeyVRF = vrfKey,
-          praosCanBeLeaderSignKeyBLS = unBlsSigningKey <$> mBlsKey
+          praosCanBeLeaderSignKeyBLS = unBlsSigningKey <$> blsKeys
         },
       shelleyLeaderCredentialsLabel = "Shelley"
     }
   where
     unBlsSigningKey (BlsSigningKey k) = k
+
+-- | Read the BLS (Leios) signing keys from a file holding either a single text
+-- envelope or a JSON array of them. A pair of keys keeps a rotated key voting
+-- across the epoch boundary; a larger bundle casts one vote per committee seat
+-- held.
+readBlsSigningKeys ::
+     FilePath
+  -> ExceptT PraosLeaderCredentialsError IO [SigningKey BlsKey]
+readBlsSigningKeys fp = do
+  content <- handleIOExceptT (CredentialsReadError fp) $ BS.readFile fp
+  envelopes <-
+    firstExceptT (EnvelopeParseError fp) . hoistEither $
+      case Aeson.eitherDecodeStrict' content of
+        Right tes -> Right tes
+        Left _ -> (:[]) <$> Aeson.eitherDecodeStrict' content
+  traverse (\te -> parseEnvelope (te, fp)) envelopes
 
 parseEnvelope ::
      HasTextEnvelope a
