@@ -172,3 +172,9 @@ well-formed but invalid transaction, asserting on substrings of the responses.  
   reachable on the socket; without one you get a connection error instead and that assertion fails.
 
 Treat a clean run as a smoke signal rather than a conformance test.
+
+## Core maintainers
+
+* [Jordan Millar](https://github.com/Jimbo4350) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
+* [Mateusz Gałażyn](https://github.com/carbolymer) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
+* [Pablo Lamela](https://github.com/palas) [<picture><source media="(prefers-color-scheme: dark)" srcset="../.github/blockpqr-dark-theme.svg"> <img alt="BlockPQR" src="../.github/blockpqr-light-theme.svg" height="14"> </picture>](https://blockpqr.io)
