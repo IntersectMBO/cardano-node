@@ -69,7 +69,7 @@ hprop_rpc_read_era_summary = integrationRetryWorkspace 2 "rpc-read-era-summary" 
       initEntries = NonEmpty.init nonEmptySummaries
 
   H.note_ "names are exactly a prefix of the canonical era order"
-  map (^. U5c.name) summaries H.=== take (length summaries) eraNamesInOrder
+  map (^. U5c.name) summaries === take (length summaries) eraNamesInOrder
 
   H.note_ "every entry except the last has its end set; the last entry's end is unset"
   forM_ initEntries $ \entry -> void $ H.nothingFail (entry ^. U5c.maybe'end)
@@ -78,9 +78,9 @@ hprop_rpc_read_era_summary = integrationRetryWorkspace 2 "rpc-read-era-summary" 
   H.note_ "consecutive boundaries line up: an era's end is the next era's start"
   forM_ (zip summaries (drop 1 summaries)) $ \(cur, next) -> do
     end <- H.nothingFail (cur ^. U5c.maybe'end)
-    end ^. U5c.slot H.=== next ^. U5c.start . U5c.slot
-    end ^. U5c.epoch H.=== next ^. U5c.start . U5c.epoch
-    end ^. U5c.time H.=== next ^. U5c.start . U5c.time
+    end ^. U5c.slot === next ^. U5c.start . U5c.slot
+    end ^. U5c.epoch === next ^. U5c.start . U5c.epoch
+    end ^. U5c.time === next ^. U5c.start . U5c.time
 
   H.note_ "start boundaries are non-decreasing across eras (testnet hard-forks eagerly, so mostly equal)"
   H.assertWith (map (^. U5c.start . U5c.slot) summaries) isNonDecreasing
@@ -88,8 +88,8 @@ hprop_rpc_read_era_summary = integrationRetryWorkspace 2 "rpc-read-era-summary" 
   H.assertWith (map (^. U5c.start . U5c.time) summaries) isNonDecreasing
 
   H.note_ "the first era starts at slot 0, epoch 0"
-  firstEntry ^. U5c.start . U5c.slot H.=== 0
-  firstEntry ^. U5c.start . U5c.epoch H.=== 0
+  firstEntry ^. U5c.start . U5c.slot === 0
+  firstEntry ^. U5c.start . U5c.epoch === 0
 
   H.note_ "protocolParams is unset for every era: only ReadParams carries current parameters"
   forM_ summaries $ \entry -> H.assertWith (entry ^. U5c.maybe'protocolParams) isNothing
