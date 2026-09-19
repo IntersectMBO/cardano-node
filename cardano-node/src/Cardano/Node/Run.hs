@@ -169,7 +169,7 @@ import           System.Win32.File
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
-import           LeiosDemoDb (newLeiosDBInMemory, newLeiosDBSQLite)
+import           LeiosDemoDb (newLeiosDBInMemory, openLeiosDBSQLite)
 import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -365,8 +365,8 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
                          $ Proxy @blk
                          ))
 
-  leiosDB <- case ncLeiosDbConfig nc of
-    LeiosDbInMemory -> newLeiosDBInMemory
+  (leiosDB, closeLeiosDB) <- case ncLeiosDbConfig nc of
+    LeiosDbInMemory -> (\db -> (db, pure ())) <$> newLeiosDBInMemory
     LeiosDbSQLite leiosVolDbPath leiosImmDbPath -> do
       let resolvedVolPath
             | isAbsolute leiosVolDbPath = leiosVolDbPath
@@ -376,12 +376,14 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
             | otherwise = nonImmutableDbPath dbPath </> leiosImmDbPath
       createDirectoryIfMissing True (takeDirectory resolvedVolPath)
       createDirectoryIfMissing True (takeDirectory resolvedImmPath)
-      newLeiosDBSQLite
+      openLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
         resolvedVolPath
         resolvedImmPath
 
-  withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
+  -- Orderly shutdown of the LeiosDB: everything below has stopped by then, so
+  -- this flushes the pending writes and closes the connections.
+  (`Exception.finally` closeLeiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
     nt@NetworkTopology
