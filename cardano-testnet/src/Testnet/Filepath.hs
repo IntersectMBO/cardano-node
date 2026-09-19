@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Filepath
   ( TmpAbsolutePath(..)
@@ -14,7 +13,7 @@ module Testnet.Filepath
 
 import           Cardano.Api (File (..))
 
-import           Cardano.Node.Testnet.Paths (defaultSocketDir)
+import           Cardano.Node.Testnet.Paths (defaultLogsDir, defaultSocketDir)
 
 import           Prelude
 
@@ -57,7 +56,7 @@ makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
 makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirectory fp
 
 makeLogDir :: TmpAbsolutePath -> FilePath
-makeLogDir (TmpAbsolutePath fp) = addTrailingPathSeparator $ fp </> "logs"
+makeLogDir (TmpAbsolutePath fp) = addTrailingPathSeparator $ fp </> defaultLogsDir
 
 mkNodeConfigFs :: File content direction -> IO (SomeHasFS IO)
 mkNodeConfigFs configFile = do

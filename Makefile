@@ -37,6 +37,11 @@ trace-schemas-overrides-coverage: ## Fail when generated schema files change wit
 trace-schemas-validate: ## Validate trace message schemas against meta.schema.json
 	nix run .#validate-trace-schemas
 
+testnet-manifest-validate: ## Validate manifest golden file (and optionally MANIFEST=path) against its schema
+	nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json \
+	  cardano-testnet/test/cardano-testnet-golden/files/golden/manifest.json
+	$(if $(MANIFEST),nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json $(MANIFEST),)
+
 ###
 ### Workbench:  cluster shells
 ###
@@ -79,5 +84,6 @@ cls:
 .PHONY: help lint hlint host-hlint haddock-hoogle stylish-haskell cabal-hashes cli node \
         trace-documentation trace-schemas-regenerate trace-schemas-overrides-check \
         trace-schemas-overrides-coverage trace-schemas-validate \
+        testnet-manifest-validate \
         workbench-ci ci ci-report ci-targets \
         clean full-clean cls

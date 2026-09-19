@@ -1,0 +1,201 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/IntersectMBO/cardano-node/cardano-testnet/schemas/manifest.schema.json",
+    "title": "cardano-testnet manifest",
+    "description": "Machine-readable description of a running cardano-testnet cluster, written once at startup after readiness checks pass. The schema is strict: it describes schema version 1 exactly, unknown fields are an error, and any change to the manifest shape bumps schemaVersion.",
+    "type": "object",
+    "required": [
+        "schemaVersion",
+        "createdAt",
+        "cardanoTestnetVersion",
+        "network",
+        "paths",
+        "nodes",
+        "wallets"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "schemaVersion": {
+            "type": "integer",
+            "const": 1,
+            "description": "Schema version. Any change to the manifest shape, including new fields or values, bumps it."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC time the manifest was written (ISO-8601)."
+        },
+        "cardanoTestnetVersion": {
+            "type": "string",
+            "description": "The cardano-testnet package version string."
+        },
+        "network": {
+            "type": "object",
+            "required": ["magic", "era", "systemStart"],
+            "additionalProperties": false,
+            "properties": {
+                "magic": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295,
+                    "description": "Testnet magic number (a 32-bit unsigned integer)."
+                },
+                "era": {
+                    "type": "string",
+                    "description": "Lowercase era name, e.g. \"conway\"."
+                },
+                "systemStart": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Chain system start time (ISO-8601 UTC)."
+                }
+            }
+        },
+        "paths": {
+            "type": "object",
+            "required": ["nodeConfigFile", "genesisFiles"],
+            "additionalProperties": false,
+            "properties": {
+                "nodeConfigFile": {
+                    "type": "string",
+                    "description": "Relative path to the node configuration file."
+                },
+                "genesisFiles": {
+                    "type": "object",
+                    "required": ["byron", "shelley", "alonzo", "conway", "dijkstra"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "byron":    { "type": "string" },
+                        "shelley":  { "type": "string" },
+                        "alonzo":   { "type": "string" },
+                        "conway":   { "type": "string" },
+                        "dijkstra": { "type": "string" }
+                    }
+                }
+            }
+        },
+        "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "name", "role", "host", "port", "socketPath",
+                    "grpc", "pid", "pidFile", "topologyFile",
+                    "stdoutFile", "stderrFile"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Node name, e.g. \"node1\"."
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["spo", "relay"],
+                        "description": "\"spo\" for stake pool operators, \"relay\" for relay nodes."
+                    },
+                    "host": {
+                        "type": "string",
+                        "description": "Node listen address."
+                    },
+                    "port": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 65535,
+                        "description": "Node P2P listen port."
+                    },
+                    "socketPath": {
+                        "type": "string",
+                        "description": "Node-to-client socket path, relative to the manifest directory."
+                    },
+                    "grpc": {
+                        "description": "gRPC endpoint descriptor, or null when gRPC is disabled.",
+                        "oneOf": [
+                            { "type": "null" },
+                            {
+                                "type": "object",
+                                "required": ["transport", "host", "port"],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "transport": { "type": "string", "const": "http" },
+                                    "host": {
+                                        "type": "string",
+                                        "description": "gRPC listen address."
+                                    },
+                                    "port": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 65535,
+                                        "description": "gRPC listen port."
+                                    }
+                                }
+                            },
+                            {
+                                "type": "object",
+                                "required": ["transport", "socketPath"],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "transport": { "type": "string", "const": "unix-socket" },
+                                    "socketPath": {
+                                        "type": "string",
+                                        "description": "gRPC unix socket path, relative to the manifest directory."
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "pid": {
+                        "description": "OS process ID at the time the manifest was written, or null if the process handle had no PID. The pid recorded at node start time is in the pid file.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "type": "integer" }
+                        ]
+                    },
+                    "pidFile": {
+                        "type": "string",
+                        "description": "Relative path to the PID file."
+                    },
+                    "topologyFile": {
+                        "type": "string",
+                        "description": "Relative path to the node's topology file."
+                    },
+                    "stdoutFile": {
+                        "type": "string",
+                        "description": "Relative path to the node's stdout log."
+                    },
+                    "stderrFile": {
+                        "type": "string",
+                        "description": "Relative path to the node's stderr log."
+                    }
+                }
+            }
+        },
+        "wallets": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "address", "signingKeyFile", "verificationKeyFile"],
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Wallet name, e.g. \"utxo1\"."
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Bech32-encoded payment address."
+                    },
+                    "signingKeyFile": {
+                        "type": "string",
+                        "description": "Relative path to the signing key."
+                    },
+                    "verificationKeyFile": {
+                        "type": "string",
+                        "description": "Relative path to the verification key."
+                    }
+                }
+            }
+        }
+    }
+}

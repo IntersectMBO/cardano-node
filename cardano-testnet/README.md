@@ -389,6 +389,43 @@ export CARDANO_NODE_NETWORK_ID=42
 
 In order to shutdown the testnet, you can press `Ctrl+C` and `cardano-testnet` will kill all the nodes that were spawned when it was started.
 
+## Machine-readable interface
+
+When the network is ready (all nodes have produced at least one block and the
+stake pools are visible in the ledger), `cardano-testnet` writes a single
+machine-readable file into the output directory:
+
+```
+<output-dir>/manifest.json
+```
+
+The file lists sockets, ports, keys, genesis files, and wallet addresses --
+everything a script needs to use the network. A script can simply wait for the
+file to appear:
+
+```bash
+until [ -f testnet/manifest.json ]; do sleep 1; done
+SOCKET=$(jq -r '.nodes[0].socketPath' testnet/manifest.json)
+MAGIC=$(jq -r '.network.magic' testnet/manifest.json)
+```
+
+**Path rule.** All paths in the manifest are relative to the directory the
+manifest is in. To use one: `dir(manifest) + path`. Windows named-pipe values
+(starting with `\\.\pipe\`) are an exception and should be used as-is.
+
+**Stability promise.** The manifest (and the files it points to) is the
+supported interface. The rest of the directory layout may change between
+releases without notice. A strict JSON Schema
+(`cardano-testnet/schemas/manifest.schema.json`, draft 2020-12, unknown
+fields are an error) lives in the repository and is the contract. Any change
+to the manifest shape — including new fields — bumps the schema version, so
+a manifest always matches the schema of its own version exactly.
+
+**Write rules.** The file is written atomically (temp file + rename) so
+readers never see a partial file. It is written once and never modified.
+A pre-existing manifest from an earlier run in the same directory is deleted
+before nodes start.
+
 ## Supported versions
 
 cardano-testnet is designed to run the cardano-cli and cardano-node that ship

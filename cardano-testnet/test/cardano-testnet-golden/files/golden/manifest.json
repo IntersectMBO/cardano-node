@@ -1,0 +1,88 @@
+{
+    "cardanoTestnetVersion": "0.0.0.0",
+    "createdAt": "2026-01-01T00:00:00Z",
+    "network": {
+        "era": "conway",
+        "magic": 42,
+        "systemStart": "2025-12-31T12:00:00Z"
+    },
+    "nodes": [
+        {
+            "grpc": {
+                "host": "127.0.0.1",
+                "port": 50051,
+                "transport": "http"
+            },
+            "host": "127.0.0.1",
+            "name": "node1",
+            "pid": 12345,
+            "pidFile": "logs/node1/node.pid",
+            "port": 30001,
+            "role": "spo",
+            "socketPath": "socket/node1/sock",
+            "stderrFile": "logs/node1/stderr.log",
+            "stdoutFile": "logs/node1/stdout.log",
+            "topologyFile": "node-data/node1/topology.json"
+        },
+        {
+            "grpc": {
+                "socketPath": "socket/node2/rpc.sock",
+                "transport": "unix-socket"
+            },
+            "host": "127.0.0.1",
+            "name": "node2",
+            "pid": 12346,
+            "pidFile": "logs/node2/node.pid",
+            "port": 30002,
+            "role": "relay",
+            "socketPath": "socket/node2/sock",
+            "stderrFile": "logs/node2/stderr.log",
+            "stdoutFile": "logs/node2/stdout.log",
+            "topologyFile": "node-data/node2/topology.json"
+        },
+        {
+            "grpc": null,
+            "host": "127.0.0.1",
+            "name": "node3",
+            "pid": null,
+            "pidFile": "logs/node3/node.pid",
+            "port": 30003,
+            "role": "relay",
+            "socketPath": "socket/node3/sock",
+            "stderrFile": "logs/node3/stderr.log",
+            "stdoutFile": "logs/node3/stdout.log",
+            "topologyFile": "node-data/node3/topology.json"
+        }
+    ],
+    "paths": {
+        "genesisFiles": {
+            "alonzo": "alonzo-genesis.json",
+            "byron": "byron-genesis.json",
+            "conway": "conway-genesis.json",
+            "dijkstra": "dijkstra-genesis.json",
+            "shelley": "shelley-genesis.json"
+        },
+        "nodeConfigFile": "configuration.yaml"
+    },
+    "schemaVersion": 1,
+    "wallets": [
+        {
+            "address": "addr_test1vzl23s7kxatqd9aqaqnxkags2ppzr7e2xnyeq9sy04p88fsgudc0e",
+            "name": "utxo1",
+            "signingKeyFile": "utxo-keys/utxo1/utxo.skey",
+            "verificationKeyFile": "utxo-keys/utxo1/utxo.vkey"
+        },
+        {
+            "address": "addr_test1vq0gp4hqwt6umgcw5dqtgy8pwcyd2ddmxf5va5zuqwyrmhcgfgym4",
+            "name": "utxo2",
+            "signingKeyFile": "utxo-keys/utxo2/utxo.skey",
+            "verificationKeyFile": "utxo-keys/utxo2/utxo.vkey"
+        },
+        {
+            "address": "addr_test1vzpl9plngq7r6wlx3ha2wet96n0sy8c4w4jeg6h484cqlpcdxtc9d",
+            "name": "utxo3",
+            "signingKeyFile": "utxo-keys/utxo3/utxo.skey",
+            "verificationKeyFile": "utxo-keys/utxo3/utxo.vkey"
+        }
+    ]
+}

@@ -28,7 +28,7 @@ import qualified Cardano.Api as Api
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.Shelley.State as L
-import           Cardano.Node.Testnet.Paths (defaultSocketName)
+import           Cardano.Node.Testnet.Paths (defaultNodePidFile, defaultSocketName)
 
 import           Prelude
 
@@ -140,7 +140,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallS
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
-      nodePidFile = logDir </> node </> "node.pid"
+      nodePidFile = unTmpAbsPath tp </> defaultNodePidFile node
       socketRelPath = socketDir </> node </> defaultSocketName
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 

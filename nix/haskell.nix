@@ -229,6 +229,7 @@ let
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/manifest.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
                 "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
