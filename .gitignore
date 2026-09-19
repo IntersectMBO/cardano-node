@@ -72,6 +72,8 @@ bench/trace-schemas/messages/
 
 # Test artifacts
 cardano-tracer/cardano-tracer-test
+/cardano-tracer-test/
+/kernel-resource-summary.json
 
 # IntellIJ project folder
 .idea/
