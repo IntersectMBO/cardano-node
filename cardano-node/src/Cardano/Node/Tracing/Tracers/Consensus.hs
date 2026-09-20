@@ -2491,8 +2491,6 @@ instance LogFormatting TraceLeiosKernel where
       [ CounterM "leiosDbEvictedEbs" (Just evictedEbs) ]
     TraceLeiosDb TraceLeiosDbGCError{} ->
       [ CounterM "leiosDbSweepErrors" (Just 1) ]
-    TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
-      [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyError{} ->
       [ CounterM "leiosDbCopyErrors" (Just 1) ]
     _ -> []

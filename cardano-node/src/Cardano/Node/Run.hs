@@ -67,7 +67,11 @@ import           Cardano.Logging.Utils (showT)
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
-                   NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
+                   NodeDatabasePaths (..), immutableDbPath, nonImmutableDbPath,
+                   RunNodeArgs (..), StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Node.DbMarker (checkDbMarker)
+import           System.FS.API.Types (MountPoint (..))
+import           System.FS.IO (ioHasFS)
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
@@ -364,6 +368,16 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
                          . supportedNodeToClientVersions
                          $ Proxy @blk
                          ))
+
+  -- Establish the ChainDB's marker before anything else writes into its
+  -- directory. The check refuses a directory that holds files but no marker
+  -- of its own, and the Leios DB's files land in that same directory
+  -- whenever the node runs on a single database path. 'Node.run' makes this
+  -- same check later; it is idempotent, so doing it here only moves it
+  -- earlier.
+  let dbMarkerMountPoint = MountPoint (immutableDbPath dbPath)
+  either Exception.throwIO pure
+    =<< checkDbMarker (ioHasFS dbMarkerMountPoint) dbMarkerMountPoint networkMagic
 
   (leiosDB, closeLeiosDB) <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> (\db -> (db, pure ())) <$> newLeiosDBInMemory
