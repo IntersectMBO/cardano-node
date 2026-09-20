@@ -160,7 +160,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath (isAbsolute, takeDirectory, (</>))
+import           System.FilePath (isAbsolute, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -173,7 +173,7 @@ import           System.Win32.File
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
-import           LeiosDemoDb (newLeiosDBInMemory, openLeiosDBSQLite)
+import           LeiosDemoDb (LeiosDbHandle (close), newLeiosDBInMemory, newLeiosDBSQLite)
 import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -379,8 +379,8 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
   either Exception.throwIO pure
     =<< checkDbMarker (ioHasFS dbMarkerMountPoint) dbMarkerMountPoint networkMagic
 
-  (leiosDB, closeLeiosDB) <- case ncLeiosDbConfig nc of
-    LeiosDbInMemory -> (\db -> (db, pure ())) <$> newLeiosDBInMemory
+  leiosDB <- case ncLeiosDbConfig nc of
+    LeiosDbInMemory -> newLeiosDBInMemory
     LeiosDbSQLite -> do
       -- Each partition follows the node's own split: the volatile one
       -- churns and is swept, so it belongs on the performant volume with
@@ -388,16 +388,14 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
       -- the ImmutableDB. Identical under 'OnePathForAllDbs'.
       let resolvedVolPath = nonImmutableDbPath dbPath </> "leios.vol.db"
           resolvedImmPath = immutableDbPath dbPath </> "leios.imm.db"
-      createDirectoryIfMissing True (takeDirectory resolvedVolPath)
-      createDirectoryIfMissing True (takeDirectory resolvedImmPath)
-      openLeiosDBSQLite
+      newLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
         resolvedVolPath
         resolvedImmPath
 
   -- Orderly shutdown of the LeiosDB: everything below has stopped by then, so
   -- this flushes the pending writes and closes the connections.
-  (`Exception.finally` closeLeiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
+  (`Exception.finally` close leiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
     nt@NetworkTopology
