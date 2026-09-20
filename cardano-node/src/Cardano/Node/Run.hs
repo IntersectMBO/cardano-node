@@ -67,7 +67,11 @@ import           Cardano.Logging.Utils (showT)
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
-                   NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
+                   NodeDatabasePaths (..), immutableDbPath, nonImmutableDbPath,
+                   RunNodeArgs (..), StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Node.DbMarker (checkDbMarker)
+import           System.FS.API.Types (MountPoint (..))
+import           System.FS.IO (ioHasFS)
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
@@ -156,7 +160,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath (isAbsolute, takeDirectory, (</>))
+import           System.FilePath (isAbsolute, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -169,7 +173,7 @@ import           System.Win32.File
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
-import           LeiosDemoDb (newLeiosDBInMemory, newLeiosDBSQLite)
+import           LeiosDemoDb (LeiosDbHandle (close), newLeiosDBInMemory, newLeiosDBSQLite)
 import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -365,23 +369,33 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
                          $ Proxy @blk
                          ))
 
+  -- Establish the ChainDB's marker before anything else writes into its
+  -- directory. The check refuses a directory that holds files but no marker
+  -- of its own, and the Leios DB's files land in that same directory
+  -- whenever the node runs on a single database path. 'Node.run' makes this
+  -- same check later; it is idempotent, so doing it here only moves it
+  -- earlier.
+  let dbMarkerMountPoint = MountPoint (immutableDbPath dbPath)
+  either Exception.throwIO pure
+    =<< checkDbMarker (ioHasFS dbMarkerMountPoint) dbMarkerMountPoint networkMagic
+
   leiosDB <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite leiosVolDbPath leiosImmDbPath -> do
-      let resolvedVolPath
-            | isAbsolute leiosVolDbPath = leiosVolDbPath
-            | otherwise = nonImmutableDbPath dbPath </> leiosVolDbPath
-          resolvedImmPath
-            | isAbsolute leiosImmDbPath = leiosImmDbPath
-            | otherwise = nonImmutableDbPath dbPath </> leiosImmDbPath
-      createDirectoryIfMissing True (takeDirectory resolvedVolPath)
-      createDirectoryIfMissing True (takeDirectory resolvedImmPath)
+    LeiosDbSQLite -> do
+      -- Each partition follows the node's own split: the volatile one
+      -- churns and is swept, so it belongs on the performant volume with
+      -- the VolatileDB; the immutable one only grows, so it belongs with
+      -- the ImmutableDB. Identical under 'OnePathForAllDbs'.
+      let resolvedVolPath = nonImmutableDbPath dbPath </> "leios.vol.db"
+          resolvedImmPath = immutableDbPath dbPath </> "leios.imm.db"
       newLeiosDBSQLite
         (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
         resolvedVolPath
         resolvedImmPath
 
-  withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
+  -- Orderly shutdown of the LeiosDB: everything below has stopped by then, so
+  -- this flushes the pending writes and closes the connections.
+  (`Exception.finally` close leiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
     nt@NetworkTopology

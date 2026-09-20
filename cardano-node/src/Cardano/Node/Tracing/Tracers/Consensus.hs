@@ -50,7 +50,7 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
+                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId, txMeasureByteSize)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
                    TraceEventMempool (..), jsonMempoolRejectionDetails)
@@ -1142,6 +1142,12 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
+  forMachine _dtal (TraceMempoolCapacityChanged capBefore capAfter) =
+    mconcat
+      [ "kind" .= String "TraceMempoolCapacityChanged"
+      , "capacityBytesBefore" .= unByteSize32 (txMeasureByteSize capBefore)
+      , "capacityBytesAfter" .= unByteSize32 (txMeasureByteSize capAfter)
+      ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1176,6 +1182,10 @@ instance
 
   asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
 
+  asMetrics (TraceMempoolCapacityChanged _capBefore capAfter) =
+    [ IntM "mempoolCapacityBytes" (fromIntegral . unByteSize32 . txMeasureByteSize $ capAfter)
+    ]
+
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
     mconcat
@@ -1193,6 +1203,7 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
     namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+    namespaceFor TraceMempoolCapacityChanged {} = Namespace [] ["CapacityChanged"]
 
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
@@ -1203,6 +1214,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
     severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
+    severityFor (Namespace _ ["CapacityChanged"]) _ = Just Info
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1227,6 +1239,9 @@ instance MetaTrace (TraceEventMempool blk) where
       [ ("txsSyncDuration", "Latest time to sync the mempool in ms after block adoption")
       , (txsSyncDurationTotalCounterName, "Cumulative time spent syncing the mempool in ms after block adoption")
       ]
+    metricsDocFor (Namespace _ ["CapacityChanged"]) =
+      [ ("mempoolCapacityBytes", "Byte capacity of the mempool")
+      ]
     metricsDocFor _ = []
 
     documentFor (Namespace _ ["AddedTx"]) = Just
@@ -1250,6 +1265,9 @@ instance MetaTrace (TraceEventMempool blk) where
       "Mempool is about to try to validate and add a transaction."
     documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
       "LedgerDB moved to an alternative fork between two reads during re-sync."
+    documentFor (Namespace _ ["CapacityChanged"]) = Just
+      "The mempool capacity changed while syncing with the ledger, e.g. because\
+      \ a protocol parameter update was adopted."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1261,6 +1279,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
       , Namespace [] ["TipMovedBetweenSTMBlocks"]
+      , Namespace [] ["CapacityChanged"]
       ]
 
 --------------------------------------------------------------------------------
@@ -2472,8 +2491,6 @@ instance LogFormatting TraceLeiosKernel where
       [ CounterM "leiosDbEvictedEbs" (Just evictedEbs) ]
     TraceLeiosDb TraceLeiosDbGCError{} ->
       [ CounterM "leiosDbSweepErrors" (Just 1) ]
-    TraceLeiosDb TraceLeiosDbCopyQueueFull{} ->
-      [ CounterM "leiosDbCopyQueueFull" (Just 1) ]
     TraceLeiosDb TraceLeiosDbCopyError{} ->
       [ CounterM "leiosDbCopyErrors" (Just 1) ]
     _ -> []
