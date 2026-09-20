@@ -294,7 +294,7 @@ eExpectedConfig = do
     , ncRpcConfig
     , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
-    , ncLeiosDbConfig = LeiosDbSQLite "leios.vol.db" "leios.imm.db"
+    , ncLeiosDbConfig = LeiosDbSQLite
     }
 
 -- | Test that the legacy flat LedgerDB snapshot config format (options directly

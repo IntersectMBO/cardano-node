@@ -755,7 +755,7 @@ defaultPartialNodeConfiguration =
     , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1
     , pncTxSubmissionInitDelay = Last $ Just defaultTxSubmissionInitDelay
 
-    , pncLeiosDbConfig = Last (Just (LeiosDbSQLite "leios.vol.db" "leios.imm.db"))
+    , pncLeiosDbConfig = Last (Just (LeiosDbSQLite))
     }
 
 lastOption :: Parser a -> Parser (Last a)
