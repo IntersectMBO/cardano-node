@@ -92,13 +92,6 @@ allow-older:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- Points to ouroboros-consensus/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: b56977baae0740f563060a8a9171c78be865b357
-  --sha256: sha256-/fjpPeHOvcSx//tWEw6oXuNV5sIViSNcd4PuT1ZrgZI=
-
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
   type: git
@@ -112,8 +105,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e5b82026e4f3395fbb94f0af62f711655d96fec7
-  --sha256: sha256-WfinPoIUwdq3fm5aeDpyJCgXHjuIMtqrq57QZMq5E7Y=
+  tag: 02fa24879b9dfc6218c56d056300d224299fd84b
+  --sha256: sha256-LztCKV3a57uN8BF5RcBicEO3O//UxDlzRgxvrWyRcho=
 
 -- Points to cardano-ledger/leios-prototype
 source-repository-package
@@ -168,8 +161,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: cca726ea4026f6e0a40d38d549ff7ea5d458fc12
-  --sha256: sha256-Oz9WGXDF7sqRLlqDXBJjtQr4NxxcprT+lCZAaDZRDPk=
+  tag: b8c7166c14504faa72b9162c1d23e1ab2b1aec25
+  --sha256: sha256-CCCnO2R4xO7Mj0fhWF7m7RnTooAsANIy5OKeiERii20=
   subdir:
     cardano-cli
 
