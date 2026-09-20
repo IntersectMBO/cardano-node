@@ -368,12 +368,16 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
   (leiosDB, closeLeiosDB) <- case ncLeiosDbConfig nc of
     LeiosDbInMemory -> (\db -> (db, pure ())) <$> newLeiosDBInMemory
     LeiosDbSQLite leiosVolDbPath leiosImmDbPath -> do
+      -- Each partition follows the node's own split: the volatile one
+      -- churns and is swept, so it belongs on the performant volume with
+      -- the VolatileDB; the immutable one only grows, so it belongs with
+      -- the ImmutableDB. Identical under 'OnePathForAllDbs'.
       let resolvedVolPath
             | isAbsolute leiosVolDbPath = leiosVolDbPath
             | otherwise = nonImmutableDbPath dbPath </> leiosVolDbPath
           resolvedImmPath
             | isAbsolute leiosImmDbPath = leiosImmDbPath
-            | otherwise = nonImmutableDbPath dbPath </> leiosImmDbPath
+            | otherwise = immutableDbPath dbPath </> leiosImmDbPath
       createDirectoryIfMissing True (takeDirectory resolvedVolPath)
       createDirectoryIfMissing True (takeDirectory resolvedImmPath)
       openLeiosDBSQLite
