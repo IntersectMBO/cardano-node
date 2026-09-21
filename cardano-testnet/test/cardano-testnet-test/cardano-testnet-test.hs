@@ -148,6 +148,8 @@ tests = do
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
           , ignoreOnWindows "Writes a machine-readable manifest on startup" Cardano.Testnet.Test.Manifest.hprop_manifest
+          , H.testPropertyNamed "Manifest Windows pipe path" (fromString "hprop_manifest_windows_pipe_path")
+              Cardano.Testnet.Test.Manifest.hprop_manifest_windows_pipe_path
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction

@@ -18,6 +18,7 @@ module Testnet.Manifest
   , removeStaleManifest
     -- * Manifest construction
   , buildManifest
+  , makeManifestRelPath
   ) where
 
 import           Cardano.Api (AddressAny, AnyCardanoEra (..), AsType (AsAddressAny),
