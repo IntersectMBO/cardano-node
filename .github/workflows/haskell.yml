@@ -128,6 +128,32 @@ jobs:
       run: |
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
+    - name: Validate produced manifest files against schema
+      if: runner.os == 'Linux'
+      run: |
+        pipx install check-jsonschema==0.37.1
+        # Node sockets live under this directory, so it must stay well below
+        # the 108-character unix socket path limit ($RUNNER_TEMP is short).
+        dir="$RUNNER_TEMP/manifest-schema-check"
+        log="$RUNNER_TEMP/manifest-schema-check.log"
+        "$(cabal list-bin cardano-testnet)" cardano --output-dir "$dir" > "$log" 2>&1 &
+        testnet_pid=$!
+        # The manifest is written at readiness, so the file appearing is the ready signal.
+        for _ in $(seq 1 120); do
+          if [ -f "$dir/manifest.json" ]; then break; fi
+          sleep 5
+        done
+        # SIGINT, not SIGTERM: the harness tears its nodes down on SIGINT only
+        # (see Testnet.Signal.interruptNodesOnSigINT).
+        kill -INT "$testnet_pid" 2>/dev/null || true
+        wait "$testnet_pid" 2>/dev/null || true
+        if [ ! -f "$dir/manifest.json" ]; then
+          echo "ERROR: testnet did not produce $dir/manifest.json in time"
+          tail -n 100 "$log"
+          exit 1
+        fi
+        check-jsonschema --schemafile cardano-testnet/schemas/manifest.schema.json "$dir/manifest.json"
+
     - name: Tar failed tests workspaces
       if: ${{ failure() }}
       env:
