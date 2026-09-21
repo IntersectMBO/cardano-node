@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,7 +23,8 @@ module Testnet.Manifest
   ) where
 
 import           Cardano.Api (AddressAny, AnyCardanoEra (..), AsType (AsAddressAny),
-                   CardanoEra (..), File (..), deserialiseAddress, serialiseAddress)
+                   CardanoEra (..), File (..), FileDirection (In), NodeConfigFile, SocketPath,
+                   deserialiseAddress, serialiseAddress)
 
 import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultManifestFile,
                    defaultNodePidFile, defaultNodeTopologyFile)
@@ -52,12 +54,10 @@ import qualified System.Process as Process
 import           Text.ParserCombinators.ReadP (readP_to_S)
 import           Text.Read (readMaybe)
 
-import           Hedgehog.Extras.Stock (sprocketSystemName)
-
 import           Testnet.Start.Types (anyEraToString)
 import           Testnet.Types (NodeRpcEndpoint (..), PaymentKeyInfo (..), TestnetNode (..),
-                   TestnetRuntime (..), isTestnetNodeSpo, showIpv4Address, signingKeyFp,
-                   verificationKeyFp)
+                   TestnetRuntime (..), isTestnetNodeSpo, nodeSocketPath, showIpv4Address,
+                   signingKeyFp, verificationKeyFp)
 
 import           Paths_cardano_testnet (version)
 
@@ -88,7 +88,7 @@ data ManifestNetwork = ManifestNetwork
   } deriving (Eq, Show)
 
 data ManifestPaths = ManifestPaths
-  { mpNodeConfigFile :: !FilePath
+  { mpNodeConfigFile :: !(NodeConfigFile 'In)
   , mpGenesisFiles   :: !ManifestGenesisFiles
   } deriving (Eq, Show)
 
@@ -109,7 +109,7 @@ data ManifestNode = ManifestNode
   , mnodeRole         :: !ManifestNodeRole
   , mnodeHost         :: !HostAddress
   , mnodePort         :: !PortNumber
-  , mnodeSocketPath   :: !FilePath
+  , mnodeSocketPath   :: !SocketPath
   , mnodeGrpc         :: !(Maybe ManifestGrpc)
   , mnodePid          :: !(Maybe Process.Pid)
   , mnodePidFile      :: !FilePath
@@ -161,7 +161,7 @@ instance ToJSON ManifestNetwork where
 
 instance ToJSON ManifestPaths where
   toJSON p = object
-    [ "nodeConfigFile" .= mpNodeConfigFile p
+    [ "nodeConfigFile" .= unFile (mpNodeConfigFile p)
     , "genesisFiles"   .= mpGenesisFiles p
     ]
 
@@ -180,7 +180,7 @@ instance ToJSON ManifestNode where
     , "role"         .= mnodeRole n
     , "host"         .= (showIpv4Address (mnodeHost n) :: String)
     , "port"         .= (fromIntegral (mnodePort n) :: Int)
-    , "socketPath"   .= mnodeSocketPath n
+    , "socketPath"   .= unFile (mnodeSocketPath n)
     , "grpc"         .= mnodeGrpc n     -- Nothing encodes as JSON null
     , "pid"          .= (fromIntegral <$> mnodePid n :: Maybe Int)  -- Nothing encodes as JSON null
     , "pidFile"      .= mnodePidFile n
@@ -234,7 +234,7 @@ instance FromJSON ManifestNetwork where
     <*> o .: "systemStart"
 
 instance FromJSON ManifestPaths where
-  parseJSON = withObject "ManifestPaths" $ \o -> ManifestPaths
+  parseJSON = withObject "ManifestPaths" $ \o -> ManifestPaths . File
     <$> o .: "nodeConfigFile"
     <*> o .: "genesisFiles"
 
@@ -252,7 +252,7 @@ instance FromJSON ManifestNode where
     <*> o .: "role"
     <*> (parseHostAddress =<< o .: "host")
     <*> (parsePort =<< o .: "port")
-    <*> o .: "socketPath"
+    <*> (File <$> o .: "socketPath")
     <*> o .: "grpc"
     <*> (fmap fromIntegral <$> (o .: "pid" :: Parser (Maybe Int)))
     <*> o .: "pidFile"
@@ -388,7 +388,7 @@ buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets, conf
         -- values the nodes were actually started with — so the manifest
         -- cannot drift from them.  The other genesis files have no runtime
         -- field, so the default constants are used.
-        { mpNodeConfigFile = relPath (unFile configurationFile)
+        { mpNodeConfigFile = File (relPath (unFile configurationFile))
         , mpGenesisFiles   = ManifestGenesisFiles
             { mgfByron    = defaultGenesisFilepath ByronEra
             , mgfShelley  = relPath shelleyGenesisFile
@@ -411,7 +411,7 @@ buildNode outputDir node = do
     , mnodeRole         = if isTestnetNodeSpo node then RoleSpo else RoleRelay
     , mnodeHost         = nodeIpv4 node
     , mnodePort         = nodePort node
-    , mnodeSocketPath   = relPath (sprocketSystemName (nodeSprocket node))
+    , mnodeSocketPath   = File (relPath (unFile (nodeSocketPath node)))
     , mnodeGrpc         = buildGrpc <$> nodeRpcEndpoint node
     , mnodePid          = mPid
     , mnodePidFile      = defaultNodePidFile (nodeName node)
