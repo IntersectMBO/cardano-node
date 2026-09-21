@@ -267,27 +267,27 @@
             inherit (project) benchmarks;
           });
 
-      # The parameterisable workbench.
-      inherit (pkgs) workbench;
-
       packages =
         exes
         # Linux only packages:
         // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"])
         (let
+          # nix/workbench/hydra.nix IS the smoke test: its value is the run,
+          # with the analysis attached. It carries its own defaults for
+          # everything, no `customConfig`, because what Hydra builds must not
+          # depend on anybody's local configuration.
           workbenchTest = {
             profileName,
             eraName,
             workbenchStartArgs ? [],
           }:
-            (pkgs.workbench-runner
+            import ./nix/workbench/hydra.nix
               {
+                inherit pkgs;
+                haskellProject = pkgs.cardanoNodeProject;
                 inherit profileName eraName workbenchStartArgs;
                 backendName = "supervisor";
-                useCabalRun = false;
-                cardano-node-rev = pkgs.gitrev;
-              })
-            .workbench-profile-run;
+              };
         in {
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
@@ -305,7 +305,6 @@
             workbenchStartArgs = ["--trace"];
           };
 
-          inherit (pkgs) all-profiles-json profile-data-nomadperf;
 
           system-tests = pkgs.writeShellApplication {
             name = "system-tests";
@@ -495,9 +494,9 @@
         pkgs = import nixpkgs {
           inherit config system overlays;
         };
-        inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
+        inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells;
       in {
-        inherit environments checks project ciJobs devShells workbench;
+        inherit environments checks project ciJobs devShells;
 
         legacyPackages =
           pkgs

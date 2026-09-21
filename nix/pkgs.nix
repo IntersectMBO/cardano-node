@@ -6,45 +6,9 @@ let
   inherit (final) pkgs;
   inherit (prev) lib;
   inherit (prev) customConfig;
-  # Parametrized helper entrypoint for the workbench development environment.
-  workbench = import ./workbench
-    { inherit pkgs;
-      haskellProject = final.cardanoNodeProject;
-    }
-  ;
-
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
-
-  # To make it a flake output so it's available as input to external flakes.
-  inherit workbench;
-
-  # A workbench runner with default parameters from customConfig.
-  # Used in flake.nix for "workbench-ci-test" flake output package for CI.
-  workbench-runner =
-    { profiling          ? {}
-    , profileName        ? customConfig.localCluster.profileName
-    , eraName            ? customConfig.localCluster.eraName
-    , backendName        ? customConfig.localCluster.backendName
-    , stateDir           ? customConfig.localCluster.stateDir
-    , basePort           ? customConfig.localCluster.basePort
-    , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , batchName          ? customConfig.localCluster.batchName
-    , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
-    , cardano-node-rev   ? null
-    }:
-    workbench.runner
-      { # To construct the profile attrset with its `materialise-profile` function.
-        inherit profileName;
-        # Era used at runner level (tag name, hardfork params, not in profile).
-        inherit eraName;
-        # To construct backend attrset with its `materialise-profile` function.
-        inherit backendName stateDir basePort useCabalRun profiling;
-        # Parameters for the workbench shell `start-cluster` command.
-        inherit batchName workbenchStartArgs cardano-node-rev;
-      }
-  ;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
@@ -173,61 +137,6 @@ in with final;
       };
       script = "tracer";
     };
-
-  all-profiles-json = workbench.profile-names-json;
-
-  # The profile data and backend data of the cloud / "*-nomadperf" profiles.
-  # Useful to mix workbench and cardano-node commits, mostly because of scripts.
-  profile-data-nomadperf = listToAttrs (
-    map
-    (profileName:
-      # Era is a workbench-level parameter (not anymore part of profile name).
-      # These flake outputs pin Conway as the era so consumers can refer to
-      # `profile-data-nomadperf.<profile>-coay`. `eraName` is the full ledger
-      # era name used internally; `eraShort` is the 4-letter code embedded in
-      # the public attribute name (matches the run tag).
-      let eraName  = "conway";
-          eraShort = "coay";
-      in {
-        name = "${profileName}-${eraShort}";
-        value =
-          let
-              # Default values only ("run/current", 30000, profiling "none").
-              profile = workbench.profile profileName;
-              backend = workbench.backend
-                { backendName = "nomadcloud";
-                  stateDir    = customConfig.localCluster.stateDir;
-                  basePort    = customConfig.localCluster.basePort;
-                  useCabalRun = customConfig.localCluster.useCabalRun;
-                  profiling = {};
-                }
-              ;
-              profileBundle = profile.profileBundle
-                { inherit backend eraName; }
-              ;
-              materialisedProfile = profile.materialise-profile
-                { inherit profileBundle; }
-              ;
-              backendDataDir = backend.materialise-profile
-                {inherit profileBundle;}
-              ;
-          in pkgs.runCommand "workbench-data-${profileName}-${eraName}" {}
-            ''
-            mkdir "$out"
-            ln -s "${materialisedProfile}" "$out"/profileData
-            ln -s "${backendDataDir}"      "$out"/backendData
-            ''
-        ;
-        }
-    )
-    # Fetch all "*-nomadperf" profiles.
-    (fromJSON (readFile
-      (pkgs.runCommand "cardano-profile-names-cloud" {} ''
-        ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud > $out
-      ''
-      )
-    ))
-  );
 
   # Disable failing python uvloop tests
   python311 = prev.python311.override {
