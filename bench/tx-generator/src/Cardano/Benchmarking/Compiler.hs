@@ -17,6 +17,7 @@ import           Cardano.TxGenerator.Types
 
 import           Prelude
 
+import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
@@ -30,7 +31,12 @@ import qualified Data.Text as Text
 data CompileError where
   SomeCompilerError :: String -> CompileError
   deriving (Show)
-type Compiler a = RWST NixServiceOptions (DList Action) Int (Except CompileError) a
+
+type Compiler a = RWST ReadState (DList Action) Int (Except CompileError) a
+
+-- The submit mode is an optional override and is intended to support the --dump-* CLI options.
+-- LocalSocket and Benchmark submit modes will be overruled; Ogmios submission still takes precedence.
+type ReadState = (NixServiceOptions, Maybe SubmitMode)
 
 throwCompileError :: CompileError -> Compiler a
 throwCompileError = lift . throwE
@@ -42,14 +48,17 @@ type SrcWallet = String
 type DstWallet = String
 
 compileOptions :: NixServiceOptions -> Either CompileError [Action]
-compileOptions opts = runCompiler opts compileToScript
+compileOptions opts = runCompiler (opts, Nothing) compileToScript
 
-runCompiler ::NixServiceOptions -> Compiler () -> Either CompileError [Action]
+compileOptionsOverridingSubmit :: NixServiceOptions -> SubmitMode -> Either CompileError [Action]
+compileOptionsOverridingSubmit opts submitMode = runCompiler (opts, Just submitMode) compileToScript
+
+runCompiler :: ReadState -> Compiler () -> Either CompileError [Action]
 runCompiler o c = case runExcept $ runRWST c o 0 of
   Left err -> Left err
   Right ((), _ , l) -> Right $ DL.toList l
 
-testCompiler :: NixServiceOptions -> Compiler a -> Either CompileError (a, Int, [Action])
+testCompiler :: ReadState -> Compiler a -> Either CompileError (a, Int, [Action])
 testCompiler o c = case runExcept $ runRWST c o 0 of
   Left err -> Left err
   Right (a, s , l) -> Right (a, s, DL.toList l)
@@ -201,6 +210,7 @@ benchmarkingPhase wallet collateralWallet = do
   outputs <- askNixOption _nix_outputs_per_tx
   txParams <- askNixOption txGenTxParams
   endpoint <- resolveSubmissionEndpoint
+  submitOverride <- askSubmitOverride
   doneWallet <- newWallet "done_wallet"
   -- A submission endpoint replaces the target nodes as the submission target
   -- (and is a functional transport: unpaced, unmeasured), so a config that
@@ -213,6 +223,7 @@ benchmarkingPhase wallet collateralWallet = do
           \target: set targetNodes to [] (or drop the endpoint to benchmark \
           \against the target nodes)."
     Nothing
+      | Just override <- submitOverride -> pure override
       | debugMode -> pure LocalSocket
       | Just nodes <- nonEmpty targetNodes -> pure $ Benchmark nodes tps txCount
       | otherwise -> throwCompileError $ SomeCompilerError
@@ -264,11 +275,16 @@ cmd1 :: (v -> Action) -> (NixServiceOptions -> v) -> Compiler ()
 cmd1 cmd arg = emit . cmd =<< askNixOption arg
 
 askNixOption :: (NixServiceOptions -> v) -> Compiler v
-askNixOption = asks
+askNixOption f = asks (f . fst)
+
+askSubmitOverride :: Compiler (Maybe SubmitMode)
+askSubmitOverride = asks snd
 
 getSetupSubmitMode :: Compiler SubmitMode
-getSetupSubmitMode =
-  maybe LocalSocket SubmitToEndpoint <$> resolveSubmissionEndpoint
+getSetupSubmitMode = do
+  endpoint <- resolveSubmissionEndpoint
+  submitOverride <- askSubmitOverride
+  pure $ fromMaybe LocalSocket $ (SubmitToEndpoint <$> endpoint) <|> submitOverride
 
 -- | Resolve the configured submission endpoint, requiring its protocol and URI
 -- to be set together (or both omitted). The URI itself is already parsed:

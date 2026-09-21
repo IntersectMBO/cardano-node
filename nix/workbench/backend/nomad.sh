@@ -2207,6 +2207,7 @@ backend_nomad() {
     # - wait-node-stopped       RUN-DIR NODE-NAME
     # - wait-pools-stopped      RUN-DIR
     # - wait-workloads-stopped  RUN-DIR
+    # - wait-generator-stopped  RUN-DIR      (Not supported, see below)
     # - cluster-exited-programs RUN-DIR      (Nomad backend specific subcommand)
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
@@ -2407,6 +2408,22 @@ backend_nomad() {
         echo -ne "\n"
         msg "All workloads exited  -- after $(yellow ${elapsed})s"
       fi
+    ;;
+
+    # Only the "supervisor" backend can tell when a single, specific,
+    # "generator" program has stopped without also polling everything else
+    # (nodes, tracer(s)) -- see supervisor.sh's implementation. Nomad's own
+    # polling primitives (`is-task-program-running`, `cluster-exited-programs`)
+    # are keyed by Nomad Task, not by a supervisord program name, and covering
+    # this properly would need its own Nomad-specific implementation, not a
+    # smaller wrapper around a shared one. Until that exists, fail loudly and
+    # specifically instead of falling through to the generic `usage_nomadbackend`
+    # (which would just dump the top-level Nomad backend help and hard-exit).
+    wait-generator-stopped )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+
+      fatal "\"wait-generator-stopped\" is not supported by the \"${WB_BACKEND_NAME}\" backend (only \"supervisor\" is) -- the \"dump-loaded\" scenario cannot run here"
     ;;
 
     cluster-exited-programs )

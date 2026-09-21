@@ -26,6 +26,8 @@ usage_backend() {
                      Wait until all pools are stopped
     wait-workloads-stopped RUNDIR
                      Wait until all workloads are stopped
+    wait-generator-stopped RUNDIR
+                     Wait until the generator is stopped
     stop-cluster RUNDIR
     cleanup-cluster RUNDIR
                      Wipe cluster state to pristine
@@ -62,6 +64,7 @@ case "${op}" in
     get-node-socket-path )       backend_$WB_BACKEND_NAME "$@";;
     wait-pools-stopped )         backend_$WB_BACKEND_NAME "$@";;
     wait-workloads-stopped )     backend_$WB_BACKEND_NAME "$@";;
+    wait-generator-stopped )     backend_$WB_BACKEND_NAME "$@";;
     # Stop functions
     stop-all )                   backend_$WB_BACKEND_NAME "$@";;
     fetch-logs )                 backend_$WB_BACKEND_NAME "$@";;

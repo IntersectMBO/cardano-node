@@ -401,6 +401,32 @@ EOF
         fi
         ;;
 
+    wait-generator-stopped )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        local start_time=$(date +%s)
+        msg_ne "supervisor:  waiting until generator is stopped: 000000"
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+            && \
+            supervisorctl status generator > /dev/null
+        do
+            echo -ne "\b\b\b\b\b\b"
+            printf "%6d" "$(($(date +%s) - start_time))"
+            sleep 1
+        done >&2
+        echo -ne "\b\b\b\b\b\b"
+        local elapsed=$(($(date +%s) - start_time))
+        if test -f "${dir}"/flag/cluster-stopping
+        then
+            echo " Termination requested -- after $(yellow ${elapsed})s" >&2
+        else
+            touch "${dir}"/flag/cluster-stopping
+            echo " Generator exited      -- after $(yellow ${elapsed})s" >&2
+        fi
+        ;;
+
     stop-all )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
