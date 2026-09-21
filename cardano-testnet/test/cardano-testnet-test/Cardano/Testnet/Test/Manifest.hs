@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Manifest
   ( hprop_manifest
@@ -9,16 +10,13 @@ import           Cardano.Testnet (createAndRunTestnet, defaultManifestFile, mkCo
 
 import           Prelude
 
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class (def)
 import           System.FilePath ((</>))
 
 import           Testnet.Manifest
 import           Testnet.Property.Util (integrationRetryWorkspace)
 
-import           Hedgehog (Property, evalEither, (===))
+import           Hedgehog (Property, (===))
 import qualified Hedgehog.Extras as H
 
 -- | Integration test: start a default testnet, then verify that
@@ -32,11 +30,7 @@ hprop_manifest = integrationRetryWorkspace 2 "manifest" $ \tmpDir -> H.runWithDe
   conf <- mkConf tmpDir
   _runtime <- createAndRunTestnet def def conf
 
-  let manifestPath = tmpDir </> defaultManifestFile
-  H.assertFileExists manifestPath
-
-  bs <- liftIO $ LBS.readFile manifestPath
-  manifest :: Manifest <- evalEither $ A.eitherDecode' bs
+  manifest <- H.readJsonFileOk @Manifest $ tmpDir </> defaultManifestFile
 
   -- The default cluster has 3 nodes (1 SPO + 2 relays)
   length (manifestNodes manifest) === 3
