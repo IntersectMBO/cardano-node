@@ -27,7 +27,7 @@
         },
         "cardanoTestnetVersion": {
             "type": "string",
-            "description": "The cardano-testnet package version string."
+            "description": "The cardano-testnet package version: digits separated by dots, for example \"11.1.1\"."
         },
         "network": {
             "type": "object",
