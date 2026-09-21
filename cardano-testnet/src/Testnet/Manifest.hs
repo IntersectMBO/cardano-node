@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Manifest
   ( -- * Manifest types
@@ -27,7 +28,7 @@ import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultMani
 import           Prelude
 
 import           Control.Exception.Safe (onException, throwString, try)
-import           Control.Monad (when, zipWithM)
+import           Control.Monad (void, when, zipWithM)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Types (Parser)
@@ -323,9 +324,8 @@ writeManifest outputDir manifest = do
   -- must be as readable as the rest of the output directory.
   (tmpFile, tmpHandle) <- IO.openTempFileWithDefaultPermissions outputDir "manifest.json.tmp"
   let cleanup = do
-        _ <- try (hClose tmpHandle) :: IO (Either IOError ())
-        _ <- try (removeFile tmpFile) :: IO (Either IOError ())
-        pure ()
+        void . try @IO @IOError $ hClose tmpHandle
+        void . try @IO @IOError $ removeFile tmpFile
   (do LBS.hPut tmpHandle (A.encodePretty manifest)
       hClose tmpHandle
       renameFile tmpFile manifestPath)
