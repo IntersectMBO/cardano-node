@@ -43,10 +43,10 @@ trace-schemas-validate: ## Validate trace message schemas against meta.schema.js
 ## `make shell` (and -nix/-prof/-dev) opens a workbench dev shell for $(PROFILE) -- the usual
 ## entry point (below). `make <profile>[-VARIANT]` are per-profile aliases; `make ps` lists
 ## profile names. Targets, flags and the (generated) profile lists all live in
-## nix/workbench/lib.mk (which pulls in profiles.mk itself).
-include nix/workbench/lib.mk
+## nix/workbench/makefile.lib.mk (which pulls in makefile.profiles.mk itself).
+include nix/workbench/makefile.lib.mk
 
-## Dev shells -- the usual entry point; each runs $(WB_ENTER) (defined in nix/workbench/lib.mk).
+## Dev shells -- the usual entry point; each runs $(WB_ENTER) (defined in nix/workbench/makefile.lib.mk).
 shell: ## workbench dev shell for PROFILE (cabal build-on-demand); vars: PROFILE ERA BACKEND CMD RUN
 	$(WB_ENTER)
 shell-nix: ## like shell, but run the Nix-store binary
