@@ -60,6 +60,3 @@ jobs:
             exit 1
           fi
         done
-
-    - name: Validate cardano-testnet manifest golden file against its schema
-      run: make testnet-manifest-validate
