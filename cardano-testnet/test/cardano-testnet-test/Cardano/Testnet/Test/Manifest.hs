@@ -4,10 +4,12 @@
 
 module Cardano.Testnet.Test.Manifest
   ( hprop_manifest
+  , hprop_manifest_stale
   , hprop_manifest_windows_pipe_path
   ) where
 
-import           Cardano.Testnet (createAndRunTestnet, defaultManifestFile, mkConf)
+import           Cardano.Testnet (createAndRunTestnet, createTestnetEnv, defaultManifestFile,
+                   mkConf)
 
 import           Prelude
 
@@ -17,6 +19,7 @@ import qualified System.FilePath.Windows as FilePath.Windows
 
 import           Testnet.Manifest
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Cardano (liftToIntegration)
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog.Extras as H
@@ -64,3 +67,26 @@ hprop_manifest_windows_pipe_path = H.propertyOnce $ do
   --     on Windows).
   makeManifestRelPath "/tmp/out" "/tmp/out/socket/node1/sock"
     === normalise "socket/node1/sock"
+
+-- | Integration test: verify that 'createTestnetEnv' removes any
+-- pre-existing (stale) manifest from a previous run.  Only the
+-- environment is created (no cluster start); the manifest is written
+-- later by the run phase, so after 'createTestnetEnv' the file must
+-- be gone.
+--
+-- Execute with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Manifest stale/"'@
+hprop_manifest_stale :: Property
+hprop_manifest_stale = integrationRetryWorkspace 2 "manifest-stale" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
+  -- Plant a dummy stale manifest
+  let stalePath = tmpDir </> defaultManifestFile
+  H.writeFile stalePath "{}"
+  H.assertFileExists stalePath
+
+  -- createTestnetEnv deletes any pre-existing manifest first thing.
+  -- It does NOT write a new one -- manifests are only written at cluster readiness.
+  conf <- mkConf tmpDir
+  liftToIntegration $ createTestnetEnv def conf
+
+  -- The stale manifest must be gone.
+  H.assertFileMissing stalePath
