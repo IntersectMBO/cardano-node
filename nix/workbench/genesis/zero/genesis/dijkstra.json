@@ -1,7 +1,0 @@
-{
-  "maxRefScriptSizePerBlock": 0,
-  "maxRefScriptSizePerTx": 0,
-  "refScriptCostMultiplier": 1,
-  "refScriptCostStride": 1
-}
-
