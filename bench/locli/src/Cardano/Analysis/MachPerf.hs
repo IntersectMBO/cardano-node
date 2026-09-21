@@ -39,13 +39,11 @@ timelineFromLogObjects :: Run -> (LogObjectSource, [LogObject])
                        -> Either Text (LogObjectSource, (RunScalars, [SlotStats UTCTime]))
 timelineFromLogObjects _ (f, []) =
   Left $ "timelineFromLogObjects:  zero logobjects from " <> pack (logObjectSourceFile f)
-timelineFromLogObjects run@Run{genesis} (f, xs') =
+timelineFromLogObjects run@Run{genesis} (f, xs) =
   Right . (f,)
   $ foldl' (timelineStep run f) zeroTimelineAccum xs
   & (aRunScalars &&& reverse . aSlotStats)
  where
-   xs = filter (not . ("DecodeError" `textRefEquals`) . loKind) xs'
-
    firstRelevantLogObjectTime :: UTCTime
    firstRelevantLogObjectTime = loAt (head xs) `max` systemStart genesis
    firstLogObjectHost :: Host
