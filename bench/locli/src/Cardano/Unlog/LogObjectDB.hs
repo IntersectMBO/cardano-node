@@ -300,7 +300,6 @@ sqlToLogObject SummaryDB{sdbName} (at : rest) =
   in LogObject
     { loAt    = fromSqlData at
     , loNS    = ""
-    , loKind  = ""
     , loHost  = sdbName
     , loTid   = logObjectNeedsTIdforAnalysis rest body
     , loBody  = body

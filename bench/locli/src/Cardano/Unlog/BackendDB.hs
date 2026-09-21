@@ -134,11 +134,11 @@ prepareFile tracefreqs log = do
     alterFunc = maybe (Just 1) (Just . succ)
 
     go acc line = case Aeson.eitherDecode line of
-      Right logObject@LogObject{loNS, loKind} -> do
+      Right logObject@LogObject{loNS} -> do
         forM_ (logObjectToSql logObject)
             runSqlRunnable
 
-        let name = fromTextRef loNS <> ":" <> fromTextRef loKind
+        let name = fromTextRef loNS
         pure $ ML.alter alterFunc name acc
 
       Left err -> runSqlRunnable (errorToSql err $ BSL.unpack line) >> pure acc
