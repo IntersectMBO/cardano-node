@@ -245,10 +245,20 @@ if impl(ghc >= 9.14)
 -- with CHaP's older era packages that were built against it. Drop the
 -- extra subdirs (keep only eras/byron/crypto) once cardano-ledger-binary/
 -- small-steps/cardano-ledger-core catch up on CHaP.
+--
+-- Tag and subdir list both mirror ouroboros-consensus main's own
+-- cardano-ledger SRP exactly (see its cabal.project) rather than an
+-- independently-chosen commit: an earlier, older pin here (116dab4b) built
+-- fine on its own but caused a real API mismatch against
+-- ouroboros-consensus main's Shelley/Ledger/Mempool.hs (`totExUnits`
+-- missing an `AlonzoEraTx era` constraint it needs), since main's Shelley
+-- integration code is written against this exact ledger commit, not just
+-- "some recent master". Matching main's own pin exactly avoids chasing
+-- these one at a time.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 116dab4b22e3ee21b31f6d5e7814306d660c76ac
+  tag: fb723848a28256fe372ea9ba692eccded6a12a53
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -327,6 +337,25 @@ source-repository-package
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
   tag: 32838381afa79a0df04f2604e36cfa7ba00d5863
 
+-- ouroboros-network main: ouroboros-consensus main's own cabal.project (see
+-- above) itself pins ouroboros-network to this exact commit via its own
+-- SRP ("pin ouroboros-network to main, where NodeToClientV_23 is the only
+-- NodeToClient version"), rather than CHaP's published ouroboros-network-
+-- 1.2.0.0. SRPs aren't transitive across cabal.project files, so without
+-- this our build was still resolving ouroboros-network from CHaP's stale
+-- 1.2.0.0, causing ouroboros-consensus-cardano's Shelley/Ledger/Query.hs
+-- and Mempool.hs to fail (LedgerPeerSnapshot/AlonzoEraTx API mismatches).
+-- Mirroring ouroboros-consensus's own pin exactly (same tag, same subdirs).
+-- TEMPORARY -- drop this once these packages are released to CHaP.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 09495ae9e6a063929ac9f2a8a80d210735c3a66e
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
+
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
 -- rebased onto current cardano-api master (11.7.0.0), picking up the TCP/TLS
@@ -344,7 +373,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 490642565221d7d9ad8c38f0c4f7bb9a7e23017d
+  tag: 24fedf2b2aedfe51598afd8df2aa6023c3e7ff86
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
@@ -362,7 +391,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 490642565221d7d9ad8c38f0c4f7bb9a7e23017d
+  tag: 24fedf2b2aedfe51598afd8df2aa6023c3e7ff86
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
