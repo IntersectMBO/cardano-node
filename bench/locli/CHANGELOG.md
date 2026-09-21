@@ -1,5 +1,15 @@
 # Revision history for locli
 
+## 3.0 -- NEXT
+
+* This version fully drops support for parsing legacy tracing / `iohk-monitoring-framework` generated log objects.
+* It also drops capability of parsing log object formats from the development stages of new tracing / `hermod-tracing`.
+* Any dependency on the `"kind":` field of log objects is removed, as this field is scheduled for deprecation in `hermod-tracing`.
+* Ledger snapshot events are now persisted with their enclosed time (duration).
+* Fixed double-counting ledger snapshot events in the machine timeline.
+* Fixed namespace drift for several traces, keeping backwards compatibility.
+* New test: Parse a fixture file log stream and round-trip it through SQLite.
+
 ## 2.4 -- Jul 2026
 
 * Create Plutus workload calibration CSV as part of run comparison, and include as addendum in `typst` report.
