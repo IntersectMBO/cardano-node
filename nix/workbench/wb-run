@@ -278,12 +278,19 @@ export WB_BACKEND_NAME=supervisor
 export WB_BASE_PORT=$base
 export CARDANO_NODE_SOCKET_PATH=$state/current/node-0/node.socket
 
-## Same reason the Nix reader checks it: a bundle from before
-## nix/workbench/start-cluster.sh existed is still contract 8, and the entry
-## points live in that file.
-test -f "$rt"/start-cluster.sh \
-  || die "the bundle carries no start-cluster.sh: re-export it with export/export.sh"
-. "$rt"/start-cluster.sh
-## No positionals: profile/era were consumed above (wb start fatals on bare
-## args); extra start flags travel via WB_START_ARGS.
-start-cluster
+## `wb start`, inline: this is what start-cluster has always been, and every
+## value it needs is a variable above. `wb` defaults WB_GENESIS_RIPPER and
+## WB_LOCLI_DB itself (wb:10,13); the cache dir default is env.sh's.
+##
+## No positionals: profile and era were consumed above, and `wb start` fatals on
+## bare arguments. Extra flags travel in WB_START_ARGS, unquoted so an empty one
+## contributes nothing.
+set -euo pipefail
+wb start \
+  --batch-name   "${WB_BATCH_NAME:-plain}" \
+  --era-name     "$era" \
+  --profile-data "$WB_SHELL_PROFILE_DATA" \
+  --backend-data "$WB_BACKEND_DATA" \
+  --cache-dir    "${WB_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/cardano-workbench}" \
+  --base-port    "$base" \
+  ${WB_START_ARGS:-}

@@ -1,0 +1,1 @@
+{"node-0":{"autostart":true,"i":0,"isProducer":true,"kind":"pool","name":"node-0","pools":1,"port":30000,"region":"loopback","shutdown_on_block_synced":8,"shutdown_on_slot_synced":null},"node-1":{"autostart":true,"i":1,"isProducer":true,"kind":"pool","name":"node-1","pools":1,"port":30001,"region":"loopback","shutdown_on_block_synced":8,"shutdown_on_slot_synced":null}}

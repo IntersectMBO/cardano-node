@@ -1,0 +1,5 @@
+digraph {
+    graph [scale=5];
+    "node-0" [fillcolor="#fafa96"
+             ,style=filled];
+}

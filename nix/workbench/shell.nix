@@ -46,9 +46,12 @@
 with lib;
 
 let
+
   nodeVersion =
-    if cardanoNodeVersion != null then cardanoNodeVersion
-    else project.hsPkgs.cardano-node.identifier.version;
+    if cardanoNodeVersion != null
+    then cardanoNodeVersion
+    else project.hsPkgs.cardano-node.identifier.version
+  ;
 
   ## The bundle is authoritative for the base port: ports run exactly as
   ## built (the consumer cannot change them today); the recorded value only
@@ -56,7 +59,8 @@ let
   wjMeta =
     if builtins.pathExists ./workbench.json
     then builtins.fromJSON (builtins.readFile ./workbench.json)
-    else { };
+    else { }
+  ;
   basePort = wjMeta.basePort or 30000;
 
   ## The bundle says what it needs BY NAME; this repo says where to get it.
@@ -73,16 +77,16 @@ let
   ## Every name in the bundle's `cardano` group needs an answer here, including
   ## the ones a bundle RUN never reaches (`runNeeds = false` in the data): this
   ## list is what goes on PATH, and a missing entry throws at eval.
-  cardanoTool = {
-    cardano-node     = project.exes.cardano-node;
-    cardano-cli      = project.hsPkgs.cardano-cli.components.exes.cardano-cli;
-    cardano-tracer   = project.exes.cardano-tracer;
-    tx-generator     = project.exes.tx-generator;
-    locli            = project.exes.locli;
-    db-analyser      = project.hsPkgs.ouroboros-consensus.components.exes.db-analyser;
-    ## No cardano-profile / cardano-topology: they BUILD profile data, and a
-    ## checkout that vendors the bundle has neither the packages nor a reason to
-    ## run them, the data here was already materialised by the exporter.
+  cardanoTool =
+    { cardano-node   = project.exes.cardano-node;
+      cardano-cli    = project.hsPkgs.cardano-cli.components.exes.cardano-cli;
+      cardano-tracer = project.exes.cardano-tracer;
+      tx-generator   = project.exes.tx-generator;
+      locli          = project.exes.locli;
+      db-analyser    = project.hsPkgs.ouroboros-consensus.components.exes.db-analyser;
+      ## No cardano-profile / cardano-topology: they BUILD profile data, and a
+      ## checkout that vendors the bundle has neither the packages nor a reason
+      ## to run them, the data here was already materialised by the exporter.
   };
 
   ## A name the bundle used that this reader has no answer for is a hard stop:
@@ -93,11 +97,13 @@ let
     then cardanoTool.${name} or
            (throw ("workbench bundle needs cardano \"${name}\", which this reader"
                   + " cannot resolve: add it to `cardanoTool` in"
-                  + " nix/workbench/shell.nix"))
+                  + " nix/workbench/shell.nix")
+           )
     else lib.attrByPath
            (lib.splitString "." name)
            (throw ("workbench bundle needs nixpkgs \"${name}\", which this"
-                  + " checkout's nixpkgs does not have"))
+                  + " checkout's nixpkgs does not have")
+           )
            pkgs
   ;
 
@@ -133,18 +139,9 @@ let
     if !(wjMeta ? contract) then x
     else if wjMeta.contract != contract
     then throw ("workbench bundle is contract ${toString wjMeta.contract}, this"
-                + " reader speaks ${toString contract}: re-export it with"
-                + " export/export.sh and copy the result into nix/workbench/")
-    ## The contract number cannot catch a payload that merely GREW: a bundle
-    ## exported before nix/workbench/start-cluster.sh existed is still shape 8,
-    ## and `workbench-envars` below sources that file out of the deployed
-    ## runtime. Without this the shell enters, says "No such file or directory",
-    ## and leaves `start-cluster` undefined with nothing pointing at why.
-    else if !(wjMeta.files ? "start-cluster.sh")
-    then throw ("workbench bundle carries no start-cluster.sh (${toString"
-                + " (builtins.length (builtins.attrNames wjMeta.files))} payload"
-                + " files): it predates nix/workbench/start-cluster.sh, re-export"
-                + " it with export/export.sh")
+               + " reader speaks ${toString contract}: re-export it with"
+               + " export/export.sh and copy the result into nix/workbench/"
+               )
     else x
   ;
 
@@ -156,31 +153,38 @@ let
   # nothing else -- no shipped file names a store path, so `jq` is the whole
   # dependency. The binaries are earned where they are actually named, by
   # `materialised` below, whose rewritten paths ARE its own inputs.
-  wb = bundleContract (pkgs.runCommand "workbench-runtime"
-    { nativeBuildInputs = [ pkgs.jq ]; }
-    ''
-    WB_WORKBENCH_JSON=${./workbench.json} \
-      bash ${./wb-run} --deploy "$out"
-    '');
+  wb = bundleContract
+         (pkgs.runCommand "workbench-runtime"
+           { nativeBuildInputs = [ pkgs.jq ]; }
+           ''
+           WB_WORKBENCH_JSON=${./workbench.json} \
+              bash ${./wb-run} --deploy "$out"
+           ''
+         )
+  ;
 
   # One profile unpacked into the two data dirs a run exports as
   # WB_SHELL_PROFILE_DATA ($out/profile) and WB_BACKEND_DATA ($out/backend).
   # Era, version, base port and binary resolution are all bound here, not
   # baked into the bundle.
-  materialised = bundleContract (pkgs.runCommand "workbench-data-${profileName}-${eraName}"
-    { nativeBuildInputs = [ pkgs.jq ] ++ workbenchTools; }
-    ''
-    export WB_WORKBENCH_JSON=${./workbench.json}
-    export WB_PROFILE_CATALOGUE=${./profiles}
-    export WB_CARDANO_NODE_VERSION=${nodeVersion}
-    ## wb-run resolves every command the data declares out of THIS PATH, so the
-    ## rewritten data names this derivation's own inputs. That is also what puts
-    ## them in its closure: the paths it writes are references Nix scans for,
-    ## not text.
-    bash ${./wb-run} --materialise ${profileName} ${eraName} "$out"
-    '');
+  materialised = bundleContract
+    (pkgs.runCommand "workbench-data-${profileName}-${eraName}"
+      { nativeBuildInputs = [ pkgs.jq ] ++ workbenchTools; }
+      ''
+      export WB_WORKBENCH_JSON=${./workbench.json}
+      export WB_PROFILE_CATALOGUE=${./profiles}
+      export WB_CARDANO_NODE_VERSION=${nodeVersion}
+      ## wb-run resolves every command the data declares out of THIS PATH, so the
+      ## rewritten data names this derivation's own inputs. That is also what puts
+      ## them in its closure: the paths it writes are references Nix scans for,
+      ## not text.
+      bash ${./wb-run} --materialise ${profileName} ${eraName} "$out"
+      ''
+    )
+  ;
 
-  workbench-envars = ''
+  workbench-envars =
+    ''
     export WB_BUNDLE=${wb}
     export PATH=${wbPath}
     export WB_SHELL_PROFILE_NAME=${profileName}
@@ -194,182 +198,209 @@ let
     export WB_NIX_PLAN=${project.plan-nix}/plan.json
     export WB_CHAP_PATH=${project.args.inputMap."https://chap.intersectmbo.org/"}
     export WB_BATCH_NAME=${batchName}
-    export WB_START_ARGS=${lib.escapeShellArg (builtins.concatStringsSep " " workbenchStartArgs)}
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ${lib.optionalString (profiling.profiledBuild or false) "export WB_PROFILEDBUILD=yes"}
     ${lib.optionalString (profiling.infoTable or false) "export WB_PROFILINGINFOTABLE=yes"}
-    # Shared runtime defaults (WB_DEPLOYMENT_NAME, WB_LOCLI_DB, WB_CACHE_DIR,
-    # WB_GITREV, WB_MODULAR_GENESIS, WB_GENESIS_RIPPER) are set by
-    # start-cluster.sh itself, once for every reader.
-    . ${wb}/start-cluster.sh
-  '';
+    ''
+  ;
+
+  ## The three cluster commands: `wb start` / `wb finish` / `wb run restart` with
+  ## this run's values spliced in, which is all they ever were. `wb` defaults
+  ## WB_GENESIS_RIPPER and WB_LOCLI_DB itself (wb:10,13), and the cache dir
+  ## default is env.sh's, spelled at run time rather than baked.
+  ##
+  ## A subshell body, so the strict options do not leak into an interactive
+  ## shell, and exported so they survive into one.
+  clusterCommands =
+    ''
+    start-cluster() (
+        set -euo pipefail
+        wb start \
+          --batch-name   ${batchName} \
+          --era-name     ${eraName} \
+          --profile-data ${materialised}/profile \
+          --backend-data ${materialised}/backend \
+          --cache-dir    "''${XDG_CACHE_HOME:-$HOME/.cache}/cardano-workbench" \
+          --base-port    ${toString basePort} \
+          ${lib.optionalString useCabalRun "--cabal"} \
+          ${builtins.concatStringsSep " " workbenchStartArgs} \
+          "$@"
+    )
+    stop-cluster()    { wb finish "$@"; }
+    restart-cluster() { wb run restart "$@"; }
+    export -f start-cluster stop-cluster restart-cluster
+    ''
+  ;
 
   ## What ./hydra.nix needs off this file. `wb` is the HEAD of `wbPath` and of
   ## anything built from it on purpose: forcing it forces `bundleContract`
   ## first, so a stale bundle says "re-export it" instead of failing on some
   ## tool it could not resolve.
-  runner = {
-    inherit wb materialised workbench-envars;
-    inherit basePort wbPath workbenchTools;
-  };
+  runner =
+    { inherit wb materialised workbench-envars;
+      inherit basePort wbPath workbenchTools;
+    }
+  ;
 
 in
-{
-  inherit runner;
 
-  shell =
-  project.shellFor {
-    name = "workbench-shell";
+  { inherit runner;
 
-    ## `profiling` and `useCabalRun` are this file's own parameters now, the same
-    ## ones it handed the runner, so there is nothing to read back off it.
-    shellHook =
-      ''
-      while test $# -gt 0
-      do shift; done       ## Flush argv[]
+    shell = project.shellFor {
+      name = "workbench-shell";
 
-      . ${runner.wb}/lib.sh
+      ## `profiling` and `useCabalRun` are this file's own parameters now, the same
+      ## ones it handed the runner, so there is nothing to read back off it.
+      shellHook =
+        ''
+        while test $# -gt 0
+        do shift; done       ## Flush argv[]
 
-      ${runner.workbench-envars}
+        . ${runner.wb}/lib.sh
 
-      progress "profile name"            $WB_SHELL_PROFILE_NAME
-      progress "era name"                $WB_SHELL_ERA_NAME
-      progress "backend name"            $WB_BACKEND_NAME
-      progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
-      progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
-      progress "deployment name"         $WB_DEPLOYMENT_NAME
-      progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
-      progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
-      progress "WB_LOCLI_DB="            $WB_LOCLI_DB
+        ${runner.workbench-envars}
+        ${clusterCommands}
 
-      function parse_git_branch() {
-          git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
-      }
-      export PS1="\n\[\033[1;32m\][nix-shell:\w]\[\033[01;36m\]\$(parse_git_branch)\[\033[0m\]\$ "
-      ''
-      + optionalString workbenchDevMode
-      ''
-      export WB_EXTRA_FLAGS=
+        progress "profile name"            $WB_SHELL_PROFILE_NAME
+        progress "era name"                $WB_SHELL_ERA_NAME
+        progress "backend name"            $WB_BACKEND_NAME
+        progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
+        progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
+        progress "deployment name"         $WB_DEPLOYMENT_NAME
+        progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
+        progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
+        progress "WB_LOCLI_DB="            $WB_LOCLI_DB
 
-      ## Point wb at a workbench checkout to hack the harness live; defaults to
-      ## the runtime deployed out of the vendored bundle.
-      function wb() {
-        "''${WB_DEV_ROOT:-${runner.wb}}"/wb $WB_EXTRA_FLAGS "$@"
-      }
-      export -f wb
-      ''
-      + optionalString useCabalRun
-      ''
-      . ${runner.wb}/lib-cabal.sh
-      cabal update
-      ''
-      +
-      ''
-      function workbench_atexit() {
+        function parse_git_branch() {
+            git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
+        }
+        export PS1="\n\[\033[1;32m\][nix-shell:\w]\[\033[01;36m\]\$(parse_git_branch)\[\033[0m\]\$ "
+        ''
+        + optionalString workbenchDevMode
+        ''
+        export WB_EXTRA_FLAGS=
+
+        ## Point wb at a workbench checkout to hack the harness live; defaults to
+        ## the runtime deployed out of the vendored bundle.
+        function wb() {
+          "''${WB_DEV_ROOT:-${runner.wb}}"/wb $WB_EXTRA_FLAGS "$@"
+        }
+        export -f wb
+        ''
+        + optionalString useCabalRun
+        ''
+        . ${runner.wb}/lib-cabal.sh
+        cabal update
+        ''
+        +
+        ''
+        function workbench_atexit() {
           if test -n "$(wb backend is-running run/current)"
           then stop-cluster
           fi
-      }
-      trap workbench_atexit EXIT
-      ${setLocale}
-      echo "
-        Commands:
-          * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
-          * cardano-cli - used for key generation and other operations tasks
-          * wb - cluster workbench
-          * start-cluster - start a local development cluster
-          * stop-cluster - stop a local development cluster
-          * restart-cluster - restart the last cluster run (in 'run/current')
-                              (WARNING: logs & node DB will be wiped clean)
-      "
-      ''
-    ;
+        }
+        trap workbench_atexit EXIT
+        ${setLocale}
+        echo "
+          Commands:
+            * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
+            * cardano-cli - used for key generation and other operations tasks
+            * wb - cluster workbench
+            * start-cluster - start a local development cluster
+            * stop-cluster - stop a local development cluster
+            * restart-cluster - restart the last cluster run (in 'run/current')
+                                  (WARNING: logs & node DB will be wiped clean)
+        "
+        ''
+      ;
 
-    inherit withHoogle;
+      inherit withHoogle;
 
-    # The workbench shell uses cabalWrapped, which removes the
-    # `source-repository-package` stanzas from `cabal.project`. haskell.nix is
-    # clever enough to not include `source-repository-package`s in the shell
-    # package db (cabal will rebuild them), so select *project* packages instead
-    # of the default *local* ones to keep them out entirely.
-    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
+      # The workbench shell uses cabalWrapped, which removes the
+      # `source-repository-package` stanzas from `cabal.project`. haskell.nix is
+      # clever enough to not include `source-repository-package`s in the shell
+      # package db (cabal will rebuild them), so select *project* packages instead
+      # of the default *local* ones to keep them out entirely.
+      packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
 
-    tools = {
-    };
+      tools = {};
 
-    # These programs will be available inside the nix-shell.
-    nativeBuildInputs =
-       (with pkgs; [
-         cairo
-         dyff
-         git
-         graphviz
-         hlint
-         jq
-         moreutils
-         nix
-         (pkgs.pkg-config or pkgconfig)
-         profiteur
-         sqlite-interactive
-         time
-         tmux
-         util-linux
-       ])
-    ++ (with pkgs.haskellPackages; [
-         ghc-prof-flamegraph
-         graphmod
-         profiterole
-         weeder
-       ])
-    # Packages in need of a newer versions compared to flake's nixpkgs.
-    # Pinning "nixos-25.11" to avoid cache misses when entering the shell.
-    # To update use `curl -L https://channels.nixos.org/nixos-25.11/git-revision`
-    ++ (with (builtins.getFlake "github:NixOS/nixpkgs/999ca0e5484922624254294ea1adc2b90081579e").legacyPackages.${pkgs.stdenv.hostPlatform.system}; [
-         # Will be removed once nixpkgs is bumped to a suitable version.
-         typst
-       ])
-    ++
-    ## Cabal run flag:
-    # Include the packages or the tools to build them (see `lib-cabal.sh`).
-    (if !useCabalRun
-     then
-       (with project.exes; [
-         # A `notGitRev` version, faster to enter a workbench after a new commit.
-         cardano-node
-         cardano-tracer
-         locli
-         # A `notGitRev` version, faster to enter a workbench after a new commit.
-         tx-generator
-       ])
-     else
-       (with pkgs; [
-         pkgs.cabal-install
-         pkgs.ghcid
-         pkgs.haskellBuildUtils
-         pkgs.cabal-plan
-       ])
-    )
-    ++ (with project.hsPkgs; [
-        # A `notGitRev` version, faster to enter a workbench after a new commit.
-        cardano-cli.components.exes.cardano-cli
-        ouroboros-consensus.components.exes.db-analyser
-       ])
-    ++ [
-        # Publish
-        pkgs.bench-data-publish
-        # Debugging
-        pkgs.postgresql
-    ]
-    ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-    ## Include useful profiling helper programs.
-    ++ [
-         # For the legacy prog.hp format.
-         # Which has been deprecated in favour of eventlog based profiling.
-         pkgs.haskellPackages.hp2pretty
-         pkgs.haskellPackages.hp2html
-         pkgs.haskellPackages.eventlog2html
-       ]
-    ;
-  }
-;
+      # These programs will be available inside the nix-shell.
+      nativeBuildInputs =
+         (with pkgs; [
+           cairo
+           dyff
+           git
+           graphviz
+           hlint
+           jq
+           moreutils
+           nix
+           (pkgs.pkg-config or pkgconfig)
+           profiteur
+           sqlite-interactive
+           time
+           tmux
+           util-linux
+         ])
+      ++ (with pkgs.haskellPackages; [
+           ghc-prof-flamegraph
+           graphmod
+           profiterole
+           weeder
+         ])
+      # Packages in need of a newer versions compared to flake's nixpkgs.
+      # Pinning "nixos-25.11" to avoid cache misses when entering the shell.
+      # To update use `curl -L https://channels.nixos.org/nixos-25.11/git-revision`
+      ++ (with (builtins.getFlake "github:NixOS/nixpkgs/999ca0e5484922624254294ea1adc2b90081579e").legacyPackages.${pkgs.stdenv.hostPlatform.system}; [
+           # Will be removed once nixpkgs is bumped to a suitable version.
+           typst
+         ])
+      ++
+      ## Cabal run flag:
+      # Include the packages or the tools to build them (see `lib-cabal.sh`).
+      (if !useCabalRun
+       then
+         (with project.exes; [
+           # A `notGitRev` version, faster to enter a workbench after a new commit.
+           cardano-node
+           cardano-tracer
+           locli
+           # A `notGitRev` version, faster to enter a workbench after a new commit.
+           tx-generator
+         ])
+       else
+         (with pkgs; [
+           pkgs.cabal-install
+           pkgs.ghcid
+           pkgs.haskellBuildUtils
+           pkgs.cabal-plan
+         ])
+      )
+      ++ (with project.hsPkgs; [
+          # A `notGitRev` version, faster to enter a workbench after a new commit.
+          cardano-cli.components.exes.cardano-cli
+          ouroboros-consensus.components.exes.db-analyser
+         ])
+      ++ [
+          # Publish
+          pkgs.bench-data-publish
+          # Debugging
+          pkgs.postgresql
+      ]
+      ++ lib.optional haveGlibcLocales pkgs.glibcLocales
+      ## Include useful profiling helper programs.
+      ++ [
+           # For the legacy prog.hp format.
+           # Which has been deprecated in favour of eventlog based profiling.
+           pkgs.haskellPackages.hp2pretty
+           pkgs.haskellPackages.hp2html
+           pkgs.haskellPackages.eventlog2html
+         ]
+      ;
+
+    }
+  ;
+
 }
+
