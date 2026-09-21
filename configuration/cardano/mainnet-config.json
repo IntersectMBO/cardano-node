@@ -1,8 +1,8 @@
 {
-  "$schema": "https://raw.githubusercontent.com/IntersectMBO/cardano-config/v1/schemas/config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/IntersectMBO/cardano-config/v2/schemas/config.schema.json",
   "Configuration": {
     "ConsensusConfig": {
-      "ConsensusMode": "PraosMode"
+      "ConsensusMode": "GenesisMode"
     },
     "HermodTracing": {
       "TraceOptionForwarder": {
@@ -117,5 +117,5 @@
     }
   },
   "MinNodeVersion": "11.2.0",
-  "Version": 1
+  "Version": 2
 }

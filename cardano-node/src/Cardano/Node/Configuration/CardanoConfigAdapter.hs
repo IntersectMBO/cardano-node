@@ -58,7 +58,7 @@ import           Cardano.Node.Types (CheckpointsFile (..), CheckpointsHash (..),
                    TopologyFile (..))
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..), RpcTlsFiles (..))
 import           Data.Functor.Identity (runIdentity)
 import           Data.Monoid (Last (..))
 import           Data.Time.Clock (secondsToDiffTime)
@@ -157,10 +157,8 @@ cardanoConfigToPartialNodeConfiguration cfg =
         pncRpcConfig =
           RpcConfig
             (Last (Just (runIdentity (Cfg.enableGrpc lcc))))
-            -- cardano-config only models the unix socket endpoint; the HTTP and
-            -- HTTPS listeners added in 11.2 have no counterpart there yet.
-            (Last (fmap (RpcEndpointUnixSocket . File)
-                        (strictMaybeToMaybe (Cfg.grpcSocketPath lcc))))
+            (Last (fmap fromCfgGrpcEndpoint
+                        (strictMaybeToMaybe (Cfg.grpcEndpoint lcc))))
             mempty
       , -- Backend selector, query batch size and snapshot policy are all mapped
         -- from cardano-config. 'DeprecatedOptions' has no cardano-config
@@ -191,6 +189,23 @@ cardanoConfigToPartialNodeConfiguration cfg =
     fromCfgDiffusionMode :: Cfg.DiffusionMode -> DiffusionMode
     fromCfgDiffusionMode Cfg.InitiatorOnly = InitiatorOnlyDiffusionMode
     fromCfgDiffusionMode Cfg.InitiatorAndResponder = InitiatorAndResponderDiffusionMode
+
+    -- cardano-config's 'GrpcEndpoint' mirrors 'RpcEndpoint' constructor for
+    -- constructor, so this is a straight relabel; only the file paths gain
+    -- their 'File' tags.
+    fromCfgGrpcEndpoint :: Cfg.GrpcEndpoint -> RpcEndpoint
+    fromCfgGrpcEndpoint (Cfg.GrpcEndpointUnixSocket p) = RpcEndpointUnixSocket (File p)
+    fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttp addr port) = RpcEndpointHttp addr port
+    fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttps addr port tls) =
+      RpcEndpointHttps addr port (fromCfgGrpcTlsFiles tls)
+
+    fromCfgGrpcTlsFiles :: Cfg.GrpcTlsFiles -> RpcTlsFiles
+    fromCfgGrpcTlsFiles t =
+      RpcTlsFiles
+        { certificateFile = File (Cfg.certificateFile t)
+        , privateKeyFile = File (Cfg.privateKeyFile t)
+        , chainCertificateFiles = map File (Cfg.chainCertificateFiles t)
+        }
 
     fromCfgAcceptedConnLimit :: Cfg.AcceptedConnectionsLimit -> AcceptedConnectionsLimit
     fromCfgAcceptedConnLimit c =

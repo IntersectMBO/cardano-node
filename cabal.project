@@ -93,15 +93,6 @@ allow-newer:
   -- kes-agent bounds cardano-crypto-class ^>=2.5 but we have a newer version
   , kes-agent:cardano-crypto-class
   , kes-agent-crypto:cardano-crypto-class
-  -- cardano-config 1.1.0.0 bounds each of these one minor below what the 11.2
-  -- ledger and crypto pins resolve to
-  , cardano-config:cardano-crypto-class
-  , cardano-config:cardano-crypto-wrapper
-  , cardano-config:cardano-ledger-alonzo
-  , cardano-config:cardano-ledger-conway
-  , cardano-config:cardano-ledger-core
-  , cardano-config:cardano-ledger-dijkstra
-  , cardano-config:cardano-ledger-shelley
   -- plutus-scripts-bench bounds cardano-api ^>=11.5 but we have 11.6
   , plutus-scripts-bench:cardano-api
   -- plutus-scripts-bench bounds plutus-* ^>=1.65 but we have 1.68
@@ -113,15 +104,6 @@ allow-newer:
 allow-older:
   -- dmq-node-0.7.1.0 lower-bounds ouroboros-consensus >=4.1 but we have 4.0
   , dmq-node:ouroboros-consensus
-  -- cardano-config lower-bounds these above what ghc 9.6.7 ships, though its
-  -- own ci covers 9.6.7 by installing newer ones from hackage. It imports only
-  -- long stable modules from them and no OsPath, so the older boot libs should
-  -- do.
-  , cardano-config:bytestring
-  , cardano-config:directory
-  , cardano-config:filepath
-  , cardano-config:text
-  , cardano-config:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -214,10 +196,11 @@ source-repository-package
 -- TEMPORARY: cardano-config is not published to CHaP yet. Remove this stanza
 -- (and depend on the CHaP release) as soon as it is.
 --
--- Tag cardano-config-1.1.0.0. Was pull/9/head, which never merged and forked
--- before 1.0.0.0; its exports all landed on main by 1.1.0.0.
+-- pull/22/head, cardano-config 2.0.0.0. Not a tag: the PR is the branch the
+-- 11.2 integration fed back into, and it carries the schema format version 2
+-- this series writes. Move to the 2.0.0.0 tag once it merges.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-config
-  tag: 6d4f91680bbfb526f4bbac0c8365b0d0cce318aa
-  --sha256: sha256-y/L7xZ7314UuAEJPwANBkuN+Jib0W86eiBAGX20zT7Y=
+  tag: 29d5cf3f600a5a7fb2fd4b6fe06df21c06d30d8d
+  --sha256: sha256-WiWfrOCo8BRpPaPAqgqof9xlR3VxjBcbhjD+wOWZ2h4=
