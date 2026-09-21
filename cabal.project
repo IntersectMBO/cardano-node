@@ -98,21 +98,15 @@ allow-newer:
   , io-classes:time
 
   -- EXPERIMENT: these packages pin cardano-crypto-class to <2.6 (either
-  -- ^>=2.5 or an explicit >=x.y && <2.6); let them accept the 2.6.x line
-  -- so crypton can move to >= 1.1. (cardano-api's own bound is already
-  -- ^>=2.6 on the erikd/crypton+ram SRP, cardano-node/-chairman/
+  -- ^>=2.5 or an explicit >=x.y && <2.6); let them accept the 2.6.x line so
+  -- crypton can move to >= 1.1. (cardano-api's own bound is already ^>=2.6
+  -- on the erikd/crypton+ram SRP, cardano-node/-chairman/
   -- cardano-submit-api/cardano-testnet's own bounds were widened to
-  -- ^>=2.5||^>=2.6 directly, and ouroboros-consensus's own bound is already
-  -- ^>=2.5||^>=2.6 on the erikd/ram SRP, so none of those need an entry
-  -- here.)
+  -- ^>=2.5||^>=2.6 directly, and ouroboros-consensus main and the whole
+  -- cardano-ledger monorepo SRP below already accept up to <2.7 natively,
+  -- so none of those need an entry here.)
   , cardano-cli:cardano-crypto-class
   , cardano-keys:cardano-crypto-class
-  , cardano-ledger-binary:cardano-crypto-class
-  , cardano-ledger-core:cardano-crypto-class
-  , cardano-ledger-mary:cardano-crypto-class
-  , cardano-ledger-shelley:cardano-crypto-class
-  , cardano-protocol:cardano-crypto-class
-  , cardano-protocol-tpraos:cardano-crypto-class
   , kes-agent:cardano-crypto-class
   , kes-agent-crypto:cardano-crypto-class
 
@@ -130,6 +124,27 @@ allow-newer:
   -- (no memory dependency though, so not a blocker otherwise); let it accept
   -- the widened versions.
   , cardano-keys:cardano-crypto-wrapper
+
+  -- TEMPORARY: cardano-keys (CHaP 11.0.0.0, unmodified) pins
+  -- cardano-ledger-core ^>=1.21 and cardano-ledger-shelley ^>=1.19, both
+  -- excluding the versions the cardano-ledger monorepo SRP below now
+  -- provides (1.22.0.0 / 1.20.0.0); let it accept them.
+  , cardano-keys:cardano-ledger-core
+  , cardano-keys:cardano-ledger-shelley
+
+-- TEMPORARY: ouroboros-consensus's main branch (below) doesn't keep its own
+-- version field in sync with real numbered releases -- those are cut from
+-- separate release branches -- so main's version field is a permanently
+-- stale placeholder (confirmed: still 4.0.0.0 even though main's actual
+-- code is well past the real 4.2.1.0 release). Since main is the shared
+-- upstream integration branch, not something we can push a version-bump
+-- commit to, bridge with allow-older instead of chasing a bump-and-push
+-- fix each time.
+allow-older:
+  , cardano-node:ouroboros-consensus
+  , tx-generator:ouroboros-consensus
+  , cardano-api:ouroboros-consensus
+  , dmq-node:ouroboros-consensus
 
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
@@ -218,34 +233,99 @@ if impl(ghc >= 9.14)
 -- cardano-crypto-wrapper bumped to 1.8.0.0, crypton >=1.1 (no upper bound),
 -- and build-depends swapped from memory to ram (module names are identical
 -- between the two packages, so no source-import changes were needed).
--- TEMPORARY: still tracking master via SRP until this is in a CHaP release;
--- drop this stanza once cardano-crypto-wrapper-1.8.0.0+ is released.
+--
+-- TEMPORARY: pulling in the whole monorepo here, not just
+-- eras/byron/crypto, because ouroboros-consensus main (below) transitively
+-- needs cardano-ledger-binary ^>=1.10, small-steps ^>=1.2 and
+-- cardano-ledger-core ^>=1.22 -- none released to CHaP yet (latest there:
+-- cardano-ledger-binary-1.9.0.0, small-steps-1.1.4.0,
+-- cardano-ledger-core-1.21.0.0) -- and every other era package in the
+-- monorepo has to move in lockstep with whichever of these it depends on,
+-- or the solver ends up trying to mix this commit's cardano-ledger-core
+-- with CHaP's older era packages that were built against it. Drop the
+-- extra subdirs (keep only eras/byron/crypto) once cardano-ledger-binary/
+-- small-steps/cardano-ledger-core catch up on CHaP.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
   tag: 116dab4b22e3ee21b31f6d5e7814306d660c76ac
-  subdir: eras/byron/crypto
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
 
--- ouroboros-consensus PR #2213 (erikd/ram):
--- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213
--- built from the original PR #2213 tip (based on the released 4.2.0.0 tag,
--- widens its own cardano-crypto-class bound to ^>=2.5||^>=2.6 natively --
--- no more allow-newer needed for it) merged with the small
--- ouroboros-consensus-4.x-backports branch (an ioctxIOWaitMetrics flag
--- flip, and a GetGenesisConfig decoding fix for cardano-ledger-shelley's
--- new sgExtraConfig field), landing at version 4.2.1.0 -- satisfies both
--- cardano-node's ouroboros-consensus ^>=4.2.0.1 bound and cardano-api PR
--- #1292's ^>=4.2 bound. (An earlier attempt rebased this PR onto current
--- ouroboros-consensus main instead -- 163+ commits past the 4.2.0.0 tag --
--- which pulled in unreleased Leios-prep work transitively requiring
--- cardano-ledger-binary ^>=1.10 and cardano-crypto-leios ^>=0.3, neither of
--- which exist in CHaP; reverted in favour of this smaller, clean merge.)
--- The .cabal lives at the repo root (its own cabal.project says
--- `packages: .`), so no subdir is needed.
+-- cardano-base (pre-DST-internalisation cardano-crypto-leios): ouroboros-
+-- consensus main (above) needs cardano-crypto-leios ^>=0.3, which doesn't
+-- exist in CHaP at all (it's not part of the cardano-ledger monorepo
+-- either).
+--
+-- Tried sourcing cardano-crypto-class from cardano-base's tip too (not just
+-- cardano-crypto-leios), reasoning that cardano-crypto-leios's
+-- verifyPossessionProofDSIGN/verifyDSIGN calls only typecheck against
+-- cardano-base's OWN (newer) cardano-crypto-class: CHaP's published
+-- cardano-crypto-class-2.6.0.0 tarball predates the "drop leiosSignContext,
+-- DST is internal to the scheme" refactor (58f5a53a / 3d5e2ba1) and still
+-- has `type ContextDSIGN (BLS12381DSIGN curve) = BLS12381SignContext` plus
+-- a 3-argument verifyPossessionProofDSIGN, whereas cardano-base's real tip
+-- has moved to `= ()` and a 2-argument verifyPossessionProofDSIGN (same
+-- version number -- doesn't track real changes, as with several other
+-- repos in this migration). That fixed cardano-crypto-leios but broke both
+-- ouroboros-consensus main's own Committee/Crypto/BLS.hs (imports
+-- BLS12381SignContext/minSigPoPDST/blsSignContextAug, all removed by the
+-- refactor) and cardano-ledger-core's testlib (same). Those are two big,
+-- central packages that would need real upstream fixes to move to the new
+-- API, versus cardano-crypto-leios which is small and peripheral -- so
+-- instead we pin cardano-crypto-leios itself to 3d5e2ba1 (the last commit
+-- before the refactor: it only touches cardano-crypto-class, leaving
+-- Leios.hs still using the old explicit `leiosSignContext`/`minSigPoPDST`
+-- calls), and go back to resolving cardano-crypto-class from CHaP as usual.
+-- No code fix needed either way -- just picking the commit whose
+-- cardano-crypto-leios source matches CHaP's actual API.
+-- TEMPORARY -- drop this whole stanza once cardano-crypto-leios-0.3.0.0+ is
+-- released to CHaP.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-base.git
+  tag: 3d5e2ba1e76b7cd3bead8bd3f81a2e7ee743ce5c
+  subdir: cardano-crypto-leios
+
+-- ouroboros-consensus main: switched from PR #2213 (erikd/ram) now that
+-- main itself builds natively against crypton 1.1.4 / cardano-crypto-class
+-- ^>=2.6 (confirmed: no `memory` dependency, cardano-crypto-class ^>=2.6 at
+-- line ~374 of ouroboros-consensus.cabal). main's own version field is a
+-- permanently stale placeholder (still 4.0.0.0; real releases are cut from
+-- separate release branches and never merged back to bump main's version),
+-- so cardano-node's ^>=4.2.0.1 and cardano-api's ^>=4.2.1.0 bounds are
+-- bridged with allow-older above rather than a version-bump commit (main
+-- is upstream's shared integration branch, not something to push a bump to
+-- directly). main also transitively needs cardano-ledger-binary ^>=1.10
+-- and cardano-crypto-leios ^>=0.3, neither released to CHaP -- see the two
+-- extra source-repository-package stanzas above and the matching
+-- allow-newer entries for their CHaP-released dependents. The .cabal lives
+-- at the repo root (its own cabal.project says `packages: .`), so no
+-- subdir is needed.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: aed5521fb4824f33421571b0623b8f4b820747e5
+  tag: 32838381afa79a0df04f2604e36cfa7ba00d5863
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
@@ -254,13 +334,17 @@ source-repository-package
 -- ouroboros-consensus ^>=4.2.1.0 bound bump, and the
 -- caseShelleyToBabbageOrConwayEraOnwards removal (cardano-cli PR #1417
 -- still calls this in 5 places -- needs a matching update, see PR #1417's
--- SRP comment below). cardano-crypto-class ^>=2.6 and cardano-crypto-wrapper
+-- SRP comment below). Also widens its own resource-registry (^>=0.3||^>=0.4),
+-- small-steps (^>=1.1||^>=1.2), cardano-ledger-api (^>=1.14||^>=1.15) and
+-- plutus-core/plutus-ledger-api (^>=1.65||^>=1.68) bounds directly, needed
+-- now that ouroboros-consensus main (below) pulls in newer versions of
+-- those transitively. cardano-crypto-class ^>=2.6 and cardano-crypto-wrapper
 -- ^>=1.7||^>=1.8 still accepted natively, and no `memory` dependency
 -- anywhere.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 81d7655dfae5341f8d24c367b597b1a19cdaacff
+  tag: 490642565221d7d9ad8c38f0c4f7bb9a7e23017d
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
@@ -278,7 +362,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 81d7655dfae5341f8d24c367b597b1a19cdaacff
+  tag: 490642565221d7d9ad8c38f0c4f7bb9a7e23017d
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
