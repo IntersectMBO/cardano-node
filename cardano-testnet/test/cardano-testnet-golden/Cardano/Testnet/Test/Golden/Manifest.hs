@@ -124,3 +124,9 @@ golden_Manifest = propertyOnce $ do
   decodedManifest <- evalEither (eitherDecode encoded :: Either String Manifest)
   let reEncoded = encodePretty decodedManifest
   encoded === reEncoded
+
+  -- An unsupported schema version is rejected at decode time.
+  let v2 = encodePretty sampleManifest { manifestSchemaVersion = supportedSchemaVersion + 1 }
+  case eitherDecode v2 :: Either String Manifest of
+    Left _  -> pure ()
+    Right _ -> failure

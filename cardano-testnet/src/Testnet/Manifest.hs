@@ -12,6 +12,7 @@ module Testnet.Manifest
   , ManifestNodeRole(..)
   , ManifestGrpc(..)
   , ManifestWallet(..)
+  , supportedSchemaVersion
     -- * File operations
   , writeManifest
   , removeStaleManifest
@@ -63,6 +64,11 @@ import           Paths_cardano_testnet (version)
 -- ---------------------------------------------------------------------------
 -- Manifest types
 -- ---------------------------------------------------------------------------
+
+-- | The manifest schema version this code writes and reads.  Any change to
+-- the manifest shape bumps it (see the schema's policy note).
+supportedSchemaVersion :: Int
+supportedSchemaVersion = 1
 
 data Manifest = Manifest
   { manifestSchemaVersion        :: !Int
@@ -212,7 +218,7 @@ instance ToJSON ManifestWallet where
 
 instance FromJSON Manifest where
   parseJSON = withObject "Manifest" $ \o -> Manifest
-    <$> o .: "schemaVersion"
+    <$> (parseSchemaVersion =<< o .: "schemaVersion")
     <*> o .: "createdAt"
     <*> (parseVersionString =<< o .: "cardanoTestnetVersion")
     <*> o .: "network"
@@ -302,6 +308,13 @@ parseVersionString s =
     [v] -> pure v
     _   -> fail $ "Invalid version string: " <> s
 
+-- | Parse the manifest schema version, accepting only 'supportedSchemaVersion'.
+parseSchemaVersion :: Int -> Parser Int
+parseSchemaVersion v
+  | v == supportedSchemaVersion = pure v
+  | otherwise = fail $ "Unsupported manifest schema version: " <> show v
+                    <> " (supported: " <> show supportedSchemaVersion <> ")"
+
 instance FromJSON ManifestWallet where
   parseJSON = withObject "ManifestWallet" $ \o -> ManifestWallet
     <$> o .: "name"
@@ -359,7 +372,7 @@ buildManifest outputDir TestnetRuntime{testnetMagic, testnetNodes, wallets, conf
   nodes <- mapM (buildNode outputDir) testnetNodes
   ws <- buildWallets outputDir wallets
   pure Manifest
-    { manifestSchemaVersion        = 1
+    { manifestSchemaVersion        = supportedSchemaVersion
     , manifestCreatedAt            = now
     , manifestCardanoTestnetVersion = version
     , manifestNetwork              = ManifestNetwork
