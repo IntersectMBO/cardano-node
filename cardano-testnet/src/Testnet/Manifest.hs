@@ -26,7 +26,7 @@ import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultMani
 
 import           Prelude
 
-import           Control.Exception.Safe (onException, try)
+import           Control.Exception.Safe (onException, throwString, try)
 import           Control.Monad (when, zipWithM)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
 import qualified Data.Aeson.Encode.Pretty as A
@@ -420,7 +420,7 @@ buildWallets outputDir = zipWithM build [(1::Int)..]
       -- here means the manifest can only ever hold a valid address.
       addr <- case deserialiseAddress AsAddressAny paymentKeyInfoAddr of
         Just a  -> pure a
-        Nothing -> fail $ "buildManifest: invalid wallet address: " <> Text.unpack paymentKeyInfoAddr
+        Nothing -> throwString $ "buildManifest: invalid wallet address: " <> Text.unpack paymentKeyInfoAddr
       pure ManifestWallet
         { mwalletName                = "utxo" <> show i
         , mwalletAddress             = addr
