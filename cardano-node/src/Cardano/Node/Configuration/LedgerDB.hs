@@ -86,3 +86,4 @@ selectorToArgs (V2LSM fp fpExport) fastStoragePath =
     (fromMaybe "lsm" fp)
     fpExport
     fastStoragePath
+    LSM.DiskCacheAll
