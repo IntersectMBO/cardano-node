@@ -185,7 +185,8 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   LogObject{loBody=LOMempoolRejectedTx} ->
     forTAHead accum
       (\s-> s { slRejectedTx = slRejectedTx cur + 1 })
-  LogObject{loBody=LOLedgerTookSnapshot} ->
+  -- we only count snapshot completion events (those that have an enclosedTime in their trace)
+  LogObject{loBody=LOLedgerTookSnapshot{loEnclosedTime=SJust{}}} ->
     forTAHead accum
       (\s-> s { slChainDBSnap = slChainDBSnap cur + 1 })
   LogObject{loBody=LOLedgerMetrics _ utxo density} ->
