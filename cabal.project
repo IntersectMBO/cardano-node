@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-09-20T20:47:43Z
-  , cardano-haskell-packages 2026-09-16T23:53:07Z
+  , hackage.haskell.org 2026-09-22T20:09:17Z
+  , cardano-haskell-packages 2026-09-22T20:39:47Z
 
 
 constraints:
@@ -246,19 +246,35 @@ if impl(ghc >= 9.14)
 -- extra subdirs (keep only eras/byron/crypto) once cardano-ledger-binary/
 -- small-steps/cardano-ledger-core catch up on CHaP.
 --
--- Tag and subdir list both mirror ouroboros-consensus main's own
--- cardano-ledger SRP exactly (see its cabal.project) rather than an
--- independently-chosen commit: an earlier, older pin here (116dab4b) built
--- fine on its own but caused a real API mismatch against
--- ouroboros-consensus main's Shelley/Ledger/Mempool.hs (`totExUnits`
--- missing an `AlonzoEraTx era` constraint it needs), since main's Shelley
--- integration code is written against this exact ledger commit, not just
--- "some recent master". Matching main's own pin exactly avoids chasing
+-- Tag and subdir list mirror ouroboros-consensus's own cardano-ledger SRP
+-- (see its cabal.project) rather than an independently-chosen commit: an
+-- earlier, older pin here (116dab4b) built fine on its own but caused a
+-- real API mismatch against ouroboros-consensus's Shelley/Ledger/Mempool.hs
+-- (`totExUnits` missing an `AlonzoEraTx era` constraint it needs), since
+-- its Shelley integration code is written against this exact ledger
+-- commit, not just "some recent master". Matching that pin avoids chasing
 -- these one at a time.
+--
+-- Tried bumping to cardano-ledger's master tip bd3034fb (95 commits past
+-- fb723848) as a routine freshness bump: this reintroduced the exact
+-- totExUnits/AlonzoEraTx mismatch fixed above, because ouroboros-consensus's
+-- Shelley/Ledger/Mempool.hs is written against exactly fb723848 (its own
+-- SRP pin, unchanged even on the erikd/crypto+ram branch below) -- ledger's
+-- API drifted enough in those 95 commits to break it again.
+--
+-- Bumped again to master's current tip (d37df81c, 2026-09-23) per explicit
+-- request. This time paired with switching ouroboros-consensus to
+-- erikd/update-ledger-srp (below), which bumps ITS OWN cardano-ledger SRP
+-- to this exact same commit and fixes the two real API-shape breaks that
+-- caused (totExUnits/AlonzoEraTx again, plus a new
+-- MarkSnapShot/SetSnapShot/GoSnapShot break in Cardano/Node.hs) -- see that
+-- branch's commit "Fix build against the bumped cardano-ledger SRP" for
+-- details. Keep this tag in sync with whatever ouroboros-consensus's SRP
+-- below actually pins; don't bump it independently again.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: fb723848a28256fe372ea9ba692eccded6a12a53
+  tag: d37df81c04fee76b5206d426edc990ebd641b2a4
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -317,16 +333,32 @@ source-repository-package
   tag: 3d5e2ba1e76b7cd3bead8bd3f81a2e7ee743ce5c
   subdir: cardano-crypto-leios
 
--- ouroboros-consensus main: switched from PR #2213 (erikd/ram) now that
--- main itself builds natively against crypton 1.1.4 / cardano-crypto-class
--- ^>=2.6 (confirmed: no `memory` dependency, cardano-crypto-class ^>=2.6 at
--- line ~374 of ouroboros-consensus.cabal). main's own version field is a
+-- ouroboros-consensus (erikd/update-ledger-srp): branched from
+-- erikd/crypto+ram (itself main + a Byron DSIGN fix that turned out to be
+-- unnecessary -- an explicit associated-type instance just overrides the
+-- class default with no conflict, confirmed by testing the reverted code
+-- directly) to bump its OWN cardano-ledger SRP to d37df81c (matching the
+-- ledger bump above) and fix what that broke:
+--   - Shelley/Ledger/Mempool.hs: totExUnits (now deprecated in favour of
+--     getTotalExUnits) genuinely needs an AlonzoEraTx era constraint
+--     txMeasureAlonzo didn't have.
+--   - Cardano/Node.hs: MarkSnapShot/SetSnapShot/GoSnapShot used to be
+--     interchangeable (one generic lens setter); cardano-ledger-core now
+--     makes them distinct records (Leios-committee prep), so
+--     seedInitialStakeSnapshots needs the real mkSetSnapShot/mkGoSnapShot
+--     conversions instead.
+-- See that branch's "Fix build against the bumped cardano-ledger SRP"
+-- commit for the full diff.
+--
+-- builds natively against crypton 1.1.4 / cardano-crypto-class ^>=2.6
+-- (confirmed: no `memory` dependency, cardano-crypto-class ^>=2.6 at
+-- line ~374 of ouroboros-consensus.cabal). Its version field is a
 -- permanently stale placeholder (still 4.0.0.0; real releases are cut from
 -- separate release branches and never merged back to bump main's version),
 -- so cardano-node's ^>=4.2.0.1 and cardano-api's ^>=4.2.1.0 bounds are
 -- bridged with allow-older above rather than a version-bump commit (main
 -- is upstream's shared integration branch, not something to push a bump to
--- directly). main also transitively needs cardano-ledger-binary ^>=1.10
+-- directly). Also transitively needs cardano-ledger-binary ^>=1.10
 -- and cardano-crypto-leios ^>=0.3, neither released to CHaP -- see the two
 -- extra source-repository-package stanzas above and the matching
 -- allow-newer entries for their CHaP-released dependents. The .cabal lives
@@ -335,7 +367,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 32838381afa79a0df04f2604e36cfa7ba00d5863
+  tag: 1fe3caa7cdc0db8449adc358eea6be84710a5eb6
 
 -- ouroboros-network main: ouroboros-consensus main's own cabal.project (see
 -- above) itself pins ouroboros-network to this exact commit via its own
@@ -373,7 +405,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 24fedf2b2aedfe51598afd8df2aa6023c3e7ff86
+  tag: 0cc537ee37d1e35f974d6cd469d332295dd16eb1
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
@@ -391,7 +423,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 24fedf2b2aedfe51598afd8df2aa6023c3e7ff86
+  tag: 0cc537ee37d1e35f974d6cd469d332295dd16eb1
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
@@ -408,8 +440,23 @@ source-repository-package
 -- to derive no Integral instance; EraBased.Query.Run's
 -- opCertStartingKesPeriod called fromIntegral directly on it -- fixed by
 -- unwrapping via unKESPeriod first.
+-- Three more commits since: mkStakePoolState (cardano-ledger, above) gained a
+-- leading EpochNo parameter, threaded through Type/Common.hs's mkPoolStates
+-- and EraBased/Query/Run.hs's writePoolState/runQueryPoolStateCmd via the
+-- same queryEpoch pattern already used elsewhere in that file. cardano-cli's
+-- own cabal.project (previously CHaP-only, no SRPs) now carries the same
+-- crypton>=1.1 migration SRP set as this file and cardano-api's, which also
+-- required dropping its now-unsatisfiable `time-hourglass < 0` constraint
+-- (every modern crypton-x509-validation needs it unconditionally) and adding
+-- the `|| >= 1.7` branch to its crypton-x509-system bound (matching this
+-- file's own entry above). And cardano-api's HasTextEnvelope class now only
+-- has one method (textEnvelopeTypes, plural); the singular textEnvelopeType
+-- convenience function is no longer a class member, so cardano-cli's golden
+-- tests (9 files) needed to import it explicitly instead of getting it for
+-- free via HasTextEnvelope (..).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 39d02bb14b6768aed7fd5173aeaab90ac8ebe2f9
+  tag: 64317a0190d7b969e4c605bcb7f0d526d6cb6bd3
+  --sha256: sha256-hcTpuBcMx1ncO/WC+Dcp1JJdHB9vpGkrVLrCou4OW28=
   subdir: cardano-cli
