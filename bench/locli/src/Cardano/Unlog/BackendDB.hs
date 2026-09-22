@@ -9,6 +9,7 @@ module Cardano.Unlog.BackendDB
        -- specific SQLite queries or statements
        , getSummary
        , getTraceFreqs
+       , selectAll
        , sqlGetEvent
        , sqlGetTxns
        , sqlGetResource

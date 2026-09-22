@@ -217,7 +217,9 @@ test-suite test-locli
                       , hedgehog
                       , hedgehog-extras ^>= 0.10
                       , locli
+                      , sqlite-easy
                       , text
+                      , time
 
   other-modules:        Test.Analysis.CDF
                         Test.Unlog.LogObjectDB
