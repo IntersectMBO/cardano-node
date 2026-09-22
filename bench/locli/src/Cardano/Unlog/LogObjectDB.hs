@@ -52,7 +52,10 @@ import           Data.Maybe
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as TS (empty, intercalate, pack, splitOn, unpack)
-import qualified Data.Text.Lazy as TL (Text, fromStrict, pack)
+import qualified Data.Text.Read as TS (rational)
+import qualified Data.Text.Lazy as TL (Text, fromStrict, pack, toStrict)
+import qualified Data.Text.Lazy.Builder as TL (toLazyText)
+import qualified Data.Text.Lazy.Builder.RealFloat as TL (realFloat)
 import qualified Data.Text.Short as ShortText (ShortText, empty, fromText, pack, toText)
 
 import           Database.Sqlite.Easy hiding (Text)
@@ -237,7 +240,7 @@ logObjectToSql lo@LogObject{loAt, loBody, loTid} =
     LOBlockAddedToCurrentChain h mSz len
                                   -> newLOEvent $ Triple    ("slot", mSz) ("block", len) ("hash", h)
 
-    LOLedgerTookSnapshot          -> newLOEvent Empty
+    LOLedgerTookSnapshot dt       -> newLOEvent $ Singleton ("hash", dt)
     LOLedgerMetrics slot utxoSize chainDensity
                                   -> Just (insertLMetrics, lMetricsArgs loAt (Triple ("", slot) ("", utxoSize) ("", chainDensity)))
 
@@ -355,7 +358,7 @@ toLOBodyConverters args = ML.fromList
     , LOBlockAddedToCurrentChain (fromSqlData hash) (fromSqlData slot) (fromSqlData block)
     )
 
-  , ( "LOLedgerTookSnapshot", LOLedgerTookSnapshot)
+  , ( "LOLedgerTookSnapshot", LOLedgerTookSnapshot (fromSqlData hash))
   , ( "LOLedgerMetrics"
     , LOLedgerMetrics (fromSqlData slot) (fromSqlData utxoSize) (fromSqlData chainDens)
     )  
@@ -436,6 +439,16 @@ instance AsSQLData String where
 instance AsSQLData UTCTime where
   toSqlData   = SQLFloat . realToFrac . utcTimeToPOSIXSeconds
   fromSqlData = withSqlFloat (posixSecondsToUTCTime . realToFrac)
+
+-- Note: Currently, only the LOLedgerTookSnapshot constructor relies on that instance and needs to store its field in a TEXT column.
+-- If ever any other constructors add a field of this type which ends up in a REAL column, change this to SQLFloat and provide a newtype wrapper for above case.
+instance AsSQLData NominalDiffTime where
+  toSqlData dt = 
+    let dt' :: Double = realToFrac dt
+    in SQLText $ TL.toStrict $ TL.toLazyText $ TL.realFloat dt'
+  fromSqlData  = withSqlText $ \t -> case TS.rational t of
+    Right (v, _)  -> v
+    Left err      -> error $ "fromSqlData(NominalDiffTime): " ++ err
 
 instance AsSQLData LOBody where
   toSqlData           = SQLText . TS.pack . showConstr . toConstr
