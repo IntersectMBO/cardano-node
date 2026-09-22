@@ -230,6 +230,16 @@ prop_CDF_CDF_I_3x3x3_collapsed_shifted = property $ cdf2_3x3x3sh ===
         ,(Centile 0.5,                 I 2.0)
         ,(Centile 0.8333333333333333,  I 3.0)]})]}
 
+-- | Combining CDFs of one sample each (e.g. a per-node count): the spread is that of
+--   the samples themselves, as the CDFs' own stddevs are undefined.
+prop_CDF_CDF_I_singletons_stddev = property $
+  cdfStddev cdf2_singletons === 1.0
+ where
+   cdf2_singletons :: CDF (CDF I) Double
+   cdf2_singletons =
+     cdf2OfCDFs (stdCombine1 centi3x3) (cdf centi3x3 . pure <$> [1, 2, 3])
+     & handle
+
 tests :: IO Bool
 tests =
   checkSequential $$discover

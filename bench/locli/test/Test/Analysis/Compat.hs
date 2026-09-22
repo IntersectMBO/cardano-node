@@ -1,0 +1,69 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+
+-- | Analysis results of older runs must stay readable, so they can be compared
+--   with new ones.
+module Test.Analysis.Compat where
+
+import           Cardano.Prelude
+
+import           Data.Aeson (Value (..), eitherDecodeFileStrict, eitherDecode, encode, toJSON)
+import           Data.Aeson.Key (Key)
+import qualified Data.Aeson.KeyMap as KeyMap
+
+import           Cardano.Analysis.API
+
+import           Hedgehog
+
+
+-- | Real cluster performance results of a locli 3.0 analysis.
+clusterPerfFixture :: FilePath
+clusterPerfFixture = "test/data/analysis/clusterperf.json"
+
+-- | The keys 'MachPerf' gained in locli 3.0. Fixed history, not to be derived: dropping
+--   them from a 3.0 result yields a result as written by locli 2.x. When adding a CDF
+--   in a later version, add a list like this one for that version.
+addedIn3_0 :: [Key]
+addedIn3_0 =
+  [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside"
+  , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio"
+  , "cdfCpuPerTx", "cdfMutPerTx", "cdfGcPerTx"
+  ]
+
+decodeClusterPerf :: KeyMap.KeyMap Value -> Either [Char] ClusterPerf
+decodeClusterPerf = eitherDecode . encode . Object
+
+withoutKeys :: [Key] -> KeyMap.KeyMap Value -> KeyMap.KeyMap Value
+withoutKeys ks o = foldr KeyMap.delete o ks
+
+prop_clusterPerf_2x_readable = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict clusterPerfFixture)
+  filter (not . (`KeyMap.member` o)) addedIn3_0 === []
+
+  full <- evalEither $ decodeClusterPerf o
+  old  <- evalEither $ decodeClusterPerf (withoutKeys addedIn3_0 o)
+
+  -- The new CDFs are empty, ...
+  let sizes = [ KeyMap.lookup k (asObject old) >>= cdfSizeOf | k <- addedIn3_0 ]
+  sizes === (Just (Number 0) <$ addedIn3_0)
+  -- ... everything else is read as before.
+  withoutKeys addedIn3_0 (asObject old) === withoutKeys addedIn3_0 (asObject full)
+ where
+   asObject :: ClusterPerf -> KeyMap.KeyMap Value
+   asObject x = case toJSON x of
+     Object o -> o
+     _        -> KeyMap.empty
+
+   cdfSizeOf :: Value -> Maybe Value
+   cdfSizeOf = \case
+     Object c -> KeyMap.lookup "cdfSize" c
+     _        -> Nothing
+
+-- | Leniency is limited to the CDFs: other missing keys still fail.
+prop_clusterPerf_requires_version = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict clusterPerfFixture)
+  assert . isLeft $ decodeClusterPerf (KeyMap.delete "mpVersion" o)
+
+tests :: IO Bool
+tests =
+  checkSequential $$discover
