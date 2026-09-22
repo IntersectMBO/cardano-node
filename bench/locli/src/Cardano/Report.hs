@@ -13,6 +13,10 @@ module Cardano.Report
   , generateTypstSummary
   , generateTypstReport
   , generateTypstProfiling
+  , fieldsWarnIfZero
+  , Section (sTypstFile, sTitle)
+  , summaryReportSection
+  , analysesReportSections
   )
 where
 

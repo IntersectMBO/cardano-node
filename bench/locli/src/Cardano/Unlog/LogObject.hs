@@ -21,7 +21,6 @@ module Cardano.Unlog.LogObject
   , rlLogs
   , LogObject (..)
   , loPretty
-  --
   , logObjectStreamInterpreterKeys
   , LOBody (..)
   , LOAnyType (..)
