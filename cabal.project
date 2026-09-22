@@ -105,15 +105,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 02fa24879b9dfc6218c56d056300d224299fd84b
-  --sha256: sha256-LztCKV3a57uN8BF5RcBicEO3O//UxDlzRgxvrWyRcho=
+  tag: 6c04e80db9b553d85b43a2b2a4cbf22f51761559
+  --sha256: sha256-/nPo07c6AZSGEq3i5Bwpx35Z4so4b3xraFHFcpxLgkA=
 
 -- Points to cardano-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: daa38fec95ddba68ad4e780b933e7e094d68241d
-  --sha256: sha256-UtLWITAOilFFXXRwCyAoG+6NHd/34wIYG296z3+L7FA=
+  tag: d93c654699c8f10c883a625168f65dd387abc695
+  --sha256: sha256-iRshuIFnyh6a+NfxXmkfbOzbbMm5YUcezwHyRQwp7dg=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
