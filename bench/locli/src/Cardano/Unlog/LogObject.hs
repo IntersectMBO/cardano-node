@@ -194,10 +194,20 @@ interpreters = Map.fromList
             <$> v .: "slot"
             <*> pure False
 
+  , (,) "Forge.Loop.ForgeTickedLedgerState" $
+    \v -> LOTickedLedgerState
+            <$> v .: "slot"
+  -- Compat: pre-rename namespace, kept in case older node versions are still
+  -- in the fleet during a rollout.
   , (,) "Forge.Loop.TickedLedgerState" $
     \v -> LOTickedLedgerState
             <$> v .: "slot"
 
+  , (,) "Forge.Loop.ForgingMempoolSnapshot" $
+    \v -> LOMempoolSnapshot
+            <$> v .: "slot"
+  -- Compat: pre-rename namespace, kept in case older node versions are still
+  -- in the fleet during a rollout.
   , (,) "Forge.Loop.MempoolSnapshot" $
     \v -> LOMempoolSnapshot
             <$> v .: "slot"
@@ -269,8 +279,21 @@ interpreters = Map.fromList
 
   -- Ledger related:
   , (,) "ChainDB.LedgerEvent.Snapshot.TookSnapshot" $
-    \_ -> pure LOLedgerTookSnapshot
-  -- If needed, this could track slot and duration (SMaybe):
+    \v -> do
+      enclosedTime :: Object <- v .: "enclosedTime"
+      -- Current tracing uses {"edge": <seconds>} on completion and
+      -- {"edge": "Starting"} on the rising edge. Try that shape first; if
+      -- "edge" isn't a NominalDiffTime (missing, or the "Starting" string),
+      -- fall back to the older {"tag":...,"contents": <seconds>?} shape --
+      -- whose own rising edge (no "contents") also yields Nothing, so either
+      -- format's start event ends up SNothing without a separate case.
+      mDuration <- (Just <$> enclosedTime .: "edge")
+                   <|> enclosedTime .:? "contents"
+      pure $ LOLedgerTookSnapshot $ strictMaybe mDuration
+  -- example traces (current format):
+  -- {"at":"2026-09-07T13:04:33.037388555Z","ns":"ChainDB.LedgerEvent.Snapshot.TookSnapshot","data":{"enclosedTime":{"edge":"Starting"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 981) 4c9e24c2c79ff3cc0fe8df3f4277bb53b4bc2757a2ebd6cc739f591dd6d84c79"},"sev":"Info","thread":"50","host":"node-1"}
+  -- {"at":"2026-09-07T13:04:44.865133877Z","ns":"ChainDB.LedgerEvent.Snapshot.TookSnapshot","data":{"enclosedTime":{"edge":11.82772269},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 981) 4c9e24c2c79ff3cc0fe8df3f4277bb53b4bc2757a2ebd6cc739f591dd6d84c79"},"sev":"Info","thread":"50","host":"node-1"}
+  -- example traces (older format, still accepted for backward compat):
   -- {"at":"2026-09-10T12:28:28.864828281Z","ns":"ChainDB.LedgerEvent.Snapshot.TookSnapshot","data":{"enclosedTime":{"tag":"RisingEdge"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 56096) a071837adb7010366e7ff8ed344b2f9232dbbfe077a1e040a621431ff4de27ce"},"sev":"Info","thread":"102","host":"node-1"}
   -- {"at":"2026-09-10T12:28:48.984750482Z","ns":"ChainDB.LedgerEvent.Snapshot.TookSnapshot","data":{"enclosedTime":{"contents":20.119900237,"tag":"FallingEdgeWith"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 56096) a071837adb7010366e7ff8ed344b2f9232dbbfe077a1e040a621431ff4de27ce"},"sev":"Info","thread":"102","host":"node-1"}
 
@@ -383,6 +406,8 @@ data LOBody
     }
   -- Ledger related:
   | LOLedgerTookSnapshot
+    { loEnclosedTime     :: !(SMaybe NominalDiffTime)
+    }
   | LOLedgerMetrics
     { loSlotNo           :: !SlotNo
     , loUtxoSize         :: !Word64
