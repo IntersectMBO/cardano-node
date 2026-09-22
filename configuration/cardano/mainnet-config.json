@@ -125,9 +125,6 @@
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
     },
-    "Net.ErrorPolicy": {
-      "severity": "Info"
-    },
     "Net.InboundGovernor": {
       "severity": "Warning"
     },
