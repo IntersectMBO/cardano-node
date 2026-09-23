@@ -87,9 +87,9 @@ library
   --------------------------
   build-depends:
     , cardano-api             ^>=11.6
-    , plutus-ledger-api       ^>=1.65
-    , plutus-tx               ^>=1.65
-    , plutus-tx-plugin        ^>=1.65
+    , plutus-ledger-api       ^>=1.70
+    , plutus-tx               ^>=1.70
+    , plutus-tx-plugin        ^>=1.70
 
   ------------------------
   -- Non-IOG dependencies
