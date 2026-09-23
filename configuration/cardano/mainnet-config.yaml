@@ -164,9 +164,9 @@ TraceOptions:
 
     # Only one of the following can be enabled, which determines for format
     # of node logging to stdout.
-    - Stdout HumanFormatColoured
+    # - Stdout HumanFormatColoured
     # - Stdout HumanFormatUncoloured
-    # - Stdout MachineFormat
+    - Stdout MachineFormat
 
     # Each tracer can specify the level of details for printing messages.
     # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
