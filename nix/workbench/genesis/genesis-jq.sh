@@ -159,13 +159,22 @@ derive-from-cache-jq() {
       "$outdir"/genesis.byron.json |
       sponge "$outdir"/genesis.byron.json
 
-    # Shelley: startTime, protocolVersion, maxBlockBodySize
-    jq '$prof[0].genesis.shelley as $shey
+    # Shelley: startTime, protocolVersion, maxBlockBodySize, timescale
+    #
+    # The timescale (epoch length, k, active slots coeff) is not in the cache
+    # key -- it affects no key material -- so two profiles differing only in it
+    # share an entry, and the one that derives second would otherwise silently
+    # get the other's timescale.
+    jq '$prof[0].genesis as $gen
+         | $gen.shelley as $shey
          | $shey.protocolParams.protocolVersion   as $pver
          | $shey.protocolParams.maxBlockBodySize  as $bsize
          | . * { systemStart: $timing.systemStart }
          | if $pver  != null then . * { protocolParams: { protocolVersion:  $pver  } } else . end
-         | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
+         | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end
+         | if $gen.epoch_length       != null then . * { epochLength:      $gen.epoch_length       } else . end
+         | if $gen.parameter_k        != null then . * { securityParam:    $gen.parameter_k        } else . end
+         | if $gen.active_slots_coeff != null then . * { activeSlotsCoeff: $gen.active_slots_coeff } else . end' \
       --argjson timing "$timing" \
       --slurpfile prof "$profile_json" \
       "$outdir"/genesis.shelley.json |
@@ -186,6 +195,18 @@ derive-from-cache-jq() {
       --slurpfile prof "$profile_json" \
       "$outdir"/genesis.alonzo.json |
       sponge "$outdir"/genesis.alonzo.json
+
+    # Dijkstra: fields the cardano-cli in use does not know
+    #
+    # create-testnet-data takes --spec-shelley, --spec-alonzo and --spec-conway,
+    # but no --spec-dijkstra, so genesis.dijkstra.json holds only what that
+    # cardano-cli emits -- four fields, for one that predates Leios. Fill the
+    # rest in from the zero spec so a consumer built against a later ledger
+    # finds every field it expects. The cli's own values win wherever it
+    # produced one, so this adds and never overrides.
+    jq --argjson zero "$(genesis zero-spec-dijkstra)" '$zero * .' \
+      "$outdir"/genesis.dijkstra.json |
+      sponge "$outdir"/genesis.dijkstra.json
 
     # Conway: plutusV3CostModel
     jq '$prof[0].genesis.conway as $coay
