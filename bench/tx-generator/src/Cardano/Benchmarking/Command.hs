@@ -19,19 +19,21 @@ where
 #define UNIX
 #endif
 
-import           Cardano.Benchmarking.Compiler (compileOptions)
+import           Cardano.Benchmarking.Compiler (compileOptions, compileOptionsOverridingSubmit)
 import qualified Cardano.Benchmarking.LogTypes as LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Env (emptyEnv, newEnvConsts)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
+import           Cardano.Benchmarking.Script.Types (SubmitMode(..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.TestnetDiscovery (TestnetConfig (..), discoverTestnetConfig)
 import           Cardano.TxGenerator.Types (TxGenPlutusParams (..))
 import           Data.Aeson (fromJSON)
-import           Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as BS (appendFile, empty, putStr, writeFile)
+import           Data.ByteString.Lazy as BSL (toStrict)
 import           Data.Foldable (for_)
 import           Data.Maybe (catMaybes)
 import qualified Data.Text.IO as Text
@@ -40,6 +42,8 @@ import           Cardano.Network.NodeToClient (IOManager, withIOManager)
 
 import           System.Exit
 
+import qualified Codec.CBOR.Encoding as CBORG (encodeBreak, encodeListLenIndef)
+import qualified Codec.CBOR.Write as CBORG (toStrictByteString)
 import           Control.Concurrent (myThreadId)
 import           Control.Concurrent as Weak (mkWeakThreadId)
 import           Control.Concurrent.STM as STM (readTVar)
@@ -76,7 +80,7 @@ deriving instance Show SignalSpecificInfo
 
 data Command
   = Json FilePath
-  | JsonHL FilePath (Maybe TestnetConfig) (Maybe FilePath) (Maybe FilePath)
+  | JsonHL FilePath (Maybe TestnetConfig) (Maybe FilePath) (Maybe FilePath) (Maybe SubmitMode)
   | Compile FilePath
   | Selftest (Maybe FilePath)
   | VersionCmd
@@ -94,7 +98,7 @@ runCommand' iocp = do
     Json actionFile -> do
       script <- parseScriptFileAeson actionFile
       runScript emptyEnv script envConsts >>= handleError . fst
-    JsonHL configFile maybeTestnetConfig nodeConfigOverwrite cardanoTracerOverwrite -> do
+    JsonHL configFile maybeTestnetConfig nodeConfigOverwrite cardanoTracerOverwrite maybeSubmitOverride -> do
       opts <- case maybeTestnetConfig of
         Nothing -> parseJSONFile fromJSON configFile
         Just tc -> do
@@ -109,17 +113,34 @@ runCommand' iocp = do
 
       quickTestPlutusDataOrDie finalOpts
 
-      case compileOptions finalOpts of
-        Right script -> runScript emptyEnv script consts >>= handleError . fst
+      let
+        evalCompile
+          | Just override <- maybeSubmitOverride = compileOptionsOverridingSubmit finalOpts override
+          | otherwise = compileOptions finalOpts
+
+      case evalCompile of
+        Right script -> do
+          BS.writeFile "tx-generator-script.json" $ BSL.toStrict $ prettyPrint script
+          initializeDump maybeSubmitOverride
+          (result, _) <- runScript emptyEnv script consts
+          finalizeDump maybeSubmitOverride
+          handleError result
         err -> die $ "tx-generator:Cardano.Command.runCommand JsonHL: " ++ show err
     Compile file -> do
       o <- parseJSONFile fromJSON file
       case compileOptions o of
-        Right script -> BSL.putStr $ prettyPrint script
+        Right script -> BS.putStr $ BSL.toStrict $ prettyPrint script
         Left err -> die $ "tx-generator:Cardano.Command.runCommand Compile: " ++ show err
     Selftest outFile -> runSelftest emptyEnv envConsts outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
+  initializeDump, finalizeDump :: Maybe SubmitMode -> IO ()
+  initializeDump (Just (WriteCBORList f)) = BS.writeFile f $ CBORG.toStrictByteString CBORG.encodeListLenIndef
+  initializeDump (Just (DumpToFile f)) = BS.writeFile f BS.empty
+  initializeDump _ = pure ()
+  finalizeDump (Just (WriteCBORList f)) = BS.appendFile f $ CBORG.toStrictByteString CBORG.encodeBreak
+  finalizeDump _ = pure ()
+
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
     Right _  -> exitSuccess
@@ -239,6 +260,7 @@ commandParser
                      <*> optional testnetConfigOpt
                      <*> nodeConfigOpt
                      <*> tracerConfigOpt
+                     <*> optional submitModeOverride
 
   testnetConfigOpt :: Parser TestnetConfig
   testnetConfigOpt = TestnetConfig
@@ -262,11 +284,16 @@ commandParser
   tracerConfigOpt :: Parser (Maybe FilePath)
   tracerConfigOpt = option (Just <$> str)
     ( long "cardano-tracer"
-      <> short 'n'
+      <> short 't'
       <> metavar "SOCKET"
       <> value Nothing
       <> help "the cardano-tracer socket"
     )
+
+  submitModeOverride :: Parser SubmitMode
+  submitModeOverride =
+        option (DumpToFile <$> str)    (long "dump-show" <> metavar "FILE" <> help "Do not submit; dump txn stream to text file instead")
+    <|> option (WriteCBORList <$> str) (long "dump-cbor" <> metavar "FILE" <> help "Do not submit; dump txn stream as CBOR instead")
 
   versionCmd :: Parser Command
   versionCmd = pure VersionCmd

@@ -1,5 +1,22 @@
 # ChangeLog
 
+## 2.18 -- Sep 2026
+
+* **New submit mode: dump the transaction stream to disk** instead of
+  submitting it to a node.
+  * Two new mutually exclusive CLI flags, `--dump-show FILE` (Haskell `Show`
+    text) and `--dump-cbor FILE` (raw CBOR, framed as an indefinite-length
+    list, one transaction per item), replace the normal submission phase.
+  * Wired into the workbench: `start-cluster --dump-show` / `--dump-cbor`
+    runs nodes only far enough to serve protocol parameters, then dumps the
+    generator's stream to a fixed filename and shuts the cluster down as
+    soon as the generator exits — skipping workloads and performance
+    analysis, which don't apply to a dump run.
+
+* **Dijkstra era submission support.** The generator can now submit
+  transactions built for the Dijkstra era (protocol version 12), including
+  over Node-to-Node.
+
 ## 2.17 -- Jun 2026
 
 * **New remote submission endpoint** — send transactions to a remote endpoint

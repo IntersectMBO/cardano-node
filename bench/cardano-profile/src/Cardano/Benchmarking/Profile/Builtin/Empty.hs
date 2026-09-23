@@ -50,6 +50,9 @@ baseNoDataset =
 genesis :: Types.Profile -> Types.Profile
 genesis = V.genesisVariantVoltaire64k
 
+genesisV12 :: Types.Profile -> Types.Profile
+genesisV12 = P.v12Preview . P.v11Preview . V.genesisVariantVoltaire64k
+
 --------------------------------------------------------------------------------
 
 fastDuration :: Types.Profile -> Types.Profile
@@ -127,14 +130,15 @@ profilesEmpty = map baseNoDataset
   ------------------------------------------------------------------------------
   -- ci-test: FixedLoaded and "--shutdown-on-block-synced 3" with 2 nodes.
   ------------------------------------------------------------------------------
-  let ciTest =
-          P.empty & V.datasetEmpty . genesis . ciTestDuration
+  let ciTest whichGenesis =
+          P.empty & V.datasetEmpty . whichGenesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
   in [
   -- Local
-    ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
-  , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
-  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
+    ciTest genesis    & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
+  , ciTest genesis    & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
+  , ciTest genesis    & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
+  , ciTest genesisV12 & P.name "ci-test-v12"      . V.valueLocal . P.traceForwardingOn
   ]
   ++
   ------------------------------------------------------------------------------
