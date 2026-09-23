@@ -114,13 +114,31 @@ let
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
     };
+
     instanceDbPath = cfg.databasePath i;
-    cmd = filter (x: x != "") [
+    instanceImmutableDbPath = cfg.immutableDatabasePath i;
+    instanceVolatileDbPath = cfg.volatileDatabasePath i;
+
+    # The node accepts either --database-path or both of the split paths, never
+    # a mix: parseNodeDatabasePaths is `parseDbPath <|> parseMultipleDbPaths`,
+    # so emitting --database-path alongside them would win and the split paths
+    # would be silently ignored.
+    splitDbPaths = instanceImmutableDbPath != null && instanceVolatileDbPath != null;
+
+    dbPathArgs =
+      if splitDbPaths
+      then [
+        "--immutable-database-path ${instanceImmutableDbPath}"
+        "--volatile-database-path ${instanceVolatileDbPath}"
+      ]
+      else [ "--database-path ${instanceDbPath}" ];
+
+    cmd = filter (x: x != "") ([
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
-      "--database-path ${instanceDbPath}"
+    ] ++ dbPathArgs ++ [
       "--topology ${topology i}"
-    ] ++ optionals (!cfg.systemdSocketActivation) ([
+    ]) ++ optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${if (cfg.shareIpv4port || cfg.shareIpv6port) then toString cfg.port else toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
@@ -405,6 +423,28 @@ in {
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''The node database path, for each instance.'';
+      };
+
+      immutableDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          The node immutable database path, for each instance.
+          Set this together with `volatileDatabasePath` to place the two partitions on
+          separate volumes, in which case `databasePath` is not passed to the node.
+        '';
+      };
+
+      volatileDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          The node volatile database path, for each instance.
+          Set this together with `immutableDatabasePath` to place the two partitions on
+          separate volumes, in which case `databasePath` is not passed to the node.
+        '';
       };
 
       lsmDatabasePath = mkOption {
@@ -1010,6 +1050,12 @@ in {
         {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
           message   = "When configuring multiple LSM enabled nodes on one instance, lsmDatabasePath must be unique.";
+        }
+        {
+          # The node takes either --database-path or both split paths, so half a
+          # pair would silently fall back to databasePath.
+          assertion = (cfg.immutableDatabasePath i == null) == (cfg.volatileDatabasePath i == null);
+          message   = "immutableDatabasePath and volatileDatabasePath must be set together, or neither set.";
         }
         {
           assertion = count (o: o != null) (with cfg; [
