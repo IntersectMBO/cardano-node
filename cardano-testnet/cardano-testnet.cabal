@@ -117,6 +117,7 @@ library
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
                         Testnet.Filepath
+                        Testnet.Manifest
                         Testnet.Orphans
                         Testnet.Ping
                         Testnet.Process.Cli.DRep
@@ -171,6 +172,7 @@ test-suite cardano-testnet-golden
 
   other-modules:        Cardano.Testnet.Test.Golden.Config
                         Cardano.Testnet.Test.Golden.Help
+                        Cardano.Testnet.Test.Golden.Manifest
                         Cardano.Testnet.Test.Golden.Util
 
   type:                 exitcode-stdio-1.0
@@ -185,11 +187,14 @@ test-suite cardano-testnet-golden
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , iproute
+                      , network
                       , process
                       , regex-compat
                       , tasty ^>= 1.5
                       , tasty-hedgehog
                       , text
+                      , time
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
@@ -250,6 +255,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.Parser
+                        Cardano.Testnet.Test.Manifest
                         Cardano.Testnet.Test.MainnetParams
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet

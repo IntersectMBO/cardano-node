@@ -1,0 +1,5 @@
+pr: 6693
+kind:
+  - feature
+description: |
+  When the network is ready, `cardano-testnet cardano` now writes a machine-readable `manifest.json` into the output directory. The file lists every socket, port, key path, genesis file and wallet address the cluster was started with, so scripts and test harnesses can discover the network without parsing the directory layout. The file is written atomically (it appears only after all readiness checks pass) and is never modified after being written. A strict JSON Schema (`cardano-testnet/schemas/manifest.schema.json`) accompanies the file.

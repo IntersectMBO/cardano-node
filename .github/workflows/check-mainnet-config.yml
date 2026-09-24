@@ -4,6 +4,9 @@ on:
   push:
   merge_group:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

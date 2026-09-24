@@ -272,6 +272,9 @@
 
       packages =
         exes
+        // {
+          inherit (pkgs) check-jsonschema;
+        }
         # Linux only packages:
         // optionalAttrs (elem system ["x86_64-linux" "aarch64-linux"])
         (let
