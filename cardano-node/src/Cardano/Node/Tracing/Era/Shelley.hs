@@ -174,7 +174,7 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyRegisteredDELEG credential ->
+    Conway.DelegAccountAlreadyRegistered (AccountAlreadyRegistered credential) ->
       [ "kind" .= String "StakeKeyRegisteredDELEG"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
@@ -643,7 +643,7 @@ instance
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
 instance LogFormatting (ShelleyDelegPredFailure era) where
-  forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
+  forMachine _dtal (DelegAccountAlreadyRegistered (AccountAlreadyRegistered alreadyRegistered)) =
     mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
@@ -1209,10 +1209,6 @@ instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= unWithdrawals rs
-            ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 

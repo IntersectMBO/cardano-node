@@ -352,25 +352,46 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["txCounters", "Remote"]
     configureTracers configReflection trConfig [txCountersTracer]
 
+    -- NOTE: PerasCert/PerasVote are injective associated type families, so
+    -- LogFormatting/MetaTrace can't be instanced for TraceObjectDiffusion*
+    -- applied to them directly (GHC forbids a type family application
+    -- anywhere in an instance head -- see the WrapPeras*Diffusion* comment in
+    -- Cardano.Node.Tracing.Tracers.Consensus). mkCardanoTracer is therefore
+    -- instantiated at the Wrap newtype instead, and the traces below are
+    -- adapted back to the raw Consensus.Tracers field type via contramap.
     !txPerasCertIn  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Cert", "Inbound"]
+                :: IO (Trace IO (TraceLabelPeer (ConnectionId RemoteAddress) (WrapPerasCertDiffusionInbound blk)))
     configureTracers configReflection trConfig [txPerasCertIn]
 
     !txPerasCertOut  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Cert", "Outbound"]
+                :: IO (Trace IO (TraceLabelPeer (ConnectionId RemoteAddress) (WrapPerasCertDiffusionOutbound blk)))
     configureTracers configReflection trConfig [txPerasCertOut]
 
     !txPerasVoteIn  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Vote", "Inbound"]
+                :: IO (Trace IO (TraceLabelPeer (ConnectionId RemoteAddress) (WrapPerasVoteDiffusionInbound blk)))
     configureTracers configReflection trConfig [txPerasVoteIn]
 
     !txPerasVoteOut  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Vote", "Outbound"]
+                :: IO (Trace IO (TraceLabelPeer (ConnectionId RemoteAddress) (WrapPerasVoteDiffusionOutbound blk)))
     configureTracers configReflection trConfig [txPerasVoteOut]
+
+    !txPerasCertInclusionTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inclusion"]
+    configureTracers configReflection trConfig [txPerasCertInclusionTr]
+
+    !txPerasVoteForgingTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Forging"]
+    configureTracers configReflection trConfig [txPerasVoteForgingTr]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = mkTracer $
@@ -424,10 +445,18 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = mkTracer $
           traceWith txCountersTracer
-      , Consensus.perasCertDiffusionInboundTracer = mkTracer $ traceWith txPerasCertIn
-      , Consensus.perasCertDiffusionOutboundTracer = mkTracer $ traceWith txPerasCertOut
-      , Consensus.perasVoteDiffusionInboundTracer = mkTracer $ traceWith txPerasVoteIn
-      , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $ traceWith txPerasVoteOut
+      , Consensus.perasCertDiffusionInboundTracer = mkTracer $
+          traceWith (contramap (fmap WrapPerasCertDiffusionInbound) txPerasCertIn)
+      , Consensus.perasCertDiffusionOutboundTracer = mkTracer $
+          traceWith (contramap (fmap WrapPerasCertDiffusionOutbound) txPerasCertOut)
+      , Consensus.perasVoteDiffusionInboundTracer = mkTracer $
+          traceWith (contramap (fmap WrapPerasVoteDiffusionInbound) txPerasVoteIn)
+      , Consensus.perasVoteDiffusionOutboundTracer = mkTracer $
+          traceWith (contramap (fmap WrapPerasVoteDiffusionOutbound) txPerasVoteOut)
+      , Consensus.perasCertInclusionTracer = mkTracer $
+          traceWith txPerasCertInclusionTr
+      , Consensus.perasVoteForgingTracer = mkTracer $
+          traceWith txPerasVoteForgingTr
       }
 
 mkNodeToClientTracers :: forall blk.
