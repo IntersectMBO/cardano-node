@@ -204,8 +204,34 @@ emptyState config = do
 -- On @MsgRollForward@:  queues the header for BlockFetch.
 -- On @MsgRollBackward@: discards pending blocks children of the rollback point.
 chainSyncClient :: State -> ChainSyncClient
-chainSyncClient state = CS.ChainSyncClient $ pure clientStIdle
+chainSyncClient state = CS.ChainSyncClient $ pure seekTip
   where
+    -- Start following at the chain tip, not at Genesis. See the matching
+    -- comment in NodeToClient.TxIdSync: without an explicit intersection the
+    -- server's read pointer defaults to Genesis and the client replays the
+    -- whole chain before reaching any tx this process submitted. Only blocks
+    -- from startup onward can contain them, so history is skippable.
+    --
+    -- Intersecting at Genesis always succeeds and its reply carries the
+    -- server's tip, which is then used as the real intersection, so the tip
+    -- does not have to be known up front.
+    seekTip = CS.SendMsgFindIntersect [Net.GenesisPoint] CS.ClientStIntersect
+      { CS.recvMsgIntersectFound = \_pt tip -> CS.ChainSyncClient $
+          pure (intersectAt (Net.getTipPoint tip))
+      , CS.recvMsgIntersectNotFound = \_tip -> CS.ChainSyncClient $
+          -- Genesis is an ancestor of every chain, so this should not happen.
+          pure clientStIdle
+      }
+
+    intersectAt pt = CS.SendMsgFindIntersect [pt] CS.ClientStIntersect
+      { CS.recvMsgIntersectFound = \_pt' _tip -> CS.ChainSyncClient $
+          pure clientStIdle
+      , CS.recvMsgIntersectNotFound = \tip -> CS.ChainSyncClient $
+          -- Rolled back between learning the tip and asking for it. Retry
+          -- with the newer tip rather than fall back to Genesis.
+          pure (intersectAt (Net.getTipPoint tip))
+      }
+
     -- Request the next update from the server.
     clientStIdle = CS.SendMsgRequestNext
       (pure ())    -- Action when server says "await".
