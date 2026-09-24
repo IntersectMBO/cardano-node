@@ -175,8 +175,42 @@ emptyState config = do
 --                       no BlockFetch because the block is already complete).
 -- On @MsgRollBackward@: discards pending blocks children of the rollback point.
 chainSyncClient :: State -> ChainSyncClient
-chainSyncClient state = CS.ChainSyncClient $ pure clientStIdle
+chainSyncClient state = CS.ChainSyncClient $ pure seekTip
   where
+    -- Start following at the chain tip, not at Genesis.
+    --
+    -- Without an explicit intersection the server's read pointer defaults to
+    -- Genesis, so the client replays the entire chain before it ever reaches
+    -- a tx this process submitted. That is unbounded work which grows with
+    -- the load this tool generates: measured 2026-09-24, replay ran at 823
+    -- slots/s through the sparse early chain and collapsed to ~140 slots/s in
+    -- the region tx-centrifuge had filled, ~2h to cover 1.5M slots. Recycling
+    -- never confirmed anything because catch-up never finished.
+    --
+    -- Only blocks from startup onward can contain our transactions, so chain
+    -- history is irrelevant here and skipping it is free.
+    --
+    -- Two steps, because the tip is not known up front and asking the node
+    -- separately would mean another query and more plumbing. Intersecting at
+    -- Genesis always succeeds and the reply carries the server's tip, which
+    -- is then used as the real intersection.
+    seekTip = CS.SendMsgFindIntersect [Net.GenesisPoint] CS.ClientStIntersect
+      { CS.recvMsgIntersectFound = \_pt tip -> CS.ChainSyncClient $
+          pure (intersectAt (Net.getTipPoint tip))
+      , CS.recvMsgIntersectNotFound = \_tip -> CS.ChainSyncClient $
+          -- Genesis is an ancestor of every chain, so this should not happen.
+          pure clientStIdle
+      }
+
+    intersectAt pt = CS.SendMsgFindIntersect [pt] CS.ClientStIntersect
+      { CS.recvMsgIntersectFound = \_pt' _tip -> CS.ChainSyncClient $
+          pure clientStIdle
+      , CS.recvMsgIntersectNotFound = \tip -> CS.ChainSyncClient $
+          -- The chain rolled back between learning the tip and asking for it.
+          -- Retry with the newer tip rather than fall back to Genesis.
+          pure (intersectAt (Net.getTipPoint tip))
+      }
+
     -- Request the next update from the server.
     clientStIdle = CS.SendMsgRequestNext
       (pure ())    -- Action when server says "await".
