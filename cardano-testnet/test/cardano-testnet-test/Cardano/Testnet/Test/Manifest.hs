@@ -58,7 +58,8 @@ hprop_manifest_windows_pipe_path = H.propertyOnce $ do
   FilePath.Windows.normalise (FilePath.Windows.makeRelative outputDir pipePath)
     === pipePath
 
-  -- (2) Under the real (platform-native) makeManifestRelPath: pipe path unchanged
+  -- (2) Through the real function. On Windows this repeats (1); on Posix it
+  --     passes only because backslashes are not separators there.
   makeManifestRelPath outputDir pipePath === pipePath
 
   -- (3) Sanity happy-path: a child path is made relative and normalised.

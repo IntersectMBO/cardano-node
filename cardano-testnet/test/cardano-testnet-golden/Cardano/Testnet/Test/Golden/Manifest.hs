@@ -14,6 +14,7 @@ import           Prelude
 import           Data.Aeson (eitherDecode)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either (isLeft)
 import           Data.IP (IP (IPv4), toIPv4)
 import           Data.List.NonEmpty (NonEmpty (..))
 import           Data.Maybe (fromMaybe)
@@ -29,7 +30,7 @@ import           System.FilePath ((</>))
 import           Testnet.Manifest
 
 import           Hedgehog
-import           Hedgehog.Extras.Test.Base (propertyOnce)
+import           Hedgehog.Extras.Test.Base (assertWith, propertyOnce)
 import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import qualified Hedgehog.Extras.Test.Process as H
 
@@ -127,6 +128,4 @@ golden_Manifest = propertyOnce $ do
 
   -- An unsupported schema version is rejected at decode time.
   let v2 = encodePretty sampleManifest { manifestSchemaVersion = supportedSchemaVersion + 1 }
-  case eitherDecode v2 :: Either String Manifest of
-    Left _  -> pure ()
-    Right _ -> failure
+  assertWith (eitherDecode v2 :: Either String Manifest) isLeft

@@ -53,6 +53,8 @@ jobs:
             sys:
               os: windows-latest
               shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
+          - ghc: *ghc-latest
+            validate-manifest: true
     defaults:
       run:
         shell: ${{ matrix.sys.shell }}
@@ -129,8 +131,9 @@ jobs:
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
     - name: Validate produced manifest files against schema
-      if: runner.os == 'Linux'
+      if: matrix.validate-manifest
       run: |
+        # This job has no nix, that is why we pin the version with pipx separately.
         pipx install check-jsonschema==0.37.1
         # Node sockets live under this directory, so it must stay well below
         # the 108-character unix socket path limit ($RUNNER_TEMP is short).
@@ -141,6 +144,7 @@ jobs:
         # The manifest is written at readiness, so the file appearing is the ready signal.
         for _ in $(seq 1 120); do
           if [ -f "$dir/manifest.json" ]; then break; fi
+          if ! kill -0 "$testnet_pid" 2>/dev/null; then break; fi
           sleep 5
         done
         # SIGINT, not SIGTERM: the harness tears its nodes down on SIGINT only
