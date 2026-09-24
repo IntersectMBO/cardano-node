@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-08-14T13:38:07Z
-  , cardano-haskell-packages 2026-09-23T15:51:40Z
+  , cardano-haskell-packages 2026-09-23T18:57:23Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -165,4 +165,3 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
