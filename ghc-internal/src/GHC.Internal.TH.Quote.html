@@ -1,0 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP, RankNTypes, ScopedTypeVariables, Trustworthy #-}</span><span>
+</span><span id="line-2"></span><span class="annot"><span class="hs-comment">{- |
+Module : GHC.Internal.TH.Quote
+Description : Quasi-quoting support for Template Haskell
+
+Template Haskell supports quasiquoting, which permits users to construct
+program fragments by directly writing concrete syntax.  A quasiquoter is
+essentially a function with takes a string to a Template Haskell AST.
+This module defines the 'QuasiQuoter' datatype, which specifies a
+quasiquoter @q@ which can be invoked using the syntax
+@[q| ... string to parse ... |]@ when the @QuasiQuotes@ language
+extension is enabled, and some utility functions for manipulating
+quasiquoters.  Nota bene: this package does not define any parsers,
+that is up to you.
+
+This is an internal module. Please import 'Language.Haskell.TH.Quote' instead.
+-}</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Quote.html"><span class="hs-identifier">GHC.Internal.TH.Quote</span></a></span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>        </span><span class="annot"><a href="GHC.Internal.TH.Quote.html#QuasiQuoter"><span class="hs-identifier">QuasiQuoter</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html"><span class="hs-identifier">GHC.Internal.TH.Syntax</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | The 'QuasiQuoter' type, a value @q@ of this type can be used</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- in the syntax @[q| ... string to parse ...|]@.  In fact, for</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- convenience, a 'QuasiQuoter' actually defines multiple quasiquoters</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- to be used in different splice contexts; if you are only interested</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- in defining a quasiquoter to be used for expressions, you would</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- define a 'QuasiQuoter' with only 'quoteExp', and leave the other</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- fields stubbed out with errors.</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="QuasiQuoter"><span class="annot"><a href="GHC.Internal.TH.Quote.html#QuasiQuoter"><span class="hs-identifier hs-var">QuasiQuoter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="QuasiQuoter"><span class="annot"><a href="GHC.Internal.TH.Quote.html#QuasiQuoter"><span class="hs-identifier hs-var">QuasiQuoter</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Quasi-quoter for expressions, invoked by quotes like @lhs = $[q|...]@</span></span><span>
+</span><span id="line-35"></span><span>    </span><span id="quoteExp"><span class="annot"><span class="annottext">QuasiQuoter -&gt; String -&gt; Q Exp
+</span><a href="GHC.Internal.TH.Quote.html#quoteExp"><span class="hs-identifier hs-var hs-var">quoteExp</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Q"><span class="hs-identifier hs-type">Q</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Exp"><span class="hs-identifier hs-type">Exp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Quasi-quoter for patterns, invoked by quotes like @f $[q|...] = rhs@</span></span><span>
+</span><span id="line-37"></span><span>    </span><span id="quotePat"><span class="annot"><span class="annottext">QuasiQuoter -&gt; String -&gt; Q Pat
+</span><a href="GHC.Internal.TH.Quote.html#quotePat"><span class="hs-identifier hs-var hs-var">quotePat</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Q"><span class="hs-identifier hs-type">Q</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Pat"><span class="hs-identifier hs-type">Pat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Quasi-quoter for types, invoked by quotes like @f :: $[q|...]@</span></span><span>
+</span><span id="line-39"></span><span>    </span><span id="quoteType"><span class="annot"><span class="annottext">QuasiQuoter -&gt; String -&gt; Q Type
+</span><a href="GHC.Internal.TH.Quote.html#quoteType"><span class="hs-identifier hs-var hs-var">quoteType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Q"><span class="hs-identifier hs-type">Q</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Quasi-quoter for declarations, invoked by top-level quotes</span></span><span>
+</span><span id="line-41"></span><span>    </span><span id="quoteDec"><span class="annot"><span class="annottext">QuasiQuoter -&gt; String -&gt; Q [Dec]
+</span><a href="GHC.Internal.TH.Quote.html#quoteDec"><span class="hs-identifier hs-var hs-var">quoteDec</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Q"><span class="hs-identifier hs-type">Q</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Internal.TH.Syntax.html#Dec"><span class="hs-identifier hs-type">Dec</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-43"></span></pre></body></html>

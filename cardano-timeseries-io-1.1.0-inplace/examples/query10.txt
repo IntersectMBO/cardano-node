@@ -1,0 +1,9 @@
+unless
+  (
+    filter (\x -> x)
+           (map
+             (\x -> x < 350)
+             (sum_over_time (\t -> map (\x -> to_scalar (x != 0)) (cardano_node_metrics_blockNum_int t))[now-360m;now:1m])
+           )
+  )
+  (cardano_node_metrics_blockNum_int now)
