@@ -77,6 +77,7 @@ pRuntimeOptions :: Parser TestnetRuntimeOptions
 pRuntimeOptions = TestnetRuntimeOptions
   <$> pEnableNewEpochStateLogging
   <*> pEnableRpc
+  <*> pEnableTracer
   <*> pKesSource
   <*> pEnableChainStallWatchdog
 
@@ -149,6 +150,13 @@ portReader = OA.eitherReader $ \token -> do
   when (1 > port || port > 65_535) $
     Left $ "Port number out of range (1 - 65535): " <> show port
   pure $ fromIntegral port
+
+pEnableTracer :: Parser TraceSupport
+pEnableTracer = OA.flag TraceDisabled TraceEnabled
+  (   OA.long "enable-tracer"
+  <>  OA.help "[EXPERIMENTAL] Enable cardano-tracer support on all of testnet nodes."
+  <>  OA.showDefault
+  )
 
 pKesSource :: Parser PraosCredentialsSource
 pKesSource = OA.flag UseKesKeyFile UseKesSocket

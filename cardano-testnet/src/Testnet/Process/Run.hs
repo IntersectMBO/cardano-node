@@ -18,6 +18,7 @@ module Testnet.Process.Run
   , procNode
   , procKESAgent
   , procSubmitApi
+  , procCardanoTracer
   , procChairman
   , mkExecConfig
   , mkExecConfigOffline
@@ -199,6 +200,16 @@ procSubmitApi
   -> m CreateProcess
   -- ^ Captured stdout
 procSubmitApi = GHC.withFrozenCallStack $ H.procFlex "cardano-submit-api" "CARDANO_SUBMIT_API"
+
+-- | Create a 'CreateProcess' describing how to start the cardano-tracer process
+-- and an argument list.
+procCardanoTracer
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+  -- ^ Captured stdout
+procCardanoTracer = GHC.withFrozenCallStack $ H.procFlex "cardano-tracer" "CARDANO_TRACER"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-node-chairman process
 -- and an argument list.
