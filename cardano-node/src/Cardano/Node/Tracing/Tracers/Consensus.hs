@@ -603,6 +603,7 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
             Nothing -> nothingToDo
             Just (cm', cmCdfState')
               -> cm' { cmTraceIt   = True
+                     , cmCdfState  = cmCdfState'
                      , cmTraceVars = Cdf.size cmCdfState' >= 45 -- wait until we have at least 45 samples before providing cdf estimates
                      , cmBlockSize = getSizeInBytes blockSize
                      , cmDelay     = realToFrac forgeDelay
