@@ -174,8 +174,6 @@ let
             #'';
 
             # Tests broken under Wine: System.IO.Temp file operations fail
-            packages.cardano-profile.components.tests.cardano-profile-test.buildable = lib.mkForce false;
-            packages.cardano-topology.components.tests.cardano-topology-test.buildable = lib.mkForce false;
             packages.trace-schema-gen.components.tests.trace-schema-gen-test.buildable = lib.mkForce false;
           })
           ({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.4" >= 0) {
@@ -209,8 +207,6 @@ let
             packages.cardano-node.components.exes.cardano-node.postInstall = postInstall "cardano-node";
             packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
             packages.cardano-submit-api.components.exes.cardano-submit-api.postInstall = postInstall "cardano-submit-api";
-            packages.cardano-profile.components.exes.cardano-profile.postInstall = postInstall "cardano-profile";
-            packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
             packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
           ({ lib, pkgs, config, ... }:

@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+# The bash reader of the workbench bundle: consumer-owned code, NOT part of
+# the bundle. Run a shipped profile with nothing but the bundle data and the
+# binaries on PATH -- and serve as the workhorse for the Nix reader too:
+# shell.nix's reader builds its derivations by calling the modes below, so bundle
+# reading is implemented once.
+#
+#   wb-run <profile> [cardano_era]        start a cluster and wait for it
+#   wb-run --list                         profiles the bundle ships
+#   wb-run --deploy DIR                   unpack workbench.json into DIR
+#   wb-run --materialise <p> [era] DIR    copy one leaf's data, do not run
+#
+# Selection is the catalogue path: profiles/<cardano_node_version>/
+# <cardano_era>/<profile>. The cardano-node version is the node's own
+# answer (`cardano-node --version`; WB_CARDANO_NODE_VERSION overrides;
+# --materialise picks a sole version directory automatically).
+#
+# It needs no Nix and knows nothing about useCabalRun: every dependency is
+# resolved out of THIS PATH, so whoever set the PATH decided where the
+# binaries come from (a nix shell, a cabal shell, /usr/bin, anything).
+#
+# env:  WB_STATE_DIR run
+#       WB_CARDANO_NODE_VERSION  see above
+#       WB_WORKBENCH_JSON    the runtime payload (default: ./workbench.json)
+#       WB_PROFILE_CATALOGUE the profile tree    (default: ./profiles)
+#       WB_START_ARGS        extra args forwarded to `wb start`
+set -euo pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+wj=${WB_WORKBENCH_JSON:-$here/workbench.json}
+profiles=${WB_PROFILE_CATALOGUE:-$here/profiles}
+
+die() { echo "wb-run: $*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+## Which commands a dependency NAME stands for: there is no `coreutils` binary,
+## and the data carries names only. THE place that knows, so a name it does not
+## know has to be an error -- the alternative is a rewrite that quietly skips a
+## tool, or a check that quietly passes.
+dep_commands() {
+  case $1 in
+    bashInteractive)            echo bash ;;
+    coreutils)                  echo basename cat chmod cp cut date dirname echo \
+                                     head ln ls mkdir mktemp mv readlink realpath \
+                                     rm rmdir seq sha1sum sleep sort split stat \
+                                     stdbuf tac tail tee timeout touch tr wc ;;
+    diffutils)                  echo cmp ;;
+    findutils)                  echo find xargs ;;
+    gawk)                       echo awk ;;
+    git)                        echo git ;;
+    gnugrep)                    echo grep fgrep ;;
+    gnused)                     echo sed ;;
+    gnutar)                     echo tar ;;
+    graphviz)                   echo dot neato ;;
+    iputils)                    echo ping ;;
+    jq)                         echo jq ;;
+    lsof)                       echo lsof ;;
+    moreutils)                  echo sponge ;;
+    procps)                     echo pgrep pkill ;;
+    pstree)                     echo pstree ;;
+    rsync)                      echo rsync ;;
+    python3Packages.supervisor) echo supervisord supervisorctl ;;
+    util-linux)                 echo flock ;;
+    zstd)                       echo zstd ;;
+    ## The `cardano` group, where the package name IS the command.
+    cardano-node|cardano-cli|cardano-tracer|tx-generator|locli|db-analyser)
+                                echo "$1" ;;
+    *) die "dependency \"$1\" is not one this reader knows commands for:" \
+           "the bundle is ahead of it, sync export/shim/ from the exporter" ;;
+  esac
+}
+
+## The bundle says what shape it is. This reader depends on both halves of
+## contract 10: the profiles/<cardano_node_version>/<cardano_era>/<profile>
+## layout, and `runtime-deps` keyed by dependency NAME -- to that dependency's
+## whole record under profiles/, of which this reads `.dir`, and in
+## workbench.json to whether a run needs it. `dep_commands` above is this
+## reader's half of it. Checked before any byte is written, so a stale bundle
+## says so instead of half-deploying a runtime that cannot start.
+CONTRACT=10
+check_contract() {
+  local c
+  c=$(jq -r '.contract // 0' "$wj")
+  test "$c" = "$CONTRACT" \
+    || die "bundle is contract $c, this reader speaks $CONTRACT: re-export it with export/export.sh"
+}
+
+list() { for d in "$profiles"/*/*/*/; do basename "$d"; done | sort -u; }
+
+## Deploy the runtime out of workbench.json: every file byte-exact, and +x on
+## the ones it declares executable. jq is the only tool this needs.
+deploy() {
+  local d=$1
+  mkdir -p "$d"
+  for p in $(jq -r '.files | keys[]' "$wj"); do
+    mkdir -p "$d/$(dirname "$p")"
+    jq -j --arg p "$p" '.files[$p]' "$wj" > "$d/$p"
+  done
+  for p in $(jq -r '.executable[]' "$wj"); do chmod +x "$d/$p"; done
+}
+
+## Where a command is, in THIS PATH, or the bare name when it is only a shell
+## function. `type -P` searches PATH and nothing else, so for a name that is
+## both a builtin and a file (`echo`) it answers the file, which is the one the
+## bundle recorded. `command -v` then catches what cabal mode provides
+## (lib-cabal.sh exports cardano-node and friends as functions), where a bare
+## name is the right answer: whoever defined the function is who should run it.
+## Prints nothing and returns 1 when the command is nowhere.
+resolve() {
+  local p
+  p=$(type -P "$1") || true
+  if   test -n "$p"                    ; then printf '%s' "$p"
+  elif command -v "$1" >/dev/null 2>&1 ; then printf '%s' "$1"
+  else return 1
+  fi
+}
+
+case ${1:-} in
+  --list|-l) list; exit 0 ;;
+  ''|--help|-h) sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  --deploy)
+    have jq || die "not on PATH: jq"
+    check_contract
+    dest=${2:?usage: wb-run --deploy DIR}
+    if test -e "$dest" && test -n "$(ls -A "$dest" 2>/dev/null)"; then
+      die "destination not empty: $dest  (wb-run never deletes it; remove it yourself)"
+    fi
+    deploy "$dest"; echo "wb-run: runtime deployed into $dest"; exit 0 ;;
+esac
+
+materialise_only=
+if test "${1:-}" = --materialise; then materialise_only=1; shift; fi
+
+profile=${1:?usage: wb-run <profile> [cardano_era]}
+era=${2:-conway}
+test -d "$profiles" && test -n "$(ls -A "$profiles" 2>/dev/null)" \
+  || die "no profile catalogue at $profiles"
+
+have jq || die "not on PATH: jq"
+check_contract
+
+state=${WB_STATE_DIR:-run}
+## The base port is the bundle's: ports run exactly as built, and the
+## recorded value only parameterises the runtime (EKG/Prometheus shifts).
+base=$(jq -r '.basePort // 30000' "$wj")
+
+if test -z "$materialise_only"; then
+  ## Which version leaf to run is the node's own answer, never a bundle
+  ## default, so the node has to be here before anything else happens.
+  resolve cardano-node >/dev/null || die "not on PATH: cardano-node"
+  ver=${WB_CARDANO_NODE_VERSION:-$(cardano-node --version | awk 'NR==1 { print $2 }')}
+else
+  ver=${WB_CARDANO_NODE_VERSION:-}
+  if test -z "$ver"; then
+    ver=$(ls -1 "$profiles")
+    test "$(echo "$ver" | wc -l)" -eq 1 \
+      || die "several cardano-node versions in the bundle, set WB_CARDANO_NODE_VERSION; have: $(echo "$ver" | tr '\n' ' ')"
+  fi
+fi
+
+test -d "$profiles/$ver" \
+  || die "no such cardano-node version '$ver'; the bundle ships: $(ls -1 "$profiles" | tr '\n' ' ')"
+test -d "$profiles/$ver/$era" \
+  || die "cardano-node $ver has no era '$era'; have: $(ls -1 "$profiles/$ver" | tr '\n' ' ')"
+leaf=$profiles/$ver/$era/$profile
+test -d "$leaf/profile" && test -d "$leaf/backend" \
+  || die "no profile '$profile' for $ver/$era; have:"$'\n'"$(ls -1 "$profiles/$ver/$era" | sed 's/^/  /')"
+
+## Everything this run needs, in one directory of wb-run's own: the leaf's
+## data copied out of the bundle, verbatim (ports run exactly as built), and
+## the runtime beside it. Recreated per run; it is the only thing wb-run ever
+## deletes.
+data=$state/.workbench-$ver-$era-$profile
+rm -rf "$data"
+mkdir -p "$data"
+cp -r "$leaf"/profile "$leaf"/backend "$data"/
+chmod -R u+w "$data"
+
+## The data records the store paths of the machine that EXPORTED it, and every
+## service says which directory it calls each dependency through
+## (`runtime-deps`: name -> the entry the workbench holds, whose `dir` has no
+## trailing "/"). Rewrite each "dir/command" to where this PATH
+## says that command is. A path copied out of the bundle is text: it is not on
+## this machine, and nothing would realise it if it were referenced.
+##
+## Every name through `dep_commands` in THIS shell first: it refuses a name it
+## does not know, and inside the pipeline below that `die` would exit a subshell
+## and leave a short table rather than stop.
+while read -r name
+do dep_commands "$name" >/dev/null
+done < <(jq -r '.. | objects | ."runtime-deps"? // empty | .[] | keys[]' \
+           "$leaf"/profile/*.json | sort -u)
+
+## Longest command name first, so rewriting "<dir>cat" cannot eat "<dir>catx".
+##
+## Command substitution, not a process substitution: `pipefail` then makes a jq
+## that cannot read the leaf an error here instead of an empty table, zero
+## rewrites and a cluster full of the exporting machine's paths.
+table=$(jq -r '.. | objects | ."runtime-deps"? // empty
+               | .[] | to_entries[] | [.value.dir, .key] | @tsv' "$leaf"/profile/*.json \
+        | sort -u \
+        | while IFS=$'\t' read -r dir name
+          do for cmd in $(dep_commands "$name")
+             do printf '%s\t%s\n' "$dir" "$cmd"
+             done
+          done \
+        | sort -u \
+        | awk -F'\t' '{ print length($2) "\t" $0 }' | sort -rn -k1,1 | cut -f2-)
+test -n "$table" \
+  || die "nothing in $leaf/profile declares a build input: re-export the bundle"
+
+missing=()
+while IFS=$'\t' read -r dir cmd; do
+  test -n "$cmd" || continue
+  ## An empty directory means the data already calls it by bare name (a bundle
+  ## exported in cabal mode): nothing to rewrite, and the pattern would collapse
+  ## to "/$cmd", matching the tail of every path that ends in that command.
+  test -n "$dir" || continue
+  found=$(resolve "$cmd") || { missing+=("$cmd"); continue; }
+  test "$found" = "$dir$cmd" && continue
+  ## The replacement comes from the caller's PATH, so it is not ours to trust:
+  ## in a sed replacement "&" is the whole match and "\" quotes. The pattern
+  ## needs no such care, being a store path plus a command name.
+  esc=${found//\\/\\\\}; esc=${esc//&/\\&}; esc=${esc//|/\\|}
+  for f in "$data"/profile/*.json "$data"/backend/*; do
+    test -f "$f" && sed -i "s|${dir}/${cmd}|${esc}|g" "$f"
+  done
+done <<< "$table"
+test "${#missing[@]}" -eq 0 \
+  || die "the profile data needs these on PATH: ${missing[*]}"
+
+if test -n "$materialise_only"; then
+  dest=${3:?usage: wb-run --materialise <profile> [cardano_era] DIR}
+  test ! -e "$dest" || die "destination exists: $dest  (wb-run never deletes it; remove it yourself)"
+  mv "$data" "$dest"; echo "wb-run: materialised into $dest"; exit 0
+fi
+
+## The workbench's own dependencies (workbench.json `runtime-deps`: name ->
+## whether a run needs it): nothing to rewrite, its scripts call bare names,
+## only to be here. That value splits them, because the list is the union of
+## every `wb` code path: missing `locli` or `awk` will break this run at the very
+## end, in `wb analyse`, and saying so now beats saying it then; missing `dot` or
+## `db-analyser` only means a subcommand this run never reaches would fail.
+## Every name through `dep_commands` in THIS shell first, as with the services
+## above: in the `$( )` of the loop below its `die` would exit only the
+## substitution, print, and let the run start with a name nobody resolved.
+while read -r name
+do dep_commands "$name" >/dev/null
+done < <(jq -r '.["runtime-deps"][] | keys[]' "$wj" | sort -u)
+
+absent=(); optional=()
+while IFS=$'\t' read -r needed name; do
+  test -n "$name" || continue
+  for cmd in $(dep_commands "$name"); do
+    resolve "$cmd" >/dev/null && continue
+    if test "$needed" = true; then absent+=("$cmd"); else optional+=("$cmd"); fi
+  done
+done < <(jq -r '.["runtime-deps"][] | to_entries[] | [.value, .key] | @tsv' \
+           "$wj" | sort -u)
+test "${#optional[@]}" -eq 0 \
+  || echo "wb-run: not on PATH, so those wb subcommands would fail: ${optional[*]}" >&2
+test "${#absent[@]}" -eq 0 \
+  || die "the workbench needs these on PATH: ${absent[*]}"
+
+rt=$data/runtime
+deploy "$rt"
+
+export PATH=$rt:$PATH
+export WB_SHELL_PROFILE_NAME=$profile
+## Absolute, and made absolute by the filesystem: `$PWD/$data` would be wrong
+## whenever WB_STATE_DIR is itself absolute.
+export WB_SHELL_PROFILE_DATA=$(cd "$data"/profile && pwd)
+export WB_BACKEND_DATA=$(cd "$data"/backend && pwd)
+export WB_PROFILE_CATALOGUE=$profiles
+export WB_SHELL_ERA_NAME=$era
+export WB_CARDANO_NODE_VERSION=$ver
+export WB_BACKEND_NAME=supervisor
+export WB_BASE_PORT=$base
+export CARDANO_NODE_SOCKET_PATH=$state/current/node-0/node.socket
+
+## `wb start`, inline: this is what start-cluster has always been, and every
+## value it needs is a variable above. `wb` defaults WB_GENESIS_RIPPER and
+## WB_LOCLI_DB itself (wb:10,13); the cache dir default is env.sh's.
+##
+## No positionals: profile and era were consumed above, and `wb start` fatals on
+## bare arguments. Extra flags travel in WB_START_ARGS, unquoted so an empty one
+## contributes nothing.
+set -euo pipefail
+wb start \
+  --batch-name   "${WB_BATCH_NAME:-plain}" \
+  --era-name     "$era" \
+  --profile-data "$WB_SHELL_PROFILE_DATA" \
+  --backend-data "$WB_BACKEND_DATA" \
+  --cache-dir    "${WB_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/cardano-workbench}" \
+  --base-port    "$base" \
+  ${WB_START_ARGS:-}
