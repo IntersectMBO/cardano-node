@@ -15,6 +15,7 @@ module Cardano.Testnet (
   TestnetEnvOptions(..),
   RpcSupport(..),
   RpcHttpOptions(..),
+  TraceSupport(..),
   TestnetNodesWithOptions(..),
   NodeWithOptions(..),
   cardanoDefaultTestnetNodesWithOptions,
