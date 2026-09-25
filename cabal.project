@@ -305,7 +305,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 77f17c93bedb7649d2b82299151c98a3901cddff
+  tag: 584152d1b021e7cede41b5ef065b0a21924e6fa6
+  --sha256: sha256-A/9/O49svOzHRIstJ9SSKpsJceZhui6MocsHLPW793c=
   --sha256: sha256-LD2xbnesyVD8gj3GEIKlVTiWuh0vIEA/FI16q3odH5I=
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
