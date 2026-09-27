@@ -17,6 +17,7 @@ module Main (main) where
 ----------
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch, finally)
+import GHC.Clock (getMonotonicTime)
 import Control.Monad (forM_, unless, when)
 import Data.Bifunctor (bimap, first)
 import Data.List (partition)
@@ -294,24 +295,34 @@ main = do
     -- nowhere to send them (no workers).
     when preflight $ preflightExit runtime validated
     -- The 'TargetWorker' callback, called once per 'Target'.
-    let targetWorker target fetchTx tryFetchTx = do
-          addrInfo <- resolveAddr
-            (Runtime.targetAddr target)
-            (Runtime.targetPort target)
-          keepAliveClient <- KeepAlive.keepAliveClient 10
-          result <- N2N.connect ioManager codecConfig networkMagic tracers addrInfo
-            N2N.emptyClients
-              { N2N.clientKeepAlive = Just keepAliveClient
-              , N2N.clientTxSubmission = Just $
-                  TxSubmission.txSubmissionClient
-                    (Tracing.trTxSubmission tracers)
-                    (Runtime.targetName target)
-                    (Runtime.maxBatchSize target)
-                    fetchTx tryFetchTx
-              }
-          case result of
-            Left err -> die $ Runtime.targetName target ++ ": " ++ err
-            Right () -> pure ()
+    --
+    -- One target failing must not stop the others.  A wedged relay still
+    -- completes the handshake and then never promotes the peer, so TxSubmission
+    -- and ChainSync hang silently and only KeepAlive's 60s server-agency limit
+    -- ever fires.  Treating that as fatal used to take the whole load generator
+    -- down, and all three targets have been wedged simultaneously, so failing
+    -- over to a sibling is not sufficient either.  Supervise each target
+    -- independently instead: reconnect with capped exponential backoff and let
+    -- the healthy targets keep generating load.
+    let targetWorker target fetchTx tryFetchTx =
+          superviseTarget (Runtime.targetName target) $ do
+            addrInfo <- resolveAddr
+              (Runtime.targetAddr target)
+              (Runtime.targetPort target)
+            keepAliveClient <- KeepAlive.keepAliveClient 10
+            result <- N2N.connect ioManager codecConfig networkMagic tracers addrInfo
+              N2N.emptyClients
+                { N2N.clientKeepAlive = Just keepAliveClient
+                , N2N.clientTxSubmission = Just $
+                    TxSubmission.txSubmissionClient
+                      (Tracing.trTxSubmission tracers)
+                      (Runtime.targetName target)
+                      (Runtime.maxBatchSize target)
+                      fetchTx tryFetchTx
+                }
+            case result of
+              Left err -> ioError $ userError err
+              Right () -> pure ()
     -- Cooldown: builders are running and pre-filling payload queues.
     -- Wait for the cluster to stabilise before opening connections so that
     -- transmission begins at the target TPS immediately. Configured via the
@@ -325,31 +336,85 @@ main = do
     workers <- concat <$> mapM
       (\workload -> runWorkload workload targetWorker)
       (Map.elems $ Runtime.workloads runtime)
-    -- runWorkload returns unlinked asyncs; link them here so failures
-    -- propagate to the main thread immediately.
-    mapM_ Async.link workers
-    -- All asyncs (builders and workers) are linked to the main thread and run
-    -- forever. ANY completion, whether by exception or normal return, is fatal:
-    -- either the pipeline starved ('QueueStarved'), a connection dropped, or a
-    -- builder failed.
+    -- Builders are linked, target workers deliberately are not.
     --
-    -- 'waitAnyCatch' returns as soon as the first async finishes (without
-    -- re-throwing, so we keep control). 'finally cancelAll' then cancels every
-    -- remaining async before the program exits.
+    -- A builder that stops is fatal: the pipeline has starved ('QueueStarved')
+    -- or the builder itself failed, and no amount of reconnecting fixes that.
+    -- A target worker that stops is not fatal, because 'superviseTarget' never
+    -- lets one stop; it loops forever.  Linking them would reinstate exactly
+    -- the behaviour this change removes.
     --
-    -- 'Async.link' is still needed: if the main thread is blocked in
-    -- 'waitAnyCatch' waiting on async A but async B dies, 'link' delivers the
-    -- exception asynchronously, unblocking 'waitAnyCatch' immediately instead
-    -- of waiting for A to finish first.
-    let allAsyncs = Runtime.asyncs runtime ++ workers
+    -- 'waitAnyCatch' therefore watches only the builders.  It returns as soon
+    -- as the first finishes, without re-throwing, so we keep control.
+    -- 'finally cancelAll' cancels everything, workers included, on the way out.
+    let builders = Runtime.asyncs runtime
+        allAsyncs = builders ++ workers
         cancelAll = mapM_ Async.cancel allAsyncs
+    mapM_ Async.link builders
     (_, result) <- flip finally cancelAll $
-      Async.waitAnyCatch allAsyncs
+      Async.waitAnyCatch builders
     case result of
       Left ex ->
         die $ show ex
       Right () ->
-        die "async terminated unexpectedly"
+        die "builder terminated unexpectedly"
+
+--------------------------------------------------------------------------------
+-- Target supervision.
+--------------------------------------------------------------------------------
+
+-- | Run one target's connection forever, reconnecting on any failure.
+--
+-- Never returns.  Exceptions are caught and retried rather than propagated, so
+-- a wedged or unreachable relay costs that target's share of the load and
+-- nothing else.  Asynchronous exceptions are not caught: 'Async.cancel' during
+-- shutdown must still work.
+--
+-- Backoff doubles from 'superviseBackoffBase' and is capped at
+-- 'superviseBackoffMax'.  The cap matters: an uncapped delay would grow past
+-- the time it takes a relay to be restarted, so a recovered target would sit
+-- idle long after it was usable.  A connection that survived at least
+-- 'superviseHealthy' is treated as good and resets the backoff, so a relay
+-- that flaps does not inherit the delay from an earlier outage.
+--
+-- Both transitions are traced.  Silence here would turn a permanently wedged
+-- relay into an invisible capacity loss.
+superviseTarget :: String -> IO () -> IO ()
+superviseTarget name act = go superviseBackoffBase
+  where
+    go delay = do
+      before <- getMonotonicTime
+      outcome <- (Right <$> act) `catch` (pure . Left @SomeException)
+      after <- getMonotonicTime
+      let lasted = after - before
+          reason = case outcome of
+            Left ex -> show ex
+            Right () -> "connection closed cleanly"
+          delay'
+            | lasted >= superviseHealthy = superviseBackoffBase
+            | otherwise = min superviseBackoffMax (delay * 2)
+      hPutStrLn stderr $
+        "tx-centrifuge: target " ++ name ++ " dropped after "
+          ++ show (round lasted :: Int) ++ "s: " ++ reason
+          ++ "; reconnecting in " ++ show (round delay :: Int) ++ "s"
+      threadDelay (round (delay * 1_000_000))
+      hPutStrLn stderr $ "tx-centrifuge: target " ++ name ++ " reconnecting"
+      go delay'
+
+-- | First reconnect delay, seconds.
+superviseBackoffBase :: Double
+superviseBackoffBase = 1
+
+-- | Ceiling on the reconnect delay, seconds.  Keeps recovery prompt once a
+-- wedged relay is restarted.
+superviseBackoffMax :: Double
+superviseBackoffMax = 60
+
+-- | A connection lasting at least this long, seconds, counts as healthy and
+-- resets the backoff.  Above the 60s KeepAlive server-agency limit, so a
+-- wedged target, which always dies at that limit, never resets.
+superviseHealthy :: Double
+superviseHealthy = 120
 
 --------------------------------------------------------------------------------
 -- Initial funds.
