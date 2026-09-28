@@ -53,7 +53,7 @@ export CARDANO_NODE=path to your executable
 -->
 <!-- checked-help: cardano-testnet --help -->
 ```text
-Usage: cardano-testnet (cardano | create-env | version | help)
+Usage: cardano-testnet (cardano | create-env | status | version | help)
 
 Available options:
   -h,--help                Show this help text
@@ -61,6 +61,7 @@ Available options:
 Available commands:
   cardano                  Start a testnet and keep it running until stopped
   create-env               Create a sandbox for Cardano testnet
+  status                   Check the status of a running testnet
   version                  Show cardano-testnet version
   help                     Show cardano-testnet help
 ```
