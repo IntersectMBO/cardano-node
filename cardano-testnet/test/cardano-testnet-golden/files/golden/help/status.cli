@@ -1,0 +1,14 @@
+Usage: cardano-testnet status [--testnet-dir FILEPATH]
+  [--timeout SECONDS]
+  [--json]
+  
+
+  Check the status of a running testnet
+
+Available options:
+  --testnet-dir FILEPATH   Path to the environment folder of the testnet whose
+                           status to check, by default "./testnet".
+  --timeout SECONDS        How many seconds to wait for each node to answer (1 -
+                           3600). (default: 5)
+  --json                   Output status as JSON instead of a table.
+  -h,--help                Show this help text

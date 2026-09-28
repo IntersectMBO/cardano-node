@@ -134,6 +134,9 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Cardano
                         Testnet.Start.Types
+                        Testnet.Status.Parsers
+                        Testnet.Status.Run
+                        Testnet.Status.Types
                         Testnet.SubmitApi
                         Testnet.TestQueryCmds
                         Testnet.Types

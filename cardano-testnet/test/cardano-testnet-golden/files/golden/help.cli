@@ -1,4 +1,4 @@
-Usage: cardano-testnet (cardano | create-env | version | help) 
+Usage: cardano-testnet (cardano | create-env | status | version | help) 
 
 Usage: cardano-testnet cardano 
   [ --node-env FILEPATH [--preserve-timestamps]
@@ -35,6 +35,13 @@ Usage: cardano-testnet create-env
   
 
   Create a sandbox for Cardano testnet
+
+Usage: cardano-testnet status [--testnet-dir FILEPATH]
+  [--timeout SECONDS]
+  [--json]
+  
+
+  Check the status of a running testnet
 
 Usage: cardano-testnet version 
 
