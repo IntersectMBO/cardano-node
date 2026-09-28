@@ -27,6 +27,9 @@ import           System.Directory (doesDirectoryExist)
 import           Testnet.Filepath (unTmpAbsPath)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Status.Parsers (cmdCheckStatus)
+import           Testnet.Status.Run (runCheckStatusOptions)
+import           Testnet.Status.Types (CheckStatusOptions)
 import           Testnet.Types (TestnetNode (..))
 
 import           Parsers.Cardano
@@ -62,6 +65,7 @@ opts envCli = Opt.info (commands envCli <**> helper) idm
 data CardanoTestnetCommands
   = StartCardanoTestnet CardanoTestnetCliOptions
   | CreateTestnetEnv CardanoTestnetCreateEnvOptions
+  | CheckStatus CheckStatusOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
@@ -70,6 +74,7 @@ commands envCli =
   asum
     [ fmap StartCardanoTestnet (subparser cmdCardano)
     , fmap CreateTestnetEnv (subparser cmdCreateEnv)
+    , fmap CheckStatus (subparser cmdCheckStatus)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]
@@ -79,6 +84,7 @@ runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
   CreateTestnetEnv cmdOpts -> createEnvOptions cmdOpts
+  CheckStatus cmdOpts -> runCheckStatusOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
