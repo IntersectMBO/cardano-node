@@ -30,7 +30,6 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
-import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Logging.Types (ForwarderMode (..), HowToConnect (..))
 import           Cardano.Node.Configuration.LedgerDB (LedgerDbConfiguration (..),
@@ -59,7 +58,7 @@ import           Cardano.Node.Types (CheckpointsFile (..), CheckpointsHash (..),
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..), RpcTlsFiles (..))
-import           Data.Functor.Identity (runIdentity)
+import           Data.Functor.Identity (Identity, runIdentity)
 import           Data.Monoid (Last (..))
 import           Data.Time.Clock (secondsToDiffTime)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
@@ -73,10 +72,9 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots
                    SnapshotFrequency (..), SnapshotFrequencyArgs (..),
                    SnapshotInterval (..), SnapshotPolicyArgs (..),
                    defaultSnapshotPolicyArgs, mithrilSnapshotPolicyArgs)
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.Server.RateLimiting (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
-                   (TxSubmissionInitDelay (..), TxSubmissionLogicVersion (..))
+                   (TxSubmissionInitDelay (..))
 import           System.FilePath (takeDirectory, (</>))
 
 -- | Build the node's 'NodeConfiguration' from a @cardano-config@-resolved
@@ -110,7 +108,7 @@ cardanoConfigToPartialNodeConfiguration cfg =
       , pncSyncTargetOfEstablishedBigLedgerPeers =
           Last (Just (runIdentity (Cfg.syncTargetOfEstablishedBigLedgerPeers netCfg)))
       , pncDatabaseFile = Last (Just (fromCfgDbPaths (runIdentity (Cfg.databasePath storeCfg))))
-      , pncDiffusionMode = Last (Just (fromCfgDiffusionMode (runIdentity (Cfg.diffusionMode netCfg))))
+      , pncDiffusionMode = Last (Just (runIdentity (Cfg.diffusionMode netCfg)))
       , pncMaxConcurrencyBulkSync =
           Last (Just (MaxConcurrencyBulkSync (runIdentity (Cfg.maxConcurrencyBulkSync netCfg))))
       , pncMaxConcurrencyDeadline =
@@ -118,10 +116,10 @@ cardanoConfigToPartialNodeConfiguration cfg =
       , pncTxSubmissionInitDelay =
           Last (Just (TxSubmissionInitDelay (runIdentity (Cfg.txSubmissionInitDelay netCfg))))
       , pncAcceptedConnectionsLimit =
-          Last (Just (fromCfgAcceptedConnLimit (runIdentity (Cfg.acceptedConnectionsLimit netCfg))))
+          Last (Just (fromCfgAcceptedConnLimit (Cfg.acceptedConnectionsLimit netCfg)))
       , pncConsensusMode = Last (Just (fromCfgConsensusMode consensusModeVal))
       , pncPeerSharing =
-          Last (fmap toPeerSharing (strictMaybeToMaybe (Cfg.peerSharing netCfg)))
+          Last (strictMaybeToMaybe (Cfg.peerSharing netCfg))
       , pncMaybeMempoolCapacityOverride =
           Last (fmap (MempoolCapacityBytesOverride . ByteSize32 . fromIntegral)
                      (strictMaybeToMaybe (Cfg.mempoolCapacityOverride mempCfg)))
@@ -131,8 +129,11 @@ cardanoConfigToPartialNodeConfiguration cfg =
                         (fmap toNodeShutdownOn (strictMaybeToMaybe (Cfg.shutdownOnTarget cfg)))))
       , pncResponderCoreAffinityPolicy =
           Last (Just (fromCfgAffinity (runIdentity (Cfg.responderCoreAffinityPolicy netCfg))))
-      , pncTxSubmissionLogicVersion =
-          Last (Just (fromCfgTxSubmissionLogic (runIdentity (Cfg.txSubmissionLogicVersion netCfg))))
+      , -- No mapping: cardano-config takes 'TxSubmissionLogicVersion' from
+        -- ouroboros-network rather than defining its own, so this is already
+        -- the node's type.
+        pncTxSubmissionLogicVersion =
+          Last (Just (runIdentity (Cfg.txSubmissionLogicVersion netCfg)))
       , -- The Genesis tuning flags only feed 'ncGenesisConfig' when the node runs
         -- in Genesis mode (see 'makeNodeConfiguration'); in Praos mode the node
         -- ignores them, so mirror POM and keep the defaults there.
@@ -186,10 +187,6 @@ cardanoConfigToPartialNodeConfiguration cfg =
     fromCfgDbPaths (Cfg.SingleDB p) = OnePathForAllDbs p
     fromCfgDbPaths (Cfg.SplitDB imm vol) = MultipleDbPaths imm vol
 
-    fromCfgDiffusionMode :: Cfg.DiffusionMode -> DiffusionMode
-    fromCfgDiffusionMode Cfg.InitiatorOnly = InitiatorOnlyDiffusionMode
-    fromCfgDiffusionMode Cfg.InitiatorAndResponder = InitiatorAndResponderDiffusionMode
-
     -- cardano-config's 'GrpcEndpoint' mirrors 'RpcEndpoint' constructor for
     -- constructor, so this is a straight relabel; only the file paths gain
     -- their 'File' tags.
@@ -207,21 +204,20 @@ cardanoConfigToPartialNodeConfiguration cfg =
         , chainCertificateFiles = map File (Cfg.chainCertificateFiles t)
         }
 
-    fromCfgAcceptedConnLimit :: Cfg.AcceptedConnectionsLimit -> AcceptedConnectionsLimit
+    -- cardano-config keeps this one as its own record, with the fields wrapped
+    -- in the same functor as the rest of the network config, so it still needs
+    -- mapping onto the node's flat 'AcceptedConnectionsLimit'.
+    fromCfgAcceptedConnLimit :: Cfg.AcceptedConnectionsLimitConfig Identity -> AcceptedConnectionsLimit
     fromCfgAcceptedConnLimit c =
       AcceptedConnectionsLimit
-        { acceptedConnectionsHardLimit = Cfg.hardLimit c
-        , acceptedConnectionsSoftLimit = Cfg.softLimit c
-        , acceptedConnectionsDelay = Cfg.delayOnSoftLimit c
+        { acceptedConnectionsHardLimit = runIdentity (Cfg.hardLimit c)
+        , acceptedConnectionsSoftLimit = runIdentity (Cfg.softLimit c)
+        , acceptedConnectionsDelay = runIdentity (Cfg.delayOnSoftLimit c)
         }
 
     fromCfgConsensusMode :: Cfg.ConsensusMode -> ConsensusMode
     fromCfgConsensusMode Cfg.PraosMode = PraosMode
     fromCfgConsensusMode (Cfg.GenesisMode _) = GenesisMode
-
-    toPeerSharing :: Bool -> PeerSharing
-    toPeerSharing True = PeerSharingEnabled
-    toPeerSharing False = PeerSharingDisabled
 
     toNodeShutdownOn :: Cfg.ShutdownOn -> ShutdownOn
     toNodeShutdownOn (Cfg.ShutdownAtSlot w) = ASlot (SlotNo w)
@@ -243,10 +239,6 @@ cardanoConfigToPartialNodeConfiguration cfg =
           "Accept" -> Responder
           _ -> Initiator
       )
-
-    fromCfgTxSubmissionLogic :: Cfg.TxSubmissionLogicVersion -> TxSubmissionLogicVersion
-    fromCfgTxSubmissionLogic Cfg.TxSubmissionLogicV1 = TxSubmissionLogicV1
-    fromCfgTxSubmissionLogic Cfg.TxSubmissionLogicV2 = TxSubmissionLogicV2
 
     -- Map cardano-config's snapshot policy onto the node's 'SnapshotPolicyArgs',
     -- mirroring how POM's LedgerDB parser builds it: a named Mithril policy

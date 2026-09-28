@@ -196,11 +196,12 @@ source-repository-package
 -- TEMPORARY: cardano-config is not published to CHaP yet. Remove this stanza
 -- (and depend on the CHaP release) as soon as it is.
 --
--- pull/22/head, cardano-config 2.0.0.0. Not a tag: the PR is the branch the
--- 11.2 integration fed back into, and it carries the schema format version 2
--- this series writes. Move to the 2.0.0.0 tag once it merges.
+-- main, cardano-config 2.0.0.0, where pull/22 landed as a squash. Not a tag:
+-- the CHANGELOG heading there is still `Unreleased`, and upstream dates that
+-- heading before tagging, so neither cardano-config-2.0.0.0 nor the v2 the
+-- schemas' $id points at exists yet. Move to the tag once it is cut.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-config
-  tag: 29d5cf3f600a5a7fb2fd4b6fe06df21c06d30d8d
-  --sha256: sha256-WiWfrOCo8BRpPaPAqgqof9xlR3VxjBcbhjD+wOWZ2h4=
+  tag: d6340b13b9c789441905f27d90984a6018bbe503
+  --sha256: sha256-diV4bf/cU0u0VNC6dMMe4Y/pPFI0s+MqxCIpzd9c+E8=
