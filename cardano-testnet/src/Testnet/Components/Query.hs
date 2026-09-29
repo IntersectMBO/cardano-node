@@ -11,6 +11,7 @@
 module Testnet.Components.Query
   ( EpochStateView
   , getEpochStateView
+  , stopEpochStateView
   , getEpochState
   , getSlotNumber
   , getBlockNumber
@@ -66,6 +67,7 @@ import qualified Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.Trans.Maybe (MaybeT (..), mapMaybeT, runMaybeT)
 import           Control.Monad.Trans.Resource
+import           Data.IORef
 import           Data.List (sortOn)
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
@@ -250,6 +252,8 @@ data EpochStateView = EpochStateView
   , epochStateVersion :: !(TVar Word64)
   -- ^ Monotonically increasing counter, bumped on every state write.
   -- Used by 'awaitStateUpdateTimeout' to block until the next update.
+  , epochStateFoldRelease :: !(IORef (Maybe ReleaseKey))
+  -- ^ Release key of the background fold thread, used by 'stopEpochStateView'.
   }
 
 -- | Write a new value to the epoch state and bump the version counter atomically.
@@ -389,8 +393,8 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
-  esv <- H.evalIO $ EpochStateView <$> newTVarIO (Left EpochStateNotInitialised) <*> newTVarIO 0
-  _ <- asyncRegister_ $ do
+  esv <- H.evalIO $ EpochStateView <$> newTVarIO (Left EpochStateNotInitialised) <*> newTVarIO 0 <*> newIORef Nothing
+  (releaseKey, _) <- asyncRegister_ $ do
     fs <- mkNodeConfigFs nodeConfigFile
     result <- runExceptT $ foldEpochState fs nodeConfigFile socketPath QuickValidation (EpochNo maxBound) ()
       $ \epochState slotNumber blockNumber -> do
@@ -399,7 +403,19 @@ getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
     case result of
       Left err -> atomically $ writeEpochStateView esv $ Left $ EpochStateFoldError err
       Right _ -> pure ()
+  H.evalIO $ writeIORef (epochStateFoldRelease esv) (Just releaseKey)
   pure esv
+
+-- | Stop the background thread that keeps an 'EpochStateView' up to date. The view then
+-- holds its last observed state. Use this before the chain moves into an era the
+-- client-side ledger fold cannot process; afterwards query the node through the CLI.
+stopEpochStateView
+  :: MonadIO m
+  => EpochStateView
+  -> m ()
+stopEpochStateView esv = do
+  mKey <- liftIO $ readIORef (epochStateFoldRelease esv)
+  liftIO $ mapM_ release mKey
 
 -- | Retrieve all UTxOs map from the epoch state view.
 findAllUtxos

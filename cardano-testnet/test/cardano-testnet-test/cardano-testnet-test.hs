@@ -20,6 +20,7 @@ import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+import qualified Cardano.Testnet.Test.Dijkstra.NestedTransaction
 import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
@@ -147,6 +148,7 @@ tests = do
         , T.testGroup "Cardano-testnet"
           [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
           , ignoreOnWindows "Hard fork to Dijkstra" Cardano.Testnet.Test.Node.DijkstraEra.hprop_hardfork_to_dijkstra
+          , ignoreOnWindows "Nested transaction swap" Cardano.Testnet.Test.Dijkstra.NestedTransaction.hprop_nested_transaction_swap
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
