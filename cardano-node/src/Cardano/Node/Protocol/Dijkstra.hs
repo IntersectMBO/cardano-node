@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Plutus.Language as L
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (SlotInterval (..))
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Int
@@ -90,6 +91,12 @@ emptyDijkstraGenesis =
                             , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024
                             , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7000000000 2000000000000
                             , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024
+                            , udppPerasMinCandidateBlockAge = SlotInterval 90
+                            , udppPerasHealingFactor = fromMaybe (error "impossible") $ boundRational 0.5
+                            , udppPerasCertBoost = 15
+                            , udppPerasTargetCommitteeSize = 800
+                            , udppPerasBootstrapRound = SJust 0
+                            , udppPerasQuorumThresholdSafetyMargin = fromMaybe (error "impossible") $ boundRational 0.05
                             }
   in DijkstraGenesis { dgUpgradePParams = upgradePParamsDef }
 
