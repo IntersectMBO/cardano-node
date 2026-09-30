@@ -693,6 +693,13 @@ docTracersFirstPhase condConfigFileName = do
     dtAcceptPolicyTrDoc <- documentTracer (dtAcceptPolicyTr ::
       Logging.Trace IO NtN.AcceptConnectionsPolicyTrace)
 
+    muxCountersTr    <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Counters"]
+    configureTracers configReflection trConfig [muxCountersTr]
+    muxCountersTrDoc <- documentTracer (muxCountersTr ::
+      Logging.Trace IO Mux.CountersTrace)
+
     internalTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Reflection"]
@@ -770,6 +777,7 @@ docTracersFirstPhase condConfigFileName = do
             <> localServerTrDoc
             <> localInboundGovernorTrDoc
             <> dtAcceptPolicyTrDoc
+            <> muxCountersTrDoc
 -- gRPC
             <> rpcTrDoc
 -- Internal tracer
