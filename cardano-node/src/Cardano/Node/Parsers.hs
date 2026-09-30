@@ -131,6 +131,7 @@ nodeRunParser = do
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncEgressPollInterval = mempty
+           , pncEgressBudgetMbps = mempty
            , pncChainSyncIdleTimeout = mempty
            , pncMempoolTimeoutSoft = mempty
            , pncMempoolTimeoutHard = mempty
