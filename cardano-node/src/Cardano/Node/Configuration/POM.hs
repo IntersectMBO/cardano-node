@@ -33,7 +33,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConse
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..))
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..), LeiosMinOfferLead)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -205,6 +205,7 @@ data NodeConfiguration
 
        -- Leios
        , ncLeiosDbConfig :: LeiosDbConfig
+       , ncLeiosMinOfferLead :: !(Maybe LeiosMinOfferLead)
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -311,6 +312,7 @@ data PartialNodeConfiguration
 
        -- Leios
        , pncLeiosDbConfig :: !(Last LeiosDbConfig)
+       , pncLeiosMinOfferLead :: !(Last LeiosMinOfferLead)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -428,6 +430,7 @@ instance FromJSON PartialNodeConfiguration where
       pncTxSubmissionInitDelay <- parseInitDelay
 
       pncLeiosDbConfig <- Last <$> v .:? "LeiosDbConfig"
+      pncLeiosMinOfferLead <- Last <$> v .:? "LeiosMinOfferLead"
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -477,6 +480,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTxSubmissionLogicVersion = txSubmissionLogicVersion
            , pncTxSubmissionInitDelay
            , pncLeiosDbConfig
+           , pncLeiosMinOfferLead
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -756,6 +760,7 @@ defaultPartialNodeConfiguration =
     , pncTxSubmissionInitDelay = Last $ Just defaultTxSubmissionInitDelay
 
     , pncLeiosDbConfig = Last (Just (LeiosDbSQLite))
+    , pncLeiosMinOfferLead = mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -964,6 +969,7 @@ makeNodeConfiguration pnc = do
              , ncTxSubmissionLogicVersion
              , ncTxSubmissionInitDelay
              , ncLeiosDbConfig
+             , ncLeiosMinOfferLead = getLast $ pncLeiosMinOfferLead pnc
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
