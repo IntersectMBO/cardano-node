@@ -229,7 +229,7 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- cardano-ledger: master tip (ba0f452e), kept in sync with
+-- cardano-ledger: master tip (347ff73c), kept in sync with
 -- ouroboros-consensus's own cardano-ledger SRP below (see that comment) --
 -- don't bump this independently of that pin. Pulling in the whole monorepo,
 -- not just eras/byron/crypto, because ouroboros-consensus's
@@ -240,8 +240,8 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: ba0f452efe727ae7a9900749de8424edaf0dfa65
-  --sha256: sha256-r10v764yu/eHUTzeKdX5ffJSpVRvMZAqEGmSMtPnNJs=
+  tag: 347ff73c491beee11089a6434f1dc8ecf29ae50c
+  --sha256: sha256-AGKkdYXg6FBTw3R1Fcp4Y+6VM0aBA3fvJd9gRJjqDk8=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -307,18 +307,34 @@ source-repository-package
 -- DijkstraEraBlockHeader -> LeiosEraBlockHeader rename, the
 -- BlockFetchConsensusInterface `matchedBlock` parameter, the
 -- TracePerasCertInclusionEvent/TracePerasVoteForgingEvent tracer additions,
--- and (this commit) the six new Peras UpgradeDijkstraPParams fields plus
--- widening its own cardano-protocol bound to >=0.1 && <0.3 (cardano-ledger's
--- cardano-protocol package was bumped to 0.2.0.0). Its own .cabal version
--- field was bumped to 4.2.1.0 as part of this branch, satisfying
--- cardano-node's own ^>=4.2.0.1 bound directly -- no allow-older bridge
--- needed. The .cabal lives at the repo root (its own cabal.project says
--- `packages: .`), so no subdir is needed.
+-- the Peras/RefInputsCost UpgradeDijkstraPParams fields, widening its own
+-- cardano-protocol bound to >=0.1 && <0.3 (cardano-ledger's cardano-protocol
+-- package was bumped to 0.2.0.0), and (this commit) a rebase onto upstream
+-- main -- which itself moved node-configuration parsing onto a new
+-- cardano-config SRP dependency and requires two more LeiosEraBlockHeader
+-- methods (versionInfoBlockHeaderL/ebReferencesAnnouncementBlockHeaderL) be
+-- implemented on our own placeholder instance. Its own .cabal version field
+-- was bumped to 4.2.1.0 as part of this branch, satisfying cardano-node's
+-- own ^>=4.2.0.1 bound directly -- no allow-older bridge needed. The .cabal
+-- lives at the repo root (its own cabal.project says `packages: .`), so no
+-- subdir is needed.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 447498e890c30b6baae5194d4a9e6eee25dfc997
-  --sha256: sha256-WUglPs7/daRT8fFGwLH9fe4IuCEfSOmmVlFwP9ZU0U4=
+  tag: 5b8c2bfeb4ec516ad83a7dcef98d9101d5666280
+  --sha256: sha256-BQ4Y4hw2wlww3wlf3243z8UdZdYGg+HRaHuwmUezizQ=
+
+-- cardano-config: ouroboros-consensus's own cabal.project (see above) pins
+-- this to its main branch via its own SRP, needing cardano-config ^>=2.0 --
+-- not released to CHaP yet (CHaP only has 1.x). SRPs aren't transitive
+-- across cabal.project files, so without this our build would try to
+-- resolve cardano-config from CHaP's stale 1.x release and fail. Mirroring
+-- ouroboros-consensus's own pin exactly.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config.git
+  tag: d6340b13b9c789441905f27d90984a6018bbe503
+  --sha256: sha256-diV4bf/cU0u0VNC6dMMe4Y/pPFI0s+MqxCIpzd9c+E8=
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
 -- https://github.com/IntersectMBO/cardano-api/pull/1292
