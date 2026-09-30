@@ -1,0 +1,6 @@
+description: Added a new `--enable-tracer` option, which when set starts up `cardano-tracer`
+  and causes all testnet nodes to send tracing data to it
+kind:
+- feature
+pr: 6710
+project: cardano-testnet
