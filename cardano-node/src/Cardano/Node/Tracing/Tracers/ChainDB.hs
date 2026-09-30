@@ -2693,6 +2693,14 @@ instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
       mconcat [ "kind" .= String "BlockAlreadyHere"
                , "blockId" .= String (showT blockId)
                ]
+    forMachine _dtal (VolDB.ForgotLeiosCertBlocks n) =
+      mconcat [ "kind" .= String "ForgotLeiosCertBlocks"
+               , "count" .= n
+               ]
+    forMachine _dtal (VolDB.ReadmittedForgottenBlock blockId) =
+      mconcat [ "kind" .= String "ReadmittedForgottenBlock"
+               , "blockId" .= String (showT blockId)
+               ]
     forMachine _dtal (VolDB.Truncate pErr fsPath blockOffset) =
       mconcat [ "kind" .= String "Truncate"
                , "parserError" .= String (showT pErr)
@@ -2709,12 +2717,16 @@ instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
 instance MetaTrace (VolDB.TraceEvent blk) where
     namespaceFor VolDB.DBAlreadyClosed {} = Namespace [] ["DBAlreadyClosed"]
     namespaceFor VolDB.BlockAlreadyHere {} = Namespace [] ["BlockAlreadyHere"]
+    namespaceFor VolDB.ForgotLeiosCertBlocks {} = Namespace [] ["ForgotLeiosCertBlocks"]
+    namespaceFor VolDB.ReadmittedForgottenBlock {} = Namespace [] ["ReadmittedForgottenBlock"]
     namespaceFor VolDB.Truncate {} = Namespace [] ["Truncate"]
     namespaceFor VolDB.InvalidFileNames {} = Namespace [] ["InvalidFileNames"]
     namespaceFor VolDB.DBClosed {} = Namespace [] ["DBClosed"]
 
     severityFor  (Namespace _ ["DBAlreadyClosed"]) _ = Just Debug
     severityFor  (Namespace _ ["BlockAlreadyHere"]) _ = Just Debug
+    severityFor  (Namespace _ ["ForgotLeiosCertBlocks"]) _ = Just Info
+    severityFor  (Namespace _ ["ReadmittedForgottenBlock"]) _ = Just Debug
     severityFor  (Namespace _ ["Truncate"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidFileNames"]) _ = Just Debug
     severityFor  (Namespace _ ["DBClosed"]) _ = Just Debug
@@ -2724,6 +2736,13 @@ instance MetaTrace (VolDB.TraceEvent blk) where
       "When closing the DB it was found it is closed already."
     documentFor  (Namespace _ ["BlockAlreadyHere"]) = Just
       "A block was found to be already in the DB."
+    documentFor  (Namespace _ ["ForgotLeiosCertBlocks"]) = Just
+      "How many certificate-carrying blocks were forgotten at start up, so\
+      \ that they are re-acquired by the ordinary path and their certificates\
+      \ checked against a ledger view."
+    documentFor  (Namespace _ ["ReadmittedForgottenBlock"]) = Just
+      "A block forgotten at start up was added again, so it is known once\
+      \ more. This is the event that shows the re-acquisition path firing."
     documentFor  (Namespace _ ["Truncate"]) =  Just
       "Truncates a file up to offset because of the error."
     documentFor  (Namespace _ ["InvalidFileNames"]) = Just
@@ -2735,6 +2754,8 @@ instance MetaTrace (VolDB.TraceEvent blk) where
     allNamespaces =
       [ Namespace [] ["DBAlreadyClosed"]
       , Namespace [] ["BlockAlreadyHere"]
+      , Namespace [] ["ForgotLeiosCertBlocks"]
+      , Namespace [] ["ReadmittedForgottenBlock"]
       , Namespace [] ["Truncate"]
       , Namespace [] ["InvalidFileNames"]
       , Namespace [] ["DBClosed"]
