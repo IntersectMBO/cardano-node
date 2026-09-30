@@ -977,6 +977,11 @@ mkDiffusionConfiguration
     , Diffusion.dcMuxForkPolicy
     , Diffusion.dcLocalMuxForkPolicy
     , Diffusion.dcEgressPollInterval       = ncEgressPollInterval nc
+    , Diffusion.dcEgressScheduling         =
+        if ncEgressBudgetMbps nc <= 0
+           then Nothing
+           else Just Configuration.defaultEgressScheduling {
+                  Diffusion.esBudget = ncEgressBudgetMbps nc * 1e6 / 8 }
     }
   where
     dcPeerSelectionTargets = PeerSelectionTargets {

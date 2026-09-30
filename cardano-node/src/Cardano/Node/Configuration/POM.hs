@@ -136,6 +136,10 @@ data NodeConfiguration
 
        , ncEgressPollInterval    :: DiffTime
 
+         -- | The budget scheduled egress divides among the node's peers, in
+         -- Mb/s; 0 turns scheduled egress off.
+       , ncEgressBudgetMbps      :: Double
+
          -- | Timeout override for ChainSync, see
          -- 'Ouroboros.Network.Protocol.ChainSync.Codec.ChainSyncTimeout'
        , ncChainSyncIdleTimeout :: TimeoutOverride
@@ -261,6 +265,7 @@ data PartialNodeConfiguration
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
        , pncTimeWaitTimeout       :: !(Last DiffTime)
        , pncEgressPollInterval    :: !(Last DiffTime)
+       , pncEgressBudgetMbps      :: !(Last Double)
 
        , pncChainSyncIdleTimeout      :: !(Last DiffTime)
 
@@ -371,6 +376,7 @@ instance FromJSON PartialNodeConfiguration where
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
       pncEgressPollInterval    <- Last <$> v .:? "EgressPollInterval"
+      pncEgressBudgetMbps      <- Last <$> v .:? "EgressBudgetMbps"
 
 
       -- AcceptedConnectionsLimit
@@ -453,6 +459,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncMempoolTimeoutHard
            , pncMempoolTimeoutCapacity
            , pncEgressPollInterval
+           , pncEgressBudgetMbps
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
            , pncDeadlineTargetOfKnownPeers
@@ -715,6 +722,8 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultTimeWaitTimeout
     , pncEgressPollInterval       = Last (Just Ouroboros.defaultEgressPollInterval)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
+    , pncEgressBudgetMbps         = Last (Just 950)
+      -- the budget of 'Ouroboros.Network.Diffusion.Configuration.defaultEgressSchedulingWith'
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
     , pncChainSyncIdleTimeout     = mempty
@@ -840,6 +849,9 @@ makeNodeConfiguration pnc = do
   ncEgressPollInterval <-
     lastToEither "Missing EgressPollInterval"
     $ pncEgressPollInterval pnc
+  ncEgressBudgetMbps <-
+    lastToEither "Missing EgressBudgetMbps"
+    $ pncEgressBudgetMbps pnc
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
@@ -940,6 +952,7 @@ makeNodeConfiguration pnc = do
              , ncMempoolTimeoutHard
              , ncMempoolTimeoutCapacity
              , ncEgressPollInterval
+             , ncEgressBudgetMbps
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers
              , ncDeadlineTargetOfKnownPeers
