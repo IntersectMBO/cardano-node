@@ -432,6 +432,9 @@ getAllNamespaces =
         dtDnsResolverNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "DNSResolver"])
                               (allNamespaces :: [Namespace DNSTrace])
+        muxCountersNS = map (nsGetTuple . nsReplacePrefix
+                              ["Net", "Mux", "Counters"])
+                            (allNamespaces :: [Namespace Mux.CountersTrace])
         dtAcceptPolicyNS = map (nsGetTuple . nsReplacePrefix
                                  ["Net", "AcceptPolicy"])
                                (allNamespaces :: [Namespace
@@ -524,6 +527,7 @@ getAllNamespaces =
             <> localServerNS
             <> localInboundGovernorNS
             <> dtDnsResolverNS
+            <> muxCountersNS
             <> dtAcceptPolicyNS
 -- RPC
             <> rpcNS
