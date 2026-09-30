@@ -69,6 +69,7 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile socketFile =
 -- process handle of the spawned tracer.
 startCardanoTracer
   :: HasCallStack
+  => MonadFail m
   => MonadResource m
   => MonadCatch m
   => CardanoTracerConf
@@ -92,7 +93,7 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
   hNodeStdout <- liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-  prometheusPort <- fmap head $ liftIO $ IO.allocateRandomPorts 1
+  [prometheusPort] <- liftIO $ IO.allocateRandomPorts 1
   liftIO $ encodeFile configFile $ mkConfig conf prometheusPort logDir socketFile
 
   cp <- runRIO () $ procFlex "cardano-tracer" "CARDANO_TRACER"
