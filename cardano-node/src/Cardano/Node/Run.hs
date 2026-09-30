@@ -40,7 +40,7 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
-import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..))
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..), LeiosMinOfferLead (unLeiosMinOfferLead))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
@@ -173,6 +173,7 @@ import           System.Win32.File
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
 
+import qualified LeiosDemoLogic as Leios
 import           LeiosDemoDb (LeiosDbHandle (close), newLeiosDBInMemory, newLeiosDBSQLite)
 import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
@@ -552,6 +553,7 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
             , srnTraceChainDB                 = chainDBTracer tracers
             , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
             , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
+            , srnLeiosMinOfferLead            = Leios.MkLeiosMinOfferLead . unLeiosMinOfferLead <$> ncLeiosMinOfferLead nc
             , srnSnapshotPolicyArgs           = snapshotPolicyArgs
             , srnQueryBatchSize               = queryBatchSize
             , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
