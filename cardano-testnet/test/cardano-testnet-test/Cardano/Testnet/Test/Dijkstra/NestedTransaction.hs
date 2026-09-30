@@ -54,11 +54,11 @@ import           Hedgehog.Internal.Property (MonadTest)
 -- Swap (Dijkstra): Alice offers her 100 @TokenA@ for 50 ADA, i.e. 0.5 ADA per token.
 --
 -- * Alice's sub-transaction spends her token UTxO and pays herself 53 ADA (the 50 ADA
---   price plus the 3 ADA that accompanied the tokens). It is guarded by, and signed
---   with, Alice's key only.
+--   price plus the 3 ADA that accompanied the tokens). It is signed with Alice's key
+--   only, which spending her input already requires; no guards are needed.
 -- * Bob's sub-transaction spends his 60 ADA UTxO and pays himself the 100 @TokenA@
---   (with 3 ADA) plus 7 ADA change, so he pays exactly 50 ADA. It is guarded by, and
---   signed with, Bob's key only.
+--   (with 3 ADA) plus 7 ADA change, so he pays exactly 50 ADA. It is signed with Bob's
+--   key only.
 -- * The batcher's top-level transaction embeds both signed sub-transactions, adds its
 --   own input to pay the fee, and is signed by the batcher only.
 --
@@ -175,9 +175,6 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
   bobAdaUtxo <- H.nothingFail $ find (\u -> ueLovelace u == bobFunds && ueTokens u == 0) bobBefore
   batcherUtxo <- H.nothingFail $ listToMaybeHead $ sortOn (Down . ueLovelace) batcherBefore
 
-  aliceKeyHash <- keyHash execConfig (paymentKeyInfoPair alice)
-  bobKeyHash <- keyHash execConfig (paymentKeyInfoPair bob)
-
   H.note_ "Alice's sub-transaction: 100 TokenA out, 50 ADA in (0.5 ADA per token)"
   aliceSubUnsigned <- H.note $ swapDir </> "alice.sub.unsigned"
   aliceSubSigned <- H.note $ swapDir </> "alice.sub.signed"
@@ -185,7 +182,6 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
     [ "dijkstra", "transaction", "sub-transaction", "build-raw"
     , "--tx-in", ueTxIn aliceTokenUtxo
     , "--tx-out", aliceAddr <> "+" <> show @Integer (tokensAda + price)
-    , "--guard-key-hash", aliceKeyHash
     , "--out-file", aliceSubUnsigned
     ]
   void $ execCli' execConfig
@@ -203,7 +199,6 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
     , "--tx-in", ueTxIn bobAdaUtxo
     , "--tx-out", bobAddr <> "+" <> show @Integer tokensAda <> "+" <> tokenA 100
     , "--tx-out", bobAddr <> "+" <> show @Integer (bobFunds - price - tokensAda)
-    , "--guard-key-hash", bobKeyHash
     , "--out-file", bobSubUnsigned
     ]
   void $ execCli' execConfig
@@ -299,7 +294,7 @@ utxoEntries policyId assetName = A.withObject "utxo set" $ \o ->
         Just policy -> policy A..:? K.fromString assetName A..!= 0
       pure UtxoEntry { ueTxIn = K.toString txIn, ueLovelace = lovelace, ueTokens = tokens }
 
--- | Hash of a payment verification key, as accepted by @--guard-key-hash@.
+-- | Hash of a payment verification key, used in the @sig@ minting policy.
 keyHash
   :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m)
   => H.ExecConfig
