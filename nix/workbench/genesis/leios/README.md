@@ -35,7 +35,8 @@ is not cryptographically secure, pools pledge nothing, and millions of UTxOs
 exist to pad a file. None of it protects anything, and none of it may be used
 anywhere that does.
 
-The pair is the one from `ouroboros-consensus`, at
-`ouroboros-consensus-cardano/test/tools-test/disk/queue-config`, where a chain
-built on it certifies endorser blocks -- which is what makes it worth reusing
-rather than minting a new one that has never been shown to work.
+The pair is the one `ouroboros-consensus` builds for its own tests, from the
+seed `"queue-fixture-bls-key"` in `Cardano.Tools.DBSynthesizer.QueueFixture`.
+A chain built on it certifies endorser blocks there, which is what makes it
+worth reusing rather than minting one that has never been shown to work; and
+being derived from a fixed seed, it can be regenerated rather than only copied.
