@@ -240,7 +240,7 @@ renderAlonzoPlutusPurpose = \case
   AlonzoMinting pid ->
     Aeson.object ["minting" .= Aeson.toJSON pid]
   AlonzoWithdrawing (AsItem rwdAcct) ->
-    Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+    Aeson.object ["withdrawing" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
   AlonzoCertifying cert ->
     Aeson.object ["certifying" .= Aeson.toJSON cert]
 
@@ -254,7 +254,7 @@ renderConwayPlutusPurpose = \case
   ConwayMinting pid ->
     Aeson.object ["minting" .= Aeson.toJSON pid]
   ConwayWithdrawing (AsItem rwdAcct) ->
-    Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+    Aeson.object ["withdrawing" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
   ConwayCertifying cert ->
     Aeson.object ["certifying" .= Aeson.toJSON cert]
   ConwayVoting voter ->
@@ -271,8 +271,8 @@ renderDijkstraPlutusPurpose = \case
     Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
   DijkstraMinting pid ->
     Aeson.object ["minting" .= Aeson.toJSON pid]
-  DijkstraRewarding (AsItem rwdAcct) ->
-    Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  DijkstraWithdrawing (AsItem rwdAcct) ->
+    Aeson.object ["withdrawing" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
   DijkstraCertifying cert ->
     Aeson.object ["certifying" .= Aeson.toJSON cert]
   DijkstraVoting voter ->
