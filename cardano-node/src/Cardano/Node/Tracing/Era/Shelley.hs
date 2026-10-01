@@ -1217,36 +1217,412 @@ instance
     forMachine dtal certFailure
 
 instance
-  ( LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ( Consensus.ShelleyBasedEra ledgerera
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "ENTITIES" ledgerera))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" ledgerera))
+  , Show (PredicateFailure (Ledger.EraRule "SUBLEDGERS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  forMachine v (Dijkstra.DijkstraUtxowFailure f) = forMachine v f
+  forMachine v (Dijkstra.DijkstraEntitiesFailure f) = forMachine v f
+  forMachine v (Dijkstra.DijkstraGovFailure f) = forMachine v f
+  forMachine _ (Dijkstra.DijkstraTreasuryValueMismatch Mismatch {mismatchSupplied, mismatchExpected}) =
+    mconcat [ "kind" .= String "DijkstraTreasuryValueMismatch"
+            , "actual" .= mismatchExpected
+            , "submittedInTx" .= mismatchSupplied
+            ]
+  forMachine _ (Dijkstra.DijkstraTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
+    mconcat [ "kind" .= String "DijkstraTxRefScriptsSizeTooBig"
+            , "actual" .= mismatchSupplied
+            , "limit" .= mismatchExpected
+            ]
+  -- Sub-transaction failures are rendered via 'Show' until the nested
+  -- transaction tooling stabilises.
+  forMachine _ (Dijkstra.DijkstraSubLedgersFailure f) =
+    mconcat [ "kind" .= String "DijkstraSubLedgersFailure"
+            , "error" .= String (textShow f)
+            ]
 
 instance
-  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
-  ) => LogFormatting (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ) => LogFormatting (Dijkstra.EntitiesPredFailure ledgerera) where
+  forMachine v (Dijkstra.CertsFailure f) = forMachine v f
+  forMachine _ (Dijkstra.MissingAccountsInWithdrawals withdrawals) =
+    mconcat [ "kind" .= String "MissingAccountsInWithdrawals"
+            , "withdrawals" .= unWithdrawals withdrawals
+            ]
+  forMachine _ (Dijkstra.IncompleteWithdrawals incompleteWithdrawals) =
+    mconcat [ "kind" .= String "IncompleteWithdrawals"
+            , "withdrawals" .= String (textShow incompleteWithdrawals)
+            ]
+  forMachine _ (Dijkstra.ExceededBalancesInWithdrawals accounts) =
+    mconcat [ "kind" .= String "ExceededBalancesInWithdrawals"
+            , "accounts" .= String (textShow accounts)
+            ]
+  forMachine _ (Dijkstra.MissingAccountsInDirectDeposits directDeposits) =
+    mconcat [ "kind" .= String "MissingAccountsInDirectDeposits"
+            , "directDeposits" .= String (textShow directDeposits)
+            ]
+  forMachine _ (Dijkstra.WrongNetworkInWithdrawals network accounts) =
+    mconcat [ "kind" .= String "WrongNetworkInWithdrawals"
+            , "network" .= network
+            , "accounts" .= NonEmptySet.toSet accounts
+            ]
+  forMachine _ (Dijkstra.WrongNetworkInDirectDeposits network accounts) =
+    mconcat [ "kind" .= String "WrongNetworkInDirectDeposits"
+            , "network" .= network
+            , "accounts" .= NonEmptySet.toSet accounts
+            ]
 
 instance
-  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
-  ) => LogFormatting (Dijkstra.DijkstraGovPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  ( Consensus.ShelleyBasedEra ledgerera
+  , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraMempoolPredFailure ledgerera) where
+  forMachine v (Dijkstra.LedgerFailure f) = forMachine v f
+  forMachine _ (Dijkstra.MempoolFailure message) =
+    mconcat [ "kind" .= String "DijkstraMempoolFailure"
+            , "actual" .= message
+            ]
+  forMachine _ Dijkstra.AllInputsAreSpent =
+    mconcat [ "kind" .= String "AllInputsAreSpent" ]
 
 instance
-  (LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
-  ) => LogFormatting (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  ( Consensus.ShelleyBasedEra era
+  ) => LogFormatting (Dijkstra.DijkstraGovPredFailure era) where
+  forMachine _ (Dijkstra.GovActionsDoNotExist govActionIds) =
+    mconcat [ "kind" .= String "GovActionsDoNotExist"
+            , "govActionId" .= map govActionIdToText (NonEmpty.toList govActionIds)
+            ]
+  forMachine _ (Dijkstra.MalformedProposal govAction) =
+    mconcat [ "kind" .= String "MalformedProposal"
+            , "govAction" .= govAction
+            ]
+  forMachine _ (Dijkstra.ProposalProcedureNetworkIdMismatch account network) =
+    mconcat [ "kind" .= String "ProposalProcedureNetworkIdMismatch"
+            , "rewardAccount" .= toJSON account
+            , "expectedNetworkId" .= toJSON network
+            ]
+  forMachine _ (Dijkstra.TreasuryWithdrawalsNetworkIdMismatch accounts network) =
+    mconcat [ "kind" .= String "TreasuryWithdrawalsNetworkIdMismatch"
+            , "rewardAccounts" .= NonEmptySet.toSet accounts
+            , "expectedNetworkId" .= toJSON network
+            ]
+  forMachine _ (Dijkstra.ProposalDepositIncorrect Mismatch {mismatchSupplied, mismatchExpected}) =
+    mconcat [ "kind" .= String "ProposalDepositIncorrect"
+            , "deposit" .= mismatchSupplied
+            , "expectedDeposit" .= mismatchExpected
+            ]
+  forMachine _ (Dijkstra.DisallowedVoters govActionIdToVoter) =
+    mconcat [ "kind" .= String "DisallowedVoters"
+            , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
+            ]
+  forMachine _ (Dijkstra.ConflictingCommitteeUpdate creds) =
+    mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
+            , "credentials" .= NonEmptySet.toSet creds
+            ]
+  forMachine _ (Dijkstra.ExpirationEpochTooSmall credsToEpoch) =
+    mconcat [ "kind" .= String "ExpirationEpochTooSmall"
+            , "credentialsToEpoch" .= String (textShow credsToEpoch)
+            ]
+  forMachine _ (Dijkstra.InvalidPrevGovActionId proposalProcedure) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionId"
+            , "proposalProcedure" .= proposalProcedure
+            ]
+  forMachine _ (Dijkstra.VotingOnExpiredGovAction actions) =
+    mconcat [ "kind" .= String "VotingOnExpiredGovAction"
+            , "action" .= actions
+            ]
+  forMachine _ (Dijkstra.ProposalCantFollow prevGovActionId Mismatch {mismatchSupplied, mismatchExpected}) =
+    mconcat [ "kind" .= String "ProposalCantFollow"
+            , "prevGovActionId" .= prevGovActionId
+            , "protVer" .= mismatchSupplied
+            , "prevProtVer" .= mismatchExpected
+            ]
+  forMachine _ (Dijkstra.InvalidGuardrailsScriptHash actualPolicyHash expectedPolicyHash) =
+    mconcat [ "kind" .= String "InvalidPolicyHash"
+            , "actualPolicyHash" .= actualPolicyHash
+            , "expectedPolicyHash" .= expectedPolicyHash
+            ]
+  forMachine _ (Dijkstra.DisallowedProposalDuringBootstrap proposal) =
+    mconcat [ "kind" .= String "DisallowedProposalDuringBootstrap"
+            , "proposal" .= proposal
+            ]
+  forMachine _ (Dijkstra.DisallowedVotesDuringBootstrap votes) =
+    mconcat [ "kind" .= String "DisallowedVotesDuringBootstrap"
+            , "votes" .= votes
+            ]
+  forMachine _ (Dijkstra.VotersDoNotExist voters) =
+    mconcat [ "kind" .= String "VotersDoNotExist"
+            , "voters" .= NonEmpty.toList voters
+            ]
+  forMachine _ (Dijkstra.ZeroTreasuryWithdrawals govAction) =
+    mconcat [ "kind" .= String "ZeroTreasuryWithdrawals"
+            , "govAction" .= govAction
+            ]
+  forMachine _ (Dijkstra.ProposalReturnAccountDoesNotExist account) =
+    mconcat [ "kind" .= String "ProposalReturnAccountDoesNotExist"
+            , "invalidAccount" .= account
+            ]
+  forMachine _ (Dijkstra.TreasuryWithdrawalReturnAccountsDoNotExist accounts) =
+    mconcat [ "kind" .= String "TreasuryWithdrawalReturnAccountsDoNotExist"
+            , "invalidAccounts" .= NonEmpty.toList accounts
+            ]
+  forMachine _ (Dijkstra.UnelectedCommitteeVoters voters) =
+    mconcat [ "kind" .= String "UnelectedCommitteeVoters"
+            , "unelectedCommitteeVoters" .= NonEmpty.toList voters
+            ]
+
+instance LogFormatting (Dijkstra.DijkstraGovCertPredFailure era) where
+  forMachine _dtal = mconcat . \case
+    Dijkstra.DijkstraDRepAlreadyRegistered credential ->
+      [ "kind" .= String "DijkstraDRepAlreadyRegistered"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "DRep is already registered"
+      ]
+    Dijkstra.DijkstraDRepNotRegistered credential ->
+      [ "kind" .= String "DijkstraDRepNotRegistered"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "DRep is not registered"
+      ]
+    Dijkstra.DijkstraDRepIncorrectDeposit Mismatch {mismatchSupplied, mismatchExpected} ->
+      [ "kind" .= String "DijkstraDRepIncorrectDeposit"
+      , "givenCoin" .= mismatchSupplied
+      , "expectedCoin" .= mismatchExpected
+      , "error" .= String "DRep delegation has incorrect deposit"
+      ]
+    Dijkstra.DijkstraCommitteeHasPreviouslyResigned coldCred ->
+      [ "kind" .= String "DijkstraCommitteeHasPreviouslyResigned"
+      , "credential" .= String (textShow coldCred)
+      , "error" .= String "Committee has resigned"
+      ]
+    Dijkstra.DijkstraDRepIncorrectRefund Mismatch {mismatchSupplied, mismatchExpected} ->
+      [ "kind" .= String "DijkstraDRepIncorrectRefund"
+      , "givenRefund" .= mismatchSupplied
+      , "expectedRefund" .= mismatchExpected
+      , "error" .= String "Refunds mismatch"
+      ]
+    Dijkstra.DijkstraCommitteeIsUnknown coldCred ->
+      [ "kind" .= String "DijkstraCommitteeIsUnknown"
+      , "credential" .= String (textShow coldCred)
+      , "error" .= String "Committee is Unknown"
+      ]
 
 instance
-  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
-  ) => LogFormatting (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  ( Ledger.Era era
+  , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+  ) => LogFormatting (Dijkstra.DijkstraBbodyPredFailure era) where
+  forMachine _ err = mconcat [ "kind" .= String "DijkstraBbodyPredFail"
+                             , "error" .= String (textShow err)
+                             ]
 
 instance
-  (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Consensus.ShelleyBasedEra ledgerera
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
-  forMachine _ = error "Dijkstra era is not active yet"
+  forMachine dtal = \case
+    Dijkstra.UtxosFailure utxosPredFailure -> forMachine dtal utxosPredFailure
+    Dijkstra.BadInputsUTxO badInputs ->
+      mconcat [ "kind" .= String "BadInputsUTxO"
+              , "badInputs" .= NonEmptySet.toSet badInputs
+              , "error" .= renderBadInputsUTxOErr (NonEmptySet.toSet badInputs)
+              ]
+    Dijkstra.OutsideValidityIntervalUTxO validityInterval slot ->
+      mconcat [ "kind" .= String "ExpiredUTxO"
+              , "validityInterval" .= validityInterval
+              , "slot" .= slot
+              ]
+    Dijkstra.MaxTxSizeUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "MaxTxSizeUTxO"
+              , "size" .= mismatchSupplied
+              , "maxSize" .= mismatchExpected
+              ]
+    Dijkstra.InputSetEmptyUTxO ->
+      mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
+    Dijkstra.FeeTooSmallUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "FeeTooSmallUTxO"
+              , "minimum" .= mismatchExpected
+              , "fee" .= mismatchSupplied
+              ]
+    Dijkstra.ValueNotConservedUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "ValueNotConservedUTxO"
+              , "consumed" .= mismatchSupplied
+              , "produced" .= mismatchExpected
+              , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
+              ]
+    Dijkstra.WrongNetwork network addrs ->
+      mconcat [ "kind" .= String "WrongNetwork"
+              , "network" .= network
+              , "addrs"   .= NonEmptySet.toSet addrs
+              ]
+    Dijkstra.OutputBootAddrAttrsTooBig badOutputs ->
+      mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
+              , "outputs" .= badOutputs
+              , "error" .= String "The Byron address attributes are too big"
+              ]
+    Dijkstra.OutputTooBigUTxO badOutputs ->
+      mconcat [ "kind" .= String "OutputTooBigUTxO"
+              , "outputs" .= badOutputs
+              , "error" .= String "Too many asset ids in the tx output"
+              ]
+    Dijkstra.InsufficientCollateral computedBalance suppliedFee ->
+      mconcat [ "kind" .= String "InsufficientCollateral"
+              , "balance" .= computedBalance
+              , "txfee" .= suppliedFee
+              ]
+    Dijkstra.ScriptsNotPaidUTxO utxos ->
+      mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
+              , "utxos" .= String (textShow utxos)
+              ]
+    Dijkstra.ExUnitsTooBigUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
+              , "maxexunits" .= mismatchExpected
+              , "exunits" .= mismatchSupplied
+              ]
+    Dijkstra.CollateralContainsNonADA inputs ->
+      mconcat [ "kind" .= String "CollateralContainsNonADA"
+              , "inputs" .= inputs
+              ]
+    Dijkstra.WrongNetworkInTxBody Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "WrongNetworkInTxBody"
+              , "networkid" .= mismatchExpected
+              , "txbodyNetworkId" .= mismatchSupplied
+              ]
+    Dijkstra.OutsideForecast slotNum ->
+      mconcat [ "kind" .= String "OutsideForecast"
+              , "slot" .= slotNum
+              ]
+    Dijkstra.TooManyCollateralInputs Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "TooManyCollateralInputs"
+              , "max" .= mismatchExpected
+              , "inputs" .= mismatchSupplied
+              ]
+    Dijkstra.NoCollateralInputs ->
+      mconcat [ "kind" .= String "NoCollateralInputs" ]
+    Dijkstra.IncorrectTotalCollateralField provided declared ->
+      mconcat [ "kind" .= String "UnequalCollateralReturn"
+              , "collateralProvided" .= provided
+              , "collateralDeclared" .= declared
+              ]
+    Dijkstra.BabbageOutputTooSmallUTxO outputs ->
+      mconcat [ "kind" .= String "BabbageOutputTooSmall"
+              , "outputs" .= outputs
+              ]
+    Dijkstra.BabbageNonDisjointRefInputs nonDisjointInputs ->
+      mconcat [ "kind" .= String "BabbageNonDisjointRefInputs"
+              , "outputs" .= nonDisjointInputs
+              ]
+    Dijkstra.PtrPresentInCollateralReturn output ->
+      mconcat [ "kind" .= String "PtrPresentInCollateralReturn"
+              , "output" .= output
+              ]
+    Dijkstra.WithdrawalsExceedAccountBalance accounts ->
+      mconcat [ "kind" .= String "WithdrawalsExceedAccountBalance"
+              , "accounts" .= String (textShow accounts)
+              ]
+
+instance
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Consensus.ShelleyBasedEra ledgerera
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
+  ) => LogFormatting (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
+   forMachine dtal = \case
+    Dijkstra.UtxoFailure utxoPredFail -> forMachine dtal utxoPredFail
+    Dijkstra.InvalidWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "invalidWitnesses" .= map textShow (NonEmpty.toList ws)
+              ]
+    Dijkstra.MissingVKeyWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
+              , "missingWitnesses" .= NonEmptySet.toSet ws
+              ]
+    Dijkstra.MissingScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "MissingScriptWitnessesUTXOW"
+              , "missingScripts" .= NonEmptySet.toSet scripts
+              ]
+    Dijkstra.ScriptWitnessNotValidatingUTXOW failedScripts ->
+      mconcat [ "kind" .= String "ScriptWitnessNotValidatingUTXOW"
+              , "failedScripts" .= NonEmptySet.toSet failedScripts
+              ]
+    Dijkstra.MissingTxBodyMetadataHash hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Dijkstra.MissingTxMetadata hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Dijkstra.ConflictingMetadataHash Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "ConflictingMetadataHash"
+              , "txBodyMetadataHash" .= mismatchSupplied
+              , "fullMetadataHash" .= mismatchExpected
+              ]
+    Dijkstra.InvalidMetadata ->
+      mconcat [ "kind" .= String "InvalidMetadata"
+              ]
+    Dijkstra.ExtraneousScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "extraneousScripts" .= Set.map renderScriptHash (NonEmptySet.toSet scripts)
+              ]
+    Dijkstra.MissingRedeemers scripts ->
+      mconcat [ "kind" .= String "MissingRedeemers"
+              , "scripts" .= renderMissingRedeemers Api.shelleyBasedEra scripts
+              ]
+    Dijkstra.MissingRequiredDatums required received ->
+      mconcat [ "kind" .= String "MissingRequiredDatums"
+              , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
+                                      (NonEmptySet.toList required)
+              , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
+                                      (Set.toList received)
+              ]
+    Dijkstra.NotAllowedSupplementalDatums disallowed acceptable ->
+      mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
+              , "disallowed" .= NonEmptySet.toList disallowed
+              , "acceptable" .= Set.toList acceptable
+              ]
+    Dijkstra.PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "PPViewHashesDontMatch"
+              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              ]
+    Dijkstra.UnspendableUTxONoDatumHash ins ->
+      mconcat [ "kind" .= String "MissingRequiredSigners"
+              , "txins" .= NonEmptySet.toList ins
+              ]
+    Dijkstra.ExtraRedeemers rs ->
+      Api.forEraInEon
+        (Api.toCardanoEra Api.shelleyBasedEra)
+        mempty
+        (\alonzoOnwards ->
+           mconcat
+             [ "kind" .= String "ExtraRedeemers"
+             , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) (NonEmpty.toList rs)
+             ]
+        )
+    Dijkstra.MalformedScriptWitnesses scripts ->
+      mconcat [ "kind" .= String "MalformedScriptWitnesses"
+              , "scripts" .= NonEmptySet.toSet scripts
+              ]
+    Dijkstra.MalformedReferenceScripts scripts ->
+      mconcat [ "kind" .= String "MalformedReferenceScripts"
+              , "scripts" .= NonEmptySet.toSet scripts
+              ]
+    Dijkstra.ScriptIntegrityHashMismatch Mismatch {mismatchSupplied, mismatchExpected} mBytes ->
+      mconcat [ "kind" .= String "ScriptIntegrityHashMismatch"
+              , "supplied" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "expected" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
+              , "hashHexPreimage" .= formatAsHex (strictMaybeToMaybe mBytes)
+              ]
+    Dijkstra.MissingRequiredGuards guards ->
+      mconcat [ "kind" .= String "MissingRequiredGuards"
+              , "guards" .= map textShow (NonEmptySet.toList guards)
+              ]
+    Dijkstra.MalformedGuardDatums guards ->
+      mconcat [ "kind" .= String "MalformedGuardDatums"
+              , "guards" .= map textShow (NonEmptySet.toList guards)
+              ]
 
 instance
   ( Ledger.Crypto crypto
