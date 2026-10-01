@@ -1532,25 +1532,6 @@
         "type": "github"
       }
     },
-    "ouroboros-consensus-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789085254,
-        "narHash": "sha256-ZDAPypcfLn7xzUyxcI7ktHxnvUKtPEHcPR522+c04Ao=",
-        "ref": "master",
-        "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
-        "revCount": 11115,
-        "submodules": true,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
-      },
-      "original": {
-        "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
-        "submodules": true,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
-      }
-    },
     "root": {
       "inputs": {
         "CHaP": "CHaP",
@@ -1568,7 +1549,6 @@
           "haskellNix",
           "nixpkgs-unstable"
         ],
-        "ouroboros-consensus-src": "ouroboros-consensus-src",
         "utils": "utils_2"
       }
     },
