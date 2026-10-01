@@ -59,14 +59,14 @@ import           Control.Monad.Catch
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
 import           Data.Functor
 import           Data.IP (IP)
-import           Data.List (sort, stripPrefix)
+import           Data.List (nub, sort, stripPrefix)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
@@ -589,11 +589,37 @@ cardanoTestnet
 -- to actually forward their traces and metrics to cardano-tracer.
 enableTraceForwarding :: FilePath -> IO ()
 enableTraceForwarding configFile = do
-  Aeson.eitherDecodeFileStrict configFile >>= \case
-    Left err -> throwString $ "enableTraceForwarding: could not decode node configuration file " <> configFile <> ": " <> err
-    Right (config :: Aeson.KeyMap Aeson.Value) -> do
-      let config' = Aeson.insert "TraceOptions" Defaults.traceOptionsForwarding config
-      Aeson.encodeFile configFile config'
+  Yaml.decodeFileEither configFile >>= \case
+    Left err -> throwString $ "enableTraceForwarding: could not decode node configuration file " <> configFile <> ": " <> show err
+    Right (config :: KeyMap.KeyMap Yaml.Value) -> do
+      let config' = KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding config
+      Yaml.encodeFile configFile config'
+  where
+    mergeTraceOptions :: Yaml.Value -> Yaml.Value -> Yaml.Value
+    mergeTraceOptions (Object forwarding) (Object existing) =
+      Object $ KeyMap.unionWith mergeNamespace forwarding existing
+    mergeTraceOptions forwarding _ = forwarding
+
+    mergeNamespace :: Yaml.Value -> Yaml.Value -> Yaml.Value
+    mergeNamespace (Object forwarding) (Object existing) =
+      Object
+        . KeyMap.insert "backends"
+            (mergeBackends
+              (KeyMap.lookup "backends" forwarding)
+              (KeyMap.lookup "backends" existing))
+        . copyIfMissing "detail"
+        . copyIfMissing "severity"
+        $ existing
+      where
+        copyIfMissing key = maybe id (KeyMap.insert key) $ KeyMap.lookup key forwarding
+    mergeNamespace forwarding _ = forwarding
+
+    mergeBackends :: Maybe Yaml.Value -> Maybe Yaml.Value -> Yaml.Value
+    mergeBackends mForwarding mExisting =
+      Array . fromList . nub $ toArray mExisting <> toArray mForwarding
+      where
+        toArray (Just (Array xs)) = foldr (:) [] xs
+        toArray _ = []
 
 -- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
 -- plus the forecast horizon) when waiting for testnet startup: covers node process
