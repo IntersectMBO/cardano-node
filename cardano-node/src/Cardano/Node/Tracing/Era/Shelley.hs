@@ -1244,6 +1244,9 @@ instance
   ) => LogFormatting (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
   forMachine _ = error "Dijkstra era is not active yet"
 
+instance LogFormatting (Dijkstra.DijkstraPoolPredFailure ledgerera) where
+  forMachine _ = error "Dijkstra era is not active yet"
+
 instance
   ( Ledger.Crypto crypto
   ) => LogFormatting (Praos.PraosValidationErr crypto) where

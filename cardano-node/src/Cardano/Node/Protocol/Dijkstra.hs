@@ -14,6 +14,7 @@ import           Cardano.Api
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Binary as L
+import           Cardano.Ledger.Coin (CoinPerByte (..), CompactForm (..))
 import           Cardano.Ledger.Core (MaxPledgeLeverage (..))
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import qualified Cardano.Ledger.Dijkstra.Genesis as Dijkstra
@@ -97,6 +98,8 @@ emptyDijkstraGenesis =
                             , udppPerasTargetCommitteeSize = 800
                             , udppPerasBootstrapRound = SJust 0
                             , udppPerasQuorumThresholdSafetyMargin = fromMaybe (error "impossible") $ boundRational 0.05
+                            , udppRefInputsCostPerMultiAssetPolicy = Coin 0
+                            , udppRefInputsCostPerDatumByte = CoinPerByte (CompactCoin 0)
                             }
   in DijkstraGenesis { dgUpgradePParams = upgradePParamsDef }
 

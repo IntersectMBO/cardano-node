@@ -68,7 +68,6 @@ import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
                    (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
                    (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
-import           Ouroboros.Consensus.Peras.Voting.Trace (TracePerasVoteForgingEvent (..))
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
