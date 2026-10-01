@@ -81,6 +81,7 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters)
 import           Ouroboros.Network.PeerSelection.Governor.Types (TracePeerSelection)
+import           Ouroboros.Network.Diffusion.PoolRelays (TracePoolRelays)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (DNSTrace (..))
@@ -453,6 +454,9 @@ getAllNamespaces =
         muxCountersNS = map (nsGetTuple . nsReplacePrefix
                               ["Net", "Mux", "Counters"])
                             (allNamespaces :: [Namespace Mux.CountersTrace])
+        poolRelaysNS = map (nsGetTuple . nsReplacePrefix
+                             ["Net", "Peers", "PoolRelays"])
+                           (allNamespaces :: [Namespace TracePoolRelays])
         dtAcceptPolicyNS = map (nsGetTuple . nsReplacePrefix
                                  ["Net", "AcceptPolicy"])
                                (allNamespaces :: [Namespace
@@ -531,6 +535,7 @@ getAllNamespaces =
             <> dtLocalHandshakeNS
             <> dtDiffusionInitializationNS
             <> dtLedgerPeersNS
+            <> poolRelaysNS
 
 -- DiffusionTracersExtra P2P
             <> localRootPeersNS
