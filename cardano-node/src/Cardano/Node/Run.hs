@@ -114,7 +114,8 @@ import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 import           Cardano.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
-                   PeerSelectionTargets (..), RemoteAddress)
+                   PeerSelectionTargets (..), RemoteAddress, keepAliveMiniProtocolNum)
+import           LeiosDemoOnlyTestNotify (leiosNotifyMiniProtocolNum)
 import           Ouroboros.Network.PeerSelection.Governor.Types (PeerSelectionState,
                    PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
@@ -981,7 +982,11 @@ mkDiffusionConfiguration
         if ncEgressBudgetMbps nc <= 0
            then Nothing
            else Just Configuration.defaultEgressScheduling {
-                  Diffusion.esBudget = ncEgressBudgetMbps nc * 1e6 / 8 }
+                  Diffusion.esBudget = ncEgressBudgetMbps nc * 1e6 / 8,
+                  -- what a client cannot drive to volume is never charged
+                  -- to a credit bucket: keep-alive and the Leios notifications
+                  Diffusion.esUnchargedProtocols =
+                    [keepAliveMiniProtocolNum, leiosNotifyMiniProtocolNum] }
     }
   where
     dcPeerSelectionTargets = PeerSelectionTargets {

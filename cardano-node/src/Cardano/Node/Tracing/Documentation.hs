@@ -87,6 +87,7 @@ import           Cardano.Network.NodeToNode (RemoteAddress)
 import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection)
+import           Ouroboros.Network.Diffusion.PoolRelays (TracePoolRelays)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.PublicRootPeers ()
@@ -572,6 +573,13 @@ docTracersFirstPhase condConfigFileName = do
     dtLedgerPeersTrDoc <- documentTracer (dtLedgerPeersTr ::
       Logging.Trace IO TraceLedgerPeers)
 
+    poolRelaysTr  <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Peers", "PoolRelays"]
+    configureTracers configReflection trConfig [poolRelaysTr]
+    poolRelaysTrDoc <- documentTracer (poolRelaysTr ::
+      Logging.Trace IO TracePoolRelays)
+
 -- DiffusionTracersExtra P2P
     localRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -760,6 +768,7 @@ docTracersFirstPhase condConfigFileName = do
             <> dtLocalMuxTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
+            <> poolRelaysTrDoc
 -- DiffusionTracersExtra P2P
             <> localRootPeersTrDoc
             <> publicRootPeersTrDoc
