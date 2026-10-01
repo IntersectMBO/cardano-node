@@ -159,17 +159,42 @@ derive-from-cache-jq() {
       "$outdir"/genesis.byron.json |
       sponge "$outdir"/genesis.byron.json
 
-    # Shelley: startTime, protocolVersion, maxBlockBodySize
-    jq '$prof[0].genesis.shelley as $shey
+    # Shelley: startTime, protocolVersion, maxBlockBodySize, voting keys
+    #
+    # The Leios voting key goes on every pool, for a profile that asks for a
+    # committee. create-testnet-data registers no such key and the cardano-cli
+    # in use cannot produce the proof of possession one needs, so the pair is
+    # pregenerated under genesis/leios and patched in here; genesis/leios/README
+    # says why that is fixed rather than made per genesis. A pool id is the hash
+    # of a cold key this genesis generated, so which pools exist is only known
+    # now -- hence map_values over whatever is there rather than naming one.
+    #
+    # The timescale is not patched here. create-testnet-data writes epoch
+    # length, k and the active slots coefficient from the spec the profile
+    # supplies, so a genesis it has just made agrees with the profile. The cache
+    # key covers what shapes key material and the timescale does not, so an
+    # entry built by a profile on another timescale carries that one's: until
+    # the key accounts for it, such an entry has to be dropped by hand.
+    local bls_key
+    bls_key=$(jq -c . "$global_basedir"/genesis/leios/bls-key.json)
+    jq '$prof[0].genesis as $gen
+         | $gen.shelley as $shey
          | $shey.protocolParams.protocolVersion   as $pver
          | $shey.protocolParams.maxBlockBodySize  as $bsize
          | . * { systemStart: $timing.systemStart }
          | if $pver  != null then . * { protocolParams: { protocolVersion:  $pver  } } else . end
-         | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
+         | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end
+         | if ($gen.dijkstra.leiosCommitteeSize // 0) > 0
+           then .extraConfig.stakePools.data |= map_values(. + { blsKey: $bls })
+           else . end' \
       --argjson timing "$timing" \
+      --argjson bls "$bls_key" \
       --slurpfile prof "$profile_json" \
       "$outdir"/genesis.shelley.json |
       sponge "$outdir"/genesis.shelley.json
+
+    # The forger needs the signing key that matches what the pools now register.
+    cp "$global_basedir"/genesis/leios/bls.skey "$outdir"/bls.skey
 
     # Alonzo: Execution budgets
     # NB. PlutusV1 and PlutusV2 cost models are *NOT* covered here; they're encoded
@@ -187,7 +212,7 @@ derive-from-cache-jq() {
       "$outdir"/genesis.alonzo.json |
       sponge "$outdir"/genesis.alonzo.json
 
-    # Dijkstra: fields the cardano-cli in use does not know
+    # Dijkstra: fields the cardano-cli in use does not know, then the profile's
     #
     # create-testnet-data takes --spec-shelley, --spec-alonzo and --spec-conway,
     # but no --spec-dijkstra, so genesis.dijkstra.json holds only what that
@@ -195,7 +220,16 @@ derive-from-cache-jq() {
     # rest in from the zero spec so a consumer built against a later ledger
     # finds every field it expects. The cli's own values win wherever it
     # produced one, so this adds and never overrides.
-    jq --argjson zero "$(genesis zero-spec-dijkstra)" '$zero * .' \
+    #
+    # Then lay `.genesis.dijkstra` over the result, which is where a profile's
+    # pparams overlays land (the `leios-6912k` overlay is the one that matters here).
+    # Without --spec-dijkstra the cli cannot be told any of this, so the profile
+    # reaches the genesis only by being patched in after the fact; and unlike
+    # the zero spec, the profile does override, since asking for a value is the
+    # whole point of setting it.
+    jq --argjson zero "$(genesis zero-spec-dijkstra)" \
+       --slurpfile prof "$profile_json" \
+       '$zero * . * ($prof[0].genesis.dijkstra // {})' \
       "$outdir"/genesis.dijkstra.json |
       sponge "$outdir"/genesis.dijkstra.json
 

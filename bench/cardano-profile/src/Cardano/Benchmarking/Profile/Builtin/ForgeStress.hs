@@ -161,7 +161,7 @@ profilesForgeStress =
   , fs & P.name "fschain-768k"                  . valueXLBlock  . n1 . V.datasetOct2021 . durationChainM 90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
   , fsXXL & P.name "fschain-6912k-xs"           . valueXXLBlock . n1 . V.datasetOct2021 . durationChain  800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
   , fsXXL & P.name "fschain-6912k"              . valueXXLBlock . n1 . V.datasetOct2021 . durationChainL 800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
-  , fsXXL & P.name "fschain-6912k-replay"       . valueXXLBlock . n1 . V.datasetOct2021 . duration3000Slots 800000 . P.traceForwardingOn                          . P.analysisUnitary  . P.blocksize6912k
+  , fsXXL & P.name "fschain-6912k-replay"       . valueXXLBlock . n1 . V.datasetOct2021 . duration3000Slots 800000 . P.traceForwardingOn                          . P.analysisUnitary  . P.blocksize6912k . P.leios6912k . P.v12Preview . P.v11Preview
   , fs & P.name "fschain-8io"                   . valueInOut 8  . n1 . V.datasetOct2021 . durationXL            . P.traceForwardingOn
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
