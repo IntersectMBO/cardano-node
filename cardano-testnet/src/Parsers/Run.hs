@@ -32,7 +32,7 @@ import           Testnet.Types (TestnetNode (..))
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           RIO (display, forever, fromString, logInfo, runSimpleApp, threadDelay)
+import           RIO (display, displayShow, forever, fromString, logInfo, runSimpleApp, threadDelay)
 import           UnliftIO.Resource (runResourceT)
 
 pref :: ParserPrefs
@@ -121,6 +121,8 @@ runCardanoOptions = \case
       runtime <- cardanoTestnet nodes fromEnvRuntimeOptions
                conf{updateTimestamps = envUpdateTimestamps fromEnvOptions}
       logInfo "Testnet started"
+      forM_ (prometheusPort runtime) $ \port ->
+        logInfo $ "Prometheus is running at http://127.0.0.1:" <> displayShow port
       logGrpcEndpoints runtime
       waitForShutdown
   where

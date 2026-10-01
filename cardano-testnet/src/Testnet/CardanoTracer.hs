@@ -6,6 +6,7 @@
 
 module Testnet.CardanoTracer
   ( CardanoTracerConf (..)
+  , CardanoTracerRuntime (..)
   , startCardanoTracer
   ) where
 
@@ -13,6 +14,8 @@ module Testnet.CardanoTracer
 import           Testnet.Filepath
 import           Cardano.Node.Testnet.Paths (defaultSocketName)
 import           Cardano.Tracer.Configuration
+
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket, sprocketArgumentName)
 
 import           Prelude
 
@@ -24,6 +27,7 @@ import           Data.Aeson (encodeFile)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
+import           Network.Socket (PortNumber)
 import           System.Directory (createDirectoryIfMissing)
 import           System.FilePath ((</>))
 import qualified System.IO as IO
@@ -36,7 +40,7 @@ import           Testnet.Process.Run (initiateProcess)
 
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 
-import           RIO (runRIO, throwString, unless, logInfo, displayShow, runSimpleApp)
+import           RIO (runRIO, throwString, unless)
 
 data CardanoTracerConf = CardanoTracerConf
   { tempAbsPath :: FilePath
@@ -44,10 +48,10 @@ data CardanoTracerConf = CardanoTracerConf
   , logFormat :: LogFormat
   } deriving (Eq, Show)
 
-mkConfig :: CardanoTracerConf -> Int -> FilePath ->  FilePath -> TracerConfig
-mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile socketFile = TracerConfig
+mkConfig :: CardanoTracerConf -> Int -> FilePath ->  Sprocket -> TracerConfig
+mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile sprocket = TracerConfig
   { networkMagic = fromIntegral testnetMagic
-  , network = AcceptAt $ LocalPipe socketFile
+  , network = AcceptAt $ LocalPipe $ sprocketArgumentName sprocket
   , loRequestNum = Nothing
   , ekgRequestFreq = Nothing
   , hasEKG = Nothing
@@ -70,6 +74,12 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile socketFile =
   , prometheusLabels = Nothing
   }
 
+data CardanoTracerRuntime = CardanoTracerRuntime
+  { tracerSprocket :: Sprocket
+  , tracerHandle :: ProcessHandle
+  , prometheusPort :: PortNumber
+  }
+
 -- | Start a @cardano-tracer@ process, returning the (working-directory relative)
 -- path to the socket that testnet nodes should connect to, together with the
 -- process handle of the spawned tracer.
@@ -79,7 +89,7 @@ startCardanoTracer
   => MonadResource m
   => MonadCatch m
   => CardanoTracerConf
-  -> m (FilePath, ProcessHandle)
+  -> m CardanoTracerRuntime
 startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack $ do
   let tmpPath = TmpAbsolutePath tempAbsPath
       logDir = makeLogDir tmpPath
@@ -91,23 +101,22 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
 
   let nodeStdoutFile = logDir </> "cardano-tracer.stdout.log"
       nodeStderrFile = logDir </> "cardano-tracer.stderr.log"
-      -- The socket path is relative to the working directory shared by the
-      -- tracer and the nodes ('tempBaseAbsPath').
-      socketFile = makeSocketDir tmpPath </> defaultSocketName
+      sprocket = makeSprocket tmpPath defaultSocketName
       configFile = tempAbsPath </> "cardano-tracer-config.json"
 
   hNodeStdout <- liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-  [prometheusPort] <- liftIO $ IO.allocateRandomPorts 1
+  [prometheusPortNo] <- liftIO $ IO.allocateRandomPorts 1
+  let prometheusPort = fromIntegral prometheusPortNo
   -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
   -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
 
   let portWaitTimeout = 45
-  isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 $ fromIntegral prometheusPort
+  isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 prometheusPort
   unless isClosed $
-    throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting tracer: " <> show prometheusPort
-  liftIO $ encodeFile configFile $ mkConfig conf prometheusPort logDir socketFile
+    throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting tracer: " <> show prometheusPortNo
+  liftIO $ encodeFile configFile $ mkConfig conf prometheusPortNo logDir sprocket
 
   cp <- runRIO () $ procFlex "cardano-tracer" "CARDANO_TRACER"
     [ "--config", configFile
@@ -123,9 +132,9 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
     Left err -> throwString $ "Could not start cardano-tracer: " <> show err
     Right (_, _, _, hProcess, _) -> pure hProcess
 
-  ePortResult <- liftIOAnnotated $ Ping.waitForTcpPort portWaitTimeout 0.1 "127.0.0.1" $ fromIntegral prometheusPort
+  ePortResult <- liftIOAnnotated $ Ping.waitForTcpPort portWaitTimeout 0.1 "127.0.0.1" prometheusPort
   case ePortResult of
     Left err -> throwString $ "Prometheus didn't start: " <> show err
-    Right _ -> runSimpleApp $ logInfo $ "Prometheus is running at http://127.0.0.1:" <> displayShow prometheusPort
+    Right _ -> pure ()
 
-  pure (socketFile, hProcess)
+  pure $ CardanoTracerRuntime sprocket hProcess prometheusPort
