@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-18T01:34:09Z
-  , cardano-haskell-packages 2026-09-16T23:53:07Z
+  , cardano-haskell-packages 2026-09-30T12:46:04Z
 
 
 constraints:
@@ -229,7 +229,7 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- cardano-ledger: master tip (347ff73c), kept in sync with
+-- cardano-ledger: master tip (c9e53ed9), kept in sync with
 -- ouroboros-consensus's own cardano-ledger SRP below (see that comment) --
 -- don't bump this independently of that pin. Pulling in the whole monorepo,
 -- not just eras/byron/crypto, because ouroboros-consensus's
@@ -240,8 +240,8 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 347ff73c491beee11089a6434f1dc8ecf29ae50c
-  --sha256: sha256-AGKkdYXg6FBTw3R1Fcp4Y+6VM0aBA3fvJd9gRJjqDk8=
+  tag: c9e53ed9b9f6a7b2f20aedc7fa0b84da7725ede3
+  --sha256: sha256-Mpmm0oFhH4dyqka/yKb95ilHzpKbTSAQ1DVkDPoV2FA=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -345,17 +345,21 @@ source-repository-package
 -- still calls this in 5 places -- needs a matching update, see PR #1417's
 -- SRP comment below). Also widens its own resource-registry
 -- (^>=0.3||^>=0.4), small-steps (^>=1.1||^>=1.2), cardano-ledger-api
--- (^>=1.14||^>=1.15) and plutus-core/plutus-ledger-api (^>=1.65||^>=1.68)
--- bounds directly, needed now that ouroboros-consensus's
--- erikd/update-ledger-srp SRP above pulls in newer versions of those
--- transitively. cardano-crypto-class ^>=2.6 and cardano-crypto-wrapper
--- ^>=1.7||^>=1.8 still accepted natively, and no `memory` dependency
--- anywhere. NOTE: the previous pin here (81d7655d) is a stale, now-orphaned
--- commit -- the branch was rebased since; 0cc537ee is the current tip.
+-- (^>=1.14||^>=1.15) and plutus-core/plutus-ledger-api
+-- (^>=1.65||^>=1.68||^>=1.71) bounds directly, needed now that
+-- ouroboros-consensus's erikd/update-ledger-srp SRP above pulls in newer
+-- versions of those transitively. cardano-crypto-class ^>=2.6 and
+-- cardano-crypto-wrapper ^>=1.7||^>=1.8 still accepted natively, and no
+-- `memory` dependency anywhere. Its own cabal.project was itself bumped to
+-- match ouroboros-consensus's/cardano-ledger's current pins (it had drifted
+-- behind independently) and gained a matching cardano-config SRP, plus
+-- fixes for the new Peras/RefInputsCost DijkstraPParams fields and the
+-- renamed/retyped Peras round bound field in a cardano-rpc test. f4f072cf5
+-- is the current tip.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 0cc537ee37d1e35f974d6cd469d332295dd16eb1
+  tag: f4f072cf50913c12cdd7ee7864b3d61e0fdbddb0
   subdir: cardano-api
 
 -- cardano-api PR #1292 (erikd/crypton+ram):
@@ -373,7 +377,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 0cc537ee37d1e35f974d6cd469d332295dd16eb1
+  tag: f4f072cf50913c12cdd7ee7864b3d61e0fdbddb0
   subdir: cardano-rpc
 
 -- cardano-cli PR #1417 (erikd/crypton-ram):
