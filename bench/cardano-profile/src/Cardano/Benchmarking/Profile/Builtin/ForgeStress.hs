@@ -89,15 +89,25 @@ durationChainL txCount x = let
   g = Types.generator p
   in p {Types.generator = g {Types.tx_count = Just txCount}}
 
--- 'durationChainL' on the replayable timescale.
+-- A transaction stream for db-synthesizer to replay, rather than a forge-stress
+-- run of its own.
 --
--- Two epochs of 1200 slots is the same 2400 slots of generation four epochs of
--- 600 were, so the chain this makes has the same block density, the same
--- transactions per block and the same stream length as 'fschain-6912k'. Only
--- the epoch boundary moves.
+-- The timescale is the standard small one, for its epoch: applying a block
+-- subtracts two stability windows from the start of the next epoch, and
+-- 'timescaleXLBlock' leaves an epoch of one (ceil(3k/f) = 600), so a fragment
+-- made on it underflows and cannot be replayed into a ChainDB. Two epochs of
+-- 1200 slots then run the generator far longer than the ~889 slots that
+-- emitting 'txCount' at the configured tps needs, and the shutdown slot clears
+-- both.
+--
+-- What this does not do is reproduce 'fschain-6912k''s workload: the small
+-- timescale fills a block every ~20 slots where the XL one fills every ~66, so
+-- the chain is denser and shorter. Blocks are still filled to capacity, since
+-- what a replayed block holds is decided by the block's capacity and what the
+-- stream still has, not by submission pressure.
 duration3000Slots :: Integer -> Types.Profile -> Types.Profile
 duration3000Slots txCount x = let
-  p =   timescaleXLBlockReplay
+  p =   V.timescaleSmall
       . P.shutdownOnSlot 3000
       . P.generatorEpochs 2
       $ x
@@ -110,13 +120,6 @@ duration3000Slots txCount x = let
 timescaleXLBlock :: Types.Profile -> Types.Profile
 timescaleXLBlock =
     P.slotDuration 1 . P.epochLength 600
-  . P.activeSlotsCoeff 0.015 . P.parameterK 3
-
--- Epoch of two stability windows (ceil(3k/f) = 600): applying a block subtracts
--- two of them from the start of the next epoch, which underflows at 600.
-timescaleXLBlockReplay :: Types.Profile -> Types.Profile
-timescaleXLBlockReplay =
-    P.slotDuration 1 . P.epochLength 1200
   . P.activeSlotsCoeff 0.015 . P.parameterK 3
 
 -- much higher submission pressure needed to fill large blocks

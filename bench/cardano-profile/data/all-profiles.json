@@ -88137,7 +88137,7 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 7.5e-3,
+      "minimum_chain_density": 2.5e-2,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
       "tx_loss_ratio": 2.0e-2,
@@ -88222,7 +88222,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 1.5e-2,
+      "active_slots_coeff": 5.0e-2,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -89471,7 +89471,7 @@
         "heavyDelegation": {},
         "nonAvvmBalances": {},
         "protocolConsts": {
-          "k": 3,
+          "k": 6,
           "protocolMagic": 42,
           "vssMaxTTL": 6,
           "vssMinTTL": 2
@@ -89842,7 +89842,7 @@
       "funds_balance": 40000000000000,
       "max_block_size": null,
       "network_magic": 42,
-      "parameter_k": 3,
+      "parameter_k": 6,
       "per_pool_balance": 1000000000000000,
       "pool_coin": 1000000000000000,
       "pparamsEpoch": 537,
@@ -89853,7 +89853,7 @@
         "blocksize6912k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 1.5e-2,
+        "activeSlotsCoeff": 5.0e-2,
         "epochLength": 1200,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -89914,7 +89914,7 @@
           "rho": 3.0e-3,
           "tau": 0.2
         },
-        "securityParam": 3,
+        "securityParam": 6,
         "slotLength": 1,
         "slotsPerKESPeriod": 129600,
         "systemStart": "2017-09-23T21:44:51Z",
