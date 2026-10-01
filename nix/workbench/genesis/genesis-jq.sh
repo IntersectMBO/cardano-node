@@ -187,6 +187,18 @@ derive-from-cache-jq() {
       "$outdir"/genesis.alonzo.json |
       sponge "$outdir"/genesis.alonzo.json
 
+    # Dijkstra: fields the cardano-cli in use does not know
+    #
+    # create-testnet-data takes --spec-shelley, --spec-alonzo and --spec-conway,
+    # but no --spec-dijkstra, so genesis.dijkstra.json holds only what that
+    # cardano-cli emits -- four fields, for one that predates Leios. Fill the
+    # rest in from the zero spec so a consumer built against a later ledger
+    # finds every field it expects. The cli's own values win wherever it
+    # produced one, so this adds and never overrides.
+    jq --argjson zero "$(genesis zero-spec-dijkstra)" '$zero * .' \
+      "$outdir"/genesis.dijkstra.json |
+      sponge "$outdir"/genesis.dijkstra.json
+
     # Conway: plutusV3CostModel
     jq '$prof[0].genesis.conway as $coay
          | $coay.plutusV3CostModel as $pv3cost
