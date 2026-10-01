@@ -321,8 +321,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 5b8c2bfeb4ec516ad83a7dcef98d9101d5666280
-  --sha256: sha256-BQ4Y4hw2wlww3wlf3243z8UdZdYGg+HRaHuwmUezizQ=
+  tag: 433a611509b61036b03cc3bb5544436451736265
+  --sha256: sha256-rR+/kSDiwU6D9tlqVWq3KmXb9j9THsfrnPwShkt5Iuk=
 
 -- cardano-config: ouroboros-consensus's own cabal.project (see above) pins
 -- this to its main branch via its own SRP, needing cardano-config ^>=2.0 --
