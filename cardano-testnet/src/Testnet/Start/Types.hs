@@ -187,8 +187,8 @@ instance Default RpcHttpOptions where
   def = RpcHttpOptions defaultRpcListenAddress Nothing
 
 data TraceSupport
-  = TraceDisabled
-  | TraceEnabled
+  = TraceDisabled -- ^ Do not enable tracing
+  | TraceEnabled  -- ^ Enable tracing over cardano-tracer
   deriving (Eq, Show)
 
 -- | Options for creating a testnet environment (genesis files, topology, ports).

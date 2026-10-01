@@ -71,6 +71,7 @@ import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
+import qualified Data.Yaml as Yaml
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
@@ -130,6 +131,7 @@ data TestnetRuntime = TestnetRuntime
   , testnetNodes :: !(NonEmpty TestnetNode)
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
+  , prometheusPort :: !(Maybe PortNumber)
   }
 
 testnetSprockets :: TestnetRuntime -> NonEmpty Sprocket
@@ -279,7 +281,7 @@ getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStac
   where
     decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
     decodeNodeConfiguration (File file) = do
-      partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
+      partialNodeCfg <- modifyError show $ ExceptT $ Yaml.decodeFileEither file
       fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
     decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
     decodeGenesisFile fp = withExceptT (docToString . prettyError) $
