@@ -247,6 +247,7 @@
           mkdir -p $out/bin
           makeWrapper ${projectExes.cardano-testnet}/bin/cardano-testnet $out/bin/cardano-testnet \
             --set-default CARDANO_NODE ${projectExes.cardano-node}/bin/cardano-node \
+            --set-default CARDANO_TRACER ${projectExes.cardano-tracer}/bin/cardano-tracer \
             --set-default CARDANO_CLI ${projectExes.cardano-cli}/bin/cardano-cli
         '';
 

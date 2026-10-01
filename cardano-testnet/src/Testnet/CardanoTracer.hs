@@ -30,12 +30,13 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (ProcessHandle)
 
-import           Testnet.Process.RunIO (procFlex)
+import qualified Testnet.Ping as Ping
+import           Testnet.Process.RunIO (procFlex, liftIOAnnotated)
 import           Testnet.Process.Run (initiateProcess)
 
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 
-import           RIO (runRIO, throwString)
+import           RIO (runRIO, throwString, unless, logInfo, displayShow, runSimpleApp)
 
 data CardanoTracerConf = CardanoTracerConf
   { tempAbsPath :: FilePath
@@ -55,7 +56,12 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile socketFile =
   , tlsCertificate = Nothing
   , hasForwarding = Nothing
   , logging = LoggingParams logFile FileMode logFormat :| []
-  , rotation = Nothing
+  , rotation = Just $ RotationParams
+      { rpFrequencySecs = 30 * 60
+      , rpLogLimitBytes = 50000
+      , rpMaxAgeMinutes = 60
+      , rpKeepFilesNum = 3
+      }
   , verbosity = Nothing
   , metricsNoSuffix = Nothing
   , metricsHelp = Nothing
@@ -94,6 +100,13 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
   hNodeStderr <- liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
   [prometheusPort] <- liftIO $ IO.allocateRandomPorts 1
+  -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
+  -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
+
+  let portWaitTimeout = 45
+  isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 $ fromIntegral prometheusPort
+  unless isClosed $
+    throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting tracer: " <> show prometheusPort
   liftIO $ encodeFile configFile $ mkConfig conf prometheusPort logDir socketFile
 
   cp <- runRIO () $ procFlex "cardano-tracer" "CARDANO_TRACER"
@@ -110,5 +123,9 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
     Left err -> throwString $ "Could not start cardano-tracer: " <> show err
     Right (_, _, _, hProcess, _) -> pure hProcess
 
-  liftIO $ putStrLn $ "Prometheus is running at http://localhost:" <> show prometheusPort
+  ePortResult <- liftIOAnnotated $ Ping.waitForTcpPort portWaitTimeout 0.1 "127.0.0.1" $ fromIntegral prometheusPort
+  case ePortResult of
+    Left err -> throwString $ "Prometheus didn't start: " <> show err
+    Right _ -> runSimpleApp $ logInfo $ "Prometheus is running at http://127.0.0.1:" <> displayShow prometheusPort
+
   pure (socketFile, hProcess)
