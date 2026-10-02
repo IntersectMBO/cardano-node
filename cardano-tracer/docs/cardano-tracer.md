@@ -475,7 +475,8 @@ Below is a minimal example of a corresponding job definition that goes into the
       - url: 'http://127.0.0.1:3200/targets'    # <-- Your cardano-tracer's real hostname:prometheus port
 ```
 
-Each target will have a label `node_name` which corresponds to the `TraceOptionNodeName` setting in the respective node config.
+Each target will have a label `node_name` which corresponds to the `ApplicationName` setting in the respective
+node's tracing configuration (`TraceOptionNodeName` in the deprecated `TraceOptions` layout, which is still read).
 
 In `cardano-tracer`'s config, you can optionally provide additional labels to be attached to *all* targets
 (default is no additional labels):

@@ -13,7 +13,6 @@ module Cardano.Tracer.Test.ForwardingStressTest.Script
   , runScriptForwarding
   ) where
 
-import           Cardano.Logging
 import           Cardano.Tracer.Test.ForwardingStressTest.Config ()
 import           Cardano.Tracer.Test.ForwardingStressTest.Messages
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
@@ -36,6 +35,8 @@ import qualified Data.Vector as Vector
 import           System.FilePath.Glob
 
 import           Test.QuickCheck
+
+import           Hermod.Tracing
 
 -- | configuration for testing
 simpleTestConfig :: TraceConfig

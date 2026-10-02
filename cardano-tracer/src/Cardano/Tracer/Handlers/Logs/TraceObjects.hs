@@ -7,7 +7,6 @@ module Cardano.Tracer.Handlers.Logs.TraceObjects
   , deregisterNodeId
   ) where
 
-import           Cardano.Logging (TraceObject)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.File
@@ -18,6 +17,8 @@ import           Cardano.Tracer.Utils
 import           Control.Concurrent.Async (forConcurrently_)
 import qualified Data.Map as Map
 import           System.IO (Handle, hClose)
+
+import           Hermod.Tracing (TraceObject)
 
 -- | This handler is called periodically by 'TraceObjectForward' protocol
 --   from 'trace-forward' library.

@@ -5,11 +5,10 @@ module Cardano.Tracer.Handlers.Logs.File
   ( writeTraceObjectsToFile
   ) where
 
-import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils
 import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils (nl, sanitizeNodeName, readRegistry)
+import           Cardano.Tracer.Utils (nl, readRegistry, sanitizeNodeName)
 
 import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (unless)
@@ -22,6 +21,8 @@ import           System.Directory (makeAbsolute)
 import           System.FilePath (takeFileName, (</>))
 import           System.IO (hFlush)
 import           Text.Slugify (slugifyUnicode)
+
+import           Hermod.Tracing (TraceObject (..))
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --

@@ -2,6 +2,12 @@
 
 ## NEXT
 
+* Use `hermod-tracing` (`hermod-tracing-core`, `hermod-tracing-prometheus`,
+  `hermod-trace-resources`) instead of `trace-dispatcher` and `trace-resources`, and the
+  hermod tracer facade instead of `contra-tracer`, as `trace-forward`, `ekg-forward` and
+  `ouroboros-network` now do. The configuration format, the logs written and the metrics
+  served are unchanged.
+
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an
   `application/x-www-form-urlencoded` body (Prometheus wire format).

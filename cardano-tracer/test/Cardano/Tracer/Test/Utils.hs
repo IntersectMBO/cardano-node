@@ -7,10 +7,8 @@ module Cardano.Tracer.Test.Utils
   ) where
 
 import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Logging.Types (HowToConnect)
-import qualified Cardano.Logging.Types as Net
 
-import           Control.Concurrent.MVar (MVar, newMVar, takeMVar, putMVar)
+import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import           Data.Functor.Identity
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -22,6 +20,9 @@ import           System.IO.Extra (newTempDirWithin)
 
 import qualified Test.QuickCheck as QuickCheck
 import           Test.Tasty.QuickCheck
+
+import           Hermod.Tracing (HowToConnect)
+import qualified Hermod.Tracing as Net
 
 unI :: Identity a -> a
 unI (Identity x) = x

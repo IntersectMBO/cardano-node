@@ -4,8 +4,6 @@ module Cardano.Tracer.Acceptors.Client
   ( runAcceptorsClient
   ) where
 
-import           Cardano.Logging (TraceObject)
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Acceptors.Utils
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
@@ -43,6 +41,8 @@ import qualified Network.Socket as Socket
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptMetricsInit)
 
+import           Hermod.Tracing (TraceObject)
+import qualified Hermod.Tracing as Net
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsInit)

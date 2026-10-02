@@ -9,14 +9,12 @@ module Cardano.Tracer.Test.ForwardingStressTest.Types (
   , emptyScriptRes
   ) where
 
-import           Cardano.Logging
 import qualified Cardano.Tracer.Test.Utils as Utils
 
 import           Control.Applicative ((<|>))
 import           Control.Monad (guard)
 import           Data.Aeson (FromJSON (..), Object, Value (..), withObject, (.=))
-import           Data.Aeson.Types (Parser, parseFail, -- parseEither,
-                                   parseField)
+import           Data.Aeson.Types (Parser, parseFail, parseField)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector (Vector)
@@ -24,6 +22,8 @@ import qualified Data.Vector as Vector
 import           Text.Read (readMaybe)
 
 import           Test.QuickCheck
+
+import           Hermod.Tracing
 
 type MessageID = Int
 

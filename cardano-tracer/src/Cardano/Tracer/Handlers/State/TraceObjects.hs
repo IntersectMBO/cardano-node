@@ -13,7 +13,6 @@ module Cardano.Tracer.Handlers.State.TraceObjects
   , saveTraceObjects
   ) where
 
-import           Cardano.Logging (SeverityS, TraceObject (..))
 import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.Types (NodeId)
 
@@ -26,6 +25,8 @@ import qualified Data.Map.Strict as M
 import           Data.Maybe (mapMaybe)
 import           Data.Text as T (Text, null)
 import           Data.Time.Clock (UTCTime)
+
+import           Hermod.Tracing (SeverityS, TraceObject (..))
 
 type Namespace       = Text
 type TraceObjectInfo = (Text, SeverityS, UTCTime)

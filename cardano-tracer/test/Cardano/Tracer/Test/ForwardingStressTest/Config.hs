@@ -7,11 +7,11 @@ module Cardano.Tracer.Test.ForwardingStressTest.Config (
   , config4
   ) where
 
-import           Cardano.Logging
-
 import           Data.Map.Strict (fromList)
 
 import           Test.QuickCheck
+
+import           Hermod.Tracing
 
 
 -- | different configurations for testing

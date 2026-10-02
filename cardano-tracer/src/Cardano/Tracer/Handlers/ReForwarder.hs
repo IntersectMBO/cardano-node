@@ -17,9 +17,6 @@ module Cardano.Tracer.Handlers.ReForwarder
   ( initReForwarder
   ) where
 
-import           Cardano.Logging.Trace
-import           Cardano.Logging.Tracer.DataPoint
-import qualified Cardano.Logging.Types as Log
 import           Cardano.Network.NodeToClient (withIOManager)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
@@ -30,6 +27,8 @@ import           Control.Exception (SomeException (..))
 import           Control.Monad (when)
 import qualified Data.Text as Text
 
+import           Hermod.Tracing
+import qualified Hermod.Tracing as Log
 import           Trace.Forward.Forwarding
 import           Trace.Forward.Utils.ForwardSink (ForwardSink)
 import           Trace.Forward.Utils.TraceObject (writeToSink)

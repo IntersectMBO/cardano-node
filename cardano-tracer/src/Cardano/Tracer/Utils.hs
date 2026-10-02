@@ -40,7 +40,7 @@ module Cardano.Tracer.Utils
   ) where
 
 import           Trace.Forward.Types.NodeInfo (NodeInfo (..))
-import           Cardano.Logging.Utils (showT)
+import           Hermod.Tracing.Utils (showT)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Utils

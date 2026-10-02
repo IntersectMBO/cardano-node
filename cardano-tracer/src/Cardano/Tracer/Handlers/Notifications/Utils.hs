@@ -7,13 +7,12 @@ module Cardano.Tracer.Handlers.Notifications.Utils
   , updateNotificationsPeriods
   ) where
 
-import           Cardano.Logging (Trace)
 import           Cardano.Tracer.Handlers.Notifications.Send
 import           Cardano.Tracer.Handlers.Notifications.Settings
 import           Cardano.Tracer.Handlers.Notifications.Timer
 import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.Utils
-import           Cardano.Tracer.MetaTrace (TracerTrace(..))
+import           Cardano.Tracer.MetaTrace (TracerTrace (..))
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.Extra (Lock)
@@ -23,6 +22,8 @@ import           Control.Concurrent.STM.TBQueue (flushTBQueue, isFullTBQueue, ne
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Monad.Extra (unlessM, whenJust)
 import qualified Data.Map.Strict as M
+
+import           Hermod.Tracing (Trace)
 
 initEventsQueues
   :: Trace IO TracerTrace

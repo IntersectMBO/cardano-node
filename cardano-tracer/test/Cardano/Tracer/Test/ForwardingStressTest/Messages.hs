@@ -4,8 +4,9 @@ module Cardano.Tracer.Test.ForwardingStressTest.Messages (
   ) where
 
 
-import           Cardano.Logging
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
+
+import           Hermod.Tracing
 
 getMessageID :: Message -> MessageID
 getMessageID (Message1 mid _) = mid

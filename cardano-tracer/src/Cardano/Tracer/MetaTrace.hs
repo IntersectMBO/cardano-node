@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,7 +13,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Cardano.Tracer.MetaTrace
   ( module Cardano.Tracer.MetaTrace
@@ -20,8 +20,6 @@ module Cardano.Tracer.MetaTrace
   , traceWith
   ) where
 
-import           Cardano.Logging
-import           Cardano.Logging.Resources
 import           Cardano.Timeseries.Component.Trace (TimeseriesTrace)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Types (NodeId (..), NodeName)
@@ -32,6 +30,11 @@ import           Data.Functor (($>), (<&>))
 import qualified Data.Map.Strict as Map
 import           Data.Text as T (Text, pack)
 import qualified System.IO as Sys
+
+import           Hermod.Tracing
+import           Hermod.Tracing.API.Trace (mkTrace)
+import           Hermod.Tracing.Resources
+import           Hermod.Tracing.Trace.Annotations (withNames, withSeverity)
 
 
 
@@ -261,13 +264,11 @@ instance MetaTrace TracerTrace where
       ]
 
 stderrShowTracer :: Show a => Trace IO a
-stderrShowTracer =  contramapM'
-    (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
+stderrShowTracer = mkTrace (Sys.hPrint Sys.stderr)
 
 mkTracerTracer :: Trace IO FormattedMessage -> SeverityF -> IO (Trace IO TracerTrace)
 mkTracerTracer std defSeverity =
-    machineFormatter std
-    >>= filterSeverityFromConfig
+    filterSeverityFromConfig (machineFormatter std)
     >>= \t ->
           let finalTracer = withNames ["Tracer"] (withSeverity t)
           in configTracerTracer finalTracer $> finalTracer
@@ -284,7 +285,7 @@ mkTracerTracer std defSeverity =
 
 mkTimeseriesTracer :: Trace IO FormattedMessage -> IO (Trace IO TimeseriesTrace)
 mkTimeseriesTracer std = do
- !tr <- machineFormatter std >>= filterSeverityFromConfig <&> withNames ["Tracer"] . withSeverity
+ !tr <- filterSeverityFromConfig (machineFormatter std) <&> withNames ["Tracer"] . withSeverity
  configReflection <- emptyConfigReflection
  configureTracers configReflection cfg [tr]
  pure tr

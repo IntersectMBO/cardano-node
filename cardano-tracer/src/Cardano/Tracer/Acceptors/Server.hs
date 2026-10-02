@@ -4,8 +4,6 @@ module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
   ) where
 
-import           Cardano.Logging (TraceObject)
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Acceptors.Utils
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
@@ -30,7 +28,6 @@ import           Ouroboros.Network.Socket (ConnectionId (..), SomeResponderAppli
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (wait)
-import           Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
@@ -42,6 +39,9 @@ import qualified Network.Socket as Socket
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptMetricsResp)
 
+import           Hermod.Tracing (TraceObject)
+import qualified Hermod.Tracing as Net
+import           Hermod.Tracing.API.Tracer (nullTracer)
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)

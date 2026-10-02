@@ -2,15 +2,12 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Cardano.Logging hiding (LocalSocket)
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
-
 
 import           Control.Concurrent.Extra (newLock)
 import           Control.DeepSeq
@@ -21,6 +18,8 @@ import           System.FilePath ((</>))
 
 import           Criterion.Main
 import qualified Criterion.Types as Criterion
+import           Hermod.Tracing
+import qualified Hermod.Tracing as Net
 
 main :: IO ()
 main = do

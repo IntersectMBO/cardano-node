@@ -6,7 +6,6 @@ module Cardano.Tracer.Test.DataPoint.Tests
   ( tests
   ) where
 
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run (doRunCardanoTracer)
@@ -26,6 +25,7 @@ import           System.Time.Extra
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import qualified Hermod.Tracing as Net
 import           Trace.Forward.Protocol.DataPoint.Type
 import           Trace.Forward.Utils.DataPoint (askForDataPoints)
 

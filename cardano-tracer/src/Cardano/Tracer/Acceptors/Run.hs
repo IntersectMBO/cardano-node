@@ -4,8 +4,6 @@ module Cardano.Tracer.Acceptors.Run
   ( runAcceptors
   ) where
 
-import           Cardano.Logging.Types (TraceObject)
-import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Tracer.Acceptors.Client
 import           Cardano.Tracer.Acceptors.Server
 import           Cardano.Tracer.Configuration
@@ -14,13 +12,15 @@ import           Cardano.Tracer.MetaTrace
 
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Exception (SomeException (..))
-import           Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (secondsToNominalDiffTime)
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
 
+import           Hermod.Tracing (TraceObject)
+import           Hermod.Tracing.API.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import           Hermod.Tracing.Utils (runInLoop)
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TOF
 import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
