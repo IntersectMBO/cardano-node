@@ -18,13 +18,14 @@ module Trace.Forward.Protocol.DataPoint.Type
   , SingDataPointForward (..)
   ) where
 
-import           Cardano.Logging.Tracer.DataPoint (DataPointName)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Kind (Type)
 import           Data.Singletons
 import           Network.TypedProtocol.Core
+
+import           Hermod.Tracing.Tracer.DataPoint (DataPointName)
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.

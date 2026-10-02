@@ -15,8 +15,6 @@ module Trace.Forward.Utils.TraceObject
 
 --------------------------------------------------------------------------------
 
-import           Cardano.Logging.Utils
-
 import           Control.Concurrent.STM (STM, atomically, retry)
 import           Control.Concurrent.STM.TBQueue
 import           Control.DeepSeq (NFData)
@@ -26,6 +24,7 @@ import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 import           System.IO (hPutStrLn, stderr)
 
+import           Hermod.Tracing.Utils
 import           Trace.Forward.Configuration.TraceObject
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type

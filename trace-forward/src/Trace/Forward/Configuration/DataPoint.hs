@@ -7,8 +7,8 @@ module Trace.Forward.Configuration.DataPoint
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
 import           Control.Concurrent.STM.TVar (TVar)
-import           Control.Tracer (Tracer)
 
+import           Hermod.Tracing.API.Tracer (Tracer)
 import           Trace.Forward.Protocol.DataPoint.Type
 
 -- | Acceptor configuration, parameterized by trace item's type.

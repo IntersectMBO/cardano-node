@@ -16,7 +16,7 @@ import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
-import           Control.Tracer (nullTracer)
+import           Hermod.Tracing.API.Tracer (nullTracer)
 import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Properties
 import           Network.TypedProtocol.Proofs
