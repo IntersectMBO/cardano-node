@@ -1338,10 +1338,10 @@ instance
             , "protVer" .= mismatchSupplied
             , "prevProtVer" .= mismatchExpected
             ]
-  forMachine _ (Dijkstra.InvalidGuardrailsScriptHash actualPolicyHash expectedPolicyHash) =
-    mconcat [ "kind" .= String "InvalidPolicyHash"
-            , "actualPolicyHash" .= actualPolicyHash
-            , "expectedPolicyHash" .= expectedPolicyHash
+  forMachine _ (Dijkstra.InvalidGuardrailsScriptHash actualScriptHash expectedScriptHash) =
+    mconcat [ "kind" .= String "InvalidGuardrailsScriptHash"
+            , "actualGuardrailsScriptHash" .= actualScriptHash
+            , "expectedGuardrailsScriptHash" .= expectedScriptHash
             ]
   forMachine _ (Dijkstra.DisallowedProposalDuringBootstrap proposal) =
     mconcat [ "kind" .= String "DisallowedProposalDuringBootstrap"
@@ -1388,23 +1388,23 @@ instance LogFormatting (Dijkstra.DijkstraGovCertPredFailure era) where
       [ "kind" .= String "DijkstraDRepIncorrectDeposit"
       , "givenCoin" .= mismatchSupplied
       , "expectedCoin" .= mismatchExpected
-      , "error" .= String "DRep delegation has incorrect deposit"
+      , "error" .= String "DRep registration has incorrect deposit amount"
       ]
     Dijkstra.DijkstraCommitteeHasPreviouslyResigned coldCred ->
       [ "kind" .= String "DijkstraCommitteeHasPreviouslyResigned"
       , "credential" .= String (textShow coldCred)
-      , "error" .= String "Committee has resigned"
+      , "error" .= String "Committee member has previously resigned"
       ]
     Dijkstra.DijkstraDRepIncorrectRefund Mismatch {mismatchSupplied, mismatchExpected} ->
       [ "kind" .= String "DijkstraDRepIncorrectRefund"
       , "givenRefund" .= mismatchSupplied
       , "expectedRefund" .= mismatchExpected
-      , "error" .= String "Refunds mismatch"
+      , "error" .= String "Refund amount is incorrect"
       ]
     Dijkstra.DijkstraCommitteeIsUnknown coldCred ->
       [ "kind" .= String "DijkstraCommitteeIsUnknown"
       , "credential" .= String (textShow coldCred)
-      , "error" .= String "Committee is Unknown"
+      , "error" .= String "Committee member is unknown"
       ]
 
 instance
@@ -1464,7 +1464,7 @@ instance
     Dijkstra.OutputTooBigUTxO badOutputs ->
       mconcat [ "kind" .= String "OutputTooBigUTxO"
               , "outputs" .= badOutputs
-              , "error" .= String "Too many asset ids in the tx output"
+              , "error" .= String "The tokens in the tx output take up too much space"
               ]
     Dijkstra.InsufficientCollateral computedBalance suppliedFee ->
       mconcat [ "kind" .= String "InsufficientCollateral"
