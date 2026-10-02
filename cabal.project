@@ -176,3 +176,14 @@ source-repository-package
   tag: 0ebed78d11daa6d481c8fd63993532d36b05163a
   --sha256: sha256-RJrmOnIsU0pXxut0LuY7ok+8KYd6LOKOb/ooMulSP24=
 
+
+-- TEMPORARY: cardano-api 11.7.0.0 plus IntersectMBO/cardano-api#1362 ("Add support
+-- for Dijkstra ledger events"), which no release contains yet. Without it, forcing a
+-- Dijkstra block's ledger events (foldBlocks / the EpochStateView fold) dies with a
+-- non-exhaustive pattern match. Replace with a released version once available.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 216c52563381954a986b0de073e10aa392e6a0fc
+  subdir: cardano-api
+  --sha256: sha256-5rF1ntF9hHrQzZtYgUwc/Gi9vig7q/qnmU8xCVksdHM=
