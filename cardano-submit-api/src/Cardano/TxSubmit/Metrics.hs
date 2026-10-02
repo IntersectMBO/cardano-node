@@ -4,12 +4,13 @@ module Cardano.TxSubmit.Metrics
   (registerMetricsServer)
 where
 
-import           Cardano.Logging (Trace, traceWith)
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 
 import           Control.Exception.Safe
 import           System.Metrics.Prometheus.Http.Scrape (serveMetrics)
 import           System.Metrics.Prometheus.Registry (RegistrySample)
+
+import           Hermod.Tracing (Trace, traceWith)
 
 -- | Register metrics server. Returns metrics and an IO action which starts metrics server and should
 -- be passed to 'withAsync'.

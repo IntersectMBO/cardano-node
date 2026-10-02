@@ -27,7 +27,7 @@ import           Cardano.Api hiding (CardanoBlock)
 import           Cardano.Benchmarking.OuroborosImports
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
-import           Cardano.Logging
+import           Hermod.Tracing
 import           Cardano.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))

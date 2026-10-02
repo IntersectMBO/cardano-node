@@ -59,7 +59,7 @@ library
                       , streaming-commons
                       , text
                       , transformers-except
-                      , trace-dispatcher
+                      , hermod-tracing-core ^>= 1.0.1
                       , warp
 
   hs-source-dirs:       src

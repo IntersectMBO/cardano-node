@@ -23,7 +23,6 @@ import qualified Cardano.Api
 
 import           Cardano.Binary (DecoderError (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Logging (Trace, traceWith)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
@@ -66,6 +65,7 @@ import           System.IO (IO)
 import qualified System.Metrics.Prometheus.Metric.Counter as Counter
 import           Text.Show (Show (show))
 
+import           Hermod.Tracing (Trace, traceWith)
 import qualified Servant
 import           Servant (Application, Handler, ServerError (..), err400, throwError)
 import           Servant.API.Generic (toServant)

@@ -21,7 +21,7 @@ import Data.Time.Clock
 import Data.Map.Strict                  qualified as M
 
 -- Repo-local:
-import Cardano.Logging.Resources.Types
+import Hermod.Tracing.Resources.Types
 
 -- Package-local:
 import Data.CDF

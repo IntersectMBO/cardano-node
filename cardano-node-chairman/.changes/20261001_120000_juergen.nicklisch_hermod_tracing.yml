@@ -1,0 +1,6 @@
+pr: 0
+kind:
+  - maintenance
+description: |
+  Use `hermod-tracing-api` instead of `contra-tracer`, as `ouroboros-network` and
+  `ouroboros-consensus` now do.

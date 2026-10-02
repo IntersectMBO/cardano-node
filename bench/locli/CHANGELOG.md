@@ -1,5 +1,10 @@
 # Revision history for locli
 
+## Unreleased
+
+* Read resource statistics with `hermod-trace-resources` instead of `trace-resources`
+  (same types, same JSON).
+
 ## 2.4 -- Jul 2026
 
 * Create Plutus workload calibration CSV as part of run comparison, and include as addendum in `typst` report.

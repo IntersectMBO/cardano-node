@@ -61,10 +61,11 @@ library
                       , cardano-prelude
                       , cardano-rpc
                       , contra-tracer
+                      , hermod-tracing-api:public
                       , containers
                       , data-default-class
                       , containers
-                      , contra-tracer
+                      , hermod-tracing-api:public
                       , data-default-class
                       , Diff
                       , directory

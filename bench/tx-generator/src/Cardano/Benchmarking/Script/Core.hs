@@ -40,7 +40,7 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Logging hiding (LocalSocket)
+import           Hermod.Tracing
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import qualified Cardano.TxGenerator.Genesis as Genesis

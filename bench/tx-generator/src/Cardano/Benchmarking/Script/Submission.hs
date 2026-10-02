@@ -30,7 +30,7 @@ import           Cardano.Benchmarking.Script.Env (ActionM, getBenchTracers, lift
                    traceDebug)
 import           Cardano.Benchmarking.Script.Types (Generator (..))
 import           Cardano.Benchmarking.Wallet (TxStream)
-import           Cardano.Logging (traceWith)
+import           Hermod.Tracing (traceWith)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Prelude

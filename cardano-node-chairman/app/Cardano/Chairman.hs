@@ -25,12 +25,13 @@ import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer.SI
-import           Control.Tracer
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
 import           Data.Word (Word64)
+
+import           Hermod.Tracing.API.Tracer
 
 -- | The chairman checks for consensus and progress.
 --

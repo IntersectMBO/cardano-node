@@ -6,7 +6,6 @@ import           Cardano.Api (TxId (TxId), TxValidationErrorInCardanoMode (..))
 import           Cardano.Api.Pretty (textShow)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Logging
 import           Cardano.TxSubmit.Types (TxCmdError (..))
 
 import           Prelude hiding (take)
@@ -19,6 +18,8 @@ import           Data.Text.Encoding (decodeLatin1)
 import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
 import           Network.Socket (SockAddr)
+
+import           Hermod.Tracing
 
 data TraceSubmitApi = ApplicationStopping
                     | ApplicationInitializeMetrics
@@ -101,9 +102,9 @@ instance LogFormatting TraceSubmitApi where
   forHuman (EndpointSubmittedTransaction txId) =
     "txSubmitPost: successfully submitted transaction " <> renderMediumTxId txId
 
-  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" Nothing]
-  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      Nothing]
-  asMetrics ApplicationInitializeMetrics          = [CounterM "tx_submit_fail" (Just 0), CounterM "tx_submit" (Just 0)]
+  asMetrics (EndpointFailedToSubmitTransaction _) = [CounterM "tx_submit_fail" CounterIncrement]
+  asMetrics (EndpointSubmittedTransaction      _) = [CounterM "tx_submit"      CounterIncrement]
+  asMetrics ApplicationInitializeMetrics          = [CounterM "tx_submit_fail" (CounterAdd 0), CounterM "tx_submit" (CounterAdd 0)]
   asMetrics _                                     = []
 
 instance MetaTrace TraceSubmitApi where

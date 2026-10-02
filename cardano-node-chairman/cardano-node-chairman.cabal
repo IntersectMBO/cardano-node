@@ -48,7 +48,7 @@ executable cardano-node-chairman
                       , cardano-node ^>= 11.1
                       , cardano-prelude
                       , containers
-                      , contra-tracer
+                      , hermod-tracing-api:public
                       , io-classes:{io-classes, strict-stm, si-timers} ^>= 1.8
                       , optparse-applicative
                       , ouroboros-consensus

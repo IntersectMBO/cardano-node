@@ -23,13 +23,14 @@ import           Ouroboros.Consensus.Config.SupportsNode
 import           Ouroboros.Consensus.Node.ProtocolInfo
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
-import           Control.Tracer (Tracer, mkTracer, stdoutTracer, traceWith)
 import           Data.Monoid (Last (..))
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           System.Exit (exitFailure)
 import qualified System.IO as IO
+
+import           Hermod.Tracing.API.Tracer (Tracer, mkTracer, stdoutTracer, traceWith)
 
 data RunOpts = RunOpts
   { -- | Stop the test after given number of seconds. The chairman will

@@ -48,7 +48,7 @@ import           Control.Monad.STM as STM (atomically)
 #ifdef UNIX
 import           Cardano.Benchmarking.LogTypes (AsyncBenchmarkControl (..), BenchTracers (..),
                    TraceBenchTxSubmit (..))
-import           Cardano.Logging as Tracer (traceWith)
+import           Hermod.Tracing as Tracer (traceWith)
 import           Control.Concurrent.Async as Async (cancelWith)
 import           Control.Concurrent as Conc (killThread)
 import           GHC.Weak as Weak (deRefWeak)
