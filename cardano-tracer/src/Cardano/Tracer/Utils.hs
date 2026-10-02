@@ -39,7 +39,7 @@ module Cardano.Tracer.Utils
   , NodeStateWrapper (..)
   ) where
 
-import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
+import           Trace.Forward.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Logging.Utils (showT)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment

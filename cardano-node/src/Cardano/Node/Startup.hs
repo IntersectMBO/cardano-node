@@ -11,8 +11,8 @@
 
 module Cardano.Node.Startup
   ( module Cardano.Node.Startup
-  , module Cardano.Logging.Types.NodeInfo
-  , module Cardano.Logging.Types.NodeStartupInfo
+  , module Trace.Forward.Types.NodeInfo
+  , module Trace.Forward.Types.NodeStartupInfo
   ) where
 
 import qualified Cardano.Api as Api
@@ -20,8 +20,6 @@ import qualified Cardano.Api as Api
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
-import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
-import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
 import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
 import           Cardano.Network.NodeToClient (NodeToClientVersion)
 import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
@@ -57,6 +55,8 @@ import           Network.HostName (getHostName)
 import qualified Network.Socket as Socket
 
 import           Paths_cardano_node (version)
+import           Trace.Forward.Types.NodeInfo (NodeInfo (..))
+import           Trace.Forward.Types.NodeStartupInfo (NodeStartupInfo (..))
 
 data StartupTrace blk =
   -- | Log startup information.

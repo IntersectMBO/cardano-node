@@ -1,5 +1,11 @@
 # ChangeLog
 
+## NEXT
+
+* Add `Trace.Forward.Types.NodeInfo` and `Trace.Forward.Types.NodeStartupInfo`, the
+  `NodeInfo` / `NodeStartupInfo` DataPoints that cardano-node forwards and cardano-tracer reads.
+  They were defined in `trace-dispatcher`; the encoding is unchanged.
+
 ## 2.4.1 - Mar 2026
 
 * Increase robustness of evaluating trace objects to be forwarded

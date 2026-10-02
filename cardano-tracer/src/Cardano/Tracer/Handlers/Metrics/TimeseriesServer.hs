@@ -6,8 +6,6 @@
 
 module Cardano.Tracer.Handlers.Metrics.TimeseriesServer(runTimeseriesServer) where
 
-import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
-import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo)
 import           Cardano.Timeseries.API (ExecutionError (..))
 import           Cardano.Timeseries.AsText
 import           Cardano.Timeseries.Component
@@ -15,18 +13,18 @@ import           Cardano.Timeseries.JSON ()
 import           Cardano.Tracer.Configuration (Certificate (..), Endpoint, TracerConfig (..),
                    epForceSSL, setEndpoint)
 import           Cardano.Tracer.Environment (TracerEnv (..))
-import           Cardano.Tracer.Handlers.Metrics.Utils (RouteDictionary, getRouteDictionary,
-                   contentHdrJSON, contentHdrUtf8Text)
+import           Cardano.Tracer.Handlers.Metrics.Utils (RouteDictionary, contentHdrJSON,
+                   contentHdrUtf8Text, getRouteDictionary)
 import           Cardano.Tracer.Handlers.Utils (askDataPoint)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Time (getTimeMs)
 import           Cardano.Tracer.Types (NodeId (..))
 import           Cardano.Tracer.Utils (NodeStateWrapper (..))
 
-import qualified Data.Bimap as Bimap
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (join)
 import           Data.Aeson (encode, object, (.=))
+import qualified Data.Bimap as Bimap
 import qualified Data.ByteString.Lazy as BL
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
@@ -39,6 +37,9 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp hiding (run)
 import           Network.Wai.Handler.WarpTLS
 import           System.Time.Extra (sleep)
+
+import           Trace.Forward.Types.NodeInfo (NodeInfo (..))
+import           Trace.Forward.Types.NodeStartupInfo (NodeStartupInfo)
 
 errorType :: ExecutionError -> Text
 errorType ParsingErrorWhileExecuting{} = "parse"

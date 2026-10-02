@@ -58,6 +58,9 @@ library
                         Trace.Forward.Utils.ForwardSink
                         Trace.Forward.Utils.Version
 
+                        Trace.Forward.Types.NodeInfo
+                        Trace.Forward.Types.NodeStartupInfo
+
   build-depends:        aeson
                       , async
                       , bytestring
@@ -76,6 +79,7 @@ library
                       , serialise
                       , stm
                       , text
+                      , time
                       , trace-dispatcher ^>= 2.13
                       , typed-protocols:{typed-protocols, cborg} ^>= 1.2
 
