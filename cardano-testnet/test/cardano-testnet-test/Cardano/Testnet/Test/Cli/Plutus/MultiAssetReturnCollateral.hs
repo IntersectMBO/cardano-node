@@ -42,7 +42,7 @@ hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-toke
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    ceo = ConwayEraOnwardsConway
+    ceo = ConwayEraOnwardsDijkstra
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era

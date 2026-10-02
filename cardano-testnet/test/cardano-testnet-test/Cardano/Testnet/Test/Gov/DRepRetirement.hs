@@ -36,10 +36,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- | The era in which this test runs
-era :: Exp.Era ConwayEra
-era = Exp.ConwayEra
+era :: Exp.Era DijkstraEra
+era = Exp.DijkstraEra
 
-sbe :: ShelleyBasedEra ConwayEra
+sbe :: ShelleyBasedEra DijkstraEra
 sbe = convert era
 
 -- Execute this test with:
@@ -96,14 +96,14 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
   let drepRetirementCertFile = gov </> defaultDRepKeysDir </> "drep1.retirementcert"
 
   H.noteM_ $ execCli' execConfig
-     [ "conway", "governance", "drep", "retirement-certificate"
+     [ eraToString sbe, "governance", "drep", "retirement-certificate"
      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair 1
      , "--deposit-amt", show @Int 1_000_000
      , "--out-file", drepRetirementCertFile
      ]
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "query", "utxo"
+    [ eraToString sbe, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-11.json"
@@ -115,7 +115,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
   drepRetirementRegTxSignedFp <- H.note $ work </> "drep.retirement.tx"
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--certificate-file", drepRetirementCertFile
@@ -124,7 +124,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     ]
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "sign"
+    [ eraToString sbe, "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
@@ -132,7 +132,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     ]
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ eraToString sbe, "transaction", "submit"
     , "--tx-file", drepRetirementRegTxSignedFp
     ]
 

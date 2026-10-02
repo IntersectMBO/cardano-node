@@ -49,7 +49,7 @@ hprop_build_raw_ref_script_spend = integrationRetryWorkspace 2 "build-raw-ref-sc
     work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
     let
-        sbe = ShelleyBasedEraConway
+        sbe = ShelleyBasedEraDijkstra
         era = toCardanoEra sbe
         cEra = AnyCardanoEra era
         eraName = eraToString era
