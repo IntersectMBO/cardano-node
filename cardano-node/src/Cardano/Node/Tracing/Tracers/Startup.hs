@@ -21,7 +21,6 @@ import qualified Cardano.Api as Api
 import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.API as SL
-import           Cardano.Logging
 import           Cardano.Network.NodeToClient (LocalAddress (..))
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.OrphanInstances ()
@@ -55,6 +54,7 @@ import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 
+import           Hermod.Tracing
 import           Paths_cardano_node (version)
 
 
@@ -306,7 +306,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
         NotEffective -> 0
       )]
   asMetrics (BICommon BasicInfoCommon {..}) =
-    [ PrometheusM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]
+    [ LabelSetM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]
     , IntM "node.start.time" ((ceiling . utcTimeToPOSIXSeconds) biNodeStartTime)
     ]
   asMetrics _ = []

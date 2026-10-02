@@ -11,7 +11,6 @@ module Cardano.Node.Tracing.Formatting
   (
   ) where
 
-import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, RealPoint, realPointHash,
                    realPointSlot)
@@ -21,6 +20,8 @@ import           Ouroboros.Network.Block
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
+
+import           Hermod.Tracing (LogFormatting (..))
 
 -- | Derives ConvertRawHash for Header blk from ConvertRawHash blk.
 -- Safe because HeaderHash (Header blk) = HeaderHash blk.

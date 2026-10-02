@@ -23,7 +23,7 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 #endif
 
 import           Cardano.Git.Rev (gitRev)
-import           Cardano.Logging
+import           Hermod.Tracing
 
 import           Paths_cardano_node (version)
 
@@ -116,7 +116,7 @@ instance LogFormatting NodeVersionTrace where
 #if MIN_VERSION_base(4,15,0)
     , IntM "haskell_compiler_patch" (fromIntegral (getPatch compilerVersion))
 #endif
-    , PrometheusM "cardano_build_info" (getCardanoBuildInfo nvt)
+    , LabelSetM "cardano_build_info" (getCardanoBuildInfo nvt)
     ]
 
 getCardanoBuildInfo :: NodeVersionTrace -> [(Text,Text)]

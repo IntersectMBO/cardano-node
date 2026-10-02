@@ -8,7 +8,6 @@ module Cardano.Node.Tracing
   , ConsensusStartupException (..)
   ) where
 
-import           Cardano.Logging.Resources
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
@@ -27,7 +26,9 @@ import           Ouroboros.Network.ConnectionId
 import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Control.Tracer (Tracer)
+
+import           Hermod.Tracing.API.Tracer (Tracer)
+import           Hermod.Tracing.Resources
 
 data Tracers peer localPeer blk m = Tracers
   { -- | Trace the ChainDB

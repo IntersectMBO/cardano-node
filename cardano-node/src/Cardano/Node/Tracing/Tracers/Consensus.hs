@@ -26,7 +26,6 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 
 import qualified Cardano.KESAgent.Processes.ServiceClient as Agent
-import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..), HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
@@ -92,6 +91,8 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
+
+import           Hermod.Tracing
 
 enclosingValue :: ToJSON a => Enclosing' a -> Value
 enclosingValue RisingEdge = object [ "edge" .= String "Starting" ]
@@ -486,7 +487,7 @@ instance ConvertRawHash blk
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
   asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) =
-      [CounterM "served.header" Nothing]
+      [CounterM "served.header" CounterIncrement]
   asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking _) = []
   asMetrics _ = []
 
@@ -559,7 +560,7 @@ instance LogFormatting ClientMetrics where
     where
       size                = Pq.size cmSlotMap
       cdfMetric name var  = DoubleM name (fromIntegral (counter var) / fromIntegral size)
-      lateBlockMetric     = [ CounterM "blockfetchclient.lateblocks" Nothing | cmDelay > 5 ]
+      lateBlockMetric     = [ CounterM "blockfetchclient.lateblocks" CounterIncrement | cmDelay > 5 ]
 
 instance MetaTrace ClientMetrics where
   namespaceFor _ = Namespace [] ["ClientMetrics"]
@@ -825,7 +826,7 @@ instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) wh
                                     (renderHeaderHash (Proxy @blk))
                                     $ pointHash blk)]
   asMetrics (TraceBlockFetchServerSendBlock _p) =
-    [CounterM "served.block" Nothing]
+    [CounterM "served.block" CounterIncrement]
 
 instance MetaTrace (TraceBlockFetchServerEvent blk) where
     namespaceFor TraceBlockFetchServerSendBlock {} =
@@ -1143,13 +1144,13 @@ instance
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
     ++
-    [ CounterM txsMempoolTimeoutSoftCounterName Nothing
+    [ CounterM txsMempoolTimeoutSoftCounterName CounterIncrement
     | impliesMempoolTimeoutSoft ev
     ]
   asMetrics (TraceMempoolRemoveTxs txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
-    , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
+    , CounterM "txsProcessedNum" (CounterAdd (fromIntegral $ length txs))
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs _txs _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1158,7 +1159,7 @@ instance
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
     let durationMs = round (1000 * duration) :: Integer in
     [ IntM "txsSyncDuration" durationMs
-    , CounterM txsSyncDurationTotalCounterName (Just (fromIntegral durationMs))
+    , CounterM txsSyncDurationTotalCounterName (CounterAdd (fromIntegral durationMs))
     ]
   asMetrics (TraceMempoolSynced RisingEdge) = []
 
@@ -1505,37 +1506,37 @@ instance ( tx ~ GenTx blk
 
 
   asMetrics (TraceStartLeadershipCheck _slot) =
-    [CounterM "Forge.about-to-lead" Nothing]
+    [CounterM "Forge.about-to-lead" CounterIncrement]
   asMetrics (TraceSlotIsImmutable _slot _tipPoint _tipBlkNo) =
-    [CounterM "Forge.slot-is-immutable" Nothing]
+    [CounterM "Forge.slot-is-immutable" CounterIncrement]
   asMetrics (TraceBlockFromFuture _slot _slotNo) =
-    [CounterM "Forge.block-from-future" Nothing]
+    [CounterM "Forge.block-from-future" CounterIncrement]
   asMetrics (TraceNoLedgerState _slot _) =
-    [CounterM "Forge.could-not-forge"Nothing]
+    [CounterM "Forge.could-not-forge" CounterIncrement]
   asMetrics (TraceNoLedgerView _slot _) =
-    [CounterM "Forge.could-not-forge" Nothing]
+    [CounterM "Forge.could-not-forge" CounterIncrement]
   asMetrics (TraceLedgerView _) = []
   asMetrics TraceBlockContext {} = []
   asMetrics (TraceLedgerState _ _) = []
   asMetrics (TraceNodeCannotForge _slot _reason) =
-    [CounterM "Forge.could-not-forge" Nothing]
+    [CounterM "Forge.could-not-forge" CounterIncrement]
   asMetrics (TraceNodeNotLeader _slot) =
-    [CounterM "Forge.node-not-leader" Nothing]
+    [CounterM "Forge.node-not-leader" CounterIncrement]
   asMetrics (TraceNodeIsLeader _slot) =
-    [CounterM "Forge.node-is-leader" Nothing]
+    [CounterM "Forge.node-is-leader" CounterIncrement]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
   asMetrics (TraceForgedBlock slot _ _ _ _) =
     [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
-     CounterM "Forge.forged" Nothing]
+     CounterM "Forge.forged" CounterIncrement]
   asMetrics (TraceDidntAdoptBlock _slot _) =
-    [CounterM "Forge.didnt-adopt" Nothing]
+    [CounterM "Forge.didnt-adopt" CounterIncrement]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
-    [CounterM "Forge.forged-invalid" Nothing]
+    [CounterM "Forge.forged-invalid" CounterIncrement]
   asMetrics (TraceAdoptedBlock _slot _ _) =
-    [CounterM "Forge.adopted" Nothing]
+    [CounterM "Forge.adopted" CounterIncrement]
   asMetrics (TraceAdoptionThreadDied _slot _) =
-    [CounterM "Forge.adoption-thread-died" Nothing]
+    [CounterM "Forge.adoption-thread-died" CounterIncrement]
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
@@ -2330,7 +2331,7 @@ asMetricsObjectDiffusionInbound prefix = \case
   TraceObjectDiffusionInboundCollectedObjects collected ->
     [IntM (prefix <> "ObjectsCollected") (fromIntegral collected)]
   TraceObjectDiffusionInboundAddedObjects (NumObjectsProcessed added) ->
-    [CounterM (prefix <> "ObjectsAdded") (Just (fromIntegral added))]
+    [CounterM (prefix <> "ObjectsAdded") (CounterAdd (fromIntegral added))]
   _ -> []
 
 metricsDocForObjectDiffusionInbound ::
@@ -2439,7 +2440,7 @@ asMetricsObjectDiffusionOutbound ::
   -> [Metric]
 asMetricsObjectDiffusionOutbound prefix = \case
   TraceObjectDiffusionOutboundSendMsgReplyObjects objects ->
-    [CounterM (prefix <> "ObjectsSent") (Just (length objects))]
+    [CounterM (prefix <> "ObjectsSent") (CounterAdd (fromIntegral (length objects)))]
   _ -> []
 
 metricsDocForObjectDiffusionOutbound ::

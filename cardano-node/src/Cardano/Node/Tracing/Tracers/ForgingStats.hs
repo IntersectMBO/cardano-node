@@ -7,7 +7,6 @@ module Cardano.Node.Tracing.Tracers.ForgingStats
     , calcForgeStats
   ) where
 
-import           Cardano.Logging
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -15,6 +14,8 @@ import           Ouroboros.Consensus.Shelley.Node ()
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Aeson (Value (..), (.=))
+
+import           Hermod.Tracing
 
 
 --------------------------------------------------------------------------------

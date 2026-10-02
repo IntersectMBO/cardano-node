@@ -11,11 +11,12 @@ module Cardano.Node.Tracing.Tracers.Rpc () where
 
 import           Cardano.Api.Pretty
 
-import           Cardano.Logging hiding (nsInner)
 import           Cardano.Rpc.Server (TraceRpc (..), TraceRpcNodeKernelAccess (..),
                    TraceRpcQuery (..), TraceRpcSubmit (..), TraceRpcSync (..), TraceSpanEvent (..))
 
 import           Data.Aeson (Object, Value (..), (.=))
+
+import           Hermod.Tracing hiding (nsInner)
 
 instance LogFormatting TraceRpc where
   forMachine _dtal tr =
@@ -70,15 +71,15 @@ instance LogFormatting TraceRpc where
   asMetrics = \case
     -- metrics for each rpc request
     -- query names here are taken from UTXORPC spec: https://utxorpc.org/query/intro/#operations
-    TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" Nothing]
-    TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" Nothing]
-    TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" Nothing]
-    TraceRpcQuery (TraceRpcQueryReadGenesisSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadGenesis" Nothing]
-    TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
-    TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
-    TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
-    TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" Nothing]
-    TraceRpcSync (TraceRpcFollowTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FollowTip" Nothing]
+    TraceRpcQuery (TraceRpcQueryParamsSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadParams" CounterIncrement]
+    TraceRpcQuery (TraceRpcQueryReadUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadUtxos" CounterIncrement]
+    TraceRpcQuery (TraceRpcQuerySearchUtxosSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.SearchUtxos" CounterIncrement]
+    TraceRpcQuery (TraceRpcQueryReadGenesisSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadGenesis" CounterIncrement]
+    TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" CounterIncrement]
+    TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" CounterIncrement]
+    TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" CounterIncrement]
+    TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" CounterIncrement]
+    TraceRpcSync (TraceRpcFollowTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FollowTip" CounterIncrement]
     _ -> []
 
 instance MetaTrace TraceRpc where

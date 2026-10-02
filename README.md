@@ -23,7 +23,7 @@ This is an approximate diagram of the dependencies among the different component
 ```mermaid
 stateDiagram-v2
     cn: cardano-node
-    tr: trace-dispatcher
+    tr: hermod-tracing
     ca: cardano-api
     co: ouroboros-consensus
     on: ouroboros-network

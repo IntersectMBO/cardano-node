@@ -16,7 +16,6 @@ module Cardano.Node.Tracing.Tracers.KESInfo
       traceAsKESInfo
    ) where
 
-import           Cardano.Logging
 import           Cardano.Node.Queries (GetKESInfo (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Ouroboros.Consensus.Block.Forging
@@ -27,6 +26,8 @@ import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import           Data.Proxy (Proxy)
 import qualified Data.Text as Text
+
+import           Hermod.Tracing
 
 traceAsKESInfo
   :: forall m blk . (GetKESInfo blk, MonadIO m)

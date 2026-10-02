@@ -3,14 +3,14 @@ module Cardano.Node.Tracing.Tracers.Resources
   ( startResourceTracer
   ) where
 
-import           Cardano.Logging.Resources
-
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Monad (forM_, forever)
 import           Control.Monad.Class.MonadAsync (link)
-import           Control.Tracer
 import           GHC.Conc (labelThread, myThreadId)
+
+import           Hermod.Tracing.API.Tracer
+import           Hermod.Tracing.Resources
 
 -- | Starts a background thread to periodically trace resource statistics.
 -- The thread reads resource stats and traces them using the given tracer.

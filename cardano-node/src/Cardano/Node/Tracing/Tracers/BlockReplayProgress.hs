@@ -9,7 +9,6 @@ module Cardano.Node.Tracing.Tracers.BlockReplayProgress
 
 import           Cardano.Api (textShow)
 
-import           Cardano.Logging
 import           Ouroboros.Consensus.Block (SlotNo, realPointSlot)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
@@ -20,6 +19,8 @@ import           Control.Concurrent.MVar
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 import           Numeric (showFFloat)
+
+import           Hermod.Tracing
 
 
 newtype ReplayBlockState = ReplayBlockState
@@ -93,7 +94,7 @@ withReplayedBlock :: Trace IO ReplayBlockStats
     -> IO (Trace IO (ChainDB.TraceEvent blk))
 withReplayedBlock tr = do
   var <- newMVar initialReplayBlockState
-  contramapMCond tr (process var)
+  pure $ contramapMCond tr (process var)
   where
     process :: MVar ReplayBlockState
             -> (LoggingContext, Either TraceControl (ChainDB.TraceEvent blk))

@@ -61,8 +61,9 @@ import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Logging.Types (LogFormatting)
-import           Cardano.Logging.Utils (showT)
+import           Hermod.Tracing (LogFormatting)
+import           Hermod.Tracing.API.ContraTracer (toContraTracer)
+import           Hermod.Tracing.Utils (showT)
 
 import           Ouroboros.Consensus.Block.Forging (MkBlockForging)
 import qualified Ouroboros.Consensus.Config as Consensus
@@ -135,7 +136,7 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
-import           Control.Tracer
+import           Hermod.Tracing.API.Tracer
 import           Data.Bits
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
@@ -479,7 +480,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
                 mkNodeKernelAccess
-                  (rpcTracer tracers)
+                  (toContraTracer (rpcTracer tracers))
                   shelleyGenesisHash
                   shelleyGenesisFile
                   blockType
@@ -774,7 +775,7 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccess
         then
           race_
             (do
-              runRpcServer rpcTracer config networkMagic nodeKernelAccessRef
+              runRpcServer (toContraTracer rpcTracer) config networkMagic nodeKernelAccessRef
               traceWith startupTracer RpcForceDisabled
               disableRpcServer)
             (waitForRpcConfigChange config)

@@ -41,7 +41,6 @@ import           Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..))
 import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Hashes as Hashes
-import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
@@ -66,6 +65,8 @@ import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+
+import           Hermod.Tracing
 
 
 condenseT :: Condense a => a -> Text

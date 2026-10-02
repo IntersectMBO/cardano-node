@@ -29,7 +29,6 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
-import           Cardano.Logging.Types
 import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
@@ -76,6 +75,7 @@ import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
+import           Hermod.Tracing
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.

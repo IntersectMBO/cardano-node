@@ -2,6 +2,14 @@
 
 ## Next version
 
+- Tracing is built on `hermod-tracing` (`hermod-tracing-core`, `hermod-tracing-api`,
+  `hermod-tracing-prometheus`, `hermod-trace-resources`) instead of `trace-dispatcher`,
+  `trace-resources` and `contra-tracer`, as `ouroboros-network`, `ouroboros-consensus` and
+  `trace-forward` now are. Log output, namespaces, metrics and forwarding are unchanged, and
+  existing configurations keep working: the `TraceOptions*` keys are still read (deprecated in
+  favour of a `HermodTracing` section with `Options`, `Forwarder`, `ApplicationName`,
+  `MetricsPrefix` and `PeriodicTracers: { resources, ledgerMetrics }`).
+
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the
   configuration consistency check now use the runtime `TraceDecisionEvent`
   type, so the documented message namespaces are

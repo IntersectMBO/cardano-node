@@ -12,7 +12,6 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    (
    ) where
 
-import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
@@ -33,6 +32,8 @@ import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import           Data.Time (DiffTime)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+
+import           Hermod.Tracing
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer

@@ -4,16 +4,14 @@
 -- | Check namespace consistencies agains configurations
 module Test.Cardano.Tracing.NewTracing.Consistency (tests) where
 
-import           Cardano.Node.Tracing.Consistency (DocTracer, checkNodeTraceConfigurationWith, getAllNamespaces)
+import           Cardano.Node.Tracing.Consistency (DocTracer, checkNodeTraceConfigurationWith,
+                   getAllNamespaces)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 
-import           Cardano.Logging.DocuGenerator (docuResultsToNamespaces)
-
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Set as Set
-
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -22,6 +20,8 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
+
+import           Hermod.Tracing.DocuGenerator (docuResultsToNamespaces)
 
 
 

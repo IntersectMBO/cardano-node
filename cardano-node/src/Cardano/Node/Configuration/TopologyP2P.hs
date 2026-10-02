@@ -33,7 +33,6 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSna
 import           Control.Exception.Safe (Exception (..), IOException, try)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import qualified Control.Tracer as CT
 import           Data.Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
@@ -42,6 +41,8 @@ import           Data.Maybe (isJust, isNothing)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           System.FilePath (takeDirectory, (</>))
+
+import qualified Hermod.Tracing.API.Tracer as CT
 
 instance AdjustFilePaths CardanoNetworkTopology where
   adjustFilePaths f nt@NetworkTopology{peerSnapshotPath} =

@@ -17,7 +17,6 @@
 module Cardano.Node.Tracing.Era.HardFork ()
   where
 
-import           Cardano.Logging
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError, PerasWeight (..))
@@ -46,6 +45,8 @@ import           Data.Aeson
 import           Data.Proxy (Proxy (..))
 import           Data.SOP (All, Compose, K (K))
 import           Data.SOP.Strict
+
+import           Hermod.Tracing
 
 
 --

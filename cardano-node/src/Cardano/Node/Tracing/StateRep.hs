@@ -21,8 +21,7 @@ module Cardano.Node.Tracing.StateRep
 
 import           Cardano.Api (textShow)
 
-import           Cardano.Logging
-import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
@@ -35,12 +34,14 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
-import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson hiding (Result (..))
 import           Data.Text as T (Text, pack)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
+
+import           Hermod.Tracing
+import           Hermod.Tracing.Prometheus.TCPServer (TracePrometheusSimple (..))
 
 deriving instance FromJSON ChunkNo
 

@@ -19,7 +19,6 @@ import qualified Cardano.Api as Api
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
-import           Cardano.Logging
 import           Cardano.Network.Diffusion (CardanoLocalRootConfig)
 import           Cardano.Network.NodeToClient (NodeToClientVersion)
 import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
@@ -54,6 +53,7 @@ import           Data.Word (Word64)
 import           Network.HostName (getHostName)
 import qualified Network.Socket as Socket
 
+import           Hermod.Tracing
 import           Paths_cardano_node (version)
 import           Trace.Forward.Types.NodeInfo (NodeInfo (..))
 import           Trace.Forward.Types.NodeStartupInfo (NodeStartupInfo (..))
@@ -245,7 +245,7 @@ prepareNodeInfo nc blockType cfg tc nodeStartTime = do
   getSystemStartShelley = sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig
 
   prepareNodeName =
-    case tcNodeName tc of
+    case tcApplicationName tc of
       Just aName -> return aName
       Nothing -> do
         -- The user didn't specify node's name in the configuration.
