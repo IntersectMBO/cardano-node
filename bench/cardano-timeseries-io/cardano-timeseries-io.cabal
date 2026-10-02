@@ -62,7 +62,7 @@ library
       , stm
       , text
       , time
-      , trace-dispatcher >= 2.11.0 && < 3
+      , hermod-tracing-core ^>= 1.0
       , vector
 
     exposed-modules:
@@ -144,7 +144,7 @@ executable cardano-timeseries-io
       , statistics
       , text
       , time
-      , trace-resources
+      , hermod-trace-resources
       , vector
 
 test-suite cardano-timeseries-test
@@ -184,6 +184,6 @@ benchmark cardano-timeseries-io-bench
       , statistics
       , text
       , time
-      , trace-resources
+      , hermod-trace-resources
       , vector
       , zlib

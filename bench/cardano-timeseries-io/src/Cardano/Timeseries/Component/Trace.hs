@@ -4,8 +4,6 @@
 
 module Cardano.Timeseries.Component.Trace(TimeseriesTrace(..)) where
 
-import           Cardano.Logging (DetailLevel (DDetailed), LogFormatting (..), SeverityS (..))
-import           Cardano.Logging.Types (MetaTrace (..), Namespace (..))
 import           Cardano.Timeseries.API
 import           Cardano.Timeseries.Component.Types
 import           Cardano.Timeseries.Domain.Types (SeriesIdentifier)
@@ -15,6 +13,9 @@ import           Data.Aeson.KeyMap (singleton)
 import           Data.Aeson.Types ((.=))
 import           Data.Text (Text)
 import           Data.Word (Word64)
+
+import           Hermod.Tracing (DetailLevel (DDetailed), LogFormatting (..), MetaTrace (..),
+                   Namespace (..), SeverityS (..))
 
 data TimeseriesTrace = TimeseriesTraceCreate (Maybe TimeseriesConfig)
                      | TimeseriesTraceReconfigure (Maybe TimeseriesConfig)

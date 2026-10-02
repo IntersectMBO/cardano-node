@@ -1,5 +1,13 @@
 # Revision history for cardano-timeseries-io
 
+## Unreleased
+
+### Breaking changes
+
+* Use `hermod-tracing-core` and `hermod-trace-resources` instead of `trace-dispatcher`
+  and `trace-resources`: `TimeseriesTrace`'s `LogFormatting` / `MetaTrace` instances are
+  hermod's now. The traces it emits and the resource statistics it reads are unchanged.
+
 ## 1.1.0 -- May 2026
 
 ### Breaking changes
