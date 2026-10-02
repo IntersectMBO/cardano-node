@@ -9,7 +9,6 @@ module Cardano.Node.Tracing.Tracers.Shutdown
   ( ppShutdownTrace
   ) where
 
-import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown
 
 import           Prelude (Maybe (..), show)
@@ -17,6 +16,8 @@ import           Prelude (Maybe (..), show)
 import           Data.Aeson (Value (..), (.=))
 import           Data.Monoid (mconcat, (<>))
 import           Data.Text (Text, pack)
+
+import           Hermod.Tracing
 
 -- --------------------------------------------------------------------------------
 -- -- ShutdownTrace Tracer

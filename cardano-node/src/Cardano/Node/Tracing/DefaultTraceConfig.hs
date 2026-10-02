@@ -2,17 +2,16 @@ module Cardano.Node.Tracing.DefaultTraceConfig
   ( defaultCardanoConfig
   ) where
 
-import           Cardano.Logging
-
 import           Prelude
 
 import qualified Data.Map.Strict as Map
+
+import           Hermod.Tracing
 
 
 defaultCardanoConfig :: TraceConfig
 defaultCardanoConfig = emptyTraceConfig {
     tcMetricsPrefix = Just "cardano.node.metrics."
-  , tcLedgerMetricsFrequency = Nothing             -- discard the default from 'trace-dispatcher'; Cardano has own ones, different for block producers and relays
   , tcOptions = Map.fromList
      [([],
           [ ConfSeverity (SeverityF (Just Notice))

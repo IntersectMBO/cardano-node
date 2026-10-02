@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -8,7 +9,6 @@ module Cardano.Node.Tracing
   , ConsensusStartupException (..)
   ) where
 
-import           Cardano.Logging.Resources
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
@@ -27,11 +27,14 @@ import           Ouroboros.Network.ConnectionId
 import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Control.Tracer (Tracer)
+
+import qualified "contra-tracer" Control.Tracer as CT
+import           Hermod.Tracing.API.Tracer (Tracer)
+import           Hermod.Tracing.Resources
 
 data Tracers peer localPeer blk m = Tracers
   { -- | Trace the ChainDB
-    chainDBTracer         :: !(Tracer IO (ChainDB.TraceEvent blk))
+    chainDBTracer         :: !(CT.Tracer IO (ChainDB.TraceEvent blk))
     -- | Consensus-specific tracers.
   , consensusTracers      :: !(Consensus.Tracers IO (ConnectionId peer) (ConnectionId localPeer) blk)
     -- | Tracers for the node-to-node protocols.
@@ -41,7 +44,7 @@ data Tracers peer localPeer blk m = Tracers
   , nodeToClientTracers   :: !(NodeToClient.Tracers IO (ConnectionId localPeer) blk DeserialiseFailure)
     -- | Diffusion tracers
   , diffusionTracers      :: !(Cardano.Diffusion.CardanoTracers m)
-  , churnModeTracer       :: !(Tracer IO Cardano.Diffusion.TraceChurnMode)
+  , churnModeTracer       :: !(CT.Tracer IO Cardano.Diffusion.TraceChurnMode)
   , startupTracer         :: !(Tracer IO (StartupTrace blk))
   , shutdownTracer        :: !(Tracer IO ShutdownTrace)
   , nodeInfoTracer        :: !(Tracer IO NodeInfo)
@@ -50,5 +53,5 @@ data Tracers peer localPeer blk m = Tracers
   , nodeStateTracer       :: !(Tracer IO NodeState)
   , resourcesTracer       :: !(Tracer IO ResourceStats)
   , ledgerMetricsTracer   :: !(Tracer IO LedgerMetrics)
-  , rpcTracer             :: !(Tracer IO TraceRpc)
+  , rpcTracer             :: !(CT.Tracer IO TraceRpc)
   }

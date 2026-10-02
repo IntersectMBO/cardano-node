@@ -40,7 +40,6 @@ import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
 import           Control.ResourceRegistry (ResourceRegistry)
-import           Control.Tracer
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Foldable (asum)
 import           Data.Text (Text, pack)
@@ -54,6 +53,7 @@ import           System.Posix.Types (Fd (Fd))
 import qualified Text.Read as Read
 
 import           Generic.Data.Orphans ()
+import           Hermod.Tracing.API.Tracer
 
 data ShutdownOn
   = ASlot  !SlotNo

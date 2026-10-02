@@ -155,7 +155,6 @@ library
                       , cardano-rpc ^>= 11.2
                       , cborg ^>= 0.2.4
                       , containers
-                      , contra-tracer >= 0.2.1
                       , data-default-class
                       , deepseq
                       , directory
@@ -165,6 +164,11 @@ library
                       , fs-api
                       , generic-data
                       , hashable
+                      , contra-tracer >= 0.2.1
+                      , hermod-trace-resources ^>= 1.0
+                      , hermod-tracing-api:public ^>= 1.1
+                      , hermod-tracing-core ^>= 1.0.1
+                      , hermod-tracing-prometheus ^>= 1.0
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8 || ^>= 1.9
                       , kes-agent ^>=1.3
@@ -193,9 +197,7 @@ library
                       , sop-extras
                       , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.13.0
                       , trace-forward ^>= 2.5.0
-                      , trace-resources ^>= 0.2.4
                       , transformers
                       , transformers-except
                       , typed-protocols:{typed-protocols, stateful} >= 1.2
@@ -241,19 +243,19 @@ test-suite cardano-node-test
                       , cardano-node
                       , cardano-slotting
                       , containers
-                      , contra-tracer
                       , directory
                       , filepath
                       , fs-api
                       , hedgehog
                       , hedgehog-corpus
                       , hedgehog-extras ^>= 0.10
+                      , hermod-tracing-api:public
+                      , hermod-tracing-core
                       , iproute
                       , mtl
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
-                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml

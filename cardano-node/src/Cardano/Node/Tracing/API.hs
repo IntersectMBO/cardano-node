@@ -13,8 +13,6 @@ module Cardano.Node.Tracing.API
 
 import           Cardano.Api (BlockType)
 
-import           Cardano.Logging hiding (traceWith)
-import           Cardano.Logging.Prometheus.TCPServer
 import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
@@ -42,14 +40,18 @@ import           Prelude
 import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
-import           Control.Tracer (traceWith)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Word (Word64)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
 
+import           Hermod.Tracing hiding (traceWith)
+import           Hermod.Tracing.API.ContraTracer (toContraTracer)
+import           Hermod.Tracing.API.Tracer (traceWith)
+import           Hermod.Tracing.Prometheus.TCPServer
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
 
@@ -90,17 +92,20 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
 
   startResourceTracer
     (resourcesTracer tracers)
-    (fromMaybe 1000 (tcResourceFrequency trConfig))
+    (maybe 1000 periodToInt (Map.lookup "resources" (tcPeriodicTracers trConfig)))
 
   startLedgerMetricsTracer
     (ledgerMetricsTracer tracers)
-    (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
+    (maybe ledgerMetricsDefaultFreq periodToInt (Map.lookup "ledgerMetrics" (tcPeriodicTracers trConfig)))
     nodeKernel
 
   pure tracers
  where
   -- this is the backwards compatible default: block producers emit these metrics every second, relays never.
   ledgerMetricsDefaultFreq = if noBlockForging then 0 else 1
+
+  periodToInt :: Word64 -> Int
+  periodToInt = fromIntegral . min (fromIntegral (maxBound :: Int))
 
   mkTracers
     :: TraceConfig
@@ -159,7 +164,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
         Just ps ->
           let
             !nsTr            = nodeStateTracer tracers
-            !tracePrometheus = NodePrometheusSimple >$< nsTr
+            !tracePrometheus = toContraTracer (NodePrometheusSimple >$< nsTr)
           in link =<< case tcPrometheusSimpleRun trConfig of
             Nothing         -> runPrometheusSimple tracePrometheus ekgStore ps
             Just customDoS  -> runPrometheusSimpleWith customDoS tracePrometheus ekgStore ps

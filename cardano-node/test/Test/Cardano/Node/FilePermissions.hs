@@ -23,7 +23,7 @@ import           Control.Monad (Monad (..))
 import           Control.Monad.Except
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Control.Tracer
+import           Hermod.Tracing.API.Tracer
 import           Data.Bool (Bool, not)
 import           Data.Either (Either (..))
 import           Data.Eq ((==))

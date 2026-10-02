@@ -41,7 +41,6 @@ import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
-import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals, renderMissingRedeemers,
                    renderScriptHash, renderScriptIntegrityHash, renderTxId)
@@ -81,6 +80,8 @@ import qualified Data.Set.NonEmpty as NonEmptySet
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text.Encoding
+
+import           Hermod.Tracing
 
 {- HLINT ignore "Use :" -}
 

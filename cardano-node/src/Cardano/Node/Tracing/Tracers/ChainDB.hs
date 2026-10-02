@@ -14,7 +14,6 @@ module Cardano.Node.Tracing.Tracers.ChainDB
    , fragmentChainDensity
    ) where
 
-import           Cardano.Logging
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -67,6 +66,8 @@ import           Data.Typeable (Typeable, cast)
 import           Data.Void (absurd)
 import           Data.Word (Word64)
 import           Numeric (showFFloat)
+
+import           Hermod.Tracing
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -736,8 +737,8 @@ instance ( LogFormatting (Header blk)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
-        , CounterM "forks" (Just (if forkIt then 1 else 0))
-        , PrometheusM "tipBlock" [("hash",tipBlockHash)
+        , CounterM "forks" (CounterAdd (if forkIt then 1 else 0))
+        , LabelSetM "tipBlock" [("hash",tipBlockHash)
                                  ,("parent_hash",tipBlockParentHash)
                                  ,("issuer_VKey_hash", tipBlockIssuerVkHashText)]
         ]
@@ -754,7 +755,7 @@ instance ( LogFormatting (Header blk)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
-        , PrometheusM "tipBlock" [("hash",tipBlockHash)
+        , LabelSetM "tipBlock" [("hash",tipBlockHash)
                                  ,("parent_hash",tipBlockParentHash)
                                  ,("issuer_verification_key_hash", tipBlockIssuerVkHashText)]
         ]

@@ -15,10 +15,6 @@ module Cardano.Node.Tracing.Consistency
   ) where
 
 
-import           Cardano.Logging
-import           Cardano.Logging.DocuGenerator (DocTracer, dtWarnings)
-import           Cardano.Logging.Resources
-import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import qualified Cardano.Network.NodeToNode as NtN
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
@@ -114,6 +110,11 @@ import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
 import qualified Network.Socket as Socket
+
+import           Hermod.Tracing
+import           Hermod.Tracing.DocuGenerator (DocTracer, dtWarnings)
+import           Hermod.Tracing.Resources
+import           Hermod.Tracing.Resources.Types ()
 
 
 -- | Check the configuration in the given file.

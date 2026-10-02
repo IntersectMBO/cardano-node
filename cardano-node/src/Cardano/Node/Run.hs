@@ -61,8 +61,9 @@ import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Logging.Types (LogFormatting)
-import           Cardano.Logging.Utils (showT)
+import           Hermod.Tracing (LogFormatting)
+import           Hermod.Tracing.API.ContraTracer (toContraTracer)
+import           Hermod.Tracing.Utils (showT)
 
 import           Ouroboros.Consensus.Block.Forging (MkBlockForging)
 import qualified Ouroboros.Consensus.Config as Consensus
@@ -135,7 +136,8 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
-import           Control.Tracer
+import qualified Control.Tracer as CT
+import           Hermod.Tracing.API.Tracer
 import           Data.Bits
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
@@ -230,7 +232,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
   let fp = maybe  "No file path found!"
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
-  blockForging <- mkBlockForging nullTracer
+  blockForging <- mkBlockForging CT.nullTracer
   tracers <-
     initTraceDispatcher
       nc
@@ -289,7 +291,7 @@ handleSimpleNode
   => Api.BlockType blk
   -> Api.GenesisHashShelley
   -> ProtocolInfo blk
-  -> (Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
+  -> (CT.Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
   -> PartialNodeConfiguration
@@ -479,7 +481,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
                 mkNodeKernelAccess
-                  (rpcTracer tracers)
+                  (toContraTracer (rpcTracer tracers))
                   shelleyGenesisHash
                   shelleyGenesisFile
                   blockType
@@ -575,7 +577,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
 
 -- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
-                     -> Tracer IO KESAgentClientTrace
+                     -> CT.Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
                      -> PartialNodeConfiguration -- ^ original CLI configuration
@@ -617,7 +619,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc cmdPc networkMagi
 
 #ifdef UNIX
 updateBlockForging :: Tracer IO (StartupTrace blk)
-                   -> Tracer IO KESAgentClientTrace
+                   -> CT.Tracer IO KESAgentClientTrace
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
@@ -761,7 +763,7 @@ updateLedgerPeerSnapshot startupTracer NodeConfiguration { ncConsensusMode } net
 -- to prevent an infinite restart loop.
 -- The user can re-enable by sending SIGHUP to reload the configuration.
 rpcServerLoop :: Tracer IO (StartupTrace blk)
-              -> Tracer IO TraceRpc
+              -> CT.Tracer IO TraceRpc
               -> StrictTVar IO RpcConfig
               -> NetworkMagic
               -> IORef (Maybe NodeKernelAccess)
@@ -774,7 +776,7 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccess
         then
           race_
             (do
-              runRpcServer rpcTracer config networkMagic nodeKernelAccessRef
+              runRpcServer (toContraTracer rpcTracer) config networkMagic nodeKernelAccessRef
               traceWith startupTracer RpcForceDisabled
               disableRpcServer)
             (waitForRpcConfigChange config)

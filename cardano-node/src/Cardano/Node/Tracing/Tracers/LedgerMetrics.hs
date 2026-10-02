@@ -14,7 +14,6 @@ module Cardano.Node.Tracing.Tracers.LedgerMetrics
   ) where
 
 import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
-import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
 import           Cardano.Node.Tracing.Tracers.ChainDB (fragmentChainDensity)
@@ -31,10 +30,12 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Monad.Class.MonadAsync (link)
 import           Control.Monad.STM (atomically, retry)
-import           Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
 import           Data.Text as Text
 import           GHC.Conc (labelThread, myThreadId)
+
+import           Hermod.Tracing hiding (traceWith)
+import           Hermod.Tracing.API.Tracer (Tracer, traceWith)
 
 
 startLedgerMetricsTracer
@@ -200,7 +201,8 @@ instance MetaTrace LedgerMetrics where
 -- ---------------------------
 -- NB. The hardcoded delay interval of 700ms is meant to represent "0.7 * slot duration". If running with other
 -- durations than 1 second, this has to be accounted for. Especially when running with durations < 700ms, this
--- tracer will produce erroneous values and should be disabled by setting `TraceOptionLedgerMetricsFrequency = 0` in the config.
+-- tracer will produce erroneous values and should be disabled by setting `PeriodicTracers: ledgerMetrics: 0` (or the deprecated
+-- `TraceOptionLedgerMetricsFrequency: 0`) in the config.
 --
 -- The interval has been picked as the best from different candidates, based on benchmarks that compared performance impact on block production and diffusion.
 -- The previous state of affairs (which would correspond to a delay of 0ms) has shown to possess the least beneficial impact on performance.

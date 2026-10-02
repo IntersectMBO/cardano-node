@@ -13,8 +13,6 @@ module Cardano.Node.Parsers
   , parseHostPort
   ) where
 
-import           Cardano.Logging.Types
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
@@ -40,6 +38,9 @@ import qualified Options.Applicative.Help as OptI
 import qualified Prettyprinter.Internal as PP
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
+
+import           Hermod.Tracing
+import qualified Hermod.Tracing as Net
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
