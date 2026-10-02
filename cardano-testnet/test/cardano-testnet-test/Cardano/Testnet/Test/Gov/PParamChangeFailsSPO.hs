@@ -58,7 +58,7 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe

@@ -72,7 +72,7 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
@@ -170,7 +170,7 @@ desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
+  -> ConwayEraOnwards DijkstraEra -- ^ The ConwaysEraOnwards witness for the Conway era
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
@@ -217,7 +217,7 @@ makeDesiredPoolNumberChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> ConwayEraOnwards DijkstraEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> Maybe (String, Word16) -- ^ The transaction identifier and index of the previous passed
@@ -255,7 +255,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   proposalFile <- H.note $ baseDir </> "sample-proposal-file"
 
   void $ H.execCli' execConfig $
-    [ "conway", "governance", "action", "create-protocol-parameters-update"
+    [ eraToString sbe, "governance", "action", "create-protocol-parameters-update"
     , "--testnet"
     , "--governance-action-deposit", show @Integer minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -273,7 +273,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
 
   void $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn txIn
     , "--proposal-file", proposalFile
@@ -303,7 +303,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
+  -> ShelleyBasedEra DijkstraEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraDijkstra).
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> TxId -- ^ Transaction id of the governance action to vote.

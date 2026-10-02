@@ -60,7 +60,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe

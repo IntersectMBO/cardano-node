@@ -30,7 +30,7 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      sbe = ShelleyBasedEraConway
+      sbe = ShelleyBasedEraDijkstra
       creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet creationOptions def conf

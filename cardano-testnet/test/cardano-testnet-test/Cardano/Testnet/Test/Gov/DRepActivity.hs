@@ -61,7 +61,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       ceo = convert era
       sbe = convert era
       creationOptions = def

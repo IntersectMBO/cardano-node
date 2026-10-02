@@ -47,7 +47,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe

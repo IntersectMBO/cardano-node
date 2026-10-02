@@ -58,7 +58,7 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       eraName = eraToString sbe
       creationOptions = def
@@ -133,7 +133,7 @@ hprop_tx_withdrawal_reward_plutus_v3 = integrationRetryWorkspace 2 "tx-withdrawa
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       eraName = eraToString sbe
       creationOptions = def
