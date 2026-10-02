@@ -29,7 +29,7 @@ import           Cardano.Api hiding (Active, CardanoBlock)
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Logging
+import           Hermod.Tracing
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block

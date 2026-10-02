@@ -1,0 +1,8 @@
+pr: 0
+kind:
+  - breaking
+description: |
+  Use `hermod-tracing-api` instead of `contra-tracer`, as `cardano-diffusion` (whose ping client
+  takes hermod traces now) and `ouroboros-network` do. `Testnet.ChainWatchdog`'s
+  `chainStallWatchdog` and `stderrTracer` take and return hermod traces
+  (`Hermod.Tracing.API.Tracer`). Generated node configurations are unchanged.

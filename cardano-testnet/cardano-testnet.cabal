@@ -60,11 +60,11 @@ library
                       , cardano-diffusion:ping ^>= 1.1.1
                       , cardano-prelude
                       , cardano-rpc
-                      , contra-tracer
+                      , hermod-tracing-api:public
                       , containers
                       , data-default-class
                       , containers
-                      , contra-tracer
+                      , hermod-tracing-api:public
                       , data-default-class
                       , Diff
                       , directory

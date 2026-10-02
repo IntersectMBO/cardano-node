@@ -54,7 +54,11 @@ rootDirs =
   , "../ouroboros-consensus/ouroboros-consensus-protocol/src/ouroboros-consensus-protocol"
   , "../ouroboros-consensus/ouroboros-consensus-diffusion/src/ouroboros-consensus-diffusion"
   , "../ouroboros-consensus/ouroboros-consensus-cardano/src"
-  , "../hermod-tracing/trace-dispatcher/src"
+  , "../hermod-tracing/hermod-tracing-api/src/internal"
+  , "../hermod-tracing/hermod-tracing-api/src/public"
+  , "../hermod-tracing/hermod-tracing-core/src"
+  , "../hermod-tracing/hermod-tracing-prometheus/src"
+  , "../hermod-tracing/hermod-trace-resources/src"
   , "trace-forward/src"
   ]
 

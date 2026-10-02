@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Unreleased
+
+* Use `hermod-tracing` instead of `trace-dispatcher` and `contra-tracer`, as `trace-forward`
+  and `ouroboros-network` now do. Traces and forwarding are unchanged.
+
 ## 2.17 -- Jun 2026
 
 * **New remote submission endpoint** — send transactions to a remote endpoint

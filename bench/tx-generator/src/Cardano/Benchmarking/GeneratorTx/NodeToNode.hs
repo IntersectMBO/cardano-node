@@ -56,7 +56,7 @@ import           Prelude
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Control.Tracer (Tracer)
+import           Hermod.Tracing.API.Tracer (Tracer)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Foldable (fold)
 import qualified Data.Map.Strict as Map

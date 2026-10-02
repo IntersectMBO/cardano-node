@@ -32,8 +32,9 @@ import           Cardano.Api
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
-import           Cardano.Logging
-import qualified Cardano.Logging.Types as Net
+import           Hermod.Tracing
+import qualified Hermod.Tracing as Net
+import           Hermod.Tracing.Trace.Annotations (appendPrefixName, withInnerNames)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
@@ -73,9 +74,9 @@ generatorTracer ::
   -> Maybe (Trace IO FormattedMessage)
   -> IO (Trace IO a)
 generatorTracer tracerName mbTrStdout mbTrForward = do
-  forwardTrace <- maybe mempty forwardFormatter mbTrForward
-  stdoutTrace  <- maybe mempty machineFormatter mbTrStdout
-  let tr = forwardTrace <> stdoutTrace
+  let forwardTrace = maybe mempty forwardFormatter mbTrForward
+      stdoutTrace  = maybe mempty machineFormatter mbTrStdout
+      tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
 
@@ -88,7 +89,7 @@ initNullTracers = BenchTracers
     }
 
 -- if the first argument isJust, we assume we have a socket path
--- and want to use trace-dispatcher, so we'll create a forwarding tracer
+-- and want to forward the traces, so we'll create a forwarding tracer
 initTxGenTracers :: Maybe (IOManager, NetworkId, FilePath) -> IO BenchTracers
 initTxGenTracers mbForwarding = mdo
   mbStdoutTracer <- fmap Just standardTracer

@@ -8,11 +8,6 @@ module Cardano.TxSubmit
   , TxSubmitCommand(..)
   ) where
 
-import           Cardano.Logging (BackendConfig (..), ConfigOption (ConfBackend, ConfSeverity),
-                   ConfigSource (FromFile), FormatLogging (HumanFormatColoured),
-                   SeverityF (SeverityF), SeverityS (Info), Trace, TraceConfig, configureTracers,
-                   ekgTracer, emptyConfigReflection, emptyTraceConfig, mkCardanoTracer,
-                   readConfigurationWithDefault, standardTracer, tcOptions, traceWith)
 import           Cardano.TxSubmit.CLI.Parsers (opts)
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitCommand (..),
                    TxSubmitNodeParams (..))
@@ -25,6 +20,12 @@ import           Data.Map
 import qualified System.Metrics as EKG
 import           System.Metrics.Prometheus.Registry (RegistrySample, sample)
 import           System.Remote.Monitoring.Prometheus (defaultOptions, toPrometheusRegistry)
+
+import           Hermod.Tracing (BackendConfig (..), ConfigOption (ConfBackend, ConfSeverity),
+                   ConfigSource (FromFile), FormatLogging (HumanFormatColoured),
+                   SeverityF (SeverityF), SeverityS (Info), Trace, TraceConfig, configureTracers,
+                   ekgTracer, emptyConfigReflection, emptyTraceConfig, mkHermodTracer,
+                   readConfigurationWithDefault, standardTracer, tcOptions, traceWith)
 
 defaultTraceConfig :: TraceConfig
 defaultTraceConfig =
@@ -62,7 +63,7 @@ mkTraceDispatcher config = do
   let registry = toPrometheusRegistry ekgStore (defaultOptions mempty) -- Convert EKG metrics store to prometheus metrics registry on-demand
   trEkg  <- ekgTracer config ekgStore
   configReflection <- emptyConfigReflection
-  !tr <- mkCardanoTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
+  !tr <- mkHermodTracer trBase mempty (Just trEkg) ["TxSubmitApi"]
   configureTracers configReflection config [tr]
   traceWith tr ApplicationInitializeMetrics
   pure (tr, registry >>= sample)

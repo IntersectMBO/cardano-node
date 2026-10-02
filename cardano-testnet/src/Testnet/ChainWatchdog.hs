@@ -30,7 +30,6 @@ import           Control.Exception (Exception (..), asyncExceptionFromException,
                    asyncExceptionToException)
 import           Control.Exception.Safe (SomeException, try)
 import           Control.Monad (void, when)
-import           Control.Tracer (Tracer, mkTracer, traceWith)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
@@ -42,6 +41,8 @@ import           System.Process (ProcessHandle)
 import           System.Timeout (timeout)
 
 import           Testnet.Signal (hardKillProcess)
+
+import           Hermod.Tracing.API.Tracer (Tracer, mkTracer, traceWith)
 
 -- | Thrown to the test thread when the chain has irrecoverably stalled. Registered
 -- as an asynchronous exception (like the exceptions of 'Control.Exception.AsyncException')
@@ -170,7 +171,7 @@ chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
 -- flush. stderr bypasses tasty's buffered reporting, so the diagnosis is visible
 -- even if the test never manages to report a result.
 --
--- Like 'Control.Tracer.stdoutTracer', this tracer does not serialise writers:
+-- Like 'Hermod.Tracing.API.Tracer.stdoutTracer', this tracer does not serialise writers:
 -- messages traced from several threads can interleave. Each message is emitted
 -- with a single 'Text.hPutStrLn', so this only matters alongside other writers
 -- to stderr.

@@ -335,7 +335,8 @@ defaultYamlConfig =
     , ("PeerSharing", Aeson.Bool False)
 
     -- New tracing system: empty map = use all defaults.
-    -- Mandatory: trace-dispatcher's FromJSON parses "TraceOptions" at the root.
+    -- "TraceOptions" at the root selects the deprecated trace-dispatcher layout, which
+    -- hermod-tracing still reads; move to a "HermodTracing" section before that goes.
     , ("TraceOptions", Aeson.object mempty)
     ]
   where

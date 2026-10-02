@@ -71,7 +71,7 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
                    SigningKey)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
-import           Cardano.Logging
+import           Hermod.Tracing
 import           Cardano.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)

@@ -28,7 +28,7 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (TxStream)
-import           Cardano.Logging
+import           Hermod.Tracing
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Prelude
 import           Cardano.TxGenerator.Setup.NixService as Nix (NodeDescription (..))

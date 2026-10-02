@@ -15,7 +15,7 @@ import Options.Applicative      qualified as Opt
 import Data.CDF
 import Data.Profile
 
-import Cardano.Logging.Resources.Types
+import Hermod.Tracing.Resources.Types
 
 import Cardano.Unlog.LogObject
 import Cardano.Util

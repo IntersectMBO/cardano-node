@@ -2,13 +2,14 @@ module Cardano.TxSubmit.Util
   ( logException
   ) where
 
-import           Cardano.Logging (Trace, traceWith)
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 
 import           Prelude
 
 import           Control.Exception.Safe (SomeException, catch, throwIO)
 import           Data.Text (Text)
+
+import           Hermod.Tracing (Trace, traceWith)
 
 -- | ouroboros-network catches 'SomeException' and if a 'nullTracer' is passed into that
 -- code, the caught exception will not be logged. Therefore wrap all tx submission code that

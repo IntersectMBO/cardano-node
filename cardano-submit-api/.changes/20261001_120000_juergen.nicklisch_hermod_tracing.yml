@@ -1,0 +1,8 @@
+pr: 0
+kind:
+  - compatible
+description: |
+  Use `hermod-tracing-core` instead of `trace-dispatcher` for tracing. Log output, metrics and
+  the configuration format are unchanged. The `TraceOptions` keys are still read but deprecated:
+  the current layout is a `HermodTracing` section (or top-level `Options`, `ApplicationName`,
+  `MetricsPrefix`, ...).

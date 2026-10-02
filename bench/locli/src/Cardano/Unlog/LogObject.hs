@@ -33,7 +33,7 @@ module Cardano.Unlog.LogObject
 where
 
 import           Cardano.Analysis.API.Ground
-import           Cardano.Logging.Resources.Types
+import           Hermod.Tracing.Resources.Types
 import           Cardano.Prelude hiding (Text, show, toText)
 import           Cardano.Util
 
