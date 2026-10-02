@@ -208,7 +208,7 @@ data TestnetCreationOptions = TestnetCreationOptions
 instance Default TestnetCreationOptions where
   def = TestnetCreationOptions
     { creationNodes = cardanoDefaultTestnetNodesWithOptions
-    , creationEra = AnyShelleyBasedEra ShelleyBasedEraConway
+    , creationEra = AnyShelleyBasedEra ShelleyBasedEraDijkstra
     , creationMaxSupply = 100_000_020_000_000
     , creationNumDReps = 3
     , creationGenesisOptions = def
