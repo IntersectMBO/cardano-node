@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -44,8 +43,7 @@ import           Control.Concurrent.Async hiding (async)
 import           Control.DeepSeq (NFData)
 import           Control.Exception (IOException, SomeException, catch, throwIO, try)
 import           Control.Monad (forever)
-import           "contra-tracer" Control.Tracer as Contra (contramap, nullTracer, stdoutTracer,
-                   traceWith)
+import           Control.Tracer as Contra (contramap, nullTracer, stdoutTracer, traceWith)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)

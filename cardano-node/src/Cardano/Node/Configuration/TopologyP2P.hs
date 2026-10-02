@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 
 -- needed for instance AdjustFilePaths CardanoNetworkTopology
@@ -34,7 +33,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSna
 import           Control.Exception.Safe (Exception (..), IOException, try)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import qualified "contra-tracer" Control.Tracer as CT
+import qualified Control.Tracer as CT
 import           Data.Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS

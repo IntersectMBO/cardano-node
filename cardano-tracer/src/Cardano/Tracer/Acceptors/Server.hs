@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
@@ -31,7 +30,7 @@ import           Ouroboros.Network.Socket (ConnectionId (..), SomeResponderAppli
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (wait)
-import           "contra-tracer" Control.Tracer (nullTracer)
+import           Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)
 import           Data.List.NonEmpty (NonEmpty ((:|)))

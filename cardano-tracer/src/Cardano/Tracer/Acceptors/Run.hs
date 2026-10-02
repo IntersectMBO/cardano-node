@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Run
   ( runAcceptors
@@ -15,7 +14,7 @@ import           Cardano.Tracer.MetaTrace
 
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Exception (SomeException (..))
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import           Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (secondsToNominalDiffTime)

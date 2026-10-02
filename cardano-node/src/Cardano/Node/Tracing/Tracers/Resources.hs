@@ -1,4 +1,3 @@
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Tracing.Tracers.Resources
   ( startResourceTracer
@@ -10,7 +9,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Monad (forM_, forever)
 import           Control.Monad.Class.MonadAsync (link)
-import           "contra-tracer" Control.Tracer
+import           Control.Tracer
 import           GHC.Conc (labelThread, myThreadId)
 
 -- | Starts a background thread to periodically trace resource statistics.

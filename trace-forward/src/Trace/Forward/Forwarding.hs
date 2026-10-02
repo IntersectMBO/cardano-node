@@ -1,7 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -40,7 +39,7 @@ import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, wait)
 import           Control.Exception (SomeException, throwIO)
 import           Control.Monad.IO.Class
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import           Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor
 import           Data.List.NonEmpty (NonEmpty ((:|)))

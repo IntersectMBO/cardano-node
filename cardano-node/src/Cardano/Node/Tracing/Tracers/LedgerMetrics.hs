@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -32,7 +31,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Monad.Class.MonadAsync (link)
 import           Control.Monad.STM (atomically, retry)
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
+import           Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
 import           Data.Text as Text
 import           GHC.Conc (labelThread, myThreadId)

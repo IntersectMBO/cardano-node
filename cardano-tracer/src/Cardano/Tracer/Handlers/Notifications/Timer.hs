@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE StrictData #-}
 
 module Cardano.Tracer.Handlers.Notifications.Timer
@@ -11,16 +10,17 @@ module Cardano.Tracer.Handlers.Notifications.Timer
   , mkTimerDieOnFailure
   ) where
 
-import           "trace-dispatcher" Cardano.Logging.Types (Trace(..))
-import           Cardano.Tracer.MetaTrace (TracerTrace(TracerError), traceWith, stderrShowTracer)
-import           Control.Concurrent (forkIO, myThreadId, killThread)
+import           Cardano.Logging.Types (Trace (..))
+import           Cardano.Tracer.MetaTrace (TracerTrace (TracerError), stderrShowTracer, traceWith)
+
+import           Control.Concurrent (forkIO, killThread, myThreadId)
 import           Control.Exception
 import           Control.Monad.Extra (whenM)
-import           Data.IORef (newIORef, readIORef, modifyIORef')
+import           Data.IORef (modifyIORef', newIORef, readIORef)
 import           Data.Kind (Type)
-import           Data.Word (Word32)
 import qualified Data.Text as Text (pack)
-import           GHC.Conc (threadStatus, ThreadStatus (ThreadRunning))
+import           Data.Word (Word32)
+import           GHC.Conc (ThreadStatus (ThreadRunning), threadStatus)
 import           System.Time.Extra (sleep)
 
 type PeriodInSec :: Type

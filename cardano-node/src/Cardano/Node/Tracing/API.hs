@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -43,7 +42,7 @@ import           Prelude
 import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
-import           "contra-tracer" Control.Tracer (nullTracer, traceWith)
+import           Control.Tracer (traceWith)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
@@ -144,7 +143,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.
           -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
-          pure (Trace nullTracer, Trace nullTracer, pure ())
+          pure (mempty, mempty, pure ())
 
     tracers <- mkDispatchTracers
       nodeKernel

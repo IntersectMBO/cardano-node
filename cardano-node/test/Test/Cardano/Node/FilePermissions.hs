@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,8 +23,7 @@ import           Control.Monad (Monad (..))
 import           Control.Monad.Except
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           "contra-tracer" Control.Tracer
-import           Control.Tracer.Arrow
+import           Control.Tracer
 import           Data.Bool (Bool, not)
 import           Data.Either (Either (..))
 import           Data.Eq ((==))
@@ -164,7 +162,7 @@ mkCapturingTracer = do
   messages <- liftIO $ newIORef []
   let registerMessage :: String -> IO ()
       registerMessage msg = atomicModifyIORef messages (\msgs -> (msgs <> [msg], ()))
-  pure (Tracer (emit registerMessage), messages)
+  pure (mkTracer registerMessage, messages)
 #endif
 
 -- -----------------------------------------------------------------------------

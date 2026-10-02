@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -41,7 +40,7 @@ import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
 import           Control.ResourceRegistry (ResourceRegistry)
-import           "contra-tracer" Control.Tracer
+import           Control.Tracer
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Foldable (asum)
 import           Data.Text (Text, pack)

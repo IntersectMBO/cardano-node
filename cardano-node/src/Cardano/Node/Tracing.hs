@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PackageImports #-}
 
 
 module Cardano.Node.Tracing
@@ -28,7 +27,7 @@ import           Ouroboros.Network.ConnectionId
 import           Prelude (IO)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Control.Tracer (Tracer)
 
 data Tracers peer localPeer blk m = Tracers
   { -- | Trace the ChainDB
