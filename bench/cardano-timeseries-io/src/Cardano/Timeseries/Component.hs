@@ -18,7 +18,6 @@ module Cardano.Timeseries.Component(
   , insert
   , execute
   , prune) where
-import           Cardano.Logging (Trace, threadLabelMe, traceWith)
 import           Cardano.Timeseries.API hiding (execute, insert)
 import qualified Cardano.Timeseries.API as API
 import           Cardano.Timeseries.Component.Trace
@@ -40,6 +39,8 @@ import           Control.Monad.STM (atomically)
 import           Data.Foldable (Foldable (..))
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
+
+import           Hermod.Tracing (Trace, threadLabelMe, traceWith)
 
 -- | Not exported. The user gets the default if `create`-d with a `Nothing`
 defaultTimeseriesInterpConfig :: Interp.Config
