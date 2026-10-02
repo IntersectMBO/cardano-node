@@ -227,6 +227,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
                         Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+                        Cardano.Testnet.Test.Dijkstra.NestedTransaction
                         Cardano.Testnet.Test.DumpConfig
                         Cardano.Testnet.Test.FoldEpochState
                         Cardano.Testnet.Test.Gov.CommitteeAddNew
@@ -253,6 +254,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
+                        Cardano.Testnet.Test.Node.DijkstraEra
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.Manifest
