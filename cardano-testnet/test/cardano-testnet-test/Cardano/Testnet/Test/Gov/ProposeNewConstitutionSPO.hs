@@ -54,7 +54,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -123,7 +123,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
 
   -- Create constitution proposal
   H.noteM_ $ execCli' execConfig
-    [ "conway", "governance", "action", "create-constitution"
+    [ eraToString sbe, "governance", "action", "create-constitution"
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -139,7 +139,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
   txIn1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txIn1
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--proposal-file", constitutionActionFp

@@ -63,7 +63,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe

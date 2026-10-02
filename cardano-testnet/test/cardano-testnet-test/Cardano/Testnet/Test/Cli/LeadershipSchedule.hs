@@ -66,7 +66,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      ceo = ConwayEraOnwardsConway
+      ceo = ConwayEraOnwardsDijkstra
       sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
