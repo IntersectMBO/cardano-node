@@ -45,7 +45,7 @@ hprop_simple_script_mint = integrationRetryWorkspace 2 "simple-script-mint" $ \t
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    ceo = ConwayEraOnwardsConway
+    ceo = ConwayEraOnwardsDijkstra
     sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era

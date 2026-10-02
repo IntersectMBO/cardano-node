@@ -62,7 +62,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraDijkstra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     eraName = eraToString era
@@ -218,7 +218,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraDijkstra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     eraName = eraToString era
@@ -330,7 +330,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraDijkstra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     eraName = eraToString era
