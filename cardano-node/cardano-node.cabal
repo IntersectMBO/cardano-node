@@ -69,7 +69,10 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Node.Configuration.NodeAddress
+  exposed-modules:      Cardano.Node.Configuration.CardanoConfigAdapter
+                        Cardano.Node.Configuration.CardanoConfigCompare
+                        Cardano.Node.Configuration.CardanoConfigResolve
+                        Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
@@ -123,6 +126,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.8
+                      , cardano-config ^>= 2.1
                       , cardano-crypto-class ^>=2.6
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
