@@ -94,7 +94,7 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   void $ registerDRep execConfig epochStateView ceo work "drep2" wallet1
 
-  checkDRepState epochStateView sbe $ \m ->
+  checkDRepState epochStateView ceo $ \m ->
     if map (L.fromCompact . L.drepDeposit) (Map.elems m) == [L.Coin minDRepDeposit]
        then Just ()
        else Nothing

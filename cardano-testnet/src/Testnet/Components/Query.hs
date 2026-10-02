@@ -507,11 +507,11 @@ checkDRepsNumber
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  -> ConwayEraOnwards era -- ^ The era in which the test runs
   -> Int
   -> m ()
-checkDRepsNumber epochStateView sbe expectedDRepsNumber = withFrozenCallStack $
-  checkDRepState epochStateView sbe $ \dreps ->
+checkDRepsNumber epochStateView ceo expectedDRepsNumber = withFrozenCallStack $
+  checkDRepState epochStateView ceo $ \dreps ->
     if length dreps == expectedDRepsNumber
        then Just ()
        else Nothing
@@ -527,13 +527,13 @@ checkDRepState
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  -> ConwayEraOnwards era -- ^ The era in which the test runs
   -> (Map (Credential DRepRole)
           DRepState
       -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                   -- and potentially inspects it.
   -> m a
-checkDRepState epochStateView sbe f = withFrozenCallStack $
+checkDRepState epochStateView ceo f = withFrozenCallStack $
   retryUntilRightM epochStateView (WaitForEpochs $ EpochInterval 2) action >>= \case
     Right a -> pure a
     Left () -> do
@@ -542,8 +542,9 @@ checkDRepState epochStateView sbe f = withFrozenCallStack $
   where
     action = do
       AnyNewEpochState actualEra newEpochState _ <- getEpochState epochStateView
+      let sbe = convert ceo
       Refl <- H.leftFail $ assertErasEqual sbe actualEra
-      pure . maybe (Left ()) Right . f $ shelleyBasedEraConstraints sbe
+      pure . maybe (Left ()) Right . f $ conwayEraOnwardsConstraints ceo
         $ SQ.queryDRepState newEpochState Set.empty
 
 -- | Obtain governance state from node (CLI query)
