@@ -66,7 +66,7 @@ import           Data.Default.Class ()
 import           Data.Either
 import           Data.Functor
 import           Data.IP (IP)
-import           Data.List (nub, sort, stripPrefix)
+import           Data.List (sort, stripPrefix, uncons)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
@@ -304,7 +304,7 @@ cardanoTestnet
         , logFormat = ForMachine
         }
       Ping.waitForSprocket 120 0.2 (tracerSprocket tracerRuntime) >>= \case
-        Left _ -> throwString $ "Sprocket of cardano-tracer did not come up."
+        Left _ -> throwString "Sprocket of cardano-tracer did not come up."
         Right _ -> pure ()
       pure (cfgFile', Just tracerRuntime)
 
@@ -621,15 +621,34 @@ enableTraceForwarding configFile = do
         . copyIfMissing "severity"
         $ existing
       where
-        copyIfMissing key = maybe id (KeyMap.insertWith (\_new old -> old) key) $ KeyMap.lookup key forwarding
+        copyIfMissing key =
+          maybe id (KeyMap.insertWith (\_new old -> old) key)
+            $ KeyMap.lookup key forwarding
     mergeNamespace forwarding _ = forwarding
 
     mergeBackends :: Maybe Yaml.Value -> Maybe Yaml.Value -> Yaml.Value
     mergeBackends mForwarding mExisting =
-      Array . fromList . nub $ toArray mExisting <> toArray mForwarding
+      Array
+        . fromList
+        . fmap (String . Text.unwords . uncurry (:))
+        . Map.toList
+        $ -- Map's semigroup instance is left-biased, so this prefers existing values.
+          fromArray mExisting <> fromArray mForwarding
       where
-        toArray (Just (Array xs)) = foldr (:) [] xs
-        toArray _ = []
+        -- Given an array of yaml strings, split each on spaces, using the
+        -- first word as the key of the map. We can then interpret each assoc
+        -- as the string representation of a data constructor application (plus
+        -- some improperly-parsed arguments, which just come along for the
+        -- ride.)
+        fromArray :: Maybe Yaml.Value -> Map.Map Text [Text]
+        fromArray (Just (Array xs)) =
+          foldMap
+            (\case
+              String s -> foldMap (uncurry Map.singleton) $ uncons $ Text.words s
+              _ -> mempty
+            )
+            xs
+        fromArray _ = mempty
 
 -- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
 -- plus the forecast horizon) when waiting for testnet startup: covers node process

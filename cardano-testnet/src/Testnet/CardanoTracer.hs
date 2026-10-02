@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -61,10 +62,10 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile sprocket = T
   , hasForwarding = Nothing
   , logging = LoggingParams logFile FileMode logFormat :| []
   , rotation = Just $ RotationParams
-      { rpFrequencySecs = 30 * 60
-      , rpLogLimitBytes = 50000
-      , rpMaxAgeMinutes = 60
-      , rpKeepFilesNum = 3
+      { rpFrequencySecs = 60
+      , rpLogLimitBytes = 50_000_000
+      , rpMaxAgeMinutes = 3 * 24 * 60
+      , rpKeepFilesNum = 10
       }
   , verbosity = Nothing
   , metricsNoSuffix = Nothing
