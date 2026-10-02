@@ -407,7 +407,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             [ "cardano-node"
               "cardano-tracer"
               "trace-forward"
-              "trace-resources"
+              "hermod-trace-resources"
             ]
             (name: { configureFlags = [ "--ghc-option=-fprof-auto" ]; });
         }];
