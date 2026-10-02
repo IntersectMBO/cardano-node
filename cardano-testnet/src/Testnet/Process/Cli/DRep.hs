@@ -42,6 +42,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', execCliStdoutToJson)
+import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -127,7 +128,7 @@ createCertificatePublicationTxBody execConfig epochStateView sbe work prefix cer
   let dRepRegistrationTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     , "--certificate-file", unFile cert
@@ -200,7 +201,7 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
   let votingTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ execCli' execConfig $
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     ] ++ (concat [["--vote-file", voteFile] | File voteFile <- votes]) ++
@@ -219,10 +220,11 @@ registerDRep
   => MonadIO m
   => MonadTest m
   => H.MonadAssertion m
+  => Typeable era
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where the signed transaction file will be stored.
   -> FilePath -- ^ Name for the subfolder that will be created under 'work' folder to store the output keys.
   -> PaymentKeyInfo -- ^ Payment key information associated with the transaction,
@@ -255,10 +257,11 @@ delegateToDRep
   => MonadIO m
   => H.MonadAssertion m
   => MonadCatch m
+  => Typeable era
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
+  -> ShelleyBasedEra era -- ^ The Shelley-based era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
@@ -277,7 +280,7 @@ delegateToDRep execConfig epochStateView sbe work prefix
   -- Create vote delegation certificate
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
   void $ execCli' execConfig
-    [ "conway", "stake-address", "vote-delegation-certificate"
+    [ eraToString sbe, "stake-address", "vote-delegation-certificate"
     , "--drep-verification-key-file", drepVKey
     , "--stake-verification-key-file", vKeyFile
     , "--out-file", voteDelegationCertificatePath
@@ -386,7 +389,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
     ( \port -> do
         let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
         void $ execCli' execConfig' $
-          [ "conway", "governance", "action", "create-protocol-parameters-update"
+          [ eraToString sbe, "governance", "action", "create-protocol-parameters-update"
           , "--testnet"
           , "--governance-action-deposit", show @Integer minDRepDeposit
           , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -402,7 +405,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
           ]
 
         void $ execCli' execConfig'
-          [ "conway", "transaction", "build"
+          [ eraToString sbe, "transaction", "build"
           , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
           , "--tx-in", Text.unpack $ renderTxIn txIn
           , "--proposal-file", proposalFile

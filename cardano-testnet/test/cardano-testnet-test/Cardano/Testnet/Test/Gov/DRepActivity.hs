@@ -155,7 +155,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   delegateToDRep execConfig epochStateView sbe work "drep3-delegation"
                  wallet1 (defaultDelegatorStakeKeyPair 3) drep3
 
-  expirationDates <- checkDRepState epochStateView sbe $ \m ->
+  expirationDates <- checkDRepState epochStateView ceo $ \m ->
     if length m == 3
        then Just $ Map.map drepExpiry m
        else Nothing

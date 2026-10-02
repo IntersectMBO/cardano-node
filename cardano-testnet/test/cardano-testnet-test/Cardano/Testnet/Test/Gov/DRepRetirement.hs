@@ -38,6 +38,9 @@ import qualified Hedgehog.Extras as H
 sbe :: ShelleyBasedEra ConwayEra
 sbe = ShelleyBasedEraConway
 
+ceo :: ConwayEraOnwards ConwayEra
+ceo = ConwayEraOnwardsConway
+
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Retirement/"'@
 hprop_drep_retirement :: Property
@@ -84,7 +87,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
                , signingKey = File stakeSKeyFp
                }
   let sizeBefore = 3
-  checkDRepsNumber epochStateView sbe sizeBefore
+  checkDRepsNumber epochStateView ceo sizeBefore
 
   void $ H.createDirectoryIfMissing $ gov </> defaultDRepKeysDir
 
@@ -134,5 +137,5 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   -- The important bit is that we pass (sizeBefore - 1) as the last argument,
   -- to witness that the number of dreps indeed decreased.
-  checkDRepsNumber epochStateView sbe (sizeBefore - 1)
+  checkDRepsNumber epochStateView ceo (sizeBefore - 1)
   H.success

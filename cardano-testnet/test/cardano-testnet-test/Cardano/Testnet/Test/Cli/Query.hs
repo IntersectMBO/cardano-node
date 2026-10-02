@@ -83,6 +83,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let sbe = ShelleyBasedEraConway
+      ceo = ConwayEraOnwardsConway
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -120,7 +121,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
-  checkDRepsNumber epochStateView sbe 3
+  checkDRepsNumber epochStateView ceo 3
 
   -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)
