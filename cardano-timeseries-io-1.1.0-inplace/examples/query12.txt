@@ -1,0 +1,6 @@
+let chainDensityLow = 42 in
+100 * quantile_by ("environment")
+   0.2
+   (20 * (cardano_node_metrics_density_real now) {"environment" != "preview"})
+<
+chainDensityLow

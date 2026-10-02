@@ -1,0 +1,6 @@
+map (\x -> round x)
+    (increase
+      (\t -> map (\x -> to_scalar (x < 300)) (to_scalar t - cardano_node_metrics_nodeStartTime_int t))[now-1h;now:1m]
+    )
+>
+1

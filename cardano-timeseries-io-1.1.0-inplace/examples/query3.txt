@@ -1,0 +1,1 @@
+increase cardano_node_metrics_Forge_forged_int[now - 24h; now] == 0
