@@ -403,6 +403,7 @@ with pkgs.lib; let
       #!${pkgs.stdenv.shell}
 
       export TRACE_DISPATCHER_LOGGING_HOSTNAME=${name}
+      export HERMOD_TRACING_LOGGING_HOSTNAME=${name}
 
       ${service.script}
     '';
