@@ -169,12 +169,16 @@ if impl(ghc >= 9.14)
 -- TEMPORARY: ouroboros-consensus 4.2.1.0 plus IntersectMBO/ouroboros-consensus#2167
 -- ("Allow hardfork into Dijkstra"), which no 4.x release contains yet. Without it the
 -- Conway ledger config uses TriggerHardForkNotDuringThisExecution and the node can never
--- enter the Dijkstra era. Replace with a released version once one is available.
+-- enter the Dijkstra era. On top of that, a fix for the db tools (db-synthesizer and
+-- friends) so they accept ExperimentalHardForksEnabled and advertise the Dijkstra
+-- protocol versions; without it db-synthesizer forges no blocks on a testnet that
+-- starts in Dijkstra. Both changes are already on consensus main (5.0 has them), so
+-- this whole stanza goes away with the next consensus bump.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 0ebed78d11daa6d481c8fd63993532d36b05163a
-  --sha256: sha256-RJrmOnIsU0pXxut0LuY7ok+8KYd6LOKOb/ooMulSP24=
+  tag: 61cd7cecd8e639a2041e7e100c5ab253fe2f067b
+  --sha256: sha256-AsWxF+YI6eXdc3FTN0i6M/WwMOWK7TfgKNA8rtdhKqA=
 
 
 -- TEMPORARY: cardano-api 11.7.0.0 plus IntersectMBO/cardano-api#1362 ("Add support
