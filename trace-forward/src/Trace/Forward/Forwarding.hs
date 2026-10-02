@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,8 +15,6 @@ module Trace.Forward.Forwarding
   , initForwardingDelayed
   ) where
 
-import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (runInLoop)
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
@@ -39,7 +38,6 @@ import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, wait)
 import           Control.Exception (SomeException, throwIO)
 import           Control.Monad.IO.Class
-import           Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor
 import           Data.List.NonEmpty (NonEmpty ((:|)))
@@ -54,6 +52,10 @@ import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
 
+import           Hermod.Tracing (ForwarderMode (..), HowToConnect (..), TraceObject (..),
+                   TraceOptionForwarder (..), Verbosity (..))
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import           Hermod.Tracing.Utils (runInLoop)
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Forwarder

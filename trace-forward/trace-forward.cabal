@@ -67,6 +67,7 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , hermod-tracing-core ^>=1.0
                       , deepseq
                       , extra
                       , io-classes
@@ -80,7 +81,6 @@ library
                       , stm
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.13
                       , typed-protocols:{typed-protocols, cborg} ^>= 1.2
 
 test-suite test

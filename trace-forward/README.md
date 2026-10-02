@@ -6,7 +6,7 @@ The first one allows forwarding `TraceObject`s from the node to external applica
 
 The second one allows forwarding `DataPoint`s, arbitrary structured data that provides `ToJSON` instance.
 
-Please note that the node doesn't use this library directly. Instead, `trace-dispatcher` library is using it to forward mentioned data via different tracers.
+The node's tracing, built on `hermod-tracing`, writes `TraceObject`s and `DataPoint`s into the sinks this library forwards from.
 
 # Demo
 
