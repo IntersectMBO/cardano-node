@@ -151,7 +151,11 @@ Available options:
                            listens on PORT+i-1. Random free ports are used when
                            omitted. Requires --enable-grpc-http.
   --enable-tracer          [EXPERIMENTAL] Enable cardano-tracer support on all
-                           of testnet nodes.
+                           of testnet nodes. Looks for cardano-tracer via the
+                           environment variable CARDANO_TRACER, falling back to
+                           looking into PATH. This will start a Prometheus
+                           server at 127.0.0.1, on a port that will be reported
+                           at runtime.
   --use-kes-agent          Get Praos block forging credentials from kes-agent
                            via the default socket path
   --disable-chain-stall-watchdog

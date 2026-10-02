@@ -154,7 +154,7 @@ portReader = OA.eitherReader $ \token -> do
 pEnableTracer :: Parser TraceSupport
 pEnableTracer = OA.flag TraceDisabled TraceEnabled
   (   OA.long "enable-tracer"
-  <>  OA.help "[EXPERIMENTAL] Enable cardano-tracer support on all of testnet nodes."
+  <>  OA.help "[EXPERIMENTAL] Enable cardano-tracer support on all of testnet nodes. Looks for cardano-tracer via the environment variable CARDANO_TRACER, falling back to looking into PATH. This will start a Prometheus server at 127.0.0.1, on a port that will be reported at runtime."
   <>  OA.showDefault
   )
 
