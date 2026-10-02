@@ -210,6 +210,7 @@ let
             packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
             packages.cardano-submit-api.components.exes.cardano-submit-api.postInstall = postInstall "cardano-submit-api";
             packages.cardano-profile.components.exes.cardano-profile.postInstall = postInstall "cardano-profile";
+            packages.cardano-tracer.components.exes.cardano-tracer.postInstall = postInstall "cardano-tracer";
             packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
             packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
@@ -218,6 +219,7 @@ let
               exportCliPath = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportNodePath = "export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportSubmitApiPath = "export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}";
+              exportTracerPath = "export CARDANO_TRACER=${config.hsPkgs.cardano-tracer.components.exes.cardano-tracer}/bin/cardano-tracer${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportChairmanPath = "export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}";
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
@@ -288,6 +290,7 @@ let
                   ${exportCliPath}
                   ${exportNodePath}
                   ${exportSubmitApiPath}
+                  ${exportTracerPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 ''
                 # the cardano-testnet-tests and chairman-tests, use sockets stored in a temporary directory

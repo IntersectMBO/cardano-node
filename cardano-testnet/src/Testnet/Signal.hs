@@ -25,16 +25,18 @@ import           Data.List.NonEmpty (NonEmpty)
 
 import           Testnet.Types
 
-interruptNodesOnSigINT :: NonEmpty TestnetNode -> IO ()
+interruptNodesOnSigINT :: [ProcessHandle] -> NonEmpty TestnetNode -> IO ()
 #ifdef UNIX
-interruptNodesOnSigINT testnetNodes =
-  -- Interrupt cardano nodes when the main process is interrupted
+interruptNodesOnSigINT extraProcesses testnetNodes =
+  -- Interrupt cardano nodes (and any extra processes, e.g. cardano-tracer)
+  -- when the main process is interrupted
   void $ flip (installHandler sigINT) Nothing $ CatchOnce $ do
     forM_ testnetNodes $ \TestnetNode{nodeProcessHandle} ->
       interruptProcessGroupOf nodeProcessHandle
+    forM_ extraProcesses interruptProcessGroupOf
     raiseSignal sigINT
 #else
-interruptNodesOnSigINT _testnetNodes = pure ()
+interruptNodesOnSigINT _extraProcesses _testnetNodes = pure ()
 #endif
 
 -- | Send an unignorable kill to the process: @SIGKILL@ on unix, which cannot be
