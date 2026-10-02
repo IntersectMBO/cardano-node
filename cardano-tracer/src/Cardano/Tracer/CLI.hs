@@ -3,9 +3,9 @@ module Cardano.Tracer.CLI
   , parseTracerParams
   ) where
 
-import           Cardano.Logging
-
 import           Options.Applicative
+
+import           Hermod.Tracing
 
 
 -- | CLI parameters required for the tracer.

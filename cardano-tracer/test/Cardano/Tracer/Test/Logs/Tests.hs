@@ -7,7 +7,6 @@ module Cardano.Tracer.Test.Logs.Tests
   ( tests
   ) where
 
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
 import           Cardano.Tracer.MetaTrace
@@ -17,7 +16,7 @@ import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
 
-import           Control.Concurrent.Async (withAsync, link)
+import           Control.Concurrent.Async (link, withAsync)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Traversable (for)
@@ -29,6 +28,8 @@ import           System.Time.Extra
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+
+import qualified Hermod.Tracing as Net
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"

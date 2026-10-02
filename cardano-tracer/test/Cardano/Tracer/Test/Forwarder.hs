@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,10 +15,6 @@ module Cardano.Tracer.Test.Forwarder
   , mkTestDataPoint
   ) where
 
-import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
-import           Cardano.Logging.Types (HowToConnect)
-import qualified Cardano.Logging.Types as Net
-import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -43,7 +40,6 @@ import           Control.Concurrent.Async hiding (async)
 import           Control.DeepSeq (NFData)
 import           Control.Exception (IOException, SomeException, catch, throwIO, try)
 import           Control.Monad (forever)
-import           Control.Tracer as Contra (contramap, nullTracer, stdoutTracer, traceWith)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor (void)
@@ -60,6 +56,11 @@ import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
 
+import           Hermod.Tracing (DetailLevel (..), HowToConnect, SeverityS (..), TraceObject (..))
+import qualified Hermod.Tracing as Net
+import           "contra-tracer" Control.Tracer as Contra (contramap, nullTracer, stdoutTracer,
+                   traceWith)
+import           Hermod.Tracing.Utils (runInLoop)
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TOF
 import           Trace.Forward.Run.DataPoint.Forwarder

@@ -1,11 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
 
 import           Data.Functor.Identity
 import           System.Environment (getArgs)
+
+import qualified Hermod.Tracing as Net
 
 main :: IO ()
 main = getArgs >>=

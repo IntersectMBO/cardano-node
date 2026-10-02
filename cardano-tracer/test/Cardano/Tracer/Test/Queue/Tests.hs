@@ -4,7 +4,6 @@ module Cardano.Tracer.Test.Queue.Tests
   ( tests
   ) where
 
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -19,6 +18,8 @@ import           System.Time.Extra (sleep)
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+
+import qualified Hermod.Tracing as Net
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Queue"

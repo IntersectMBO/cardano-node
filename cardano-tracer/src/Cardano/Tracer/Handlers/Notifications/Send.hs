@@ -4,10 +4,9 @@ module Cardano.Tracer.Handlers.Notifications.Send
   ( makeAndSendNotification
   ) where
 
-import           Cardano.Logging (Trace, showT)
-import           Cardano.Tracer.MetaTrace (TracerTrace(..))
 import           Cardano.Tracer.Handlers.Notifications.Email
 import           Cardano.Tracer.Handlers.Notifications.Types
+import           Cardano.Tracer.MetaTrace (TracerTrace (..))
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
@@ -22,6 +21,8 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
+
+import           Hermod.Tracing (Trace, showT)
 
 makeAndSendNotification
   :: Trace IO TracerTrace

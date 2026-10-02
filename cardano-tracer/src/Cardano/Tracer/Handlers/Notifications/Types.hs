@@ -11,7 +11,6 @@ module Cardano.Tracer.Handlers.Notifications.Types
   , EventsQueues
   ) where
 
-import           Cardano.Logging (SeverityS (..))
 import           Cardano.Tracer.Handlers.Notifications.Timer
 import           Cardano.Tracer.Types
 
@@ -22,6 +21,8 @@ import           Data.Map.Strict (Map)
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
+
+import           Hermod.Tracing (SeverityS (..))
 
 -- | Email settings for notifications.
 

@@ -1,8 +1,8 @@
 {- HLINT ignore "Avoid lambda" -}
 
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
@@ -11,7 +11,8 @@ module Cardano.Tracer.Run
   , runCardanoTracer
   ) where
 
-import           Cardano.Logging.Resources
+import           Cardano.Timeseries.API (Tree)
+import qualified Cardano.Timeseries.Component as Timeseries
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
 import           Cardano.Tracer.Configuration
@@ -22,8 +23,6 @@ import           Cardano.Tracer.Handlers.ReForwarder
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
-import           Cardano.Timeseries.API (Tree)
-import qualified Cardano.Timeseries.Component as Timeseries
 
 import           Control.Applicative
 import           Control.Concurrent (threadDelay)
@@ -33,11 +32,13 @@ import           Control.Exception (SomeException, try)
 import           Control.Monad
 import           Data.Aeson (decodeFileStrict')
 import           Data.Foldable (for_)
-import           Data.Traversable (for)
-import           Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as M (Map, empty, filter, toList)
+import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, null)
 import           Data.Text.Lazy.Builder as TB (Builder, fromText)
+import           Data.Traversable (for)
+
+import           Hermod.Tracing.Resources
 
 
 -- | Top-level run function, called by 'cardano-tracer' app.

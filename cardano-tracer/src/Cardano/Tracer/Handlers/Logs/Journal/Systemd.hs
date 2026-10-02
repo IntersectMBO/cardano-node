@@ -6,8 +6,6 @@ module Cardano.Tracer.Handlers.Logs.Journal.Systemd
   ( writeTraceObjectsToJournal
   ) where
 
-import           Cardano.Logging (TraceObject (..))
-import qualified Cardano.Logging as L
 import           Cardano.Tracer.Configuration (LogFormat (..))
 import           Cardano.Tracer.Handlers.Utils (normalizeNamespace)
 import           Cardano.Tracer.Types (NodeName)
@@ -19,6 +17,8 @@ import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 
+import           Hermod.Tracing (TraceObject (..))
+import qualified Hermod.Tracing as L
 import           Systemd.Journal (Priority (..), message, mkJournalField, priority,
                    sendJournalFields, syslogIdentifier)
 

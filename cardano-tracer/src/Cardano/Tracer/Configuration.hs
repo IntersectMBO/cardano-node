@@ -26,10 +26,6 @@ module Cardano.Tracer.Configuration
   , readTracerConfig
   ) where
 
-import           Cardano.Logging.Types (HowToConnect)
-import qualified Cardano.Logging.Types as Log
-import qualified Cardano.Logging.Types as Net
-
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
 import           Data.Fixed (Pico)
@@ -50,6 +46,10 @@ import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
+
+import           Hermod.Tracing (HowToConnect)
+import qualified Hermod.Tracing as Log
+import qualified Hermod.Tracing as Net
 
 type Address :: Type
 type Address = HowToConnect

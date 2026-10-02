@@ -421,7 +421,8 @@ in {
           be declared as a string of the path to such a file.
 
           Any metrics prefix declared in provider config, such as
-          `TraceOptionMetricsPrefix` in cardano-node, should not be included in
+          `MetricsPrefix` (formerly `TraceOptionMetricsPrefix`) in cardano-node,
+          should not be included in
           the attribute name. Similarly, metric type suffixes such as `.int` or
           `.real`, should also not be included.
 

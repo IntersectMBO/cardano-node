@@ -3,8 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
-import           Cardano.Logging
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Network.NodeToClient (withIOManager)
 import           Cardano.Tracer.Test.ForwardingStressTest.Script
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
@@ -30,6 +28,8 @@ import qualified System.Process as Sys
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import           Hermod.Tracing
+import qualified Hermod.Tracing as Net
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwarding)
 import           Trace.Forward.Utils.TraceObject (writeToSink)
 
@@ -104,7 +104,7 @@ getExternalTracerState TestSetup{..} ref = do
     Nothing -> do
       stdTr <- standardTracer
       (procHdl, fwdTr) <- setupFwdTracer
-      tr <- mkCardanoTracer
+      tr <- mkHermodTracer
               stdTr fwdTr Nothing
               ["Test"]
       let st = (procHdl, tr)

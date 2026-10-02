@@ -115,13 +115,17 @@ library
                       , cardano-diffusion ^>= 1.1.1
                       , cborg ^>= 0.2.4
                       , containers
-                      , contra-tracer
                       , directory
                       , ekg-core
                       , ekg-forward >= 1.2
                       , ekg-wai
                       , extra
                       , filepath
+                      , hermod-trace-resources ^>= 1.0
+                      , contra-tracer
+                      , hermod-tracing-api:public ^>=1.1
+                      , hermod-tracing-core ^>= 1.0.1
+                      , hermod-tracing-prometheus ^>= 1.0
                       , http-types
                       , mime-mail
                       , network
@@ -134,9 +138,7 @@ library
                       , stm <2.5.2 || >=2.5.3
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.13.0
                       , trace-forward ^>= 2.5.0
-                      , trace-resources ^>= 0.2.4
                       , vector
                       , wai ^>= 3.2
                       , warp ^>= 3.4
@@ -199,7 +201,7 @@ library demo-forwarder-lib
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher
+                      , hermod-tracing-core
                       , trace-forward
                       , vector
                       , vector-algorithms
@@ -214,7 +216,7 @@ executable demo-forwarder
   main-is:              forwarder.hs
 
   build-depends:        demo-forwarder-lib
-                      , trace-dispatcher
+                      , hermod-tracing-core
 
   ghc-options:          -threaded
                         -rtsopts
@@ -243,7 +245,7 @@ library demo-acceptor-lib
                       , stm <2.5.2 || >=2.5.3
                       , tasty-quickcheck
                       , text
-                      , trace-dispatcher
+                      , hermod-tracing-core
                       , trace-forward
                       , vector
                       , vector-algorithms
@@ -306,7 +308,7 @@ test-suite cardano-tracer-test
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher
+                      , hermod-tracing-core
                       , trace-forward
                       , unix-compat
                       , vector
@@ -367,7 +369,7 @@ test-suite cardano-tracer-test-ext
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher
+                      , hermod-tracing-core
                       , trace-forward
                       , unix-compat
                       , vector
@@ -392,7 +394,7 @@ benchmark cardano-tracer-bench
                       , extra
                       , filepath
                       , time
-                      , trace-dispatcher
+                      , hermod-tracing-core
 
   ghc-options:          -threaded
                         -rtsopts

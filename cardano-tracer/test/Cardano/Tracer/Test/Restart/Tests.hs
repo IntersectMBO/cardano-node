@@ -6,8 +6,6 @@ module Cardano.Tracer.Test.Restart.Tests
   ( tests
   ) where
 
-import           Cardano.Logging (Trace (..))
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run
@@ -29,6 +27,9 @@ import           System.Time.Extra (sleep)
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+
+import           Hermod.Tracing (Trace (..))
+import qualified Hermod.Tracing as Net
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Restart"

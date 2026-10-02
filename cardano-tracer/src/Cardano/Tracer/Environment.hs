@@ -2,7 +2,6 @@ module Cardano.Tracer.Environment
   ( TracerEnv (..)
   ) where
 
-import           Cardano.Logging.Types
 import           Cardano.Timeseries.Component (TimeseriesHandle)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
@@ -11,6 +10,8 @@ import           Cardano.Tracer.Types
 import           Control.Concurrent.Extra (Lock)
 import           Data.Text (Text)
 import           Data.Text.Lazy.Builder (Builder)
+
+import           Hermod.Tracing
 
 
 -- | Environment for all functions.

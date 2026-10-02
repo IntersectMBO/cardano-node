@@ -9,8 +9,6 @@ module Cardano.Tracer.Test.Acceptor
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Logging (standardTracer)
-import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
@@ -24,6 +22,8 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import           System.Time.Extra (sleep)
 
+import           Hermod.Tracing (standardTracer)
+import qualified Hermod.Tracing as Net
 import           Trace.Forward.Utils.DataPoint
 
 data AcceptorsMode = Initiator | Responder

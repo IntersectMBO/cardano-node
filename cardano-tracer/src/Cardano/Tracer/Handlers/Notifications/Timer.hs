@@ -10,7 +10,6 @@ module Cardano.Tracer.Handlers.Notifications.Timer
   , mkTimerDieOnFailure
   ) where
 
-import           Cardano.Logging.Types (Trace (..))
 import           Cardano.Tracer.MetaTrace (TracerTrace (TracerError), stderrShowTracer, traceWith)
 
 import           Control.Concurrent (forkIO, killThread, myThreadId)
@@ -22,6 +21,8 @@ import qualified Data.Text as Text (pack)
 import           Data.Word (Word32)
 import           GHC.Conc (ThreadStatus (ThreadRunning), threadStatus)
 import           System.Time.Extra (sleep)
+
+import           Hermod.Tracing (Trace (..))
 
 type PeriodInSec :: Type
 type PeriodInSec = Word32

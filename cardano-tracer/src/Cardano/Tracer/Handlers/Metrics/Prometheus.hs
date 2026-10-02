@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
   ( runPrometheusServer
   ) where
 
-import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSampleWith)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
@@ -30,9 +29,11 @@ import qualified Data.Text.Lazy.Encoding as TL
 import           Network.HTTP.Types
 import           Network.Wai
 import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
-import           Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
+import           Network.Wai.Handler.WarpTLS (TLSSettings, runTLS, tlsSettingsChain)
 import           System.Metrics as EKG (Store, sampleAll)
 import           System.Time.Extra (sleep)
+
+import           Hermod.Tracing.Prometheus.Exposition (renderExpositionFromSampleWith)
 
 -- | Runs a simple HTTP server that listens on @endpoint@.
 --
@@ -69,7 +70,8 @@ import           System.Time.Extra (sleep)
 --      http_sd_configs:
 --        - url: 'http://127.0.0.1:3200/targets'    # <-- Your cardano-tracer's real hostname:prometheus port
 --
---  Each target will have a label "node_name" which corresponds to the TraceOptionNodeName setting in the node config.
+--  Each target will have a label "node_name" which corresponds to the ApplicationName setting in the node's
+--  tracing configuration (TraceOptionNodeName in the deprecated TraceOptions layout, which is still read).
 --
 --  In cardano-tracer's config, you can optionally provide additional labels to be attached to *all* targets
 --  (default is no additional labels):
