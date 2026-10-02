@@ -49,7 +49,6 @@ import           Network.Socket (HostName)
 import           System.Metrics as EKG
 
 import           Hermod.Tracing hiding (traceWith)
-import           Hermod.Tracing.API.ContraTracer (toContraTracer)
 import           Hermod.Tracing.API.Tracer (traceWith)
 import           Hermod.Tracing.Prometheus.TCPServer
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
@@ -164,7 +163,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
         Just ps ->
           let
             !nsTr            = nodeStateTracer tracers
-            !tracePrometheus = toContraTracer (NodePrometheusSimple >$< nsTr)
+            !tracePrometheus = NodePrometheusSimple >$< nsTr
           in link =<< case tcPrometheusSimpleRun trConfig of
             Nothing         -> runPrometheusSimple tracePrometheus ekgStore ps
             Just customDoS  -> runPrometheusSimpleWith customDoS tracePrometheus ekgStore ps

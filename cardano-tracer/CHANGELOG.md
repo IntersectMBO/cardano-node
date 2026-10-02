@@ -7,6 +7,8 @@
   hermod tracer facade instead of `contra-tracer`, as `trace-forward`, `ekg-forward` and
   `ouroboros-network` now do. The configuration format, the logs written and the metrics
   served are unchanged.
+* Accept `hermod-tracing-prometheus` 1.1 as well as 1.0: cardano-tracer only uses its
+  `Exposition` module, which 1.1 leaves unchanged.
 
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an

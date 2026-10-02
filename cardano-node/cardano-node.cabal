@@ -168,7 +168,7 @@ library
                       , hermod-trace-resources ^>= 1.0
                       , hermod-tracing-api:public ^>= 1.1
                       , hermod-tracing-core ^>= 1.0.1
-                      , hermod-tracing-prometheus ^>= 1.0
+                      , hermod-tracing-prometheus ^>= 1.1
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8 || ^>= 1.9
                       , kes-agent ^>=1.3

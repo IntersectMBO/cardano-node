@@ -62,7 +62,6 @@ import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Hermod.Tracing (LogFormatting)
-import           Hermod.Tracing.API.ContraTracer (toContraTracer)
 import           Hermod.Tracing.Utils (showT)
 
 import           Ouroboros.Consensus.Block.Forging (MkBlockForging)
@@ -481,7 +480,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
                 mkNodeKernelAccess
-                  (toContraTracer (rpcTracer tracers))
+                  (rpcTracer tracers)
                   shelleyGenesisHash
                   shelleyGenesisFile
                   blockType
@@ -776,7 +775,7 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccess
         then
           race_
             (do
-              runRpcServer (toContraTracer rpcTracer) config networkMagic nodeKernelAccessRef
+              runRpcServer rpcTracer config networkMagic nodeKernelAccessRef
               traceWith startupTracer RpcForceDisabled
               disableRpcServer)
             (waitForRpcConfigChange config)
