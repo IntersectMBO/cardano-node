@@ -219,7 +219,7 @@ createSPOGenesisAndFiles
 
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
   forM_
-    [  inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp
+    [  inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp, inputGenesisDijkstraFp
      , tempAbsPath </> "byron.genesis.spec.json" -- Created by create-testnet-data
     ]
     (\fp -> liftIOAnnotated $ whenM (System.doesFileExist fp) (System.removeFile fp))
