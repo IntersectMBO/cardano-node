@@ -121,6 +121,7 @@ data BlockProp f
     , cdfBlocksChainedRatio  :: !(CDF f Double)
     , cdfBlockBattle         :: !(CDF f Int)
     , cdfBlockSize           :: !(CDF f Int)
+    , cdfBlockCertRb         :: !(CDF f Int)
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
@@ -206,6 +207,7 @@ data ForgerEvents a
   , bfeSlotStart    :: !SlotStart
   , bfeEpochNo      :: !EpochNo
   , bfeBlockSize    :: !(SMaybe Int)
+  , bfeCertRb       :: !Bool         -- ^ Carries an endorser block certificate.
   , bfeStarted      :: !(SMaybe a)
   , bfeBlkCtx       :: !(SMaybe a)
   , bfeLgrState     :: !(SMaybe a)
@@ -251,6 +253,7 @@ data BlockForge
   , bfSlotStart    :: !SlotStart
   , bfBlockGap     :: !NominalDiffTime -- ^ Since previous forge event
   , bfBlockSize    :: !Int             -- ^ Bytes
+  , bfCertRb       :: !Bool            -- ^ Has an endorser block certificate.
   , bfStarted      :: !NominalDiffTime -- ^ Since slot start
   , bfBlkCtx       :: !(SMaybe NominalDiffTime) -- ^ Since forge loop start
   , bfLgrState     :: !(SMaybe NominalDiffTime) -- ^ Since block context
@@ -414,6 +417,12 @@ testBlockEvents g@Genesis{..}
     BSizeGEq x -> bfBlockSize >= fromIntegral x
     BSizeLEq x -> bfBlockSize <= fromIntegral x
     BMinimumAdoptions x -> count (isSJust . boAdopted) seen >= fromIntegral x
+    -- The two kinds are mutually exclusive, so this is the Leios reading of
+    -- "the block carries a payload": a certifying block's body is empty by
+    -- design and could never pass a fullness test.
+    BFullOrCertRB f ->
+      bfCertRb ||
+      bfBlockSize > floor ((fromIntegral (maxBlockBodySize protocolParams) :: Double) * f)
     BNonNegatives -> null $
                  allBlockForgeTimes       noteFieldIfNeg forge <>
       concatMap (allBlockObservationTimes noteFieldIfNeg) seen

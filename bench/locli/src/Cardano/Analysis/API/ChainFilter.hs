@@ -38,6 +38,12 @@ data BlockCond
   | BSizeLEq               Word64
   | BMinimumAdoptions      Word64 -- ^ At least this many adoptions
   | BNonNegatives                 -- ^ Non-negative timings only
+  | BFullOrCertRB          Double -- ^ Block fullness is above fraction OR the
+                                  --    block carries an endorser block
+                                  --    certificate (Leios). The two kinds are
+                                  --    mutually exclusive: a certifying block
+                                  --    (CertRB) carries NO transactions of its
+                                  --    own, by design.
   deriving (Eq, FromJSON, Generic, NFData, Ord, Show, ToJSON)
 
 data SlotCond

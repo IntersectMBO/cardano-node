@@ -57,6 +57,7 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfPeerSend               <- cdf2OfCDFs comb $ bs <&> cdfPeerSend
   cdfBlockBattle            <- cdf2OfCDFs comb $ bs <&> cdfBlockBattle
   cdfBlockSize              <- cdf2OfCDFs comb $ bs <&> cdfBlockSize
+  cdfBlockCertRb            <- cdf2OfCDFs comb $ bs <&> cdfBlockCertRb
   cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
   cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
   cdfBlocksChainedRatio     <- cdf2OfCDFs comb $ bs <&> cdfBlocksChainedRatio
@@ -246,6 +247,11 @@ data MachView
   , mvLeading      :: !(SMaybe UTCTime)
   , mvTicked       :: !(SMaybe UTCTime)
   , mvMemSnap      :: !(SMaybe UTCTime)
+  , mvCertRbs      :: !(Set Hash)
+                      -- ^ Blocks this host forged carrying an endorser block
+                      --   certificate. A set rather than a flag on the block,
+                      --   because the certificate trace comes BEFORE the forge
+                      --   trace, when the block is not in 'mvHashBlocks' yet.
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
@@ -396,6 +402,7 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfSlotStart  = bfeSlotStart
           , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
           , bfBlockSize  = bfeBlockSize & handleMiss "Size"
+          , bfCertRb     = bfeCertRb
           , bfStarted    = bfeStarted   & handleMiss "Δt Started"
           , bfBlkCtx     = bfeBlkCtx
           , bfLgrState   = bfeLgrState
@@ -545,6 +552,11 @@ blockProp _ Chain{..} = do
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
     , cdfBlockBattle         = forgerCDF c (SJust . unCount . beForks)
     , cdfBlockSize           = forgerCDF c (SJust . bfBlockSize . beForge)
+      -- 0 or 1 per block, so the average over the filtered chain is the share
+      -- of blocks that carry an endorser block certificate. Same shape as
+      -- `cdfBlockBattle` above, whose average reads .02787 on a run.
+    , cdfBlockCertRb         = forgerCDF c
+                               (SJust . fromEnum . bfCertRb . beForge)
     , bpVersion              = getLocliVersion
     , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats
                                                 <&> unCount . hbsTotal)
@@ -612,6 +624,7 @@ blockEventMapsFromLogObjects run (f, xs@(x:_)) =
      , mvLeading      = SNothing
      , mvTicked       = SNothing
      , mvMemSnap      = SNothing
+     , mvCertRbs      = mempty
      }
 
 blockPropMachEventsStep :: Run -> LogObjectSource -> MachView -> LogObject -> MachView
@@ -653,6 +666,17 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
       (\x -> Right x { boeFetched=SJust loAt })
       mbe0
       & doInsert loBlock
+  -- 2. Certify (forger only, and BEFORE its own LOBlockForged)
+  LogObject{loBody=LOBlockCertifiesEb{loBlock}} ->
+    let mv' = mv { mvCertRbs = Set.insert loBlock mvCertRbs }
+    in  case Map.lookup loBlock mvHashBlocks of
+          -- The expected order: the block is not known yet, so the hash waits
+          -- in the set for the forge event below to pick it up.
+          Nothing -> mv'
+          -- Out of order: patch what is already there.
+          Just mbe -> mbe
+                      & bimapMbe (\x -> x { bfeCertRb = True }) id
+                      & \x -> mv' { mvHashBlocks = Map.insert loBlock x mvHashBlocks }
   -- 2. Acquire:Forge (forger only)
   LogObject{loAt, loHost, loBody=LOBlockForged{loBlock,loPrev,loBlockNo,loSlotNo}} ->
     getBlock loBlock
@@ -671,6 +695,7 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
         , bfeSlotStart    = slotStart genesis loSlotNo
         , bfeEpochNo      = fst $ genesis `unsafeParseSlot` loSlotNo
         , bfeBlockSize    = SNothing
+        , bfeCertRb       = loBlock `Set.member` mvCertRbs
         , bfeStarted      = mvStarted
         , bfeBlkCtx       = mvBlkCtx
         , bfeLgrState     = mvLgrState

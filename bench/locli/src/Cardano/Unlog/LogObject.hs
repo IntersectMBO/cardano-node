@@ -16,6 +16,7 @@
 module Cardano.Unlog.LogObject
   ( HostLogs (..)
   , TraceFreqs
+  , certifiesEbTraceFreqKey
   , hlRawLogObjects
   , hlTraceFreqs
   , RunLogs (..)
@@ -60,6 +61,15 @@ import qualified Data.Vector as V
 type Text       = ShortText
 
 type TraceFreqs = ML.Map Text Int
+
+-- | The 'TraceFreqs' key of the Leios certificate trace, which is
+--   @"<ns>:<kind>"@ (see "Cardano.Unlog.BackendDB"'s @prepareFile@).
+--   Every decoded log line is counted there whether or not an interpreter
+--   exists for it, so this says whether the LOGS carried the trace,
+--   independently of whether this locli knew how to read it.
+certifiesEbTraceFreqKey :: Text
+certifiesEbTraceFreqKey =
+  "Consensus.LeiosKernel.CertifiedAndAnnounced:LeiosCertifiedAndAnnounced"
 
 
 -- | Us of the a TextRef replaces commonly expected string parses with references
@@ -217,6 +227,15 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> v .: "blockNo"
             <*> v .: "block"
             <*> v .: "blockPrev"
+
+  -- Leios: the block this forger just made certifies an endorser block, so its
+  -- own body is empty. "rbHash" is the forged block's hash, the same one
+  -- "TraceForgedBlock" reports as "block".
+  , (,,,) "LeiosCertifiedAndAnnounced"
+          "Consensus.LeiosKernel.CertifiedAndAnnounced"
+          "Consensus.LeiosKernel.CertifiedAndAnnounced" $
+    \v -> LOBlockCertifiesEb
+            <$> v .: "rbHash"
 
   -- Receipt:
   , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
@@ -380,6 +399,13 @@ data LOBody
     , loBlockNo          :: !BlockNo
     , loBlock            :: !Hash
     , loPrev             :: !Hash
+    }
+  -- | The forged block carries an endorser block certificate (Leios), which
+  --   means it carries no transactions of its own. Emitted by the forger in
+  --   the same instant as, and just BEFORE, its 'LOBlockForged', so the
+  --   consumer cannot assume the block is already known.
+  | LOBlockCertifiesEb
+    { loBlock            :: !Hash
     }
   -- Receipt:
   | LOChainSyncClientSeenHeader

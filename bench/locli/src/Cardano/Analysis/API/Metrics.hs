@@ -211,7 +211,7 @@ propSubsetFn = \case
 
 bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
 bpFieldsControl =
-  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize" ]
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize", "cdfBlockCertRb" ]
 bpFieldsForger =
   [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
@@ -338,6 +338,11 @@ instance CDFFields BlockProp p where
    <> fBoth "cdfBlockSize"  "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSize)
       "Block size"
       "Block size, in bytes"
+
+   <> fBoth "cdfBlockCertRb"  "Cert" "RB" W4 Rto P0 Lin Free (DInt cdfBlockCertRb)
+      "Certifying blocks"
+      "For a given block, 1 if it carries an endorser block certificate (Leios), 0 if not."
+
    where r = nChunksEachOf (length adoptionCentiles) 5
              ",-- Slot-rel. Δt to adoption centile: -."
          checkCentile i centi (centi', d) =
