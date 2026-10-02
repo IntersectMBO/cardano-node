@@ -1,0 +1,6 @@
+description: Generalise DRep helpers to use conway-onwards era and add Dijkstra genesis
+  to the list of removed files.
+kind:
+- refactoring
+pr: 6715
+project: cardano-testnet
