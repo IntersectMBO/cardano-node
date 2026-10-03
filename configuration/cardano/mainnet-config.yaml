@@ -164,9 +164,9 @@ TraceOptions:
 
     # Only one of the following can be enabled, which determines for format
     # of node logging to stdout.
-    - Stdout HumanFormatColoured
+    # - Stdout HumanFormatColoured
     # - Stdout HumanFormatUncoloured
-    # - Stdout MachineFormat
+    - Stdout MachineFormat
 
     # Each tracer can specify the level of details for printing messages.
     # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
@@ -187,18 +187,25 @@ TraceOptions:
     # continuation of the functionality in the legacy system.
     severity: Notice
 
-  # The following tracer configurations are configured to closely match the
-  # default logging seen in the legacy cardano-node tracing system.
+  # Focused TraceOptions for block propagation, peer selection (relays) and
+  # forging (producers). High-volume tracers are rate-limited so useful
+  # signals stay visible without flooding stdout / forwarding queues.
+  # A frequency limit (messages per second) may be set on any tracer.
   BlockFetch.Client.CompletedBlockFetch:
-    # A frequency limit for the number of messages per second may also be
-    # provided for any tracer.
-    maxFrequency: 2.0
+    severity: Info
+    maxFrequency: 4.0
 
   BlockFetch.Decision:
     severity: Info
 
+  BlockFetch.Client.SendFetchRequest:
+    severity: Info
+
   ChainDB:
     severity: Info
+
+  ChainDB.ImmDbEvent:
+    severity: Warning
 
   ChainDB.AddBlockEvent.AddBlockValidation:
     severity: Silence
@@ -212,26 +219,65 @@ TraceOptions:
   ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
     maxFrequency: 2.0
 
+  ChainDB.AddBlockEvent.AddedToCurrentChain:
+    maxFrequency: 2.0
+
+  ChainDB.AddBlockEvent.SwitchedToAFork:
+    severity: Info
+
+  ChainDB.ImmDbEvent.ChunkValidation.ValidatedChunk:
+    severity: Info
+
   ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
     maxFrequency: 2.0
+
+  ChainDB.LedgerEvent.Replay:
+    severity: Info
+    maxFrequency: 0.0668
+
+  ChainDB.LedgerEvent.Forker:
+    severity: Silence
 
   ChainSync.Client:
     severity: Warning
 
+  ChainSync.Client.DownloadedHeader:
+    severity: Info
+    maxFrequency: 14.0
+
   Forge.Loop:
     severity: Info
 
+  Forge.Loop.NodeNotLeader:
+    severity: Silence
+
+  Forge.Loop.StartLeadershipCheck:
+    severity: Silence
+
   Forge.StateInfo:
     severity: Info
+    maxFrequency: 0.0002783
 
   Mempool:
     severity: Silence
+
+  Net.AcceptPolicy.ConnectionRateLimiting:
+    severity: Info
+    maxFrequency: 0.0167
+
+  Net.AcceptPolicy.ConnectionLimitResume:
+    severity: Info
+    maxFrequency: 0.0167
 
   Net.ConnectionManager.Remote:
     severity: Info
 
   Net.InboundGovernor:
     severity: Warning
+
+  Net.InboundGovernor.Remote.InboundGovernorCounters:
+    severity: Info
+    maxFrequency: 0.0167
 
   Net.InboundGovernor.Remote:
     severity: Info
@@ -242,25 +288,15 @@ TraceOptions:
   Net.PeerSelection:
     severity: Info
 
+  Net.PeerSelection.Actions.ConnectionError:
+    severity: Silence
+
   Resources:
-    severity: Silence
-
-  Startup.DiffusionInit:
     severity: Info
+    maxFrequency: 0.0167
 
-  # The following messages are UTxO-HD specific. Silencing these tracers aims
-  # at having comparable log line rates in messages per second on both the
-  # UTxO-HD and earlier non-UTxO-HD nodes.  The additional high granularity
-  # mempool silences are not redundant in the case that the top level Mempool
-  # severity is switched away from silence.
-  ChainDB.LedgerEvent.Forker:
-    severity: Silence
-
-  Mempool.AttemptAdd:
-    severity: Silence
-
-  Mempool.SyncNotNeeded:
-    severity: Silence
+  Startup:
+    severity: Info
 
 # Set or unset the mempool capacity override in number of bytes.
 #
