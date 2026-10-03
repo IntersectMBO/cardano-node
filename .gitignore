@@ -79,3 +79,6 @@ cardano-tracer/cardano-tracer-test
 .codex
 
 .serena/
+
+# workbench run debris, dropped at the repo root by a cluster run.
+/kernel-resource-summary.json
