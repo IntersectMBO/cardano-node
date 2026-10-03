@@ -43,8 +43,8 @@ module Cardano.Benchmarking.Script.Env (
         , traceBenchTxSubmit
         , getBenchTracers
         , setBenchTracers
-        , getEnvGenesis
-        , setEnvGenesis
+        , getEnvShelleyGenesis
+        , setEnvShelleyGenesis
         , getEnvKeys
         , setEnvKeys
         , getEnvNetworkId
@@ -100,7 +100,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
-               , envGenesis :: Maybe ShelleyGenesis
+               , envShelleyGenesis :: Maybe (FilePath, ShelleyGenesis)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
@@ -113,7 +113,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
 -- all of the `Map.Map` structures being `Map.empty`.
 emptyEnv :: Env
 emptyEnv = Env { protoParams = Nothing
-               , envGenesis = Nothing
+               , envShelleyGenesis = Nothing
                , envKeys = Map.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
@@ -188,9 +188,11 @@ setBenchTracers val = do
   btTVar <- lift $ RWS.asks Tracer.benchTracers
   liftIO $ STM.atomically do STM.writeTVar btTVar $ Just val
 
--- | Write accessor for `envGenesis`.
-setEnvGenesis :: ShelleyGenesis -> ActionM ()
-setEnvGenesis val = modifyEnv (\e -> e { envGenesis = Just val })
+-- | Write accessor for `envShelleyGenesis`.
+-- The directory the Shelley genesis file lives and the parsed value itself,
+-- both are needed together when resolving `extraConfig` FILE injections.
+setEnvShelleyGenesis :: FilePath -> ShelleyGenesis -> ActionM ()
+setEnvShelleyGenesis dir genesis = modifyEnv (\e -> e { envShelleyGenesis = Just (dir, genesis) })
 
 -- | Write accessor for `envKeys`.
 setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
@@ -262,9 +264,9 @@ getBenchTracers = do
       liftIO $ IO.hPutStrLn IO.stderr errMsg
       pure $ error errMsg
 
--- | Read accessor for `envGenesis`.
-getEnvGenesis :: ActionM ShelleyGenesis
-getEnvGenesis = getEnvVal envGenesis "Genesis"
+-- | Read accessor for `envShelleyGenesis`.
+getEnvShelleyGenesis :: ActionM (FilePath, ShelleyGenesis)
+getEnvShelleyGenesis = getEnvVal envShelleyGenesis "ShelleyGenesis"
 
 -- | Read accessor for `envKeys`.
 getEnvKeys :: String -> ActionM (SigningKey PaymentKey)
