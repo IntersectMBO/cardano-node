@@ -1295,6 +1295,14 @@ instance ( LedgerSupportsProtocol blk
             in
               "Pushing ledger state for block " <> renderRealPointAsPhrase curr <> ". Progress: " <>
               showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
+    forHuman (ChainDB.UpdateLedgerDbTraceEvent
+                (LedgerDB.TraceLeiosClosurePhasesEvent p)) =
+            "Applied Leios closure " <> showT (LedgerDB.lcpEbHash p)
+              <> " (" <> showT (LedgerDB.lcpNumTxs p) <> " txs) in: resolve "
+              <> showT (LedgerDB.lcpResolveMs p) <> "ms, readVals "
+              <> showT (LedgerDB.lcpReadValsMs p) <> "ms, apply "
+              <> showT (LedgerDB.lcpApplyMs p) <> "ms, diff "
+              <> showT (LedgerDB.lcpDiffMs p) <> "ms"
 
     forMachine dtal  (ChainDB.InvalidBlock err pt) =
             mconcat [ "kind" .= String "InvalidBlock"
@@ -1312,6 +1320,16 @@ instance ( LedgerSupportsProtocol blk
                      , "startingBlock" .= renderRealPoint start
                      , "currentBlock" .= renderRealPoint curr
                      , "targetBlock" .= renderRealPoint goal
+                     ]
+    forMachine _dtal (ChainDB.UpdateLedgerDbTraceEvent
+                        (LedgerDB.TraceLeiosClosurePhasesEvent p)) =
+            mconcat [ "kind" .= String "UpdateLedgerDbTraceEvent.LeiosClosurePhases"
+                     , "ebHash" .= showT (LedgerDB.lcpEbHash p)
+                     , "numTxs" .= LedgerDB.lcpNumTxs p
+                     , "resolveMs" .= LedgerDB.lcpResolveMs p
+                     , "readValsMs" .= LedgerDB.lcpReadValsMs p
+                     , "applyMs" .= LedgerDB.lcpApplyMs p
+                     , "diffMs" .= LedgerDB.lcpDiffMs p
                      ]
 
 instance MetaTrace (ChainDB.TraceValidationEvent blk) where
