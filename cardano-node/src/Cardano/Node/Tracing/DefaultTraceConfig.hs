@@ -26,6 +26,8 @@ defaultCardanoConfig = emptyTraceConfig {
           [ ConfSeverity (SeverityF Nothing)])
      ,(["ChainDB"],
           [ ConfSeverity (SeverityF (Just Info))])
+     ,(["Span"],
+          [ ConfSeverity (SeverityF (Just Info))])
      ,(["ChainDB", "AddBlockEvent", "AddBlockValidation"],
           [ ConfSeverity (SeverityF Nothing)])
      ,(["ChainSync", "Client"],

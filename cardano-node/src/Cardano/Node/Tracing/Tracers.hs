@@ -41,6 +41,7 @@ import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import           Cardano.Node.Tracing.Span (withSpan)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -159,6 +160,12 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
     !rpcTr <- mkCardanoTracer trBase trForward mbTrEKG ["RPC"]
     configureTracers configReflection trConfig [rpcTr]
 
+    -- Span tracer: emits correlated Span.Begin / Span.End pairs. Registered
+    -- through the standard pipeline so spans are forwarded to cardano-tracer
+    -- (and thus visible to Loki) and exposed on Prometheus/EKG as metrics.
+    !spanTr <- mkCardanoTracer trBase trForward mbTrEKG []
+    configureTracers configReflection trConfig [spanTr]
+
     traceTracerInfo trBase trForward configReflection
 
     let warnings = checkNodeTraceConfiguration' trConfig
@@ -168,6 +175,11 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
     traceEffectiveConfiguration trBase trForward trConfig
 
     traceWith nodeVersionTr getNodeVersion
+
+    -- Demonstration span emitted once at tracer initialisation. This proves the
+    -- begin/end pair flows through the pipeline; replace with real withSpan
+    -- calls around the operations you want to measure.
+    withSpan spanTr "nodeTracersInit" (pure ())
 
     pure Tracers
       {

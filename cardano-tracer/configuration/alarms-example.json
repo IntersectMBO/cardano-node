@@ -1,0 +1,38 @@
+{
+  "networkMagic": 764824073,
+  "network": {
+    "tag": "AcceptAt",
+    "contents": "/tmp/forwarder.sock"
+  },
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ],
+  "alarms": {
+    "alEndpoint": {
+      "epHost": "127.0.0.1",
+      "epPort": 1234
+    },
+    "alAllowInsecure": true,
+    "alAuthentication": {
+      "aacProducers": [
+        {
+          "pcName": "hermod-bridge",
+          "pcTokenFile": null,
+          "pcSource": "hermod-recon"
+        }
+      ],
+      "aacReaders": [
+        {
+          "rcName": "local-reader",
+          "rcTokenFile": "/tmp/cardano-tracer-alarms-demo/reader.token",
+          "rcAllowHistory": true
+        }
+      ]
+    },
+    "alConsumers": []
+  }
+}
