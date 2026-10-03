@@ -197,7 +197,7 @@ data Graph3D x y z =
       -- ^ plots data read from a file, optionally giving indices of which columns to plot as x, y and z
 
 -- | Options which can be used with 'plot''
-data GnuplotOption = Interactive -- ^ keeps gnuplot open, so that you can interact with the plot (only usefull with 'X11')
+data GnuplotOption = Interactive -- ^ keeps gnuplot open, so that you can interact with the plot (only useful with 'X11')
                    | Debug       -- ^ keeps intermediate files used to invoke gnuplot, such as the script '_plot.p' and the datafiles '_plot*.dat'.
     deriving Eq
 
