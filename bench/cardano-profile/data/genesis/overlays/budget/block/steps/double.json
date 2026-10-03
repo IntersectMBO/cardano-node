@@ -1,9 +1,0 @@
-{
-  "epoch_params": {
-    "alonzo": {
-      "maxBlockExUnits": {
-        "exUnitsSteps": 40000000000
-      }
-    }
-  }
-}

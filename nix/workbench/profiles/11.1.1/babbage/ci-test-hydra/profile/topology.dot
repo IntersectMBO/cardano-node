@@ -1,0 +1,9 @@
+digraph {
+    graph [scale=5];
+    "node-0" [fillcolor="#fafa96"
+             ,style=filled];
+    "node-1" [fillcolor="#96fafa"
+             ,style=filled];
+    "node-0" -> "node-\"node-1\"";
+    "node-1" -> "node-\"node-0\"";
+}

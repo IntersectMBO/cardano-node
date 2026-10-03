@@ -1,6 +1,0 @@
-{
-  "maxRefScriptSizePerBlock": 1048576,
-  "maxRefScriptSizePerTx": 204800,
-  "refScriptCostStride": 25600,
-  "refScriptCostMultiplier": 1.2
-}

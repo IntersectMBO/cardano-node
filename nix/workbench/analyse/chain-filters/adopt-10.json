@@ -1,7 +1,0 @@
-[ { "tag":"CBlock"
-    , "contents":
-    { "tag": "BMinimumAdoptions"
-    , "contents": 10
-    }
-  }
-]

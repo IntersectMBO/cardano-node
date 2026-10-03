@@ -182,45 +182,22 @@ let
 
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
-  workbench = import ./nix/workbench/default.nix
-                { inherit pkgs; haskellProject = project; }
-  ;
-
   workbench-shell =
     with customConfig.localCluster;
-      import ./nix/workbench/shell.nix
-        { inherit pkgs lib haskellLib project;
-          inherit setLocale haveGlibcLocales;
-          inherit workbenchDevMode;
-          inherit withHoogle;
-          workbench-runner = workbench.runner
-            { inherit profiling;
-              inherit profileName eraName backendName;
-              inherit useCabalRun;
-              inherit workbenchStartArgs cardano-node-rev;
-              inherit (customConfig.localCluster) stateDir basePort batchName;
-            };
-        };
+      ( import ./nix/workbench/shell.nix
+          { inherit pkgs lib haskellLib project;
+            inherit setLocale haveGlibcLocales;
+            inherit workbenchDevMode withHoogle profiling;
+            inherit profileName eraName backendName useCabalRun workbenchStartArgs;
+            inherit (customConfig.localCluster) stateDir batchName;
+          }
+      # Returns `{ runner, shell }`; nix/workbench/hydra.nix takes the `runner`
+      # for the CI job. Nothing here has to know a runner exists.
+      ).shell
+  ;
 
-  devops =
-    let profileName = "devops";
-        eraName  = "babbage";
-        workbench-runner = workbench.runner
-          { inherit profiling;
-            inherit profileName eraName;
-            backendName = "supervisor";
-            useCabalRun = false;
-            inherit workbenchStartArgs cardano-node-rev;
-            inherit (customConfig.localCluster) stateDir basePort batchName;
-          };
-        devopsShell =
-          import ./nix/workbench/shell.nix
-            { inherit pkgs lib haskellLib project;
-              inherit setLocale haveGlibcLocales;
-              inherit workbench-runner workbenchDevMode;
-              inherit withHoogle;
-            };
-    in project.shellFor {
+  devops = project.shellFor {
+
     name = "devops-shell";
 
     packages = _: [];
@@ -231,8 +208,6 @@ let
       cardano-cli
       bech32
       cardano-node
-      cardano-profile
-      cardano-topology
       cardano-tracer
       locli
       tx-generator
@@ -243,15 +218,11 @@ let
       pstree
       pkgs.time
       pkgs.util-linux
-      workbench.workbench
       git
       graphviz
       jq
       moreutils
       procps
-      workbench-runner.workbench-interactive-start
-      workbench-runner.workbench-interactive-stop
-      workbench-runner.workbench-interactive-restart
     ];
 
     # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
@@ -261,8 +232,6 @@ let
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
-
-      ${devopsShell.shellHook}
 
       ${setLocale}
 

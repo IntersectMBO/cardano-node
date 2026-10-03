@@ -1,0 +1,14 @@
+{
+  "coreNodes": [
+    {
+      "name": "node-0",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [],
+      "region": "loopback",
+      "stakePool": true
+    }
+  ],
+  "relayNodes": []
+}
