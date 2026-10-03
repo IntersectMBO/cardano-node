@@ -135,7 +135,7 @@ library
                       , bytestring
                       , cardano-api ^>= 11.7
                       , cardano-data
-                      , cardano-crypto-class ^>=2.5
+                      , cardano-crypto-class ^>=2.5 || ^>=2.6
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
@@ -149,7 +149,7 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol ^>= 0.1
+                      , cardano-protocol >= 0.1 && < 0.3
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
                       , cardano-rpc ^>= 11.4
