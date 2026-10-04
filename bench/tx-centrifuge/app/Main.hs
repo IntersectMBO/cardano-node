@@ -238,6 +238,7 @@ main = do
                                  signingAddr signingKey
                                  inputFunds (outputsPerTx builder)
                                  (L.Coin (fee builder))
+                                 (metadataBytes builder)
               case buildTxAns of
                 Left err -> do
                   -- Drop the inputs instead of dying. Most common cause is
@@ -431,22 +432,24 @@ superviseHealthy = 120
 -- | Interpreted "value" builder configuration with defaults applied.
 data ValueBuilder
   = ValueBuilder
-    { inputsPerTx  :: !Natural
-    , outputsPerTx :: !Natural
-    , fee          :: !Integer
+    { inputsPerTx   :: !Natural
+    , outputsPerTx  :: !Natural
+    , fee           :: !Integer
+    , metadataBytes :: !Natural
     }
 
 -- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
--- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1)
--- and validates invariants.
+-- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1,
+-- @metadata_bytes@ = 0) and validates invariants.
 interpretBuilder :: Raw.Builder -> IO ValueBuilder
 interpretBuilder raw = case Raw.builderType raw of
   "value" ->
     case Aeson.Types.parseEither parseValueParams (Raw.builderParams raw) of
       Left err -> die $ "Builder params error: " ++ err
-      Right (maybeInputs, maybeOutputs, rawFee) -> do
-        let nInputs  = fromMaybe 1 maybeInputs
-            nOutputs = fromMaybe 1 maybeOutputs
+      Right (maybeInputs, maybeOutputs, rawFee, maybeMetadata) -> do
+        let nInputs   = fromMaybe 1 maybeInputs
+            nOutputs  = fromMaybe 1 maybeOutputs
+            nMetadata = fromMaybe 0 maybeMetadata
         when (nInputs  == 0) $ die "Builder: inputs_per_tx must be >= 1"
         when (nOutputs == 0) $ die "Builder: outputs_per_tx must be >= 1"
         when (rawFee   <  0) $ die "Builder: fee must be >= 0"
@@ -454,14 +457,16 @@ interpretBuilder raw = case Raw.builderType raw of
           { inputsPerTx       = nInputs
           , outputsPerTx      = nOutputs
           , fee               = rawFee
+          , metadataBytes     = nMetadata
           }
   other -> die $
     "Builder: unknown type " ++ show other ++ ", expected \"value\""
   where
     parseValueParams = Aeson.withObject "ValueParams" $ \o ->
-      (,,) <$> o .:? "inputs_per_tx"
-           <*> o .:? "outputs_per_tx"
-           <*> o .:  "fee"
+      (,,,) <$> o .:? "inputs_per_tx"
+            <*> o .:? "outputs_per_tx"
+            <*> o .:  "fee"
+            <*> o .:? "metadata_bytes"
 
 --------------------------------------------------------------------------------
 -- Observer interpretation.
