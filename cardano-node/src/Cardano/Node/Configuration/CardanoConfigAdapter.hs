@@ -372,8 +372,10 @@ nodeProtocolConfigurationFromCardanoConfig cfg =
         -- the Byron software (block) version: @PBftSignatureThreshold@ and the
         -- @LastKnownBlockVersion-*@ trio are among the keys @migrate@ drops, as
         -- they now come from consensus defaults rather than configuration. Fixed
-        -- defaults are used here, which surface as a divergence against POM for
-        -- any configuration that still sets them (see 'adapterGaps').
+        -- defaults are used here (see 'adapterGaps'). A different
+        -- @PBftSignatureThreshold@ surfaces as a divergence against POM; the
+        -- version trio does not, as the comparison leaves it out (see
+        -- 'Cardano.Node.Configuration.CardanoConfigCompare.compareProtocol').
         npcByronPbftSignatureThresh = Nothing
       , npcByronSupportedProtocolVersionMajor = 1
       , npcByronSupportedProtocolVersionMinor = 0
