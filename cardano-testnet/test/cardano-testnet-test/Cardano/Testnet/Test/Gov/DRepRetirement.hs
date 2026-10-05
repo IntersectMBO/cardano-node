@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.DRepRetirement
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.Testnet
 
@@ -37,9 +38,6 @@ import qualified Hedgehog.Extras as H
 -- | The era in which this test runs
 sbe :: ShelleyBasedEra ConwayEra
 sbe = ShelleyBasedEraConway
-
-ceo :: ConwayEraOnwards ConwayEra
-ceo = ConwayEraOnwardsConway
 
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Retirement/"'@
@@ -87,7 +85,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
                , signingKey = File stakeSKeyFp
                }
   let sizeBefore = 3
-  checkDRepsNumber epochStateView ceo sizeBefore
+  checkDRepsNumber epochStateView Exp.ConwayEra sizeBefore
 
   void $ H.createDirectoryIfMissing $ gov </> defaultDRepKeysDir
 
@@ -137,5 +135,5 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   -- The important bit is that we pass (sizeBefore - 1) as the last argument,
   -- to witness that the number of dreps indeed decreased.
-  checkDRepsNumber epochStateView ceo (sizeBefore - 1)
+  checkDRepsNumber epochStateView Exp.ConwayEra (sizeBefore - 1)
   H.success

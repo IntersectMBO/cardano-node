@@ -16,6 +16,7 @@ module Cardano.Testnet.Test.Cli.Query (
 
 import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..), unboundRational)
 import qualified Cardano.Api.Ledger as L
 
@@ -82,8 +83,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let sbe = convert Exp.ConwayEra
       
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
@@ -122,7 +122,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
-  checkDRepsNumber epochStateView ceo 3
+  checkDRepsNumber epochStateView Exp.ConwayEra 3
 
   -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)

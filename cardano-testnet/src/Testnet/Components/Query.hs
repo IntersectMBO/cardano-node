@@ -46,6 +46,7 @@ module Testnet.Components.Query
   ) where
 
 import           Cardano.Api as Api hiding (txId)
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.UTxO as Utxo
@@ -507,11 +508,11 @@ checkDRepsNumber
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ConwayEraOnwards era -- ^ The era in which the test runs
+  -> Exp.Era era -- ^ The era in which the test runs
   -> Int
   -> m ()
-checkDRepsNumber epochStateView ceo expectedDRepsNumber = withFrozenCallStack $
-  checkDRepState epochStateView ceo $ \dreps ->
+checkDRepsNumber epochStateView era expectedDRepsNumber = withFrozenCallStack $
+  checkDRepState epochStateView era $ \dreps ->
     if length dreps == expectedDRepsNumber
        then Just ()
        else Nothing
@@ -527,13 +528,13 @@ checkDRepState
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ConwayEraOnwards era -- ^ The era in which the test runs
+  -> Exp.Era era -- ^ The era in which the test runs
   -> (Map (Credential DRepRole)
           DRepState
       -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                   -- and potentially inspects it.
   -> m a
-checkDRepState epochStateView ceo f = withFrozenCallStack $
+checkDRepState epochStateView era f = withFrozenCallStack $
   retryUntilRightM epochStateView (WaitForEpochs $ EpochInterval 2) action >>= \case
     Right a -> pure a
     Left () -> do
@@ -542,9 +543,9 @@ checkDRepState epochStateView ceo f = withFrozenCallStack $
   where
     action = do
       AnyNewEpochState actualEra newEpochState _ <- getEpochState epochStateView
-      let sbe = convert ceo
+      let sbe = convert era
       Refl <- H.leftFail $ assertErasEqual sbe actualEra
-      pure . maybe (Left ()) Right . f $ conwayEraOnwardsConstraints ceo
+      pure . maybe (Left ()) Right . f $ Exp.obtainCommonConstraints era
         $ SQ.queryDRepState newEpochState Set.empty
 
 -- | Obtain governance state from node (CLI query)
