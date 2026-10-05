@@ -304,7 +304,7 @@ cardanoTestnet
         , logFormat = ForMachine
         }
       Ping.waitForSprocket 120 0.2 (tracerSprocket tracerRuntime) >>= \case
-        Left _ -> throwString "Sprocket of cardano-tracer did not come up."
+        Left err -> throwString $ "Sprocket of cardano-tracer did not come up after 120s: " <> show err
         Right _ -> pure ()
       pure (cfgFile', Just tracerRuntime)
 
@@ -601,7 +601,7 @@ enableTraceForwarding configFile = do
     Left err -> throwString $ "enableTraceForwarding: could not decode node configuration file " <> configFile <> ": " <> show err
     Right (config :: KeyMap.KeyMap Yaml.Value) -> do
       let config' = KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding config
-      let configFile' = dropExtension configFile <> "-tracer.conf"
+      let configFile' = dropExtension configFile <> "-tracer.yaml"
       Yaml.encodeFile configFile' config'
       pure configFile'
   where

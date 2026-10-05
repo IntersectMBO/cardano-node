@@ -43,10 +43,11 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 
 import           RIO (runRIO, throwString, unless)
 
+-- | Configuration record for invoking 'startCardanoTracer'.
 data CardanoTracerConf = CardanoTracerConf
-  { tempAbsPath :: FilePath
-  , testnetMagic :: Int
-  , logFormat :: LogFormat
+  { tempAbsPath :: FilePath  -- ^ Path to the testnet's temp directory.
+  , testnetMagic :: Int  -- ^ The magic number for the testnet.
+  , logFormat :: LogFormat  -- ^ The format for logs produced by cardano-tracer.
   } deriving (Eq, Show)
 
 mkConfig :: CardanoTracerConf -> Int -> FilePath ->  Sprocket -> TracerConfig
@@ -75,15 +76,14 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile sprocket = T
   , prometheusLabels = Nothing
   }
 
+-- | Data for working with a running @cardano-tracer@.
 data CardanoTracerRuntime = CardanoTracerRuntime
-  { tracerSprocket :: Sprocket
-  , tracerHandle :: ProcessHandle
-  , prometheusPort :: PortNumber
+  { tracerSprocket :: Sprocket  -- ^ A sprocket for communicating with @cardano-tracer@.
+  , tracerHandle :: ProcessHandle  -- ^ A handle for the @cardano-tracer@ process.
+  , prometheusPort :: PortNumber  -- ^ The port @cardano-tracer@ is running prometheus on.
   }
 
--- | Start a @cardano-tracer@ process, returning the (working-directory relative)
--- path to the socket that testnet nodes should connect to, together with the
--- process handle of the spawned tracer.
+-- | Start a @cardano-tracer@ process.
 startCardanoTracer
   :: HasCallStack
   => MonadFail m
