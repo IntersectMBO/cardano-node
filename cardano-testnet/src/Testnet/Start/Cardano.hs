@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -46,6 +47,7 @@ import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFi
                    defaultNodeTopologyFile, defaultNodesDataDir, defaultPortFile,
                    defaultUtxoAddrPath)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
+import           Cardano.Tracer.Configuration (LogFormat(..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
@@ -56,14 +58,15 @@ import           Control.Monad (forM, forM_, guard, replicateM, unless, when)
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
-import           Data.Aeson
+import           Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Encode.Pretty as A
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
 import           Data.Functor
 import           Data.IP (IP)
-import           Data.List (sort, stripPrefix)
+import           Data.List (sort, stripPrefix, uncons)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
@@ -77,9 +80,10 @@ import qualified Data.Yaml as Yaml
 import           GHC.Exts (fromList)
 import           GHC.Stack
 import qualified System.Directory as IO
-import           System.FilePath ((</>))
+import           System.FilePath ((</>), dropExtension)
 import qualified System.Process as Process
 
+import           Testnet.CardanoTracer (CardanoTracerConf(..), CardanoTracerRuntime(..), startCardanoTracer)
 import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog, stderrTracer)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
@@ -96,6 +100,7 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Stock (sprocketSystemName)
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (sprocketArgumentName)
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import           Hedgehog.Internal.Property (failException)
 
@@ -261,6 +266,7 @@ cardanoTestnet
   TestnetRuntimeOptions
     { runtimeEnableNewEpochStateLogging=enableNewEpochStateLogging
     , runtimeEnableRpc=cardanoEnableRpc
+    , runtimeEnableTracer=cardanoEnableTracer
     , runtimeKESSource=cardanoKESSource
     , runtimeEnableChainStallWatchdog=enableChainStallWatchdog
     }
@@ -283,6 +289,26 @@ cardanoTestnet
           Right sg -> return sg
           Left err -> throwString $ "Could not decode shelley genesis file: " <> shelleyGenesisFile <> " Error: " <> err
   let testnetMagic :: Int = fromIntegral sgNetworkMagic
+
+  -- Optionally start a cardano-tracer, and remember the socket that the nodes
+  -- should connect to. The tracer's lifetime is tied to the surrounding
+  -- 'MonadResource' scope, and it is additionally interrupted on SIGINT
+  -- alongside the nodes (see 'interruptNodesOnSigINT' below).
+  (nodeConfigFile', mTracer) <- case cardanoEnableTracer of
+    TraceDisabled -> pure (nodeConfigFile, Nothing)
+    TraceEnabled -> do
+      cfgFile' <- liftIOAnnotated $ enableTraceForwarding nodeConfigFile
+      tracerRuntime <- startCardanoTracer $ CardanoTracerConf
+        { tempAbsPath = tmpAbsPath
+        , testnetMagic = testnetMagic
+        , logFormat = ForMachine
+        }
+      Ping.waitForSprocket 120 0.2 (tracerSprocket tracerRuntime) >>= \case
+        Left err -> throwString $ "Sprocket of cardano-tracer did not come up after 120s: " <> show err
+        Right _ -> pure ()
+      pure (cfgFile', Just tracerRuntime)
+
+
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
@@ -417,13 +443,14 @@ cardanoTestnet
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic (nodeBin nodeWithOptions) $
         [ "run"
-        , "--config", nodeConfigFile
+        , "--config", nodeConfigFile'
         , "--topology", tmpAbsPath </> defaultNodeTopologyFile nodeName
         , "--database-path", nodeDataDir </> "db"
         ]
         <> spoNodeCliArgs
         <> nodeExtraCliArgs nodeWithOptions
         <> grpcArgs
+        <> maybe [] (\rt -> ["--tracer-socket-path-connect", sprocketArgumentName (tracerSprocket rt)]) mTracer
 
     -- cardano-node swallows a gRPC HTTP bind failure silently (no stderr, exit 0), so a
     -- successfully-started node can still have a dead endpoint; probe it before trusting it.
@@ -455,8 +482,9 @@ cardanoTestnet
   testnetNodes' <- maybe (throwString "cardanoTestnet: no testnet nodes were configured") pure $
     NEL.nonEmpty startedNodes
 
-  -- Interrupt cardano nodes when the main process is interrupted
-  liftIOAnnotated $ interruptNodesOnSigINT testnetNodes'
+  -- Interrupt cardano nodes (and the cardano-tracer, if any) when the main
+  -- process is interrupted
+  liftIOAnnotated $ interruptNodesOnSigINT (maybe [] (pure . tracerHandle) mTracer) testnetNodes'
 
   -- Make sure that all nodes are healthy by waiting for a chain extension.
   -- The deadline covers the worst case in which the chain can still start: genesis start
@@ -466,15 +494,16 @@ cardanoTestnet
   let startupHorizon = chainForecastHorizon shelleyGenesis
       startupBlockTimeout =
         startTimeOffsetSeconds + ceiling startupHorizon + startupDetectionMarginSeconds
-  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile)) testnetNodes'
+  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile')) testnetNodes'
 
   let runtime = TestnetRuntime
-        { configurationFile = File nodeConfigFile
+        { configurationFile = File nodeConfigFile'
         , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
         , testnetMagic
         , testnetNodes=testnetNodes'
         , wallets
         , delegators = []
+        , prometheusPort = fmap (\CardanoTracerRuntime{prometheusPort} -> prometheusPort) mTracer
         }
 
   -- The chain can also stall irrecoverably later, at any point of the test, if an
@@ -562,6 +591,65 @@ cardanoTestnet
             , "created."
             ]
 
+-- | Copy and modify a node configuration file so that its @TraceOptions@
+-- enables the @Forwarder@ backend. This is required for nodes to actually
+-- forward their traces and metrics to cardano-tracer. Returns a path to the
+-- modified config file.
+enableTraceForwarding :: FilePath -> IO FilePath
+enableTraceForwarding configFile = do
+  Yaml.decodeFileEither configFile >>= \case
+    Left err -> throwString $ "enableTraceForwarding: could not decode node configuration file " <> configFile <> ": " <> show err
+    Right (config :: KeyMap.KeyMap Yaml.Value) -> do
+      let config' = KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding config
+      let configFile' = dropExtension configFile <> "-tracer.yaml"
+      Yaml.encodeFile configFile' config'
+      pure configFile'
+  where
+    mergeTraceOptions :: Yaml.Value -> Yaml.Value -> Yaml.Value
+    mergeTraceOptions (Object forwarding) (Object existing) =
+      Object $ KeyMap.unionWith mergeNamespace forwarding existing
+    mergeTraceOptions forwarding _ = forwarding
+
+    mergeNamespace :: Yaml.Value -> Yaml.Value -> Yaml.Value
+    mergeNamespace (Object forwarding) (Object existing) =
+      Object
+        . KeyMap.insert "backends"
+            (mergeBackends
+              (KeyMap.lookup "backends" forwarding)
+              (KeyMap.lookup "backends" existing))
+        . copyIfMissing "detail"
+        . copyIfMissing "severity"
+        $ existing
+      where
+        copyIfMissing key =
+          maybe id (KeyMap.insertWith (\_new old -> old) key)
+            $ KeyMap.lookup key forwarding
+    mergeNamespace forwarding _ = forwarding
+
+    mergeBackends :: Maybe Yaml.Value -> Maybe Yaml.Value -> Yaml.Value
+    mergeBackends mForwarding mExisting =
+      Array
+        . fromList
+        . fmap (String . Text.unwords . uncurry (:))
+        . Map.toList
+        $ -- Map's semigroup instance is left-biased, so this prefers existing values.
+          fromArray mExisting <> fromArray mForwarding
+      where
+        -- Given an array of yaml strings, split each on spaces, using the
+        -- first word as the key of the map. We can then interpret each assoc
+        -- as the string representation of a data constructor application (plus
+        -- some improperly-parsed arguments, which just come along for the
+        -- ride.)
+        fromArray :: Maybe Yaml.Value -> Map.Map Text [Text]
+        fromArray (Just (Array xs)) =
+          foldMap
+            (\case
+              String s -> foldMap (uncurry Map.singleton) $ uncons $ Text.words s
+              _ -> mempty
+            )
+            xs
+        fromArray _ = mempty
+
 -- | Slack on top of the worst legitimate first-block time ('startTimeOffsetSeconds'
 -- plus the forecast horizon) when waiting for testnet startup: covers node process
 -- startup (spawning, parsing the configuration and genesis files, creating the
@@ -612,8 +700,8 @@ createAndRunTestnet :: ()
   -> H.Integration TestnetRuntime
 createAndRunTestnet creationOptions runtimeOptions conf = do
   liftToIntegration $ do
-     createTestnetEnv creationOptions conf
-     cardanoTestnet (creationNodes creationOptions) runtimeOptions conf
+    createTestnetEnv creationOptions conf
+    cardanoTestnet (creationNodes creationOptions) runtimeOptions conf
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError
