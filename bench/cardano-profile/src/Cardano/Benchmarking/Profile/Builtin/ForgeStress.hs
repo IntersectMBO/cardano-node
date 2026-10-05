@@ -89,6 +89,31 @@ durationChainL txCount x = let
   g = Types.generator p
   in p {Types.generator = g {Types.tx_count = Just txCount}}
 
+-- A transaction stream for db-synthesizer to replay, rather than a forge-stress
+-- run of its own.
+--
+-- The timescale is the standard small one, for its epoch: applying a block
+-- subtracts two stability windows from the start of the next epoch, and
+-- 'timescaleXLBlock' leaves an epoch of one (ceil(3k/f) = 600), so a fragment
+-- made on it underflows and cannot be replayed into a ChainDB. Two epochs of
+-- 1200 slots then run the generator far longer than the ~889 slots that
+-- emitting 'txCount' at the configured tps needs, and the shutdown slot clears
+-- both.
+--
+-- What this does not do is reproduce 'fschain-6912k''s workload: the small
+-- timescale fills a block every ~20 slots where the XL one fills every ~66, so
+-- the chain is denser and shorter. Blocks are still filled to capacity, since
+-- what a replayed block holds is decided by the block's capacity and what the
+-- stream still has, not by submission pressure.
+duration3000Slots :: Integer -> Types.Profile -> Types.Profile
+duration3000Slots txCount x = let
+  p =   V.timescaleSmall
+      . P.shutdownOnSlot 3000
+      . P.generatorEpochs 2
+      $ x
+  g = Types.generator p
+  in p {Types.generator = g {Types.tx_count = Just txCount}}
+
 -- This is timescaleCompressed with a changed slot filling constraint:
 -- fill on avg every 66th slot instead of every 20th.
 -- Goes hand in hand with changed submission pressure to fill large blocks, and bumped tx counts.
@@ -139,6 +164,7 @@ profilesForgeStress =
   , fs & P.name "fschain-768k"                  . valueXLBlock  . n1 . V.datasetOct2021 . durationChainM 90000  . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize768k
   , fsXXL & P.name "fschain-6912k-xs"           . valueXXLBlock . n1 . V.datasetOct2021 . durationChain  800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
   , fsXXL & P.name "fschain-6912k"              . valueXXLBlock . n1 . V.datasetOct2021 . durationChainL 800000 . P.traceForwardingOn                             . P.analysisUnitary  . P.blocksize6912k
+  , fsXXL & P.name "fschain-6912k-replay"       . valueXXLBlock . n1 . V.datasetOct2021 . duration3000Slots 800000 . P.traceForwardingOn                          . P.analysisUnitary  . P.blocksize6912k . P.leios6912k . P.v12Preview . P.v11Preview
   , fs & P.name "fschain-8io"                   . valueInOut 8  . n1 . V.datasetOct2021 . durationXL            . P.traceForwardingOn
   -- 3 nodes versions (non-pre)
   , fs & P.name "forge-stress"                  . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary

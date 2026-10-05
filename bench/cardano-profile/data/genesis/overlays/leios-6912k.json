@@ -1,0 +1,10 @@
+{
+  "description": "Turns Leios on in the Dijkstra genesis: a voting committee and non-zero endorser-block capacity. The zero spec leaves all three at 0, which seats no committee and leaves no room for transactions in an endorser block, so a chain made on it announces none. Sized to match a 6912k ranking block; a profile on another block size wants its own values.",
+  "epoch_params": {
+    "dijkstra": {
+      "leiosCommitteeSize": 1,
+      "maxEndorserBlockTxsSize": 7077888,
+      "maxEndorserBlockReferencesSize": 1048576
+    }
+  }
+}
