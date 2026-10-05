@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
 
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
@@ -58,8 +59,9 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet
-  let ceo = ConwayEraOnwardsDijkstra
-      sbe = convert ceo
+  let era = Exp.DijkstraEra
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
       creationOptions = def
@@ -144,14 +146,14 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
     makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
                                Nothing (EpochInterval 3) stakeKeys wallet0 (EpochInterval 2)
 
-  failToVoteChangeProposalWithSPOs ceo execConfig epochStateView baseDir "vote"
+  failToVoteChangeProposalWithSPOs era execConfig epochStateView baseDir "vote"
                                    governanceActionTxId governanceActionIndex propVotes wallet1
 
 -- | Cast votes for a governance action with SPO keys.
 failToVoteChangeProposalWithSPOs
   :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, Typeable era)
-  => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
-                          -- transaction will be constructed.
+  => Exp.Era era -- ^ The era in which the
+                 -- transaction will be constructed.
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.v
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -164,13 +166,13 @@ failToVoteChangeProposalWithSPOs
                      -- (i.e: "yes", "no", "abstain").
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m ()
-failToVoteChangeProposalWithSPOs ceo execConfig epochStateView work prefix
+failToVoteChangeProposalWithSPOs era execConfig epochStateView work prefix
                                  governanceActionTxId governanceActionIndex votes wallet = withFrozenCallStack $ do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
 
   voteFiles <- SPO.generateVoteFiles ceo execConfig baseDir "vote-files"
                                      governanceActionTxId governanceActionIndex

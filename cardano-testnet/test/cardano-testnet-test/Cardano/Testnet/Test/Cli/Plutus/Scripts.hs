@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Cli.Plutus.Scripts
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
@@ -54,10 +55,10 @@ hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purpos
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    ceo = ConwayEraOnwardsDijkstra
-    sbe = convert ceo
-    era = toCardanoEra sbe
-    anyEra = AnyCardanoEra era
+    era = Exp.DijkstraEra
+    ceo = convert era
+    sbe = convert era
+    anyEra = AnyCardanoEra $ toCardanoEra sbe
     creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
@@ -209,10 +210,10 @@ hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $
     -- extraConfig, because cardano-ledger-dijkstra 0.3's injectIntoTestState misses
     -- the alonzoInjectCostModels step. This is fixed in cardano-ledger-dijkstra
     -- 0.4.0.0, so this test can move to Dijkstra once the node uses ledger 0.4.
-    ceo = ConwayEraOnwardsConway
-    sbe = convert ceo
-    era = toCardanoEra sbe
-    anyEra = AnyCardanoEra era
+    era = Exp.ConwayEra
+    ceo = convert era
+    sbe = convert era
+    anyEra = AnyCardanoEra $ toCardanoEra sbe
     creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
