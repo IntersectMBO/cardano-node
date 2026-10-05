@@ -10,6 +10,18 @@
   favour of a `HermodTracing` section with `Options`, `Forwarder`, `ApplicationName`,
   `MetricsPrefix` and `PeriodicTracers: { resources, ledgerMetrics }`).
 
+- Every tracer is declared once, in `Cardano.Node.Tracing.Tracers`, through the new
+  `Cardano.Node.Tracing.Registry`; `cardano-node trace-documentation` and the configuration
+  consistency check run that declaration instead of keeping their own lists. Both now follow
+  the names the node emits: `Forge.StateInfo.StateInfo` (was documented as `Forge.StateInfo`),
+  `Forge.Stats.ForgingStats` (was `Forge.ThreadStats.ForgingStats`), `Net.PeerSelection.Counters`
+  (was `Net.PeerSelection.Counters.Counters`) and `Net.DNS` (was checked as `Net.DNSResolver`);
+  the Mux channel and the handshake tracers are documented; `NodeInfo`, `NodeStartupInfo` and
+  `Reflection` are accepted by the check; `Net.AcceptPolicy` and `Net.PeerSelection.Responder`,
+  which no tracer emits, are gone from both, and `Net.ErrorPolicy` from the default
+  configuration. `bench/trace-schemas/newNamespaces.txt` is regenerated and now kept current by
+  a test. The log output, metrics and forwarding of the node are unchanged.
+
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the
   configuration consistency check now use the runtime `TraceDecisionEvent`
   type, so the documented message namespaces are

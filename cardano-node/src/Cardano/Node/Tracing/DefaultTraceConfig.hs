@@ -33,8 +33,6 @@ defaultCardanoConfig = emptyTraceConfig {
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Startup", "DiffusionInit"],
           [ ConfSeverity (SeverityF (Just Info))])
-     ,(["Net", "ErrorPolicy"],
-          [ ConfSeverity (SeverityF (Just Info))])
      ,(["Forge", "Loop"],
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Forge", "StateInfo"],

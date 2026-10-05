@@ -60,11 +60,9 @@ let
       "Mempool".severity = "Debug";
       "Mempool.Synced".severity = "Silence";
       "Net".severity = "Notice";
-      "Net.AcceptPolicy".severity = "Debug";
       "Net.ConnectionManager.Local".severity = "Debug";
       "Net.ConnectionManager.Remote".severity = "Debug";
-      "Net.DNSResolver".severity = "Notice";
-      "Net.ErrorPolicy".severity = "Debug";
+      "Net.DNS".severity = "Notice";
       "Net.Handshake.Local".severity = "Debug";
       "Net.Handshake.Remote".severity = "Debug";
       "Net.InboundGovernor.Local".severity = "Debug";
@@ -77,7 +75,6 @@ let
       "Net.PeerSelection.Counters".detail = "DMinimal";
       "Net.PeerSelection.Counters".severity = "Debug";
       "Net.PeerSelection.Initiator".severity = "Notice";
-      "Net.PeerSelection.Responder".severity = "Notice";
       "Net.PeerSelection.Selection".severity = "Debug";
       "Net.Peers.Ledger".severity = "Debug";
       "Net.Peers.LocalRoot".severity = "Debug";
