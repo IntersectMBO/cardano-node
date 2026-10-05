@@ -10,11 +10,7 @@ module Cardano.Node.TraceConstraints (TraceConstraints) where
 import           Cardano.Ledger.Credential
 import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
-import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
-                   HasKESMetricsData (..), LedgerQueries)
-import           Cardano.Node.Tracing.Tracers.HasIssuer (HasIssuer)
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
-import qualified Cardano.Node.Tracing.Tracers.Consensus as ConsensusTracers
+import           Cardano.Node.Queries (HasKESMetricsData (..), LedgerQueries)
 import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    GetHeader, HasHeader, Header, HeaderHash)
@@ -27,6 +23,8 @@ import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract (ReasonForSwitch, SelectView,
                    SelectViewReasonForSwitch, TiebreakerView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx)
+import           Ouroboros.Consensus.Tracing (ConvertTxId, GetKESInfo (..), HasIssuer,
+                   HasKESInfo (..))
 import           Ouroboros.Network.Block (Serialised)
 
 import           Data.Aeson

@@ -13,12 +13,11 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Cardano.Node.Queries (ConvertTxId)
-import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
+import           Ouroboros.Consensus.Tracing (ConvertTxId, renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
