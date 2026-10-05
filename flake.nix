@@ -69,7 +69,7 @@
     mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
 
     ouroboros-consensus-src = {
-      url = "git+file:///media/nvme/git/iog/ouroboros-consensus?rev=835d3747eb2fbd6b7d69e73245ec7c9703faec21&submodules=1";
+      url = "github:IntersectMBO/ouroboros-consensus?rev=835d3747eb2fbd6b7d69e73245ec7c9703faec21&submodules=1";
       flake = false;
     };
   };

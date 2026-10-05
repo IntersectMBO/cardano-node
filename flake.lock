@@ -1537,18 +1537,16 @@
       "locked": {
         "lastModified": 1789085254,
         "narHash": "sha256-ZDAPypcfLn7xzUyxcI7ktHxnvUKtPEHcPR522+c04Ao=",
-        "ref": "master",
+        "owner": "IntersectMBO",
+        "repo": "ouroboros-consensus",
         "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
-        "revCount": 11115,
-        "submodules": true,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
+        "type": "github"
       },
       "original": {
+        "owner": "IntersectMBO",
+        "repo": "ouroboros-consensus",
         "rev": "835d3747eb2fbd6b7d69e73245ec7c9703faec21",
-        "submodules": true,
-        "type": "git",
-        "url": "file:///media/nvme/git/iog/ouroboros-consensus"
+        "type": "github"
       }
     },
     "root": {
