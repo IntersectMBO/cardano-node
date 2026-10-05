@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-09-22T20:39:47Z
+  , cardano-haskell-packages 2026-10-02T13:31:03Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -105,61 +105,16 @@ allow-older:
   -- dmq-node-0.7.1.0 lower-bounds ouroboros-consensus >=4.1 but we have 4.0
   , dmq-node:ouroboros-consensus
 
+allow-newer:
+  , cardano-cli:cardano-diffusion
+  , ekg-forward:ouroboros-network
+
+allow-older:
+  cardano-keys:bytestring
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/kes-agent
-  tag: 4625f3cf543566517d08882e659c97932d106d86
-  --sha256: sha256-CSHWndpeJFqCEFNT6ysfyN6x+O4vZ9TtYOOsZKcLnIA=
-  subdir:
-    kes-agent
-    kes-agent-crypto
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger
-  tag: fb723848a28256fe372ea9ba692eccded6a12a53
-  --sha256: sha256-iL61RTn4OPRNzzPn/2YcVJNMJYolXghaQ9cDG/DOOWM=
-  subdir:
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/babbage/impl
-    eras/byron/chain/executable-spec
-    eras/byron/crypto
-    eras/byron/ledger/executable-spec
-    eras/byron/ledger/impl
-    eras/conway/impl
-    eras/dijkstra/impl
-    eras/mary/impl
-    eras/shelley/impl
-    eras/shelley/test-suite
-    libs/cardano-data
-    libs/cardano-ledger-api
-    libs/cardano-ledger-binary
-    libs/cardano-ledger-core
-    libs/cardano-protocol
-    libs/cardano-protocol-tpraos
-    libs/non-integral
-    libs/small-steps
-    libs/vector-map
-
-source-repository-package
-  type: git
-  location: https://github.com/intersectmbo/cardano-base.git
-  --sha256: sha256-WUBluY6UqvBkS5cNsJnKMOaW+1dTfL3mg8iq/kVPV0o=
-  tag: d92e2e3841eaad354c5e1ef77b458b347f471271
-  subdir: cardano-crypto-leios
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 835d3747eb2fbd6b7d69e73245ec7c9703faec21
-  --sha256: sha256-ZDAPypcfLn7xzUyxcI7ktHxnvUKtPEHcPR522+c04Ao=
-  subdir:
-    .
 
 source-repository-package
   type: git
@@ -172,14 +127,8 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-crypto
-  tag: ac2e12a471b735ad80949bcbf0f6f634e5dbef77
-  --sha256: sha256-NvbMk41W2PQy2H91nkG0GtPyGDwia0y6DQNNf9RtoAc=
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 6095192558ff527fc73eb06a9862da62d7fb0949
+  tag: d612005d7f4c9fecc6d21d1c126cdd4e9dff018f
   --sha256: sha256-6mBza4a3Plu9f3ZFfJNUufj5ckx7bNefvYW8atUz0j8=
   subdir:
     cardano-api
@@ -188,7 +137,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: efc7514dddce8999e66f7a48dcd1a5c9a8e981cf
+  tag: a91dcd5397e5a4c26d2d3870ccb54c3f20153a11
   --sha256: sha256-3maT6ogGaR9WJXsC0OZpvpLS2uv9JvWoJp5klSSLH6I=
   subdir:
     cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/dmq-node
+  tag: c9f90dd575d87b7c5b93bfcac5a7848676fbd51b
+  subdir:
+    dmq-node
