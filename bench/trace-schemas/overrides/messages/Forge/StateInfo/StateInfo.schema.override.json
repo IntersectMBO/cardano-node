@@ -1,7 +1,7 @@
 {
   "_meta": {
     "owner": "tracing-team",
-    "reason": "Generator cannot infer the KESInfo payload behind the Forge.StateInfo namespace."
+    "reason": "Generator cannot infer the KESInfo payload behind the Forge.StateInfo.StateInfo namespace."
   },
   "patch": {
     "data": {

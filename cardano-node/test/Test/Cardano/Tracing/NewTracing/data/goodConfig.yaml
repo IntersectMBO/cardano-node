@@ -54,10 +54,7 @@ TraceOptions:
   Mempool:
     severity: Info
 
-  Net.AcceptPolicy:
-    severity: Info
-
-  Net.DNSResolver:
+  Net.DNS:
     severity: Info
 
   Resources:
