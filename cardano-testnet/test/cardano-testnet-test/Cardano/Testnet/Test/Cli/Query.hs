@@ -83,11 +83,10 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let sbe = convert Exp.ConwayEra
-      
+  let era = Exp.ConwayEra
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       eraName = eraToString era
       fastTestnetOptions = def
         { creationEra = asbe
@@ -122,7 +121,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
-  checkDRepsNumber epochStateView Exp.ConwayEra 3
+  checkDRepsNumber epochStateView era 3
 
   -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)

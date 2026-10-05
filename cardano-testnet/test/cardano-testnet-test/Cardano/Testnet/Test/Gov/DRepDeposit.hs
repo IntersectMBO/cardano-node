@@ -43,10 +43,10 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let era = Exp.ConwayEra
+      ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNumDReps = 0
@@ -93,9 +93,9 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   -- DRep 2 (enough deposit)
 
-  void $ registerDRep execConfig epochStateView Exp.ConwayEra work "drep2" wallet1
+  void $ registerDRep execConfig epochStateView era work "drep2" wallet1
 
-  checkDRepState epochStateView Exp.ConwayEra $ \m ->
+  checkDRepState epochStateView era $ \m ->
     if map (L.fromCompact . L.drepDeposit) (Map.elems m) == [L.Coin minDRepDeposit]
        then Just ()
        else Nothing
