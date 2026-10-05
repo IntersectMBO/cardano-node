@@ -6,14 +6,17 @@
 -- difference in the resolved value, with no representation mismatch and no
 -- deferred set. A field the adapter cannot yet populate from cardano-config keeps
 -- the node default and therefore surfaces here as a divergence (see
--- 'Cardano.Node.Configuration.CardanoConfigAdapter.adapterGaps').
+-- 'Cardano.Node.Configuration.CardanoConfigAdapter.adapterGaps'), with one
+-- exception: the Byron supported-protocol-version trio, which is excluded from
+-- the comparison (see 'ignoreByronSupportedVersion').
 module Cardano.Node.Configuration.CardanoConfigCompare
   ( compareConfigurations
   , deprecatedFlagWarnings
   ) where
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Types (NodeProtocolConfiguration (..))
+import           Cardano.Node.Types (NodeByronProtocolConfiguration (..),
+                   NodeProtocolConfiguration (..))
 
 -- | Diagnose node CLI flags that cardano-config's own CLI parser rejects, in
 -- terms the operator can act on. All of these flags are deprecated: the three
@@ -116,7 +119,8 @@ compareProtocol
   (NodeProtocolConfigurationCardano b1 s1 a1 c1 d1 h1 k1)
   (NodeProtocolConfigurationCardano b2 s2 a2 c2 d2 h2 k2) =
     concat
-      [ cmpValues "Byron protocol config" b1 b2
+      [ cmpValues "Byron protocol config"
+          (ignoreByronSupportedVersion b1) (ignoreByronSupportedVersion b2)
       , cmpValues "Shelley protocol config" s1 s2
       , cmpValues "Alonzo protocol config" a1 a2
       , cmpValues "Conway protocol config" c1 c2
@@ -124,3 +128,21 @@ compareProtocol
       , cmpValues "HardFork protocol config" h1 h2
       , cmpValues "Checkpoints protocol config" k1 k2
       ]
+
+-- | Blank the Byron supported-protocol-version trio, so that it takes no part in
+-- the Byron comparison.
+--
+-- cardano-config does not model the @LastKnownBlockVersion-*@ keys at all (its
+-- @migrate@ drops them), so the adapter supplies a fixed value and the two sides
+-- differ for every configuration that sets a different one. The value is the
+-- version the node endorses in the Byron era's update mechanism, which no
+-- Cardano chain past the Byron era still runs, so the difference tells the
+-- operator nothing to act on and is not worth reporting.
+ignoreByronSupportedVersion ::
+  NodeByronProtocolConfiguration -> NodeByronProtocolConfiguration
+ignoreByronSupportedVersion byronConfig =
+  byronConfig
+    { npcByronSupportedProtocolVersionMajor = 0
+    , npcByronSupportedProtocolVersionMinor = 0
+    , npcByronSupportedProtocolVersionAlt = 0
+    }
