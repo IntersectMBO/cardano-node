@@ -9,6 +9,9 @@
 
 module Cardano.Testnet.Test.Node.DijkstraEra
   ( hprop_hardfork_to_dijkstra
+  , hardForkToDijkstra
+  , getProtocolMajorVersion
+  , assertNodeInDijkstra
   ) where
 
 import           Cardano.Api
@@ -17,6 +20,7 @@ import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Utils (nodesProduceBlocks)
 
@@ -30,7 +34,6 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default.Class (def)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
-import           Data.Type.Equality ((:~:) (..))
 import           Data.Word (Word16)
 import           GHC.Stack
 import           Lens.Micro
@@ -48,7 +51,6 @@ import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
-import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -82,10 +84,7 @@ hprop_hardfork_to_dijkstra = integrationRetryWorkspace 2 "hardfork-to-dijkstra" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
-      era = toCardanoEra sbe
-      eraName = eraToString era
+  let sbe = ShelleyBasedEraConway
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationGenesisOptions = def
@@ -106,8 +105,37 @@ hprop_hardfork_to_dijkstra = integrationRetryWorkspace 2 "hardfork-to-dijkstra" 
   execConfig <- mkExecConfig tempBaseAbsPath nodeSprocket testnetMagic
   epochStateView <- getEpochStateView configurationFile socketPath
 
+  hardForkToDijkstra execConfig epochStateView tempAbsPath work wallet0 wallet1
+
+  assertNodeInDijkstra execConfig
+
+  H.note_ "the ledger state served by the node is a Dijkstra NewEpochState"
+  AnyNewEpochState sbe' _ _ <- getEpochState epochStateView
+  shelleyBasedEraConstraints sbe' $
+    AnyShelleyBasedEra sbe' H.=== AnyShelleyBasedEra ShelleyBasedEraDijkstra
+
+  nodesProduceBlocks tempAbsBasePath' runtime
+
+-- | Take a cluster that was started in Conway at protocol version 10 into the
+-- Dijkstra era through governance: register a stake key to receive the action
+-- deposits, then propose, vote and enact a hard fork to PV 11.0 (Conway
+-- intra-era) followed by a chained hard fork to PV 12.0 (Dijkstra).
+hardForkToDijkstra
+  :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, H.MonadBaseControl IO m)
+  => H.ExecConfig
+  -> EpochStateView
+  -> TmpAbsolutePath
+  -> FilePath -- ^ Working directory
+  -> PaymentKeyInfo -- ^ Wallet paying for the governance actions and votes
+  -> PaymentKeyInfo -- ^ Wallet paying for the stake key registration
+  -> m ()
+hardForkToDijkstra execConfig epochStateView tempAbsPath work wallet0 wallet1 = withFrozenCallStack $ do
+  let ceo = ConwayEraOnwardsConway
+      sbe = convert ceo
+      eraName = eraToString $ toCardanoEra sbe
+
   H.note_ "the cluster starts in Conway at protocol version 10"
-  startPv <- getProtocolMajorVersion epochStateView ceo
+  startPv <- getProtocolMajorVersion epochStateView
   startPv H.=== 10
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
@@ -149,30 +177,25 @@ hprop_hardfork_to_dijkstra = integrationRetryWorkspace 2 "hardfork-to-dijkstra" 
   _ <- waitForBlocks epochStateView 1
 
   H.note_ "hard fork 10.0 -> 11.0 (Conway intra-era hard fork)"
-  hf11 <- proposeAndEnactHardFork execConfig epochStateView ceo (gov </> "hardfork-11")
+  hf11 <- proposeAndVoteHardFork execConfig epochStateView ceo (gov </> "hardfork-11")
             Nothing 11 stakeKeys wallet0
+  H.note_ "waiting for protocol major version 11"
+  _ <- retryUntilM epochStateView (WaitForEpochs (EpochInterval 4))
+         (getProtocolMajorVersion epochStateView) (== 11)
 
   H.note_ "hard fork 11.0 -> 12.0 (Conway -> Dijkstra)"
-  _ <- proposeAndEnactHardFork execConfig epochStateView ceo (gov </> "hardfork-12")
+  _ <- proposeAndVoteHardFork execConfig epochStateView ceo (gov </> "hardfork-12")
          (Just hf11) 12 stakeKeys wallet0
-
-  H.note_ "query tip reports the Dijkstra era"
-  tipStr <- H.noteM $ execCli' execConfig [ "query", "tip", "--output-json" ]
-  tip :: A.Object <- H.nothingFail $ A.decode $ B.pack tipStr
-  KM.lookup "era" tip H.=== Just (A.String "Dijkstra")
-
-  H.note_ "the ledger state served by the node is in the Dijkstra era"
-  AnyNewEpochState actualEra _ _ <- getEpochState epochStateView
-  Refl <- H.leftFail $ assertErasEqual ShelleyBasedEraDijkstra actualEra
-
-  nodesProduceBlocks tempAbsBasePath' runtime
+  H.note_ "waiting for protocol major version 12"
+  void $ retryUntilM epochStateView (WaitForEpochs (EpochInterval 4))
+         (getProtocolMajorVersion epochStateView) (== 12)
 
 -- | Submit a @HardForkInitiation@ governance action to the given major protocol
--- version (minor version 0), vote @yes@ on it with the three default DReps and
--- the default SPO, and wait until the ledger's protocol parameters report the
--- new major version. Returns the action's transaction id and index so that the
--- next hard fork action can be chained to it.
-proposeAndEnactHardFork
+-- version (minor version 0) and vote @yes@ on it with the three default DReps and
+-- the default SPO. Ratification happens at the next epoch boundary and enactment
+-- at the one after; the caller waits for it. Returns the action's transaction id
+-- and index so that the next hard fork action can be chained to it.
+proposeAndVoteHardFork
   :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, H.MonadBaseControl IO m)
   => H.ExecConfig
   -> EpochStateView
@@ -183,7 +206,7 @@ proposeAndEnactHardFork
   -> KeyPair StakeKey -- ^ Registered stake key that receives the deposit back
   -> PaymentKeyInfo -- ^ Wallet paying for the transactions
   -> m (TxId, Word16)
-proposeAndEnactHardFork execConfig epochStateView ceo work prevAction targetMajor stakeKeys wallet = withFrozenCallStack $ do
+proposeAndVoteHardFork execConfig epochStateView ceo work prevAction targetMajor stakeKeys wallet = withFrozenCallStack $ do
   let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -267,20 +290,37 @@ proposeAndEnactHardFork execConfig epochStateView ceo work prevAction targetMajo
       : [ Some (defaultDRepKeyPair n) | n <- [1..3] ]
   submitTx execConfig cEra signedVoteTx
 
-  -- Ratification happens at the next epoch boundary and enactment at the one after.
-  H.note_ $ "waiting for protocol major version " <> show targetMajor
-  _ <- retryUntilM epochStateView (WaitForEpochs (EpochInterval 4))
-         (getProtocolMajorVersion epochStateView ceo)
-         (== targetMajor)
-
   pure (govActionTxId, govActionIndex)
 
--- | The major protocol version currently in the ledger's protocol parameters.
+-- | The major protocol version currently in the ledger's protocol parameters,
+-- read from whatever era the node is in. This must not fix the era, because the
+-- version being awaited is the one whose enactment moves the node into Dijkstra.
 getProtocolMajorVersion
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m)
   => EpochStateView
-  -> ConwayEraOnwards era
   -> m Natural
-getProtocolMajorVersion epochStateView ceo = withFrozenCallStack $ do
-  LedgerProtocolParameters pp <- getProtocolParams epochStateView ceo
-  pure $ conwayEraOnwardsConstraints ceo $ L.getVersion $ L.pvMajor $ pp ^. L.ppProtocolVersionL
+getProtocolMajorVersion epochStateView = withFrozenCallStack $ do
+  AnyNewEpochState sbe nes _ <- getEpochState epochStateView
+  pure $ shelleyBasedEraConstraints sbe $
+    L.getVersion $ L.pvMajor $ nes ^. L.nesEsL . L.curPParamsEpochStateL . L.ppProtocolVersionL
+
+-- | Assert that the node reports the Dijkstra era over node-to-client.
+--
+-- Needs ouroboros-consensus >= 5.0: earlier versions enact protocol version 12 but
+-- stay in Conway, because 'protocolInfoCardano' builds the Conway ledger config with
+-- 'TriggerHardForkNotDuringThisExecution' and ignores the Dijkstra trigger.
+assertNodeInDijkstra
+  :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m)
+  => H.ExecConfig
+  -> m ()
+assertNodeInDijkstra execConfig = withFrozenCallStack $ do
+  H.note_ "query tip reports the Dijkstra era"
+  tipStr <- H.noteM $ execCli' execConfig [ "query", "tip", "--output-json" ]
+  tip :: A.Object <- H.nothingFail $ A.decode $ B.pack tipStr
+  case KM.lookup "era" tip of
+    Just (A.String "Dijkstra") -> pure ()
+    other -> H.failMessage callStack $ unlines
+      [ "The node is not in the Dijkstra era after protocol version 12 was enacted: " <> show other
+      , "The pinned ouroboros-consensus does not hard fork out of Conway (the Conway ledger config"
+      , "uses TriggerHardForkNotDuringThisExecution); ouroboros-consensus >= 5.0 is needed."
+      ]
