@@ -19,6 +19,7 @@ module Testnet.Process.Cli.DRep
 
 import           Cardano.Api hiding (TxBody, txId)
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
 
 import           Cardano.Testnet (maybeExtractGovernanceActionIndex)
@@ -42,6 +43,7 @@ import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', execCliStdoutToJson)
+import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -127,7 +129,7 @@ createCertificatePublicationTxBody execConfig epochStateView sbe work prefix cer
   let dRepRegistrationTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     , "--certificate-file", unFile cert
@@ -200,7 +202,7 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
   let votingTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ execCli' execConfig $
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     ] ++ (concat [["--vote-file", voteFile] | File voteFile <- votes]) ++
@@ -219,21 +221,21 @@ registerDRep
   => MonadIO m
   => MonadTest m
   => H.MonadAssertion m
+  => Typeable era
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> Exp.Era era -- ^ The era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where the signed transaction file will be stored.
   -> FilePath -- ^ Name for the subfolder that will be created under 'work' folder to store the output keys.
   -> PaymentKeyInfo -- ^ Payment key information associated with the transaction,
                     -- as returned by 'cardanoTestnetDefault'.
   -> m (KeyPair PaymentKey)
-registerDRep execConfig epochStateView ceo work prefix wallet = do
-  let sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+registerDRep execConfig epochStateView era work prefix wallet = do
+  let sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
 
-  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
+  minDRepDeposit <- getMinDRepDeposit epochStateView (convert era)
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   drepKeyPair <- generateDRepKeyPair execConfig baseDir "keys"
@@ -255,29 +257,30 @@ delegateToDRep
   => MonadIO m
   => H.MonadAssertion m
   => MonadCatch m
+  => Typeable era
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
+  -> Exp.Era era -- ^ The era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> KeyPair StakeKey -- ^ Staking key pair used for delegation.
   -> KeyPair PaymentKey -- ^ Delegate Representative (DRep) key pair ('PaymentKeyPair') to which delegate.
   -> m ()
-delegateToDRep execConfig epochStateView sbe work prefix
+delegateToDRep execConfig epochStateView era work prefix
                payingWallet skeyPair@KeyPair{verificationKey=File vKeyFile}
                KeyPair{verificationKey=File drepVKey}  = do
 
-  let era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   -- Create vote delegation certificate
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
   void $ execCli' execConfig
-    [ "conway", "stake-address", "vote-delegation-certificate"
+    [ eraToString sbe, "stake-address", "vote-delegation-certificate"
     , "--drep-verification-key-file", drepVKey
     , "--stake-verification-key-file", vKeyFile
     , "--out-file", voteDelegationCertificatePath
@@ -386,7 +389,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
     ( \port -> do
         let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
         void $ execCli' execConfig' $
-          [ "conway", "governance", "action", "create-protocol-parameters-update"
+          [ eraToString sbe, "governance", "action", "create-protocol-parameters-update"
           , "--testnet"
           , "--governance-action-deposit", show @Integer minDRepDeposit
           , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -402,7 +405,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
           ]
 
         void $ execCli' execConfig'
-          [ "conway", "transaction", "build"
+          [ eraToString sbe, "transaction", "build"
           , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
           , "--tx-in", Text.unpack $ renderTxIn txIn
           , "--proposal-file", proposalFile

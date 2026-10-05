@@ -6,6 +6,7 @@ module Cardano.Testnet.Test.Gov.DRepDeposit
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
@@ -42,10 +43,10 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let era = Exp.ConwayEra
+      ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNumDReps = 0
@@ -92,9 +93,9 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   -- DRep 2 (enough deposit)
 
-  void $ registerDRep execConfig epochStateView ceo work "drep2" wallet1
+  void $ registerDRep execConfig epochStateView era work "drep2" wallet1
 
-  checkDRepState epochStateView sbe $ \m ->
+  checkDRepState epochStateView era $ \m ->
     if map (L.fromCompact . L.drepDeposit) (Map.elems m) == [L.Coin minDRepDeposit]
        then Just ()
        else Nothing
