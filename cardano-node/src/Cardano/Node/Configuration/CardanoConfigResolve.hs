@@ -36,6 +36,11 @@ module Cardano.Node.Configuration.CardanoConfigResolve
     -- * Dialects
   , ConfigurationDialect (..)
   , classifyConfigurationFile
+
+    -- * Command-line layers
+  , nodeCliPartialConfiguration
+  , nodeCliLayer
+  , cardanoConfigCliLayer
   ) where
 
 import           Cardano.Logging.Types (TraceConfig)
@@ -48,6 +53,7 @@ import           Cardano.Node.Configuration.CardanoConfigCompare
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
                    makeNodeConfiguration, parseNodeConfigurationFP)
+import           Cardano.Node.Parsers (nodeCLIParser)
 import           Cardano.Node.Types (ConfigYamlFilePath (..))
 
 import           Control.Exception (Exception (..))
@@ -243,11 +249,66 @@ crossCheckWithCardanoConfig configFp nc = do
 -- dropped to get the flag list; @cardano-config@'s 'Cfg.parseCliArgs' is a flat
 -- parser with no @run@ subcommand, matching that stripped list. On failure the
 -- returned message leads with actionable guidance for each offending flag.
+-- | The node's own command-line layer for the configuration being resolved: the
+-- flags this process was given, parsed with the node's own run parser.
+--
+-- This is the POM twin of 'cardanoConfigCliArgs': the two read the SAME flags,
+-- each with its own parser, which is what makes a comparison of the two resolved
+-- configurations a comparison of the parsers rather than of their inputs.
+nodeCliPartialConfiguration :: FilePath -> IO (Maybe PartialNodeConfiguration, [String])
+nodeCliPartialConfiguration configFp = nodeCliLayer configFp . nodeFlags <$> getArgs
+ where
+  -- Drop the leading verbs (@config resolve@, @run@) and the flags that belong to
+  -- the command itself rather than to the node: @--with-geneses@ tells
+  -- @config resolve@ how much of the result to print.
+  nodeFlags argv =
+    filter (`notElem` ["--with-geneses"]) (dropWhile (not . isPrefixOf "-") argv)
+
+-- | The node's command-line layer for a given flag list, as 'nodeRunParser' reads
+-- it. Pure, so a caller that is not the node's own process (a test, say) can ask
+-- for the layer of a stated command line.
+--
+-- An empty flag list is not the same as no layer: the node's parser supplies CLI
+-- defaults of its own, and an absent @--shutdown-on-slot-synced@ resolves to
+-- 'Cardano.Node.Handlers.Shutdown.NoShutdown' rather than to "unset".
+--
+-- Returns the layer together with any line to report. A flag the node's parser
+-- rejects is not fatal: the layer falls back to the flagless one and the
+-- rejection is reported, so the rest is still compared. 'Nothing' means there is
+-- no layer to apply at all, which the caller reports and continues without.
+nodeCliLayer :: FilePath -> [String] -> (Maybe PartialNodeConfiguration, [String])
+nodeCliLayer configFp flags =
+  case parseWith flags of
+    Right pnc -> (Just pnc, [])
+    Left err ->
+      ( either (const Nothing) Just (parseWith [])
+      , [ "the node's own parser rejected the command line; its command-line layer"
+            <> " falls back to the flagless one. " <> err
+        ]
+      )
+ where
+  parseWith fs =
+    case Opt.execParserPure Opt.defaultPrefs (Opt.info nodeCLIParser mempty) ("run" : fs) of
+      Opt.Success pnc -> Right (onConfigFile pnc)
+      Opt.CompletionInvoked _ -> Left "command-line completion was invoked"
+      Opt.Failure failure ->
+        let (msg, _exitCode) = Opt.renderFailure failure "cardano-node"
+         in Left msg
+
+  -- Pin the file being resolved, for the same reason 'cardanoConfigCliArgs' does.
+  onConfigFile pnc = pnc{pncConfigFile = Last (Just (ConfigYamlFilePath configFp))}
+
 cardanoConfigCliArgs :: FilePath -> IO (Either String Cfg.CliArgs)
-cardanoConfigCliArgs configFp = do
-  argv <- getArgs
-  let flags = dropWhile (not . ("-" `isPrefixOf`)) argv
-  pure $ case Opt.execParserPure Opt.defaultPrefs (Opt.info Cfg.parseCliArgs mempty) flags of
+cardanoConfigCliArgs configFp =
+  cardanoConfigCliLayer configFp . dropWhile (not . isPrefixOf "-") <$> getArgs
+
+-- | cardano-config's command-line layer for a given flag list, as its own parser
+-- reads it. The twin of 'nodeCliLayer', and pure for the same reason: a caller
+-- that is not the node's own process can ask for the layer of a stated command
+-- line, and the two parsers can then be given the same one.
+cardanoConfigCliLayer :: FilePath -> [String] -> Either String Cfg.CliArgs
+cardanoConfigCliLayer configFp flags =
+  case Opt.execParserPure Opt.defaultPrefs (Opt.info Cfg.parseCliArgs mempty) flags of
     Opt.Success cli -> Right (onConfigFile cli)
     Opt.CompletionInvoked _ -> Right (Cfg.defaultCliArgs configFp)
     Opt.Failure failure ->

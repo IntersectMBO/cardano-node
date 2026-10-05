@@ -22,7 +22,6 @@ module Main (main) where
 import           Control.Exception (SomeException, evaluate, try)
 import           Control.Monad (filterM)
 import           Data.List (isInfixOf, isPrefixOf)
-import           Data.Monoid (Last (..))
 
 import qualified Cardano.Configuration as Cfg
 import           Cardano.Node.Configuration.CardanoConfigAdapter
@@ -30,11 +29,15 @@ import           Cardano.Node.Configuration.CardanoConfigAdapter
 import           Cardano.Node.Configuration.CardanoConfigCompare
                    (compareConfigurations, deprecatedFlagWarnings)
 import           Cardano.Node.Configuration.CardanoConfigResolve
-                   (ConfigurationDialect (..), classifyConfigurationFile)
+                   (ConfigurationDialect (..), cardanoConfigCliLayer,
+                   classifyConfigurationFile, nodeCliLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                   makeNodeConfiguration, parseNodeConfigurationFP)
+                   defaultPartialNodeConfiguration, makeNodeConfiguration,
+                   parseNodeConfigurationFP)
+import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..))
+
+import           Data.Monoid (Last (..))
 
 import           System.Directory (doesFileExist)
 import           System.FilePath ((</>))
@@ -87,9 +90,18 @@ envelopeConfigPath = (</> "config-envelope.json") <$> fixtureDir
 -- breaks a mapped one) is still caught.
 allowedResidualLabels :: [String]
 allowedResidualLabels =
-  [ -- (2) representation: "MempoolCapacityBytesOverride: NoOverride" is an
+  [ -- (3) default mismatch: the fixture sets no DatabasePath, and the two
+    -- parsers fall back to different directories (POM to "mainnet/db/",
+    -- cardano-config to "db"). This is the one residual that changes what the
+    -- node does, so it is the one to close first.
+    "DatabaseFile"
+    -- (2) representation: the node's CLI parser always yields a shutdown target
+    -- (an absent flag reads as NoShutdown), where cardano-config leaves it unset.
+    -- Both mean "no shutdown handler" to 'maybeSpawnOnSlotSyncedShutdownHandler'.
+  , "ShutdownConfig"
+    -- (2) representation: "MempoolCapacityBytesOverride: NoOverride" is an
     -- explicit no-override value for POM but simply absent for cardano-config.
-    "MaybeMempoolCapacityOverride"
+  , "MaybeMempoolCapacityOverride"
     -- (3) default mismatch: the fixture leaves these unset; POM defaults to
     -- Nothing (no limit) while cardano-config supplies its own default of 1.
   , "MaxConcurrencyBulkSync"
@@ -120,6 +132,8 @@ tests = testGroup "cardano-config configuration dialects"
       [ testCase "the fixture is classified as legacy" testLegacyClassification
       , testCase "the two parsers diverge only on the documented residuals"
           testLegacyDualParse
+      , testCase "an absent --port means the same ephemeral port to both parsers"
+          testFlaglessPortAgrees
       ]
   , testGroup "cardano-config envelope dialect (cardano-config only)"
       [ testCase "the migrated fixture is classified as an envelope"
@@ -165,7 +179,7 @@ testLegacyDualParse :: Assertion
 testLegacyDualParse = do
   configPath <- legacyConfigPath
   adapted <- resolveWithCardanoConfig configPath
-  pomNc <- resolveWithPom configPath adapted
+  pomNc <- resolveWithPom configPath
 
   let divergences = compareConfigurations pomNc adapted
       isAllowed d = any (`isPrefixOf` d) allowedResidualLabels
@@ -180,6 +194,23 @@ testLegacyDualParse = do
   assertBool
     ("divergences outside the documented residual set: " <> show unexpected)
     (null unexpected)
+
+-- | An absent @--port@ must mean the same thing to both parsers.
+--
+-- Both spell the flag with @value 0@ ("use an ephemeral port"), so a flagless
+-- command line resolves to port 0 on either side. The distinction matters: an
+-- UNSET port is not the same as 0, because 'gatherConfiguredSockets' hands the
+-- port straight to @getaddrinfo@, which fails when neither a host address nor a
+-- service is given. Pinning this here keeps the agreement from being an accident
+-- of the two parsers being given the same command line.
+testFlaglessPortAgrees :: Assertion
+testFlaglessPortAgrees = do
+  configPath <- legacyConfigPath
+  adapted <- resolveWithCardanoConfig configPath
+  pomNc <- resolveWithPom configPath
+  let port = getLast . ncNodePortNumber . ncSocketConfig
+  port pomNc @?= Just 0
+  port adapted @?= port pomNc
 
 testEnvelopeClassification :: Assertion
 testEnvelopeClassification =
@@ -220,9 +251,15 @@ testEnvelopeResolvesToSameConfiguration = do
 -- and adapt it to the node's own 'NodeConfiguration'.
 resolveWithCardanoConfig :: FilePath -> IO NodeConfiguration
 resolveWithCardanoConfig fp = do
-  resolved <- Cfg.resolveConfigurationFromFile fp
-  (cfgNc, _warns) <-
-    either (assertFailure . ("cardano-config resolve failed: " <>) . show) pure resolved
+  (fileCfg, _warns) <- Cfg.parseConfigurationFiles fp
+  -- The same empty command line the POM side is given (see 'resolveWithPom'),
+  -- read by cardano-config's own parser. Both parsers must see the same two
+  -- inputs, or the diff reports the inputs rather than the parsers.
+  cli <- either (assertFailure . ("cardano-config CLI layer failed: " <>)) pure
+           (cardanoConfigCliLayer fp [])
+  (cfgNc, _checkWarns) <-
+    either (assertFailure . ("cardano-config resolve failed: " <>) . show) pure
+      (Cfg.resolveConfiguration cli fileCfg)
   either (assertFailure . ("adapter failed: " <>)) pure
     (cardanoConfigToNodeConfiguration cfgNc)
 
@@ -232,19 +269,15 @@ resolveWithCardanoConfig fp = do
 -- the file; mirror them from the given cardano-config result so the comparison
 -- isolates the file-parse and adapter-gap differences rather than CLI-supplied
 -- noise.
-resolveWithPom :: FilePath -> NodeConfiguration -> IO NodeConfiguration
-resolveWithPom fp adapted = do
+resolveWithPom :: FilePath -> IO NodeConfiguration
+resolveWithPom fp = do
   fileYaml <- parseNodeConfigurationFP (Just (ConfigYamlFilePath fp))
-  -- 'PartialNodeConfiguration' is a Semigroup but not a Monoid, so there is no
-  -- empty value to start from: merge defaults with the file layer (mirroring
-  -- 'buildNodeConfiguration'), then override the CLI-only fields on top.
-  let withCli =
-        (defaultPartialNodeConfiguration <> fileYaml)
-          { pncConfigFile = Last (Just (ConfigYamlFilePath fp))
-          , pncTopologyFile = Last (Just (ncTopologyFile adapted))
-          , pncDatabaseFile = Last (Just (ncDatabaseFile adapted))
-          , pncProtocolFiles = Last (Just (ncProtocolFiles adapted))
-          , pncSocketConfig = Last (Just (ncSocketConfig adapted))
-          }
+  -- The three layers a node assembles, in the node's own order: defaults, then
+  -- the file, then the command line. The command line here is the one a node
+  -- started with nothing but @--config@ has, which is not the same as no layer
+  -- at all (see 'nodeCliLayer').
+  let fileLayer = defaultPartialNodeConfiguration <> fileYaml
+      (mCliLayer, cliReport) = nodeCliLayer fp []
+  assertBool ("the node's CLI layer could not be built: " <> show cliReport) (null cliReport)
   either (assertFailure . ("POM makeNodeConfiguration failed: " <>)) pure
-    (makeNodeConfiguration withCli)
+    (makeNodeConfiguration (maybe fileLayer (fileLayer <>) mCliLayer))
