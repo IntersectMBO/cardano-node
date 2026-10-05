@@ -15,10 +15,11 @@ import           Cardano.Node.Configuration.CardanoConfigAdapter
 import           Cardano.Node.Configuration.CardanoConfigCompare
                    (compareConfigurations)
 import           Cardano.Node.Configuration.CardanoConfigResolve
-                   (ConfigurationDialect (..), classifyConfigurationFile)
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                   makeNodeConfiguration, parseNodeConfigurationFP)
+                   (ConfigurationDialect (..), classifyConfigurationFile,
+                   nodeCliPartialConfiguration)
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
+                   defaultPartialNodeConfiguration, makeNodeConfiguration,
+                   parseNodeConfigurationFP)
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser)
 import           Cardano.Node.Run (runNode)
@@ -205,11 +206,15 @@ runDualResolve resolveOpts = do
   configFp = CliArgs.configFilePath cli
 
 -- | Resolve a legacy configuration file (+ CLI) both ways and return the
--- divergences. The node (POM) side takes its CLI-supplied, file-absent fields
--- (topology / database / protocol files / socket) from the shared cardano-config
--- resolution, so the diff reflects how the two parsers read the configuration
--- FILE (plus the documented adapter gaps) rather than an independent — and
--- necessarily asymmetric — CLI reverse-mapping.
+-- divergences.
+--
+-- Both sides are built from the same two inputs, each by its own parser: the
+-- configuration file, and the flags this command was given. The node side is
+-- assembled exactly as @cardano-node run@ assembles it (node defaults, then the
+-- file, then the node's own command-line layer, see
+-- 'nodeCliPartialConfiguration'), so what @resolve@ reports is what a node
+-- started with these flags reports at startup — the database path and the
+-- shutdown configuration included.
 resolveDiscrepancies :: Cfg.CliArgs -> IO [String]
 resolveDiscrepancies cli = do
   (fileCfg, _warns) <- Cfg.parseConfigurationFiles configFp
@@ -221,16 +226,11 @@ resolveDiscrepancies cli = do
         Left adaptErr -> pure ["cardano-config configuration could not be adapted: " <> adaptErr]
         Right adaptedNc -> do
           filePartial <- parseNodeConfigurationFP (Just (ConfigYamlFilePath configFp))
-          let withCli =
-                (defaultPartialNodeConfiguration <> filePartial)
-                  { pncConfigFile    = Last (Just (ConfigYamlFilePath configFp))
-                  , pncTopologyFile  = Last (Just (ncTopologyFile adaptedNc))
-                  , pncDatabaseFile  = Last (Just (ncDatabaseFile adaptedNc))
-                  , pncProtocolFiles = Last (Just (ncProtocolFiles adaptedNc))
-                  , pncSocketConfig  = Last (Just (ncSocketConfig adaptedNc))
-                  }
-          case makeNodeConfiguration withCli of
-            Left err -> pure ["node parser (makeNodeConfiguration) failed: " <> err]
-            Right pomNc -> pure (compareConfigurations pomNc adaptedNc)
+          (mCliPartial, cliReport) <- nodeCliPartialConfiguration configFp
+          let fileLayer = defaultPartialNodeConfiguration <> filePartial
+              pom = maybe fileLayer (fileLayer <>) mCliPartial
+          case makeNodeConfiguration pom of
+            Left err -> pure (cliReport <> ["node parser (makeNodeConfiguration) failed: " <> err])
+            Right pomNc -> pure (cliReport <> compareConfigurations pomNc adaptedNc)
  where
   configFp = CliArgs.configFilePath cli
