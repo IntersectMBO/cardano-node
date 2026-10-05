@@ -74,7 +74,9 @@ envelopeConfigPath = (</> "config-envelope.json") <$> fixtureDir
 -- cardano-config resolved; the check exists precisely to surface these:
 --
 --   (1) adapter gaps — a field the adapter cannot populate from cardano-config
---       (see 'Cardano.Node.Configuration.CardanoConfigAdapter.adapterGaps');
+--       (see 'Cardano.Node.Configuration.CardanoConfigAdapter.adapterGaps'); no
+--       gap reaches this fixture, since the one the Byron configuration still
+--       has (the supported-protocol-version trio) is left out of the comparison;
 --   (2) representation differences — same meaning, different shape;
 --   (3) parser default mismatches — a field the fixture does not set (or sets
 --       under a key one parser ignores), for which the two parsers fall back to
@@ -85,12 +87,9 @@ envelopeConfigPath = (</> "config-envelope.json") <$> fixtureDir
 -- breaks a mapped one) is still caught.
 allowedResidualLabels :: [String]
 allowedResidualLabels =
-  [ -- (1) adapter gap: Byron supported-protocol-version is hard-coded 1/0/0 by
-    -- the adapter, whereas the fixture sets LastKnownBlockVersion-Major = 3.
-    "Byron protocol config"
-    -- (2) representation: "MempoolCapacityBytesOverride: NoOverride" is an
+  [ -- (2) representation: "MempoolCapacityBytesOverride: NoOverride" is an
     -- explicit no-override value for POM but simply absent for cardano-config.
-  , "MaybeMempoolCapacityOverride"
+    "MaybeMempoolCapacityOverride"
     -- (3) default mismatch: the fixture leaves these unset; POM defaults to
     -- Nothing (no limit) while cardano-config supplies its own default of 1.
   , "MaxConcurrencyBulkSync"
