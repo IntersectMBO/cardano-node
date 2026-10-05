@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
+import qualified Cardano.Api.Experimental as Exp
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -53,10 +54,11 @@ hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsDijkstra
-      sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let era = Exp.DijkstraEra
+
+      ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNodes =

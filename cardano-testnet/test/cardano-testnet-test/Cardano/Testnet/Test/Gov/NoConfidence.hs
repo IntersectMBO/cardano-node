@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.Gov.NoConfidence
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Genesis as L
@@ -63,11 +64,12 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsDijkstra
-      sbe = convert ceo
+  let era = Exp.DijkstraEra
+
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def { creationEra = asbe, creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath

@@ -15,6 +15,7 @@ module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
 
 import           Cardano.Api hiding (txId)
 import           Cardano.Api.Experimental (obtainCommonConstraints)
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (Credential, EpochInterval (EpochInterval), KeyRole (Staking))
 
 import qualified Cardano.Ledger.BaseTypes as L
@@ -63,9 +64,10 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsDijkstra
-      sbe = convert ceo
-      era = toCardanoEra sbe
+  let era = Exp.DijkstraEra
+
+      ceo = convert era
+      sbe = convert era
       eraName = eraToString era
 
       creationOptions = def
