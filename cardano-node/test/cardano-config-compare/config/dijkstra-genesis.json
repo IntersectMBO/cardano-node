@@ -1,0 +1,28 @@
+{
+  "maxRefScriptSizePerBlock": 1048576,
+  "maxRefScriptSizePerTx": 204800,
+  "refScriptCostStride": 25600,
+  "refScriptCostMultiplier": 1.2,
+  "minPoolMargin": 0.015,
+  "plutusV4CostModel": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  "leiosAnnouncementPeriodLength": 1000,
+  "leiosVotePeriodLength": 4000,
+  "leiosDiffusionPeriodLength": 7000,
+  "leiosCommitteeSize": 900,
+  "leiosQuorumStakeThreshold": 0.75,
+  "maxEndorserBlockReferencesSize": 524288,
+  "maxEndorserBlockTxsSize": 12582912,
+  "maxEndorserBlockExecutionUnits": {
+    "memory": 7000000000,
+    "steps": 2000000000000
+  },
+  "maxRefScriptSizePerEndorserBlock": 12582912,
+  "perasMinCandidateBlockAge": 90,
+  "perasHealingFactor": 0.5,
+  "perasCertBoost": 15,
+  "perasTargetCommitteeSize": 800,
+  "perasBootstrapRound": 0,
+  "perasQuorumThresholdSafetyMargin": 0.05,
+  "refInputsCostPerMultiAssetPolicy": 0,
+  "refInputsCostPerDatumByte": 0
+}
