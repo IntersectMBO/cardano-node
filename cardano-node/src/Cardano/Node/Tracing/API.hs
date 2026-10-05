@@ -150,7 +150,6 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
           pure (mempty, mempty, pure ())
 
     tracers <- mkDispatchTracers
-      nodeKernel
       stdoutTrace
       fwdTracer
       (Just ekgTrace)

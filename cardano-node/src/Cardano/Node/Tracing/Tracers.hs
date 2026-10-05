@@ -14,6 +14,7 @@
 
 module Cardano.Node.Tracing.Tracers
   ( mkDispatchTracers
+  , buildNodeTracers
   ) where
 
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
@@ -22,11 +23,15 @@ import           Cardano.Network.NodeToClient.Version ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Network.NodeToNode.Version ()
 import           Cardano.Network.OrphanInstances ()
-import           Cardano.Node.Queries (NodeKernelData)
+import           Cardano.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelectionCounters ()
+import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
-import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.NodeInfo ()
+import           Cardano.Node.Tracing.NodeStartupInfo ()
+import           Cardano.Node.Tracing.Registry
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -55,6 +60,8 @@ import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
+import           Ouroboros.Network.PeerSelection.PublicRootPeers ()
+import           Ouroboros.Network.Tracing ()
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
@@ -66,9 +73,11 @@ import           Network.Mux.Tracing ()
 
 import           Hermod.Tracing
 import qualified Hermod.Tracing.API.Tracer as HT
+import           Hermod.Tracing.HermodTracingMessage (HermodTracingMessage)
+import           Hermod.Tracing.Resources.Types ()
 
 
--- | Construct tracers for all system components.
+-- | Construct and configure the tracers for all system components.
 --
 mkDispatchTracers
   :: forall blk .
@@ -82,100 +91,119 @@ mkDispatchTracers
   , MetaTrace (TraceGsmEvent (Tip blk))
   , ToJSON (HeaderHash blk)
   )
-  => NodeKernelData blk
-  -> Trace IO FormattedMessage
+  => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> IO (Tracers RemoteAddress LocalAddress blk IO)
 
-mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
+mkDispatchTracers trBase trForward mbTrEKG trDataPoint trConfig = do
+    registry <- newRegistry ForRuntime Backends
+      { bkStdout    = trBase
+      , bkForward   = trForward
+      , bkEKG       = mbTrEKG
+      , bkDataPoint = trDataPoint
+      }
+    !tracers <- buildNodeTracers registry
+    entries <- registered registry
 
     configReflection <- emptyConfigReflection
-
-    !nodeInfoDP <- mkDataPointTracer trDataPoint
-    configureTracers configReflection trConfig [nodeInfoDP]
-
-    !nodeStartupInfoDP <- mkDataPointTracer trDataPoint
-    configureTracers configReflection trConfig [nodeStartupInfoDP]
-
-    !nodeStateDP <- mkDataPointTracer trDataPoint
-    configureTracers configReflection trConfig [nodeStateDP]
-
-    !stateTr <- mkHermodTracer trBase trForward mbTrEKG ["NodeState"]
-    configureTracers configReflection trConfig [stateTr]
-
-    !resourcesTr <- mkHermodTracer trBase trForward mbTrEKG []
-    configureTracers configReflection trConfig [resourcesTr]
-
-    !ledgerMetricsTr <- mkHermodTracer trBase trForward mbTrEKG []
-    configureTracers configReflection trConfig [ledgerMetricsTr]
-
-    !startupTr <- mkHermodTracer trBase trForward mbTrEKG ["Startup"]
-    configureTracers configReflection trConfig [startupTr]
-
-    !shutdownTr <- mkHermodTracer trBase trForward mbTrEKG ["Shutdown"]
-    configureTracers configReflection trConfig  [shutdownTr]
-
-    !chainDBTr <- mkHermodTracer' trBase trForward mbTrEKG ["ChainDB"]
-                                    withAddedToCurrentChainEmptyLimited
-    configureTracers configReflection trConfig [chainDBTr]
-
-    !nodeVersionTr <- mkHermodTracer trBase trForward mbTrEKG ["Version"]
-    configureTracers configReflection trConfig  [nodeVersionTr]
-
-    -- Filter out replayed blocks for this tracer
-    let chainDBTr' = filterTrace
-                      (\case (_, ChainDB.TraceLedgerDBEvent
-                                            (LedgerDB.LedgerReplayEvent (LedgerDB.TraceReplayProgressEvent
-                                                                        (LedgerDB.ReplayedBlock {})))) -> False
-                             (_, _) -> True)
-                      chainDBTr
-
-
-    !replayBlockTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["ChainDB", "ReplayBlock"]
-    configureTracers configReflection trConfig [replayBlockTr]
-
-    -- This tracer handles replayed blocks specially
-    !replayBlockTr' <- withReplayedBlock replayBlockTr
-
-
-    !consensusTr <-
-      mkConsensusTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig nodeKernel
-
-    !nodeToClientTr <-
-      mkNodeToClientTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
-
-    !nodeToNodeTr <-
-      mkNodeToNodeTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
-
-    !(diffusionTr :: Cardano.Diffusion.CardanoTracers IO) <-
-      mkDiffusionTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
-
-    !churnModeTr <- mkHermodTracer trBase trForward mbTrEKG ["Net", "PeerSelection", "ChurnMode"]
-    configureTracers configReflection trConfig [churnModeTr]
-
-    !rpcTr <- mkHermodTracer trBase trForward mbTrEKG ["RPC"]
-    configureTracers configReflection trConfig [rpcTr]
+    configureAll configReflection trConfig entries
 
     traceTracerInfo trBase trForward configReflection
 
-    let warnings = checkNodeTraceConfiguration' trConfig
+    let warnings = checkAll trConfig entries
     unless (null warnings) $
       traceConfigWarnings trBase trForward warnings
 
     traceEffectiveConfiguration trBase trForward trConfig
 
-    traceWith nodeVersionTr getNodeVersion
+    traceWith (nodeVersionTracer tracers) getNodeVersion
+
+    pure tracers
+
+-- | The one declaration of every trace the node constructs: each trace is
+-- built once here, through the registry, and assembled into the records the
+-- libraries expect. Nothing is configured or traced yet; the registry's entries
+-- are configured, documented and checked by the callers.
+buildNodeTracers
+  :: forall blk .
+  ( Consensus.RunNode blk
+  , TraceConstraints blk
+  , LogFormatting (LedgerEvent blk)
+  , LogFormatting
+    (TraceLabelPeer
+      (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , LogFormatting (TraceGsmEvent (Tip blk))
+  , MetaTrace (TraceGsmEvent (Tip blk))
+  , ToJSON (HeaderHash blk)
+  )
+  => Registry
+  -> IO (Tracers RemoteAddress LocalAddress blk IO)
+buildNodeTracers registry = do
+
+    !nodeInfoDP <- newDataPoint registry
+
+    !nodeStartupInfoDP <- newDataPoint registry
+
+    -- Fed by the node state projections of the other tracers; its inner names
+    -- (OpeningDbs, NodeKernelOnline, ...) have no prefix.
+    !nodeStateDP <- newDataPointWith runtimeOnly registry
+
+    !stateTr <- newTrace registry ["NodeState"]
+
+    !resourcesTr <- newTrace registry []
+
+    !ledgerMetricsTr <- newTrace registry []
+
+    !startupTr <- newTrace registry ["Startup"]
+
+    !shutdownTr <- newTrace registry ["Shutdown"]
+
+    !chainDBTr <- newTrace registry ["ChainDB"]
+    !chainDBTr' <- withAddedToCurrentChainEmptyLimited chainDBTr
+
+    !nodeVersionTr <- newTrace registry ["Version"]
+
+    -- Filter out replayed blocks for this tracer
+    let chainDBTr'' = filterTrace
+                      (\case (_, ChainDB.TraceLedgerDBEvent
+                                            (LedgerDB.LedgerReplayEvent (LedgerDB.TraceReplayProgressEvent
+                                                                        (LedgerDB.ReplayedBlock {})))) -> False
+                             (_, _) -> True)
+                      chainDBTr'
+
+
+    !replayBlockTr <- newTrace registry ["ChainDB", "ReplayBlock"]
+
+    -- This tracer handles replayed blocks specially
+    !replayBlockTr' <- withReplayedBlock replayBlockTr
+
+
+    !consensusTr <- mkConsensusTracers registry
+
+    !nodeToClientTr <- mkNodeToClientTracers registry
+
+    !nodeToNodeTr <- mkNodeToNodeTracers registry
+
+    !(diffusionTr :: Cardano.Diffusion.CardanoTracers IO) <- mkDiffusionTracers registry
+
+    -- TraceChurnMode's MetaTrace instance (cardano-diffusion, Churn.hs) has an
+    -- empty inner namespace and no severity for the documentation, so the
+    -- documentation and the consistency check would warn about it.
+    !churnModeTr <- newTraceWith runtimeOnly registry ["Net", "PeerSelection", "ChurnMode"]
+
+    !rpcTr <- newTrace registry ["RPC"]
+
+    -- hermod's own messages: emitted by hermod, documented here.
+    docOnly @HermodTracingMessage registry ["Reflection"]
 
     pure Tracers
       {
         -- Library-facing fields take contra-tracer's carrier, so the node
         -- adapts; its own tracers stay hermod traces.
-        chainDBTracer = mkTracer (traceWith chainDBTr')
+        chainDBTracer = mkTracer (traceWith chainDBTr'')
                       <> mkTracer (traceWith replayBlockTr')
                       <> mkTracer (SR.traceNodeStateChainDB nodeStateDP)
       , consensusTracers = consensusTr
@@ -183,17 +211,16 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
       , nodeToClientTracers = nodeToClientTr
       , nodeToNodeTracers = nodeToNodeTr
       , diffusionTracers = diffusionTr
-      , startupTracer   = HT.mkTracer (traceWith startupTr)
+      , startupTracer   = startupTr
                          <> HT.mkTracer (SR.traceNodeStateStartup nodeStateDP)
-      , shutdownTracer  = HT.mkTracer (traceWith shutdownTr)
-                         <> HT.mkTracer (SR.traceNodeStateShutdown nodeStateDP)
-      , nodeInfoTracer  = HT.mkTracer (traceWith nodeInfoDP)
-      , nodeStartupInfoTracer = HT.mkTracer (traceWith nodeStartupInfoDP)
-      , nodeStateTracer = HT.mkTracer (traceWith stateTr)
-                          <> HT.mkTracer (traceWith nodeStateDP)
-      , nodeVersionTracer = HT.mkTracer (traceWith nodeVersionTr)
-      , resourcesTracer = HT.mkTracer (traceWith resourcesTr)
-      , ledgerMetricsTracer = HT.mkTracer (traceWith ledgerMetricsTr)
+      , shutdownTracer  = shutdownTr
+                         <> contramap SR.NodeShutdown nodeStateDP
+      , nodeInfoTracer  = nodeInfoDP
+      , nodeStartupInfoTracer = nodeStartupInfoDP
+      , nodeStateTracer = stateTr <> nodeStateDP
+      , nodeVersionTracer = nodeVersionTr
+      , resourcesTracer = resourcesTr
+      , ledgerMetricsTracer = ledgerMetricsTr
       , rpcTracer = mkTracer (traceWith rpcTr)
     }
 
@@ -206,23 +233,13 @@ mkConsensusTracers :: forall blk.
   , MetaTrace (TraceGsmEvent (Tip blk))
   , ToJSON (HeaderHash blk)
   )
-  => ConfigReflection
-  -> Trace IO FormattedMessage
-  -> Trace IO FormattedMessage
-  -> Maybe (Trace IO FormattedMessage)
-  -> Trace IO DataPoint
-  -> TraceConfig
-  -> NodeKernelData blk
+  => Registry
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
-mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig _nodeKernel = do
-    !chainSyncClientTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                 ["ChainSync", "Client"]
-    configureTracers configReflection trConfig [chainSyncClientTr]
-    !chainSyncServerHeaderTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["ChainSync", "ServerHeader"]
-    configureTracers configReflection trConfig [chainSyncServerHeaderTr]
+mkConsensusTracers registry = do
+    let mbTrEKG = bkEKG (regBackends registry)
+
+    !chainSyncClientTr  <- newTrace registry ["ChainSync", "Client"]
+    !chainSyncServerHeaderTr <- newTrace registry ["ChainSync", "ServerHeader"]
 
     -- Special chainSync server metrics
     -- any server header event advances the counter
@@ -233,25 +250,13 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                   [CounterM "ChainSync.HeadersServed" CounterIncrement]))
               (mkMetricsTracer mbTrEKG)
 
-    !chainSyncServerBlockTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["ChainSync", "ServerBlock"]
-    configureTracers configReflection trConfig [chainSyncServerBlockTr]
+    !chainSyncServerBlockTr <- newTrace registry ["ChainSync", "ServerBlock"]
 
-    !consensusSanityCheckTr <- mkHermodTracer
-                 trBase trForward mbTrEKG
-                 ["Consensus", "SanityCheck"]
-    configureTracers configReflection trConfig [consensusSanityCheckTr]
+    !consensusSanityCheckTr <- newTrace registry ["Consensus", "SanityCheck"]
 
-    !blockFetchDecisionTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockFetch", "Decision"]
-    configureTracers configReflection trConfig [blockFetchDecisionTr]
+    !blockFetchDecisionTr  <- newTrace registry ["BlockFetch", "Decision"]
 
-    !blockFetchClientTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockFetch", "Client"]
-    configureTracers configReflection trConfig [blockFetchClientTr]
+    !blockFetchClientTr  <- newTrace registry ["BlockFetch", "Client"]
 
     -- Special blockFetch client metrics, send directly to EKG
     !blockFetchClientMetricsTr <- do
@@ -262,119 +267,55 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                                               BlockFetch.CompletedBlockFetch {} -> True
                                               _ -> False)
                  tr1
+    -- The metrics above bypass configuration; this documents them.
+    docOnly @ClientMetrics registry ["BlockFetch", "Client"]
 
-    !blockFetchServerTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockFetch", "Server"]
-    configureTracers configReflection trConfig [blockFetchServerTr]
+    !blockFetchServerTr  <- newTrace registry ["BlockFetch", "Server"]
 
     !servedBlockLatestTr <- servedBlockLatest mbTrEKG
 
-    !forgeKESInfoTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Forge", "StateInfo"]
-    configureTracers configReflection trConfig [forgeKESInfoTr]
+    !forgeKESInfoTr  <- newTrace registry ["Forge", "StateInfo"]
 
-    !txInboundTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["TxSubmission", "TxInbound"]
-    configureTracers configReflection trConfig [txInboundTr]
+    !txInboundTr  <- newTrace registry ["TxSubmission", "TxInbound"]
 
-    !txOutboundTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["TxSubmission", "TxOutbound"]
-    configureTracers configReflection trConfig [txOutboundTr]
+    !txOutboundTr  <- newTrace registry ["TxSubmission", "TxOutbound"]
 
-    !localTxSubmissionServerTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["TxSubmission", "LocalServer"]
-    configureTracers configReflection trConfig [localTxSubmissionServerTr]
+    !localTxSubmissionServerTr <- newTrace registry ["TxSubmission", "LocalServer"]
 
-    !mempoolTr   <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Mempool"]
-    configureTracers configReflection trConfig [mempoolTr]
+    !mempoolTr   <- newTrace registry ["Mempool"]
 
-    !forgeTr    <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Forge", "Loop"]
-    configureTracers configReflection trConfig [forgeTr]
+    !forgeTr    <- newTrace registry ["Forge", "Loop"]
 
-    !forgeStatsTr <- mkHermodTracer'
-                trBase trForward mbTrEKG
-                ["Forge", "Stats"]
-                calcForgeStats
-    configureTracers configReflection trConfig [forgeStatsTr]
+    !forgeStatsTr <- newTrace registry ["Forge", "Stats"]
+    !forgeStatsTr' <- calcForgeStats forgeStatsTr
 
-    !blockchainTimeTr   <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockchainTime"]
-    configureTracers configReflection trConfig [blockchainTimeTr]
+    !blockchainTimeTr   <- newTrace registry ["BlockchainTime"]
 
-    !keepAliveClientTr  <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net"]
-    configureTracers configReflection trConfig [keepAliveClientTr]
+    !keepAliveClientTr  <- newTrace registry ["Net"]
 
-    !consensusStartupErrorTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "Startup"]
-    configureTracers configReflection trConfig [consensusStartupErrorTr]
+    !consensusStartupErrorTr <- newTrace registry ["Consensus", "Startup"]
 
-    !consensusGddTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "GDD"]
-    configureTracers configReflection trConfig [consensusGddTr]
+    !consensusGddTr <- newTrace registry ["Consensus", "GDD"]
 
-    !consensusGsmTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "GSM"]
-    configureTracers configReflection trConfig [consensusGsmTr]
+    !consensusGsmTr <- newTrace registry ["Consensus", "GSM"]
 
-    !consensusCsjTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "CSJ"]
-    configureTracers configReflection trConfig [consensusCsjTr]
+    !consensusCsjTr <- newTrace registry ["Consensus", "CSJ"]
 
-    !consensusKesAgentTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "KESAgent"]
-    configureTracers configReflection trConfig [consensusKesAgentTr]
+    !consensusKesAgentTr <- newTrace registry ["Consensus", "KESAgent"]
 
-    !consensusDbfTr <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Consensus", "DevotedBlockFetch"]
-    configureTracers configReflection trConfig [consensusDbfTr]
+    !consensusDbfTr <- newTrace registry ["Consensus", "DevotedBlockFetch"]
 
-    !txLogicTracer  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["txLogic", "Remote"]
-    configureTracers configReflection trConfig [txLogicTracer]
+    !txLogicTracer  <-  newTrace registry ["txLogic", "Remote"]
 
-    !txCountersTracer  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["txCounters", "Remote"]
-    configureTracers configReflection trConfig [txCountersTracer]
+    !txCountersTracer  <-  newTrace registry ["txCounters", "Remote"]
 
-    !txPerasCertIn  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Inbound"]
-    configureTracers configReflection trConfig [txPerasCertIn]
+    !txPerasCertIn  <-  newTrace registry ["Peras", "Cert", "Inbound"]
 
-    !txPerasCertOut  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Outbound"]
-    configureTracers configReflection trConfig [txPerasCertOut]
+    !txPerasCertOut  <-  newTrace registry ["Peras", "Cert", "Outbound"]
 
-    !txPerasVoteIn  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Inbound"]
-    configureTracers configReflection trConfig [txPerasVoteIn]
+    !txPerasVoteIn  <-  newTrace registry ["Peras", "Vote", "Inbound"]
 
-    !txPerasVoteOut  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Outbound"]
-    configureTracers configReflection trConfig [txPerasVoteOut]
+    !txPerasVoteOut  <-  newTrace registry ["Peras", "Vote", "Outbound"]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = mkTracer $
@@ -409,7 +350,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.forgeTracer =
            mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
            <>
-           mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
+           mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr' x)
       , Consensus.blockchainTimeTracer = mkTracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = mkTracer $
@@ -436,37 +377,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 
 mkNodeToClientTracers :: forall blk.
      Consensus.RunNode blk
-  => ConfigReflection
-  -> Trace IO FormattedMessage
-  -> Trace IO FormattedMessage
-  -> Maybe (Trace IO FormattedMessage)
-  -> Trace IO DataPoint
-  -> TraceConfig
+  => Registry
   -> IO (NodeToClient.Tracers IO (ConnectionId LocalAddress) blk DeserialiseFailure)
-mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
-    !chainSyncTr <-
-      mkHermodTracer
-        trBase trForward mbTrEKG
-        ["ChainSync", "Local"]
-    configureTracers configReflection trConfig [chainSyncTr]
+mkNodeToClientTracers registry = do
+    !chainSyncTr <- newTrace registry ["ChainSync", "Local"]
 
-    !txMonitorTr <-
-      mkHermodTracer
-        trBase trForward mbTrEKG
-        ["TxSubmission", "MonitorClient"]
-    configureTracers configReflection trConfig [txMonitorTr]
+    !txMonitorTr <- newTrace registry ["TxSubmission", "MonitorClient"]
 
-    !txSubmissionTr <-
-      mkHermodTracer
-        trBase trForward mbTrEKG
-        ["TxSubmission", "Local"]
-    configureTracers configReflection trConfig [txSubmissionTr]
+    !txSubmissionTr <- newTrace registry ["TxSubmission", "Local"]
 
-    !stateQueryTr <-
-      mkHermodTracer
-        trBase trForward mbTrEKG
-        ["StateQueryServer"]
-    configureTracers configReflection trConfig [stateQueryTr]
+    !stateQueryTr <- newTrace registry ["StateQueryServer"]
 
     pure $ NtC.Tracers
       { NtC.tChainSyncTracer = mkTracer $
@@ -482,59 +402,27 @@ mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trC
 mkNodeToNodeTracers :: forall blk.
   ( Consensus.RunNode blk
   , TraceConstraints blk)
-  => ConfigReflection
-  -> Trace IO FormattedMessage
-  -> Trace IO FormattedMessage
-  -> Maybe (Trace IO FormattedMessage)
-  -> Trace IO DataPoint
-  -> TraceConfig
+  => Registry
   -> IO (NodeToNode.Tracers IO RemoteAddress blk DeserialiseFailure)
-mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
+mkNodeToNodeTracers registry = do
 
-    !chainSyncTracer <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["ChainSync", "Remote"]
-    configureTracers configReflection trConfig [chainSyncTracer]
+    !chainSyncTracer <-  newTrace registry ["ChainSync", "Remote"]
 
-    !chainSyncSerialisedTr <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["ChainSync", "Remote", "Serialised"]
-    configureTracers configReflection trConfig [chainSyncSerialisedTr]
+    !chainSyncSerialisedTr <-  newTrace registry ["ChainSync", "Remote", "Serialised"]
 
-    !blockFetchTr  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockFetch", "Remote"]
-    configureTracers configReflection trConfig [blockFetchTr]
+    !blockFetchTr  <-  newTrace registry ["BlockFetch", "Remote"]
 
-    !blockFetchSerialisedTr <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["BlockFetch", "Remote", "Serialised"]
-    configureTracers configReflection trConfig [blockFetchSerialisedTr]
+    !blockFetchSerialisedTr <-  newTrace registry ["BlockFetch", "Remote", "Serialised"]
 
-    !txSubmission2Tracer  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["TxSubmission", "Remote"]
-    configureTracers configReflection trConfig [txSubmission2Tracer]
+    !txSubmission2Tracer  <-  newTrace registry ["TxSubmission", "Remote"]
 
-    !keepAliveTracer  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["KeepAlive", "Remote"]
-    configureTracers configReflection trConfig [keepAliveTracer]
+    !keepAliveTracer  <-  newTrace registry ["KeepAlive", "Remote"]
 
-    !peerSharingTracer  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["PeerSharing", "Remote"]
-    configureTracers configReflection trConfig [peerSharingTracer]
+    !peerSharingTracer  <-  newTrace registry ["PeerSharing", "Remote"]
 
-    !txPerasCertDiffusion  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Cert", "Remote"]
-    configureTracers configReflection trConfig [txPerasCertDiffusion]
+    !txPerasCertDiffusion  <-  newTrace registry ["Peras", "Cert", "Remote"]
 
-    !txPerasVoteDiffusion  <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Peras", "Vote", "Remote"]
-    configureTracers configReflection trConfig [txPerasVoteDiffusion]
+    !txPerasVoteDiffusion  <-  newTrace registry ["Peras", "Vote", "Remote"]
 
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = mkTracer $
@@ -564,139 +452,64 @@ mkDiffusionTracers ::
             Mux.Trace
         )
     ) =>
-    ConfigReflection ->
-    Trace IO FormattedMessage ->
-    Trace IO FormattedMessage ->
-    Maybe (Trace IO FormattedMessage) ->
-    Trace IO DataPoint ->
-    TraceConfig ->
+    Registry ->
     IO (Cardano.Diffusion.CardanoTracers IO)
-mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
+mkDiffusionTracers registry = do
 
-    !dtMuxTr   <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Remote"]
-    configureTracers configReflection trConfig [dtMuxTr]
+    !dtMuxTr   <-  newTrace registry ["Net", "Mux", "Remote"]
 
-    !dtChannelTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Remote", "Channel"]
-    configureTracers configReflection trConfig [dtChannelTracer]
+    !dtChannelTracer <- newTrace registry ["Net", "Mux", "Remote", "Channel"]
 
-    !dtBearerTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Remote", "Bearer"]
-    configureTracers configReflection trConfig [dtBearerTracer]
+    -- Mux.BearerTrace's TraceEmitDeltaQ has no severity (network-mux,
+    -- Network/Mux/Tracing.hs), so the documentation would warn.
+    !dtBearerTracer <- newTraceWith undocumented registry ["Net", "Mux", "Remote", "Bearer"]
 
-    !dtHandshakeTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Handshake", "Remote"]
-    configureTracers configReflection trConfig [dtHandshakeTracer]
+    !dtHandshakeTracer <- newTrace registry ["Net", "Handshake", "Remote"]
 
-    !dtLocalMuxTr   <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Local"]
-    configureTracers configReflection trConfig [dtLocalMuxTr]
+    !dtLocalMuxTr   <-  newTrace registry ["Net", "Mux", "Local"]
 
-    !dtLocalChannelTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Local", "Channel"]
-    configureTracers configReflection trConfig [dtLocalChannelTracer]
+    !dtLocalChannelTracer <- newTrace registry ["Net", "Mux", "Local", "Channel"]
 
-    !dtLocalBearerTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Mux", "Local", "Bearer"]
-    configureTracers configReflection trConfig [dtLocalBearerTracer]
+    !dtLocalBearerTracer <- newTraceWith undocumented registry ["Net", "Mux", "Local", "Bearer"]
 
-    !dtLocalHandshakeTracer <- mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Net", "Handshake", "Local"]
-    configureTracers configReflection trConfig [dtLocalHandshakeTracer]
+    !dtLocalHandshakeTracer <- newTrace registry ["Net", "Handshake", "Local"]
 
-    !dtDiffusionInitializationTr   <-  mkHermodTracer
-                trBase trForward mbTrEKG
-                ["Startup", "DiffusionInit"]
-    configureTracers configReflection trConfig [dtDiffusionInitializationTr]
+    !dtDiffusionInitializationTr   <-  newTrace registry ["Startup", "DiffusionInit"]
 
-    !localRootPeersTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "Peers", "LocalRoot"]
-    configureTracers configReflection trConfig [localRootPeersTr]
+    !localRootPeersTr  <-  newTrace registry ["Net", "Peers", "LocalRoot"]
 
-    !publicRootPeersTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "Peers", "PublicRoot"]
-    configureTracers configReflection trConfig [publicRootPeersTr]
+    !publicRootPeersTr  <-  newTrace registry ["Net", "Peers", "PublicRoot"]
 
-    !peerSelectionTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Selection"]
-    configureTracers configReflection trConfig [peerSelectionTr]
+    !peerSelectionTr  <-  newTrace registry ["Net", "PeerSelection", "Selection"]
 
-    !debugPeerSelectionTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Initiator"]
-    configureTracers configReflection trConfig [debugPeerSelectionTr]
+    !debugPeerSelectionTr  <-  newTrace registry ["Net", "PeerSelection", "Initiator"]
 
-    !peerSelectionCountersTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection"]
-    configureTracers configReflection trConfig [peerSelectionCountersTr]
+    !peerSelectionCountersTr  <-  newTrace registry ["Net", "PeerSelection"]
 
-    !peerSelectionActionsTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Actions"]
-    configureTracers configReflection trConfig [peerSelectionActionsTr]
+    !peerSelectionActionsTr  <-  newTrace registry ["Net", "PeerSelection", "Actions"]
 
-    !connectionManagerTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "ConnectionManager", "Remote"]
-    configureTracers configReflection trConfig [connectionManagerTr]
+    !connectionManagerTr  <-  newTrace registry ["Net", "ConnectionManager", "Remote"]
 
-    !connectionManagerTransitionsTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "ConnectionManager", "Transition"]
-    configureTracers configReflection trConfig [connectionManagerTransitionsTr]
+    !connectionManagerTransitionsTr  <-  newTrace registry ["Net", "ConnectionManager", "Transition"]
 
-    !serverTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "Server", "Remote"]
-    configureTracers configReflection trConfig [serverTr]
+    !serverTr  <-  newTrace registry ["Net", "Server", "Remote"]
 
-    !inboundGovernorTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "InboundGovernor", "Remote"]
-    configureTracers configReflection trConfig [inboundGovernorTr]
+    !inboundGovernorTr  <-  newTrace registry ["Net", "InboundGovernor", "Remote"]
 
-    !localInboundGovernorTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "InboundGovernor", "Local"]
-    configureTracers configReflection trConfig [localInboundGovernorTr]
+    !localInboundGovernorTr  <-  newTrace registry ["Net", "InboundGovernor", "Local"]
 
-    !inboundGovernorTransitionsTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "InboundGovernor", "Transition"]
-    configureTracers configReflection trConfig [inboundGovernorTransitionsTr]
+    !inboundGovernorTransitionsTr  <-  newTrace registry ["Net", "InboundGovernor", "Transition"]
 
-    !localConnectionManagerTr  <-  mkHermodTracer
-      trBase trForward Nothing -- never conflate metrics of the same name with those originating from `connectionManagerTr`
-      ["Net", "ConnectionManager", "Local"]
-    configureTracers configReflection trConfig [localConnectionManagerTr]
+    -- never conflate metrics of the same name with those originating from `connectionManagerTr`
+    !localConnectionManagerTr  <-  newTraceWith withoutMetrics registry ["Net", "ConnectionManager", "Local"]
 
-    !localServerTr  <-  mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "Server", "Local"]
-    configureTracers configReflection trConfig [localServerTr]
+    !localServerTr  <-  newTrace registry ["Net", "Server", "Local"]
 
-    !dtLedgerPeersTr   <- mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "Peers", "Ledger"]
-    configureTracers configReflection trConfig [dtLedgerPeersTr]
+    !dtLedgerPeersTr   <- newTrace registry ["Net", "Peers", "Ledger"]
 
-    !dtDnsTr  <- mkHermodTracer
-      trBase trForward mbTrEKG
-      ["Net", "DNS"]
-    configureTracers configReflection trConfig [dtDnsTr]
+    -- DNSTrace's MetaTrace instance (ouroboros-network, DNSActions.hs) has no
+    -- severity for the documentation, so the documentation would warn.
+    !dtDnsTr  <- newTraceWith undocumented registry ["Net", "DNS"]
 
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer = mkTracer $

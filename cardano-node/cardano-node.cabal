@@ -105,6 +105,7 @@ library
                         Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
+                        Cardano.Node.Tracing.Registry
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
