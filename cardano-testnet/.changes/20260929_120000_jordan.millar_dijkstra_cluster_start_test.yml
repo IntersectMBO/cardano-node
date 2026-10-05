@@ -1,0 +1,5 @@
+pr: 6709
+kind:
+  - test
+description: |
+  Added the `Hard fork to Dijkstra` integration test. It starts a cluster in Conway at protocol version 10, then hard forks it through governance the way mainnet will: a `HardForkInitiation` action to PV 11.0, voted for by the default DReps and SPO and enacted, followed by a chained `HardForkInitiation` action to PV 12.0. It then asserts that `query tip` and the ledger state served over node-to-client both report the Dijkstra era before checking block production and clean shutdown. The generated node configuration now sets `ExperimentalHardForksEnabled: true` for every era: without it the node declares PV11 as its maximum protocol version and rejects its own blocks with `ObsoleteNode` once the ledger reaches PV12.
