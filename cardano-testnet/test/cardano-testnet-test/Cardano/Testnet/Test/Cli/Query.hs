@@ -82,8 +82,9 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let sbe = ShelleyBasedEraConway
-      ceo = ConwayEraOnwardsConway
+  let ceo = ConwayEraOnwardsConway
+      sbe = convert ceo
+      
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
