@@ -183,7 +183,7 @@ createSPOGenesisAndFiles
         }
   alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
-      dijkstraGenesis' = dijkstraGenesisDefaults
+      dijkstraGenesis' = Defaults.defaultDijkstraGenesis
 
   (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
      <- resolveOnChainParams onChainParams
