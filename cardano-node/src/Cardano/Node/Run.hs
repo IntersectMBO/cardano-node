@@ -228,7 +228,7 @@ handleNodeWithTracers
      -- too; 'Nothing' leaves it to trace-dispatcher to read the file.
   -> SomeConsensusProtocol
   -> IO ()
-handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) = do
+handleNodeWithTracers cmdPc nc mTrConfig (SomeConsensusProtocol blockType runP) = do
   (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
