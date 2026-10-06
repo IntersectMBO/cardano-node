@@ -114,19 +114,24 @@ source-repository-package
     grapesy
     grpc-spec
 
+-- cardano-api master after IntersectMBO/cardano-api#1328 (consensus 5.0 / ledger 1.22) and
+-- IntersectMBO/cardano-api#1361 (Dijkstra sub-transaction API).
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-api
-  tag: d612005d7f4c9fecc6d21d1c126cdd4e9dff018f
-  --sha256: sha256-6mBza4a3Plu9f3ZFfJNUufj5ckx7bNefvYW8atUz0j8=
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: c9943eb31ca918deb64cc5bc4949048749ed6303
+  --sha256: sha256-2we4ypKkedQYc7N+LVC2rdQGhqL9ll0wX9JTOiS8LPg=
   subdir:
     cardano-api
     cardano-rpc
 
+-- TEMPORARY: cardano-cli with the `dijkstra transaction sub-transaction` commands
+-- (IntersectMBO/cardano-cli#1453, on top of the 11.2 bounds update), needed by the
+-- "Nested transaction swap" test. Replace once #1453 is merged and released.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 64fce9fbdc9dfdc43d55418832d3f6e268ef90d8
-  --sha256: sha256-TVS+ajUawyb0t0oDmovBzNEh7e7LMcioD4bfgx/8ytE=
+  tag: c5062645d80bc5ea019c48899403c455eca1a6b7
+  --sha256: sha256-iKFQLcNSV55OGVEEFT4DITx545xsn4BDRixKiBdK3nQ=
   subdir:
     cardano-cli
