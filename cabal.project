@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-10-05T13:20:29Z
+  , cardano-haskell-packages 2026-10-06T13:07:09Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -104,6 +104,10 @@ allow-newer:
 -- These need to be deleted before 11.2 is released
 allow-newer:
   , ekg-forward:ouroboros-network
+  -- these bound ouroboros-consensus ^>=5.0, but we take 5.1.0.0 from the
+  -- source-repository-package below
+  , cardano-api:ouroboros-consensus
+  , dmq-node:ouroboros-consensus
 
 source-repository-package
   type: git
@@ -130,3 +134,11 @@ source-repository-package
   --sha256: sha256-TVS+ajUawyb0t0oDmovBzNEh7e7LMcioD4bfgx/8ytE=
   subdir:
     cardano-cli
+
+-- Temporary: ouroboros-consensus 5.1.0.0 (the snapshot policy startup trace).
+-- Delete once it is published to CHaP.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 3a3c42d7ce5ecd5692b4cf732af8ffff033bd2b5
+  --sha256: sha256-mUNZci9Z759hLndec9UzV/viBv2CAA1qsCWh031JS7M=

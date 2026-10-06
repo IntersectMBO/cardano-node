@@ -127,7 +127,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.7
-                      , cardano-config ^>= 2.1
+                      , cardano-config ^>= 2.2
                       , cardano-crypto-class ^>=2.6
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -165,7 +165,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 5.0
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 5.1
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.3
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.3
                       , prettyprinter
@@ -204,7 +204,7 @@ executable cardano-node
   autogen-modules:      Paths_cardano_node
 
   build-depends:        base
-                      , cardano-config ^>= 2.1
+                      , cardano-config ^>= 2.2
                       , cardano-config:commands
                       , cardano-crypto-class
                       , cardano-git-rev
@@ -219,7 +219,7 @@ test-suite cardano-config-compare-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
-                      , cardano-config ^>= 2.1
+                      , cardano-config ^>= 2.2
                       , cardano-node
                       , directory
                       , filepath

@@ -774,8 +774,14 @@ defaultPartialNodeConfiguration =
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncProtocolConfig = mempty
-    , pncMaxConcurrencyBulkSync = mempty
-    , pncMaxConcurrencyDeadline = mempty
+    , -- Leaving these unset means "do not override the block-fetch defaults",
+      -- which are 1 and 1 (see 'Cardano.defaultBlockFetchConfiguration'). State
+      -- that value instead of implying it, so that the configuration the node
+      -- runs on says what the concurrency is. cardano-config's own default layer
+      -- pins the same 1, so the two must be changed together, and either one
+      -- changing on its own shows up as a divergence at startup.
+      pncMaxConcurrencyBulkSync = Last (Just (MaxConcurrencyBulkSync 1))
+    , pncMaxConcurrencyDeadline = Last (Just (MaxConcurrencyDeadline 1))
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -793,7 +799,13 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
-    , pncChainSyncIdleTimeout     = mempty
+    , pncChainSyncIdleTimeout     =
+        Last (Just (case Cardano.defaultChainSyncIdleTimeout of
+                      Cardano.ChainSyncIdleTimeout t -> t
+                      -- 'customizeChainSyncTimeout' in "Cardano.Node.Run" reads
+                      -- 0 back as "no idle timeout".
+                      Cardano.ChainSyncNoIdleTimeout -> 0))
+      -- https://ouroboros-network.cardano.intersectmbo.org/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultChainSyncIdleTimeout
     , pncMempoolTimeoutSoft       = mempty
     , pncMempoolTimeoutHard       = mempty
     , pncMempoolTimeoutCapacity   = mempty

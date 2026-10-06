@@ -154,10 +154,15 @@ cardanoConfigToPartialNodeConfiguration cfg =
       , pncMaybeMempoolCapacityOverride =
           Last (fmap (MempoolCapacityBytesOverride . ByteSize32 . fromIntegral)
                      (strictMaybeToMaybe (Cfg.mempoolCapacityOverride mempCfg)))
-      , pncShutdownConfig =
+      , -- An absent shutdown target is 'NoShutdown', not "unset": that is what
+        -- the node's own CLI parser yields when no @--shutdown-on-*@ flag is
+        -- given, and 'maybeSpawnOnSlotSyncedShutdownHandler' arms no handler for
+        -- either spelling. State the same value the node states.
+        pncShutdownConfig =
           Last (Just (ShutdownConfig
                         (strictMaybeToMaybe (Cfg.shutdownIPC cfg))
-                        (fmap toNodeShutdownOn (strictMaybeToMaybe (Cfg.shutdownOnTarget cfg)))))
+                        (Just (maybe NoShutdown toNodeShutdownOn
+                                 (strictMaybeToMaybe (Cfg.shutdownOnTarget cfg))))))
       , pncResponderCoreAffinityPolicy =
           Last (Just (fromCfgAffinity (runIdentity (Cfg.responderCoreAffinityPolicy netCfg))))
       , pncTxSubmissionLogicVersion =

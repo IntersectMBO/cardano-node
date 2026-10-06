@@ -90,32 +90,11 @@ envelopeConfigPath = (</> "config-envelope.json") <$> fixtureDir
 -- breaks a mapped one) is still caught.
 allowedResidualLabels :: [String]
 allowedResidualLabels =
-  [ -- (3) default mismatch: the fixture sets no DatabasePath, and the two
-    -- parsers fall back to different directories (POM to "mainnet/db/",
-    -- cardano-config to "db"). This is the one residual that changes what the
-    -- node does, so it is the one to close first.
-    "DatabaseFile"
-    -- (2) representation: the node's CLI parser always yields a shutdown target
-    -- (an absent flag reads as NoShutdown), where cardano-config leaves it unset.
-    -- Both mean "no shutdown handler" to 'maybeSpawnOnSlotSyncedShutdownHandler'.
-  , "ShutdownConfig"
-    -- (2) representation: "MempoolCapacityBytesOverride: NoOverride" is an
-    -- explicit no-override value for POM but simply absent for cardano-config.
-  , "MaybeMempoolCapacityOverride"
-    -- (3) default mismatch: the fixture leaves these unset; POM defaults to
-    -- Nothing (no limit) while cardano-config supplies its own default of 1.
-  , "MaxConcurrencyBulkSync"
-  , "MaxConcurrencyDeadline"
-    -- (2)/(3): cardano-config ships a QueryBatchSize where the node has none,
+  [ -- (2)/(3): cardano-config ships a QueryBatchSize where the node has none,
     -- and it states the snapshot interval as the explicit 86400 slots where the
     -- node leaves it at DefaultSnapshotInterval, which is the same 40*k slots
     -- named rather than spelled out. The rest of the snapshot policy agrees.
-  , "LedgerDbConfig"
-    -- (3) default mismatch: the fixture leaves ChainSyncIdleTimeout unset. POM
-    -- treats that as "no override" and lets the diffusion layer pick, while
-    -- cardano-config states the same value (3373s) as a default, so the node
-    -- sees it as an override.
-  , "ChainSyncIdleTimeout"
+    "LedgerDbConfig"
   ]
 
 main :: IO ()
