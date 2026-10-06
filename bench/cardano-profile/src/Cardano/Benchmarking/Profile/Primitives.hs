@@ -102,7 +102,13 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
-  , analysisSizeSmall, analysisSizeModerate, analysisSizeModerate2, analysisSizeFull
+  , analysisSizeSmall, analysisSizeModerate, analysisSizeModerate2
+  , analysisSizeFull
+  , analysisAnnouncesOwnEb, analysisPredecessorAnnouncesEb
+  , analysisCertifiesPredecessorEb, analysisNotCertifiesPredecessorEb
+  , analysisSuccessorCertifiesOwnEb, analysisSuccessorNotCertifiesOwnEb
+  , analysisOwnEbHasQuorum, analysisOwnEbNoQuorum
+  , analysisPredecessorEbHasQuorum, analysisPredecessorEbNoQuorum
   , analysisUnitary, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
   , cBlockMinimumAdoptions
 
@@ -901,6 +907,64 @@ analysisSizeModerate2 = analysisFiltersAppend "size-moderate-2"
 -- for 88k blocks: larger than 79.2k
 analysisSizeFull :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeFull = analysisFiltersAppend "size-full"
+
+
+-- Leios. Each name says WHOSE endorser block it is about: "Own" is the one the
+-- block itself announced, "Predecessor" the one the block before it announced.
+-- They are axioms over one chain edge, conjoin them to ask anything else.
+
+-- The blocks that announced an endorser block of their own, which is nearly all
+-- of them under load: a forger announces whenever its mempool is non-empty. Its
+-- use is conjunction, with "own-eb-no-quorum" it isolates the blocks whose
+-- endorser block was announced and then failed its vote, which that filter
+-- alone cannot tell apart from announcing nothing.
+analysisAnnouncesOwnEb :: HasCallStack => Types.Profile -> Types.Profile
+analysisAnnouncesOwnEb = analysisFiltersAppend "announces-own-eb"
+
+-- The blocks whose PREDECESSOR announced an endorser block, so the blocks that
+-- were that endorser block's single chance to be certified. Nearly every block
+-- once there is load, so a near no-op alone; it earns its keep conjoined.
+analysisPredecessorAnnouncesEb :: HasCallStack => Types.Profile -> Types.Profile
+analysisPredecessorAnnouncesEb = analysisFiltersAppend "predecessor-announces-eb"
+
+-- Did the block certify its PREDECESSOR's endorser block, or not. Certifying is
+-- the only Leios work that belongs to a block: carrying the certificate and
+-- applying the endorser block's transactions. Fetching and voting happens in
+-- every node per endorser block and belongs to no block. Such a block carries
+-- no transactions of its own, so "size-full" rejects every one of them.
+-- Conjoin either with "predecessor-announces-eb" to split the blocks that had
+-- the chance into the ones that took it and the ones that did not.
+analysisCertifiesPredecessorEb, analysisNotCertifiesPredecessorEb
+  :: HasCallStack => Types.Profile -> Types.Profile
+analysisCertifiesPredecessorEb    = analysisFiltersAppend "certifies-predecessor-eb"
+analysisNotCertifiesPredecessorEb = analysisFiltersAppend "not-certifies-predecessor-eb"
+
+-- Did the SUCCESSOR certify this block's OWN endorser block, that is, did the
+-- endorser block this block made reach the chain. The same fact as
+-- "certifies-predecessor-eb" on the successor, seen from the announcer, so the
+-- two give the same partition of chain edges and differ only in whose timings
+-- you analyse.
+analysisSuccessorCertifiesOwnEb, analysisSuccessorNotCertifiesOwnEb
+  :: HasCallStack => Types.Profile -> Types.Profile
+analysisSuccessorCertifiesOwnEb    = analysisFiltersAppend "successor-certifies-own-eb"
+analysisSuccessorNotCertifiesOwnEb = analysisFiltersAppend "successor-not-certifies-own-eb"
+
+-- Did this block's OWN endorser block reach a quorum of votes, or not. Not
+-- whether a block then CARRIED the certificate: a quorum can form after the
+-- only block that could have carried it was forged.
+analysisOwnEbHasQuorum, analysisOwnEbNoQuorum
+  :: HasCallStack => Types.Profile -> Types.Profile
+analysisOwnEbHasQuorum = analysisFiltersAppend "own-eb-has-quorum"
+analysisOwnEbNoQuorum  = analysisFiltersAppend "own-eb-no-quorum"
+
+-- The same quorum, seen from the block that could have carried it: was there a
+-- certificate for the PREDECESSOR's endorser block. Conjoined with
+-- "not-certifies-predecessor-eb" this is the only way to tell a quorum the
+-- successor went out without from a vote that never reached one.
+analysisPredecessorEbHasQuorum, analysisPredecessorEbNoQuorum
+  :: HasCallStack => Types.Profile -> Types.Profile
+analysisPredecessorEbHasQuorum = analysisFiltersAppend "predecessor-eb-has-quorum"
+analysisPredecessorEbNoQuorum  = analysisFiltersAppend "predecessor-eb-no-quorum"
 
 analysisUnitary :: HasCallStack => Types.Profile -> Types.Profile
 analysisUnitary = analysisFiltersAppend "unitary"

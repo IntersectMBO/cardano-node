@@ -222,7 +222,10 @@ logObjectToSql lo@LogObject{loAt, loBody, loTid} =
     LOTickedLedgerState s         -> newLOEvent $ Singleton ("slot", s)
     LOMempoolSnapshot s           -> newLOEvent $ Singleton ("slot", s)
     LOBlockForged s b h1 h2       -> newLOEvent $ Triple    ("slot", s) ("block", b) ("hash", (h1, h2))
-    LOBlockCertifiesEb h          -> newLOEvent $ Singleton ("hash", h)
+    LOBlockAnnouncesOwnEb h       -> newLOEvent $ Singleton ("hash", h)
+    LOOwnEbHasQuorum h            -> newLOEvent $ Singleton ("hash", h)
+    LOBlockCertifiesPredecessorEb h
+                                  -> newLOEvent $ Singleton ("hash", h)
 
     -- diffusion
     LOChainSyncClientSeenHeader s b h
@@ -336,7 +339,11 @@ toLOBodyConverters args = ML.fromList
   , ( "LOTickedLedgerState",  LOTickedLedgerState (fromSqlData slot))
   , ( "LOMempoolSnapshot",    LOMempoolSnapshot (fromSqlData slot))
   , ( "LOBlockForged",        uncurry (LOBlockForged (fromSqlData slot) (fromSqlData block)) (fromSqlData hash))
-  , ( "LOBlockCertifiesEb",   LOBlockCertifiesEb (fromSqlData hash))
+  , ( "LOBlockAnnouncesOwnEb", LOBlockAnnouncesOwnEb (fromSqlData hash))
+  , ( "LOOwnEbHasQuorum",      LOOwnEbHasQuorum (fromSqlData hash))
+  , ( "LOBlockCertifiesPredecessorEb"
+    , LOBlockCertifiesPredecessorEb (fromSqlData hash)
+    )
 
   -- diffusion
   , ( "LOChainSyncClientSeenHeader"

@@ -92,37 +92,37 @@ hbsChained HostBlockStats{..} = hbsFiltered + hbsRejected
 -- | Results of block propagation analysis.
 data BlockProp f
   = BlockProp
-    { bpVersion              :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , bpDomainSlots          :: !(CDFList f (DataDomain I SlotNo))
-    , bpDomainBlocks         :: !(CDFList f (DataDomain I BlockNo))
-    , bpDomainCDFSlots       :: !(DataDomain f SlotNo)
-    , bpDomainCDFBlocks      :: !(DataDomain f BlockNo)
-    , cdfForgerStart         :: !(CDF f NominalDiffTime)
-    , cdfForgerBlkCtx        :: !(CDF f NominalDiffTime)
-    , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
-    , cdfForgerLgrView       :: !(CDF f NominalDiffTime)
-    , cdfForgerLead          :: !(CDF f NominalDiffTime)
-    , cdfForgerTicked        :: !(CDF f NominalDiffTime)
-    , cdfForgerMemSnap       :: !(CDF f NominalDiffTime)
-    , cdfForgerForge         :: !(CDF f NominalDiffTime)
-    , cdfForgerAnnounce      :: !(CDF f NominalDiffTime)
-    , cdfForgerAdoption      :: !(CDF f NominalDiffTime)
-    , cdfForgerSend          :: !(CDF f NominalDiffTime)
-    , cdfForgerAnnounceCum   :: !(CDF f NominalDiffTime)
-    , cdfPeerNoticeFirst     :: !(CDF f NominalDiffTime)
-    , cdfPeerFetchFirst      :: !(CDF f NominalDiffTime)
-    , cdfPeerRequest         :: !(CDF f NominalDiffTime)
-    , cdfPeerFetch           :: !(CDF f NominalDiffTime)
-    , cdfPeerAnnounce        :: !(CDF f NominalDiffTime)
-    , cdfPeerAdoption        :: !(CDF f NominalDiffTime)
-    , cdfPeerSend            :: !(CDF f NominalDiffTime)
-    , cdfBlocksPerHost       :: !(CDF f Int)
-    , cdfBlocksFilteredRatio :: !(CDF f Double)
-    , cdfBlocksChainedRatio  :: !(CDF f Double)
-    , cdfBlockBattle         :: !(CDF f Int)
-    , cdfBlockSize           :: !(CDF f Int)
-    , cdfBlockCertRb         :: !(CDF f Int)
-    , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
+    { bpVersion                      :: !Cardano.Analysis.API.LocliVersion.LocliVersion
+    , bpDomainSlots                  :: !(CDFList f (DataDomain I SlotNo))
+    , bpDomainBlocks                 :: !(CDFList f (DataDomain I BlockNo))
+    , bpDomainCDFSlots               :: !(DataDomain f SlotNo)
+    , bpDomainCDFBlocks              :: !(DataDomain f BlockNo)
+    , cdfForgerStart                 :: !(CDF f NominalDiffTime)
+    , cdfForgerBlkCtx                :: !(CDF f NominalDiffTime)
+    , cdfForgerLgrState              :: !(CDF f NominalDiffTime)
+    , cdfForgerLgrView               :: !(CDF f NominalDiffTime)
+    , cdfForgerLead                  :: !(CDF f NominalDiffTime)
+    , cdfForgerTicked                :: !(CDF f NominalDiffTime)
+    , cdfForgerMemSnap               :: !(CDF f NominalDiffTime)
+    , cdfForgerForge                 :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnounce              :: !(CDF f NominalDiffTime)
+    , cdfForgerAdoption              :: !(CDF f NominalDiffTime)
+    , cdfForgerSend                  :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnounceCum           :: !(CDF f NominalDiffTime)
+    , cdfPeerNoticeFirst             :: !(CDF f NominalDiffTime)
+    , cdfPeerFetchFirst              :: !(CDF f NominalDiffTime)
+    , cdfPeerRequest                 :: !(CDF f NominalDiffTime)
+    , cdfPeerFetch                   :: !(CDF f NominalDiffTime)
+    , cdfPeerAnnounce                :: !(CDF f NominalDiffTime)
+    , cdfPeerAdoption                :: !(CDF f NominalDiffTime)
+    , cdfPeerSend                    :: !(CDF f NominalDiffTime)
+    , cdfBlocksPerHost               :: !(CDF f Int)
+    , cdfBlocksFilteredRatio         :: !(CDF f Double)
+    , cdfBlocksChainedRatio          :: !(CDF f Double)
+    , cdfBlockBattle                 :: !(CDF f Int)
+    , cdfBlockSize                   :: !(CDF f Int)
+    , cdfBlockCertifiesPredecessorEb :: !(CDF f Int)
+    , bpPropagation                  :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
 deriving instance
@@ -199,29 +199,32 @@ data Chain
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
   =  ForgerEvents
-  { bfeHost         :: !Host
-  , bfeBlock        :: !Hash
-  , bfeBlockPrev    :: !Hash
-  , bfeBlockNo      :: !BlockNo
-  , bfeSlotNo       :: !SlotNo
-  , bfeSlotStart    :: !SlotStart
-  , bfeEpochNo      :: !EpochNo
-  , bfeBlockSize    :: !(SMaybe Int)
-  , bfeCertRb       :: !Bool         -- ^ Carries an endorser block certificate.
-  , bfeStarted      :: !(SMaybe a)
-  , bfeBlkCtx       :: !(SMaybe a)
-  , bfeLgrState     :: !(SMaybe a)
-  , bfeLgrView      :: !(SMaybe a)
-  , bfeLeading      :: !(SMaybe a)
-  , bfeTicked       :: !(SMaybe a)
-  , bfeMemSnap      :: !(SMaybe a)
-  , bfeForged       :: !(SMaybe a)
-  , bfeAnnounced    :: !(SMaybe a)
-  , bfeAnnouncedCum :: !(SMaybe a)
-  , bfeSending      :: !(SMaybe a)
-  , bfeAdopted      :: !(SMaybe a)
-  , bfeChainDelta   :: !Int
-  , bfeErrs         :: [BPError]
+  { bfeHost                   :: !Host
+  , bfeBlock                  :: !Hash
+  , bfeBlockPrev              :: !Hash
+  , bfeBlockNo                :: !BlockNo
+  , bfeSlotNo                 :: !SlotNo
+  , bfeSlotStart              :: !SlotStart
+  , bfeEpochNo                :: !EpochNo
+  , bfeBlockSize              :: !(SMaybe Int)
+    -- | Leios, as 'BlockForge' below, which documents the three.
+  , bfeAnnouncesOwnEb         :: !Bool
+  , bfeOwnEbHasQuorum         :: !Bool
+  , bfeCertifiesPredecessorEb :: !Bool
+  , bfeStarted                :: !(SMaybe a)
+  , bfeBlkCtx                 :: !(SMaybe a)
+  , bfeLgrState               :: !(SMaybe a)
+  , bfeLgrView                :: !(SMaybe a)
+  , bfeLeading                :: !(SMaybe a)
+  , bfeTicked                 :: !(SMaybe a)
+  , bfeMemSnap                :: !(SMaybe a)
+  , bfeForged                 :: !(SMaybe a)
+  , bfeAnnounced              :: !(SMaybe a)
+  , bfeAnnouncedCum           :: !(SMaybe a)
+  , bfeSending                :: !(SMaybe a)
+  , bfeAdopted                :: !(SMaybe a)
+  , bfeChainDelta             :: !Int
+  , bfeErrs                   :: [BPError]
   }
   deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
@@ -249,24 +252,43 @@ data BlockEvents
 
 data BlockForge
   =  BlockForge
-  { bfForger       :: !Host
-  , bfSlotStart    :: !SlotStart
-  , bfBlockGap     :: !NominalDiffTime -- ^ Since previous forge event
-  , bfBlockSize    :: !Int             -- ^ Bytes
-  , bfCertRb       :: !Bool            -- ^ Has an endorser block certificate.
-  , bfStarted      :: !NominalDiffTime -- ^ Since slot start
-  , bfBlkCtx       :: !(SMaybe NominalDiffTime) -- ^ Since forge loop start
-  , bfLgrState     :: !(SMaybe NominalDiffTime) -- ^ Since block context
-  , bfLgrView      :: !(SMaybe NominalDiffTime) -- ^ Since ledger state
-  , bfLeading      :: !NominalDiffTime -- ^ Since ledger view OR loop start
-  , bfTicked       :: !(SMaybe NominalDiffTime) -- ^ Since leading
-  , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
-  , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
-  , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
-  , bfAnnouncedCum :: !NominalDiffTime -- ^ Since slot start
-  , bfSending      :: !NominalDiffTime -- ^ Since announcement
-  , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
-  , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
+  { bfForger                  :: !Host
+  , bfSlotStart               :: !SlotStart
+  , bfBlockGap                :: !NominalDiffTime          -- ^ Since previous forge event
+  , bfBlockSize               :: !Int                      -- ^ Bytes
+    -- | Leios. The three facts about the endorser block THIS block announced,
+    --   in the order it lives through them. A forger announces one whenever
+    --   its mempool is non-empty.
+  , bfAnnouncesOwnEb          :: !Bool
+    -- | The cluster's votes passed the threshold, whether or not the successor
+    --   then carried the certificate.
+  , bfOwnEbHasQuorum          :: !Bool
+    -- | So it reached the chain. A fact of the chain rather than of the block,
+    --   so filled in once it is rebuilt, like 'bfBlockGap'.
+  , bfSuccessorCertifiesOwnEb :: !Bool
+    -- | The same three facts about the endorser block the PREDECESSOR
+    --   announced, the one this block is the single chance for.
+    --   Chain facts too, both of them.
+  , bfPredecessorAnnouncesEb  :: !Bool
+    -- | A certificate existed to be carried.
+  , bfPredecessorEbHasQuorum  :: !Bool
+    -- | And this block carried it, which is why it holds no transactions of
+    --   its own. Needs more than 'bfPredecessorAnnouncesEb': see
+    --   'minCertificationGap'.
+  , bfCertifiesPredecessorEb  :: !Bool
+  , bfStarted                 :: !NominalDiffTime          -- ^ Since slot start
+  , bfBlkCtx                  :: !(SMaybe NominalDiffTime) -- ^ Since forge loop start
+  , bfLgrState                :: !(SMaybe NominalDiffTime) -- ^ Since block context
+  , bfLgrView                 :: !(SMaybe NominalDiffTime) -- ^ Since ledger state
+  , bfLeading                 :: !NominalDiffTime          -- ^ Since ledger view OR loop start
+  , bfTicked                  :: !(SMaybe NominalDiffTime) -- ^ Since leading
+  , bfMemSnap                 :: !(SMaybe NominalDiffTime) -- ^ Since ticked
+  , bfForged                  :: !NominalDiffTime          -- ^ Since ticked OR loop start
+  , bfAnnounced               :: !NominalDiffTime          -- ^ Since forging
+  , bfAnnouncedCum            :: !NominalDiffTime          -- ^ Since slot start
+  , bfSending                 :: !NominalDiffTime          -- ^ Since announcement
+  , bfAdopted                 :: !NominalDiffTime          -- ^ Since announcement
+  , bfChainDelta              :: !Int                      -- ^ ChainDelta during adoption
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -417,12 +439,12 @@ testBlockEvents g@Genesis{..}
     BSizeGEq x -> bfBlockSize >= fromIntegral x
     BSizeLEq x -> bfBlockSize <= fromIntegral x
     BMinimumAdoptions x -> count (isSJust . boAdopted) seen >= fromIntegral x
-    -- The two kinds are mutually exclusive, so this is the Leios reading of
-    -- "the block carries a payload": a certifying block's body is empty by
-    -- design and could never pass a fullness test.
-    BFullOrCertRB f ->
-      bfCertRb ||
-      bfBlockSize > floor ((fromIntegral (maxBlockBodySize protocolParams) :: Double) * f)
+    BAnnouncesOwnEb            -> bfAnnouncesOwnEb
+    BOwnEbHasQuorum b          -> bfOwnEbHasQuorum          == b
+    BSuccessorCertifiesOwnEb b -> bfSuccessorCertifiesOwnEb == b
+    BPredecessorAnnouncesEb    -> bfPredecessorAnnouncesEb
+    BPredecessorEbHasQuorum b  -> bfPredecessorEbHasQuorum  == b
+    BCertifiesPredecessorEb b  -> bfCertifiesPredecessorEb  == b
     BNonNegatives -> null $
                  allBlockForgeTimes       noteFieldIfNeg forge <>
       concatMap (allBlockObservationTimes noteFieldIfNeg) seen

@@ -16,7 +16,7 @@
 module Cardano.Unlog.LogObject
   ( HostLogs (..)
   , TraceFreqs
-  , certifiesEbTraceFreqKey
+  , certifiedAndAnnouncedTraceFreqKey
   , hlRawLogObjects
   , hlTraceFreqs
   , RunLogs (..)
@@ -62,13 +62,14 @@ type Text       = ShortText
 
 type TraceFreqs = ML.Map Text Int
 
--- | The 'TraceFreqs' key of the Leios certificate trace, which is
---   @"<ns>:<kind>"@ (see "Cardano.Unlog.BackendDB"'s @prepareFile@).
+-- | The 'TraceFreqs' key of @Consensus.LeiosKernel.CertifiedAndAnnounced@,
+--   the trace that says a block certifies its predecessor's endorser block.
+--   A key is @"<ns>:<kind>"@ (see "Cardano.Unlog.BackendDB"'s @prepareFile@).
 --   Every decoded log line is counted there whether or not an interpreter
 --   exists for it, so this says whether the LOGS carried the trace,
 --   independently of whether this locli knew how to read it.
-certifiesEbTraceFreqKey :: Text
-certifiesEbTraceFreqKey =
+certifiedAndAnnouncedTraceFreqKey :: Text
+certifiedAndAnnouncedTraceFreqKey =
   "Consensus.LeiosKernel.CertifiedAndAnnounced:LeiosCertifiedAndAnnounced"
 
 
@@ -212,11 +213,11 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <$> v .: "slot"
             <*> pure False
 
-  , (,,,) "TraceForgeTickedLedgerState" "Forge.TickedLedgerState" "Forge.Loop.TickedLedgerState" $
+  , (,,,) "TraceForgeTickedLedgerState" "Forge.TickedLedgerState" "Forge.Loop.ForgeTickedLedgerState" $
     \v -> LOTickedLedgerState
             <$> v .: "slot"
 
-  , (,,,) "TraceForgingMempoolSnapshot" "Forge.MempoolSnapshot" "Forge.Loop.MempoolSnapshot" $
+  , (,,,) "TraceForgingMempoolSnapshot" "Forge.MempoolSnapshot" "Forge.Loop.ForgingMempoolSnapshot" $
     \v -> LOMempoolSnapshot
             <$> v .: "slot"
 
@@ -228,13 +229,26 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> v .: "block"
             <*> v .: "blockPrev"
 
-  -- Leios: the block this forger just made certifies an endorser block, so its
-  -- own body is empty. "rbHash" is the forged block's hash, the same one
-  -- "TraceForgedBlock" reports as "block".
+  -- Leios, in the order an endorser block lives through. "rbHash" is the
+  -- ANNOUNCING block in the first two and the CERTIFYING block in the third;
+  -- consensus binds the middle one as `announcingRbHash` and renders it
+  -- "Leios cert assembled for RB <hash>".
+  , (,,,) "LeiosBlockAnnounced"
+          "Consensus.LeiosKernel.BlockAnnounced"
+          "Consensus.LeiosKernel.BlockAnnounced" $
+    \v -> LOBlockAnnouncesOwnEb
+            <$> v .: "rbHash"
+
+  , (,,,) "LeiosCertified"
+          "Consensus.LeiosKernel.Certified"
+          "Consensus.LeiosKernel.Certified" $
+    \v -> LOOwnEbHasQuorum
+            <$> v .: "rbHash"
+
   , (,,,) "LeiosCertifiedAndAnnounced"
           "Consensus.LeiosKernel.CertifiedAndAnnounced"
           "Consensus.LeiosKernel.CertifiedAndAnnounced" $
-    \v -> LOBlockCertifiesEb
+    \v -> LOBlockCertifiesPredecessorEb
             <$> v .: "rbHash"
 
   -- Receipt:
@@ -299,7 +313,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> pure 1
 
   -- Ledger related:
-  , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
+  , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.Snapshot.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
   -- If needed, this could track slot and duration (SMaybe):
   -- {"at":"2024-10-19T10:16:27.459112022Z","ns":"ChainDB.LedgerEvent.TookSnapshot","data":{"enclosedTime":{"tag":"RisingEdge"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 5319) adefbb19d6284aa68f902d33018face42d37e1a7970415d2a81bd4c2dea585ba"},"sev":"Info","thread":"81","host":"client-us-04"}
@@ -358,6 +372,20 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
    map3ple :: (a -> b) -> (a,a,a) -> (b,b,b)
    map3ple f (x,y,z) = (f x, f y, f z)
 
+-- | Namespaces the node has renamed since, mapping the spelling a RUN's logs
+--   may carry to the one 'interpreters' now keys on. A run is analysed with
+--   whatever its node emitted, so every spelling that ever shipped has to
+--   resolve, and the three slots of a table row are already spent on the kind,
+--   the legacy-tracing namespace and the current one.
+--   Not a fallback for an unknown namespace: an entry here is a rename that was
+--   observed in logs, and a namespace absent from both this and the table is an
+--   uninterpreted trace, which is not an error.
+nsRenamed :: Map Text Text
+nsRenamed = Map.fromList
+  [ ("Forge.Loop.TickedLedgerState",     "Forge.Loop.ForgeTickedLedgerState")
+  , ("Forge.Loop.MempoolSnapshot",       "Forge.Loop.ForgingMempoolSnapshot")
+  , ("ChainDB.LedgerEvent.TookSnapshot", "ChainDB.LedgerEvent.Snapshot.TookSnapshot")
+  ]
 
 
 logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
@@ -400,11 +428,29 @@ data LOBody
     , loBlock            :: !Hash
     , loPrev             :: !Hash
     }
-  -- | The forged block carries an endorser block certificate (Leios), which
-  --   means it carries no transactions of its own. Emitted by the forger in
-  --   the same instant as, and just BEFORE, its 'LOBlockForged', so the
-  --   consumer cannot assume the block is already known.
-  | LOBlockCertifiesEb
+  -- Leios, in the order an endorser block lives through: block N announces it,
+  -- the cluster votes until a certificate assembles, and block N + 1 certifies
+  -- it. The two forger traces fire in the same instant as, and just BEFORE,
+  -- that forger's own 'LOBlockForged', so neither can assume the block is
+  -- already known.
+  --
+  -- | This block announces a freshly made endorser block. Every forger with
+  --   anything in its mempool does, including one that is also certifying.
+  | LOBlockAnnouncesOwnEb
+    { loBlock            :: !Hash
+    }
+  -- | A certificate was assembled for the endorser block THIS block announced,
+  --   which means the votes passed the threshold. NOT emitted by that block's
+  --   forger: every node that gathers the quorum emits it, so it can land in a
+  --   log where the block is only observed. Says the quorum formed, not that
+  --   the successor went on to certify it.
+  | LOOwnEbHasQuorum
+    { loBlock            :: !Hash
+    }
+  -- | This block certifies the endorser block its PREDECESSOR announced, by
+  --   carrying the certificate for it, which is why it carries no transactions
+  --   of its own. Only the direct successor of an announcing block can.
+  | LOBlockCertifiesPredecessorEb
     { loBlock            :: !Hash
     }
   -- Receipt:
@@ -475,14 +521,17 @@ instance FromJSON LogObject where
     -- XXX:  fix node causing the need for this workaround
     (,) unwrapped kind <- unwrap "credentials" "val" body
     nsVorNs :: Value <- v .: "ns"
-    let ns = case nsVorNs of
-               Array (V.toList -> [String ns']) -> fromText ns'
-               String ns' -> fromText ns'
-               x -> error $
-                 "The 'ns' field must be either a string, or a singleton-String vector, was: " <> show x
+    let nsLogged = case nsVorNs of
+          Array (V.toList -> [String ns']) -> fromText ns'
+          String ns' -> fromText ns'
+          x -> error $
+            "The 'ns' field must be either a string, or a singleton-String vector, was: " <> show x
+        -- A superseded spelling resolves to the current one, anything else to
+        -- itself, so an old and a new run find the same interpreter.
+        ns = Map.findWithDefault nsLogged nsLogged nsRenamed
     LogObject
       <$> v .: "at"
-      <*> pure (toTextRef ns)
+      <*> pure (toTextRef nsLogged)
       <*> pure (toTextRef kind)
       <*> v .: "host"
       <*> v .: "thread"
@@ -534,6 +583,7 @@ lookupTextRef ref = Map.findWithDefault Text.empty ref dict
     dict    = Map.fromList [(hash t, t) | t <- concat [allKeys, kinds, legacy, newTr]]
     kinds   = map ("Cardano.Node." <>) allKeys
     allKeys = concatMap Map.keys [fst3 interpreters, snd3 interpreters, thd3 interpreters]
+              <> Map.keys nsRenamed
               & filter (not . Text.null)
 
     -- common string parses from legacy tracing with no known interpreter

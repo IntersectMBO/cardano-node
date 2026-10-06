@@ -1,0 +1,7 @@
+[ { "tag": "CBlock"
+  , "contents":
+    { "tag": "BSuccessorCertifiesOwnEb"
+    , "contents": false
+    }
+  }
+]

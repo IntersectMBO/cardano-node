@@ -211,7 +211,7 @@ propSubsetFn = \case
 
 bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
 bpFieldsControl =
-  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize", "cdfBlockCertRb" ]
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize", "cdfBlockCertifiesPredecessorEb" ]
 bpFieldsForger =
   [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
@@ -339,10 +339,10 @@ instance CDFFields BlockProp p where
       "Block size"
       "Block size, in bytes"
 
-   <> fBoth "cdfBlockCertRb"  "Cert" "RB" W4 Rto P0 Lin Free (DInt cdfBlockCertRb)
-      "Certifying blocks"
-      "For a given block, 1 if it carries an endorser block certificate (Leios), 0 if not."
-
+   <> fBoth "cdfBlockCertifiesPredecessorEb"  "Cert" "EB" W4 Rto P0 Lin Free
+      (DInt cdfBlockCertifiesPredecessorEb)
+      "Blocks certifying the predecessor's EB"
+      "For a given block, 1 if it certifies the endorser block its PREDECESSOR announced (Leios), 0 if not.  Such a block carries no transactions of its own, so the average of this over the chain is the share of blocks whose payload is an endorser block's"
    where r = nChunksEachOf (length adoptionCentiles) 5
              ",-- Slot-rel. Δt to adoption centile: -."
          checkCentile i centi (centi', d) =

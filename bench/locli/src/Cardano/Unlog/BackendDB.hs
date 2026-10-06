@@ -19,7 +19,7 @@ module Cardano.Unlog.BackendDB
 import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
 import           Cardano.Prelude (ExceptT, (<|>))
 import           Cardano.Unlog.LogObject (HostLogs (..), LOBody (..), LogObject (..), RunLogs (..),
-                   certifiesEbTraceFreqKey, fromTextRef)
+                   certifiedAndAnnouncedTraceFreqKey, fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
 
@@ -82,29 +82,29 @@ instance LoadFromDB LoadLogObjects where
   loadTimingInfo = (== LoadLogObjectsAll)
 
   -- A DB written before this locli knew the Leios certificate trace holds no
-  -- 'LOBlockCertifiesEb', and taking that absence for "no block certifies an
+  -- 'LOBlockCertifiesPredecessorEb', and taking that absence for "no block certifies an
   -- endorser block" would be a silent wrong answer rather than a missing one:
-  -- "size-full-leios" would quietly behave like plain "size-full", dropping
-  -- every Leios block. The tracefreq table settles which it is, because it
-  -- counts the trace whether or not an interpreter existed for it.
+  -- every Leios filter would quietly select nothing, or in the case of
+  -- "not-certifies-predecessor-eb" everything. The tracefreq table settles which it is,
+  -- because it counts the trace whether or not an interpreter existed for it.
   -- Only for 'LoadLogObjectsAll': the other modes select a subset of the
   -- tables on purpose, and 'loadTraceFreqs' does not even read the table for
   -- 'LoadLogObjectsWith'.
   loadSanity LoadLogObjectsAll traceFreqs los
     | logsHadIt && not streamHasIt = Left $ mconcat
         [ "This log object DB was written by a locli that did not interpret "
-        , show certifiesEbTraceFreqKey, ", which the logs carried "
+        , show certifiedAndAnnouncedTraceFreqKey, ", which the logs carried "
         , show (fromMaybe 0 inLogs), " times. Rebuild it from the node logs "
         , "(wb analyse re-creates it) rather than analyse a chain whose Leios "
         , "certificates are missing: every block would read as not certifying."
         ]
     | otherwise = Right ()
    where
-    inLogs      = ML.lookup certifiesEbTraceFreqKey traceFreqs
+    inLogs      = ML.lookup certifiedAndAnnouncedTraceFreqKey traceFreqs
     logsHadIt   = maybe False (> 0) inLogs
-    streamHasIt = any isCertifiesEb los
-    isCertifiesEb LogObject{loBody=LOBlockCertifiesEb{}} = True
-    isCertifiesEb _                                      = False
+    streamHasIt = any isCertifying los
+    isCertifying LogObject{loBody=LOBlockCertifiesPredecessorEb{}} = True
+    isCertifying _                                                 = False
   loadSanity _ _ _ = Right ()
 
 instance LoadFromDB LoadSummaryOnly where

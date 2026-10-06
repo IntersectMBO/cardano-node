@@ -26,7 +26,7 @@ import           Cardano.Util
 
 import           Prelude (id, read, show)
 
-import           Data.List (partition)
+import           Data.List (partition, zipWith4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -57,7 +57,7 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfPeerSend               <- cdf2OfCDFs comb $ bs <&> cdfPeerSend
   cdfBlockBattle            <- cdf2OfCDFs comb $ bs <&> cdfBlockBattle
   cdfBlockSize              <- cdf2OfCDFs comb $ bs <&> cdfBlockSize
-  cdfBlockCertRb            <- cdf2OfCDFs comb $ bs <&> cdfBlockCertRb
+  cdfBlockCertifiesPredecessorEb <- cdf2OfCDFs comb $ bs <&> cdfBlockCertifiesPredecessorEb
   cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
   cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
   cdfBlocksChainedRatio     <- cdf2OfCDFs comb $ bs <&> cdfBlocksChainedRatio
@@ -96,20 +96,24 @@ bfePrevBlock x = case bfeBlockNo x of
 -- | Block's events, as seen by an observer.
 data ObserverEvents a
   =  ObserverEvents
-  { boeHost       :: !Host
-  , boeBlock      :: !Hash
-  , boeBlockNo    :: !BlockNo
-  , boeSlotNo     :: !SlotNo
-  , boeSlotStart  :: !SlotStart
-  , boeNoticed    :: !(SMaybe a)
-  , boeRequested  :: !(SMaybe a)
-  , boeFetched    :: !(SMaybe a)
-  , boeAnnounced  :: !(SMaybe a)
-  , boeSending    :: !(SMaybe a)
-  , boeAdopted    :: !(SMaybe a)
-  , boeChainDelta :: !Int
-  , boeErrorsCrit :: [BPError]
-  , boeErrorsSoft :: [BPError]
+  { boeHost           :: !Host
+  , boeBlock          :: !Hash
+  , boeBlockNo        :: !BlockNo
+  , boeSlotNo         :: !SlotNo
+  , boeSlotStart      :: !SlotStart
+  , boeNoticed        :: !(SMaybe a)
+  , boeRequested      :: !(SMaybe a)
+  , boeFetched        :: !(SMaybe a)
+  , boeAnnounced      :: !(SMaybe a)
+  , boeSending        :: !(SMaybe a)
+  , boeAdopted        :: !(SMaybe a)
+    -- | A certificate was assembled for the endorser block THIS block
+    --   announced. On the observer side because every node that gathers the
+    --   quorum emits it, not just the announcing block's forger.
+  , boeOwnEbHasQuorum :: !Bool
+  , boeChainDelta     :: !Int
+  , boeErrorsCrit     :: [BPError]
+  , boeErrorsSoft     :: [BPError]
   }
   deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
@@ -238,20 +242,26 @@ type MachHashBlockEvents a
 -- An accumulator for: tip-block-events & the set of all blocks events
 data MachView
   = MachView
-  { mvHost         :: !Host
-  , mvHashBlocks   :: !(MachHashBlockEvents UTCTime)
-  , mvStarted      :: !(SMaybe UTCTime)
-  , mvBlkCtx       :: !(SMaybe UTCTime)
-  , mvLgrState     :: !(SMaybe UTCTime)
-  , mvLgrView      :: !(SMaybe UTCTime)
-  , mvLeading      :: !(SMaybe UTCTime)
-  , mvTicked       :: !(SMaybe UTCTime)
-  , mvMemSnap      :: !(SMaybe UTCTime)
-  , mvCertRbs      :: !(Set Hash)
-                      -- ^ Blocks this host forged carrying an endorser block
-                      --   certificate. A set rather than a flag on the block,
-                      --   because the certificate trace comes BEFORE the forge
-                      --   trace, when the block is not in 'mvHashBlocks' yet.
+  { mvHost                   :: !Host
+  , mvHashBlocks             :: !(MachHashBlockEvents UTCTime)
+  , mvStarted                :: !(SMaybe UTCTime)
+  , mvBlkCtx                 :: !(SMaybe UTCTime)
+  , mvLgrState               :: !(SMaybe UTCTime)
+  , mvLgrView                :: !(SMaybe UTCTime)
+  , mvLeading                :: !(SMaybe UTCTime)
+  , mvTicked                 :: !(SMaybe UTCTime)
+  , mvMemSnap                :: !(SMaybe UTCTime)
+    -- | Blocks this host forged that announced an endorser block. A set
+    --   rather than a flag on the block, because the announcement trace
+    --   precedes the forge trace, when the block is not in 'mvHashBlocks' yet.
+  , mvAnnouncesOwnEb         :: !(Set Hash)
+    -- | Blocks whose own endorser block got a certificate assembled, as this
+    --   host saw it. Keyed by the ANNOUNCING block, which this host need not
+    --   have forged.
+  , mvOwnEbHasQuorum         :: !(Set Hash)
+    -- | Blocks this host forged that carried their predecessor's endorser
+    --   block certificate. A set for the same reason as 'mvAnnouncesOwnEb'.
+  , mvCertifiesPredecessorEb :: !(Set Hash)
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
@@ -292,7 +302,8 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
   , ..
   }
  where
-   cMainChain = computeChainBlockGaps $
+   cMainChain = propagateNeighbourFlags $
+                computeChainBlockGaps $
                 doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
    (accepta, cRejecta) = partition (all snd . beAcceptance) cMainChain
 
@@ -332,6 +343,30 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
       step :: UTCTime -> BlockEvents -> (UTCTime, BlockEvents)
       step prevForge x@(beForgedAt -> at) =
         (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
+
+   -- The three neighbour facts: what the PREVIOUS block announced and whether
+   -- it reached a quorum, and whether the NEXT block certified this one's
+   -- endorser block. Each is a fact already on a neighbour, shifted one block
+   -- along, so none can be known until the chain is rebuilt, like
+   -- 'bfBlockGap'. The ends read False: the first block has no predecessor in
+   -- view, the last no successor.
+   -- Re-tests the filters, because 'liftBlockEvents' computed 'beAcceptance'
+   -- while all three were still False and nothing downstream would look again.
+   propagateNeighbourFlags :: [BlockEvents] -> [BlockEvents]
+   propagateNeighbourFlags bes =
+     zipWith4 step bes
+       (False : (bfAnnouncesOwnEb         . beForge <$> bes))
+       (False : (bfOwnEbHasQuorum         . beForge <$> bes))
+       (drop 1 (bfCertifiesPredecessorEb  . beForge <$> bes) <> [False])
+    where
+      step :: BlockEvents -> Bool -> Bool -> Bool -> BlockEvents
+      step x prevAnnounced prevQuorum nextCertifies =
+        let bf  = (beForge x)
+                    { bfPredecessorAnnouncesEb  = prevAnnounced
+                    , bfPredecessorEbHasQuorum  = prevQuorum
+                    , bfSuccessorCertifiesOwnEb = nextCertifies }
+            x'  = x { beForge = bf }
+        in  x' { beAcceptance = blockEventsAcceptance genesis flts x' }
 
    rewindChain :: [MachHashBlockEvents a] -> BlockNo -> Int -> Hash -> Hash
    rewindChain eventMaps nr0 count tip = go tip nr0 count
@@ -402,7 +437,16 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfSlotStart  = bfeSlotStart
           , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
           , bfBlockSize  = bfeBlockSize & handleMiss "Size"
-          , bfCertRb     = bfeCertRb
+          , bfAnnouncesOwnEb          = bfeAnnouncesOwnEb
+            -- Any log that saw the quorum form counts, the forger's own or an
+            -- observer's: the trace is emitted by every node that gathers it.
+          , bfOwnEbHasQuorum          = bfeOwnEbHasQuorum || any boeOwnEbHasQuorum os
+            -- The three neighbour flags, filled in by propagateNeighbourFlags
+            -- once the chain is rebuilt, like `bfBlockGap`.
+          , bfSuccessorCertifiesOwnEb = False
+          , bfPredecessorAnnouncesEb  = False
+          , bfPredecessorEbHasQuorum  = False
+          , bfCertifiesPredecessorEb  = bfeCertifiesPredecessorEb
           , bfStarted    = bfeStarted   & handleMiss "Δt Started"
           , bfBlkCtx     = bfeBlkCtx
           , bfLgrState   = bfeLgrState
@@ -555,8 +599,8 @@ blockProp _ Chain{..} = do
       -- 0 or 1 per block, so the average over the filtered chain is the share
       -- of blocks that carry an endorser block certificate. Same shape as
       -- `cdfBlockBattle` above, whose average reads .02787 on a run.
-    , cdfBlockCertRb         = forgerCDF c
-                               (SJust . fromEnum . bfCertRb . beForge)
+    , cdfBlockCertifiesPredecessorEb = forgerCDF c
+                               (SJust . fromEnum . bfCertifiesPredecessorEb . beForge)
     , bpVersion              = getLocliVersion
     , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats
                                                 <&> unCount . hbsTotal)
@@ -624,7 +668,9 @@ blockEventMapsFromLogObjects run (f, xs@(x:_)) =
      , mvLeading      = SNothing
      , mvTicked       = SNothing
      , mvMemSnap      = SNothing
-     , mvCertRbs      = mempty
+     , mvAnnouncesOwnEb         = mempty
+     , mvOwnEbHasQuorum         = mempty
+     , mvCertifiesPredecessorEb = mempty
      }
 
 blockPropMachEventsStep :: Run -> LogObjectSource -> MachView -> LogObject -> MachView
@@ -643,7 +689,9 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
          SNothing                     -- Fetched
          SNothing                     -- Announced
          SNothing                     -- Sending
-         SNothing 0                   -- Adopted & chain delta
+         SNothing                     -- Adopted
+         (loBlock `Set.member` mvOwnEbHasQuorum) -- EB quorum
+         0                            -- Chain delta
          [] [])
       & doInsert loBlock
   -- 1. Request (observer only)
@@ -666,17 +714,27 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
       (\x -> Right x { boeFetched=SJust loAt })
       mbe0
       & doInsert loBlock
-  -- 2. Certify (forger only, and BEFORE its own LOBlockForged)
-  LogObject{loBody=LOBlockCertifiesEb{loBlock}} ->
-    let mv' = mv { mvCertRbs = Set.insert loBlock mvCertRbs }
-    in  case Map.lookup loBlock mvHashBlocks of
-          -- The expected order: the block is not known yet, so the hash waits
-          -- in the set for the forge event below to pick it up.
-          Nothing -> mv'
-          -- Out of order: patch what is already there.
-          Just mbe -> mbe
-                      & bimapMbe (\x -> x { bfeCertRb = True }) id
-                      & \x -> mv' { mvHashBlocks = Map.insert loBlock x mvHashBlocks }
+  -- 2. Leios, in the order an endorser block lives through. All three can
+  --    arrive before the block they describe is known, hence patchThenRecord.
+  --    Announce and certify are the forger's own, just before its
+  --    LOBlockForged; the quorum comes from ANY node, so there the block may be
+  --    observed here rather than forged.
+  LogObject{loBody=LOBlockAnnouncesOwnEb{loBlock}} ->
+    patchThenRecord
+      (bimapMbe (\x -> x { bfeAnnouncesOwnEb = True }) id)
+      (\m -> m { mvAnnouncesOwnEb = Set.insert loBlock mvAnnouncesOwnEb })
+      loBlock
+  LogObject{loBody=LOOwnEbHasQuorum{loBlock}} ->
+    patchThenRecord
+      (bimapMbe (\x -> x { bfeOwnEbHasQuorum = True })
+                (\x -> x { boeOwnEbHasQuorum = True }))
+      (\m -> m { mvOwnEbHasQuorum = Set.insert loBlock mvOwnEbHasQuorum })
+      loBlock
+  LogObject{loBody=LOBlockCertifiesPredecessorEb{loBlock}} ->
+    patchThenRecord
+      (bimapMbe (\x -> x { bfeCertifiesPredecessorEb = True }) id)
+      (\m -> m { mvCertifiesPredecessorEb = Set.insert loBlock mvCertifiesPredecessorEb })
+      loBlock
   -- 2. Acquire:Forge (forger only)
   LogObject{loAt, loHost, loBody=LOBlockForged{loBlock,loPrev,loBlockNo,loSlotNo}} ->
     getBlock loBlock
@@ -695,7 +753,9 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
         , bfeSlotStart    = slotStart genesis loSlotNo
         , bfeEpochNo      = fst $ genesis `unsafeParseSlot` loSlotNo
         , bfeBlockSize    = SNothing
-        , bfeCertRb       = loBlock `Set.member` mvCertRbs
+        , bfeAnnouncesOwnEb         = loBlock `Set.member` mvAnnouncesOwnEb
+        , bfeOwnEbHasQuorum         = loBlock `Set.member` mvOwnEbHasQuorum
+        , bfeCertifiesPredecessorEb = loBlock `Set.member` mvCertifiesPredecessorEb
         , bfeStarted      = mvStarted
         , bfeBlkCtx       = mvBlkCtx
         , bfeLgrState     = mvLgrState
@@ -778,6 +838,15 @@ blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
 
    doInsert :: Hash -> MachBlockEvents UTCTime -> MachView
    doInsert k x = mv { mvHashBlocks = Map.insert k x mvHashBlocks }
+
+   -- For the Leios flags, whose traces can arrive before or after the block
+   -- they describe: patch the block if this log has it already, and record the
+   -- hash either way for whichever event creates the block later.
+   patchThenRecord :: (MachBlockEvents UTCTime -> MachBlockEvents UTCTime)
+                   -> (MachView -> MachView)
+                   -> Hash -> MachView
+   patchThenRecord patch record k =
+     record $ maybe mv (doInsert k . patch) (Map.lookup k mvHashBlocks)
 
 deltifyEvents :: MachBlockEvents UTCTime -> MachBlockEvents NominalDiffTime
 deltifyEvents (MBE e) = MBE e
