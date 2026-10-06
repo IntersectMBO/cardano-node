@@ -257,13 +257,16 @@ eExpectedConfig = do
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
     , ncEgressPollInterval = 0
-    , ncMaxConcurrencyBulkSync = Nothing
-    , ncMaxConcurrencyDeadline = Nothing
+    -- The block-fetch concurrency defaults, which the node now states rather
+    -- than leaving to consensus; neither test layer sets them.
+    , ncMaxConcurrencyBulkSync = Just (MaxConcurrencyBulkSync 1)
+    , ncMaxConcurrencyDeadline = Just (MaxConcurrencyDeadline 1)
     , ncTraceForwardSocket = Nothing
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
-    , ncChainSyncIdleTimeout = NoTimeoutOverride
+    -- The diffusion layer's own default, likewise now stated rather than implied.
+    , ncChainSyncIdleTimeout = TimeoutOverride 3373
     , ncMempoolTimeoutSoft = 1.0
     , ncMempoolTimeoutHard = 1.5
     , ncMempoolTimeoutCapacity = 5.0
