@@ -135,12 +135,15 @@ source-repository-package
     eras/conway/impl
     eras/dijkstra/impl
 
--- Points to ouroboros-network/leios-prototype
+-- Points to ouroboros-network/jl/leios-w39, which is 4b3ab766 plus a bound on
+-- the inbound governor's MuxFinished await. The network SRP is byte identical
+-- in w39 and w40, so the w39 branch still applies. Diagnostic for the relay
+-- wedge, revert to 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42 when done.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42
-  --sha256: sha256-fIqpI2whstetodpiONmUDVgnhTpzXeq1/gmzuHItK5A=
+  tag: 6192f552d44e412ede17580babdd75c48b1e6343
+  --sha256: sha256-txT3OBCQpLIusAw5UxEvYm4C5lCnIFJYWuZFZyje6yg=
   subdir:
     ouroboros-network
     cardano-diffusion
