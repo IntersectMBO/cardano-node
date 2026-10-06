@@ -11,14 +11,15 @@ module Cardano.TxSubmit.Web
   ( runTxSubmitServer
   ) where
 
-import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType (..),
-                   CardanoEra (..), ConsensusModeParams (..), Error (..), FromSomeType (..),
-                   HasTypeProxy (AsType), InAnyCardanoEra (..), InAnyShelleyBasedEra (..),
-                   IsCardanoEra (..),
+import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AnyShelleyBasedEra (..),
+                   AsType (..), CardanoEra (..), ConsensusModeParams (..), Error (..),
+                   FromSomeType (..), HasTypeProxy (..), InAnyCardanoEra (..),
+                   InAnyShelleyBasedEra (..), IsCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    NetworkId, SerialiseAsCBOR (..), ShelleyBasedEra (..), ShelleyEra, SocketPath,
                    ToJSON, Tx (Tx), TxId (..), TxInMode (TxInMode),
-                   TxValidationErrorInCardanoMode (..), getTxId, submitTxToNodeLocal)
+                   TxValidationErrorInCardanoMode (..), getTxId, shelleyBasedEraConstraints,
+                   submitTxToNodeLocal)
 import qualified Cardano.Api
 
 import           Cardano.Binary (DecoderError (..))
@@ -114,14 +115,17 @@ deserialiseAnyOf ts te = getResult . partitionEithers $ fmap (`deserialiseOne` t
     getResult (_, result:_) = Right result -- take the first successful decode
 
 readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyShelleyBasedEra Tx)
-readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyOf
-  [ FromSomeType (AsTx AsShelleyEra) (InAnyShelleyBasedEra ShelleyBasedEraShelley)
-  , FromSomeType (AsTx AsAllegraEra) (InAnyShelleyBasedEra ShelleyBasedEraAllegra)
-  , FromSomeType (AsTx AsMaryEra)    (InAnyShelleyBasedEra ShelleyBasedEraMary)
-  , FromSomeType (AsTx AsAlonzoEra)  (InAnyShelleyBasedEra ShelleyBasedEraAlonzo)
-  , FromSomeType (AsTx AsBabbageEra) (InAnyShelleyBasedEra ShelleyBasedEraBabbage)
-  , FromSomeType (AsTx AsConwayEra)  (InAnyShelleyBasedEra ShelleyBasedEraConway)
+readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyOf fromSomeShelleyTx
+
+-- | Raw CBOR decoders for every Shelley-based era, derived so that new eras are picked up automatically.
+fromSomeShelleyTx :: [FromSomeType SerialiseAsCBOR (InAnyShelleyBasedEra Tx)]
+fromSomeShelleyTx =
+  [ shelleyBasedEraConstraints sbe $ FromSomeType (makeTxProxy sbe) (InAnyShelleyBasedEra sbe)
+  | AnyShelleyBasedEra sbe <- [minBound .. maxBound]
   ]
+  where
+    makeTxProxy :: HasTypeProxy era => ShelleyBasedEra era -> AsType (Tx era)
+    makeTxProxy _ = AsTx (proxyToAsType (Proxy :: Proxy era))
 
 txSubmitPost
   :: Trace IO TraceSubmitApi
