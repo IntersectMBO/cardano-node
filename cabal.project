@@ -135,12 +135,21 @@ source-repository-package
     eras/conway/impl
     eras/dijkstra/impl
 
--- Points to ouroboros-network/leios-prototype
+-- io-classes with the process-wide timer service (WIP, input-output-hk/io-sim karknu/timer-service)
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: b8b899ee884551f1ef98f1ceb873e43a92b82e34
+  --sha256: sha256-pra6XSIMIM2DBrQvQ+F5CRE9auTrJvrzaV6B44/Cs4s=
+  subdir:
+    io-classes
+
+-- Points to ouroboros-network karknu/egress_scheduler.leios
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 6ca8d48271290710b47945c0985e9f1c291c4b25
-  --sha256: sha256-1xWL43b/dZxMMQsCDIFDu+fFb7tC5UKf5JYbcdaRFaw=
+  tag: e156d68602c53ccf8acad5efec6e5fc5c61632c4
+  --sha256: sha256-GxbAtbRZIajS7LKUhpRnk3IyOY6kTMbUaaCOSxwWNvs=
   subdir:
     ouroboros-network
     cardano-diffusion
