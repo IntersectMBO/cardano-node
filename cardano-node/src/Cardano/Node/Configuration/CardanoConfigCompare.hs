@@ -17,6 +17,7 @@ module Cardano.Node.Configuration.CardanoConfigCompare
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (NodeByronProtocolConfiguration (..),
                    NodeProtocolConfiguration (..))
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 
 -- | Diagnose node CLI flags that cardano-config's own CLI parser rejects, in
 -- terms the operator can act on. All of these flags are deprecated: the three
@@ -69,7 +70,9 @@ compareConfigurations pom adapted =
       , cmp "MaxConcurrencyBulkSync" ncMaxConcurrencyBulkSync
       , cmp "MaxConcurrencyDeadline" ncMaxConcurrencyDeadline
       , cmp "TraceForwardSocket" ncTraceForwardSocket
-      , cmp "MaybeMempoolCapacityOverride" ncMaybeMempoolCapacityOverride
+      , cmpValues "MaybeMempoolCapacityOverride"
+          (ignoreAbsentMempoolOverride (ncMaybeMempoolCapacityOverride pom))
+          (ignoreAbsentMempoolOverride (ncMaybeMempoolCapacityOverride adapted))
       , cmp "LedgerDbConfig" ncLedgerDbConfig
       , cmp "ProtocolIdleTimeout" ncProtocolIdleTimeout
       , cmp "TimeWaitTimeout" ncTimeWaitTimeout
@@ -146,3 +149,17 @@ ignoreByronSupportedVersion byronConfig =
     , npcByronSupportedProtocolVersionMinor = 0
     , npcByronSupportedProtocolVersionAlt = 0
     }
+
+-- | Fold the two spellings of "no mempool capacity override" together.
+--
+-- POM keeps 'Just NoMempoolCapacityBytesOverride' for a configuration that
+-- writes @MempoolCapacityBytesOverride: NoOverride@, and 'Nothing' for one that
+-- writes no such key. cardano-config models no override as absence and has no
+-- way to spell the explicit form, so a configuration that writes it diverges
+-- here on spelling alone. Both leave the mempool at the kernel default, which is
+-- 'NoMempoolCapacityBytesOverride' already: the override is applied only when it
+-- is 'Just' (see @llrnCustomiseNodeKernelArgs@ in "Ouroboros.Consensus.Node").
+ignoreAbsentMempoolOverride ::
+  Maybe MempoolCapacityBytesOverride -> Maybe MempoolCapacityBytesOverride
+ignoreAbsentMempoolOverride (Just NoMempoolCapacityBytesOverride) = Nothing
+ignoreAbsentMempoolOverride other = other
