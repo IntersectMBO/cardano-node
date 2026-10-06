@@ -21,6 +21,16 @@ module Cardano.Node.Configuration.CardanoConfigAdapter
   , cardanoConfigToPartialNodeConfiguration
   , nodeProtocolConfigurationFromCardanoConfig
   , adapterGaps
+
+    -- * Mapping cardano-config's types onto the node's
+    --
+    -- These are also what 'Cardano.Node.Parsers' needs, since it builds the
+    -- node's configuration from cardano-config's own option parsers.
+  , credentialsToProtocolFilepaths
+  , fromCfgDbPaths
+  , fromCfgGrpcEndpoint
+  , fromCfgTracerConnection
+  , toNodeShutdownOn
   ) where
 
 import           Cardano.Api (File (..))
@@ -217,52 +227,13 @@ cardanoConfigToPartialNodeConfiguration cfg =
     ledgerDbCfg = runIdentity (Cfg.ledgerDbConfiguration storeCfg)
     consensusModeVal = runIdentity (Cfg.getConsensusConfiguration (Cfg.consensusConfiguration cfg))
 
-    fromCfgDbPaths :: Cfg.NodeDatabasePaths -> NodeDatabasePaths
-    fromCfgDbPaths (Cfg.SingleDB p) = OnePathForAllDbs p
-    fromCfgDbPaths (Cfg.SplitDB imm vol) = MultipleDbPaths imm vol
-
     fromCfgConsensusMode :: Cfg.ConsensusMode -> ConsensusMode
     fromCfgConsensusMode Cfg.PraosMode = PraosMode
     fromCfgConsensusMode (Cfg.GenesisMode _) = GenesisMode
 
-    toNodeShutdownOn :: Cfg.ShutdownOn -> ShutdownOn
-    toNodeShutdownOn (Cfg.ShutdownAtSlot w) = ASlot (SlotNo w)
-    toNodeShutdownOn (Cfg.ShutdownAtBlock w) = ABlock (BlockNo w)
-
     fromCfgAffinity :: Cfg.ResponderCoreAffinityPolicy -> ResponderCoreAffinityPolicy
     fromCfgAffinity Cfg.NoResponderCoreAffinity = NoResponderCoreAffinity
     fromCfgAffinity Cfg.ResponderCoreAffinity = ResponderCoreAffinity
-
-    -- cardano-config's gRPC endpoint and the node's 'RpcEndpoint' offer the same
-    -- three choices, so the mapping is one constructor to one constructor. Both
-    -- default the listen address to 127.0.0.1, and cardano-config has already
-    -- applied that default, so the endpoint arrives complete.
-    fromCfgGrpcEndpoint :: Cfg.GrpcEndpoint -> RpcEndpoint
-    fromCfgGrpcEndpoint (Cfg.GrpcEndpointUnixSocket fp) = RpcEndpointUnixSocket (File fp)
-    fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttp ip portNo) = RpcEndpointHttp ip portNo
-    fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttps ip portNo tls) =
-      RpcEndpointHttps ip portNo (fromCfgGrpcTlsFiles tls)
-
-    fromCfgGrpcTlsFiles :: Cfg.GrpcTlsFiles -> RpcTlsFiles
-    fromCfgGrpcTlsFiles tls =
-      RpcTlsFiles
-        { certificateFile = File (Cfg.certificateFile tls)
-        , privateKeyFile = File (Cfg.privateKeyFile tls)
-        , chainCertificateFiles = map File (Cfg.chainCertificateFiles tls)
-        }
-
-    -- cardano-config records the socket mode as the literal @"Accept"@ /
-    -- @"Connect"@ its CLI parser produces; anything else cannot occur.
-    fromCfgTracerConnection :: Cfg.TracerConnection -> (HowToConnect, ForwarderMode)
-    fromCfgTracerConnection (Cfg.TracerConnection mode method) =
-      ( case method of
-          CliArgs.TracerConnectViaPipe fp -> LocalPipe fp
-          CliArgs.TracerConnectViaRemote host portNo ->
-            RemoteSocket host (fromIntegral portNo)
-      , case mode of
-          "Accept" -> Responder
-          _ -> Initiator
-      )
 
     -- Map cardano-config's snapshot policy onto the node's 'SnapshotPolicyArgs'.
     -- Resolution has already turned a named Mithril policy into the concrete
@@ -322,6 +293,49 @@ cardanoConfigToPartialNodeConfiguration cfg =
         (strictMaybeToMaybe (Cfg.gcfBucketRate f))
         (fmap SlotNo (strictMaybeToMaybe (Cfg.gcfCSJJumpSize f)))
         (strictMaybeToMaybe (Cfg.gcfGDDRateLimit f))
+
+-- | Map @cardano-config@'s database paths onto the node's.
+fromCfgDbPaths :: Cfg.NodeDatabasePaths -> NodeDatabasePaths
+fromCfgDbPaths (Cfg.SingleDB p) = OnePathForAllDbs p
+fromCfgDbPaths (Cfg.SplitDB imm vol) = MultipleDbPaths imm vol
+
+-- | Map @cardano-config@'s shutdown target onto the node's.
+toNodeShutdownOn :: Cfg.ShutdownOn -> ShutdownOn
+toNodeShutdownOn (Cfg.ShutdownAtSlot w) = ASlot (SlotNo w)
+toNodeShutdownOn (Cfg.ShutdownAtBlock w) = ABlock (BlockNo w)
+
+-- | cardano-config's gRPC endpoint and the node's 'RpcEndpoint' offer the same
+-- three choices, so the mapping is one constructor to one constructor. Both
+-- default the listen address to 127.0.0.1, and cardano-config has already
+-- applied that default, so the endpoint arrives complete.
+fromCfgGrpcEndpoint :: Cfg.GrpcEndpoint -> RpcEndpoint
+fromCfgGrpcEndpoint (Cfg.GrpcEndpointUnixSocket fp) = RpcEndpointUnixSocket (File fp)
+fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttp ip portNo) = RpcEndpointHttp ip portNo
+fromCfgGrpcEndpoint (Cfg.GrpcEndpointHttps ip portNo tls) =
+  RpcEndpointHttps ip portNo (fromCfgGrpcTlsFiles tls)
+
+fromCfgGrpcTlsFiles :: Cfg.GrpcTlsFiles -> RpcTlsFiles
+fromCfgGrpcTlsFiles tls =
+  RpcTlsFiles
+    { certificateFile = File (Cfg.certificateFile tls)
+    , privateKeyFile = File (Cfg.privateKeyFile tls)
+    , chainCertificateFiles = map File (Cfg.chainCertificateFiles tls)
+    }
+
+-- | Map @cardano-config@'s tracer connection onto the pair the node holds.
+--
+-- cardano-config records the socket mode as the literal @"Accept"@ /
+-- @"Connect"@ its CLI parser produces; anything else cannot occur.
+fromCfgTracerConnection :: Cfg.TracerConnection -> (HowToConnect, ForwarderMode)
+fromCfgTracerConnection (Cfg.TracerConnection mode method) =
+  ( case method of
+      CliArgs.TracerConnectViaPipe fp -> LocalPipe fp
+      CliArgs.TracerConnectViaRemote host portNo ->
+        RemoteSocket host (fromIntegral portNo)
+  , case mode of
+      "Accept" -> Responder
+      _ -> Initiator
+  )
 
 -- | Map @cardano-config@ 'Cfg.Credentials' (file paths) onto the node's
 -- 'ProtocolFilepaths'.
