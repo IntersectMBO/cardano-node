@@ -280,6 +280,9 @@ Configuration:
       Net.Mux.Remote:
         severity: Info
 
+      Net.Mux.Remote.Bearer:
+        severity: Silence
+
       Net.PeerSelection:
         severity: Info
 
