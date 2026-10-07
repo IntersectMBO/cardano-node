@@ -57,6 +57,8 @@ instance LogFormatting TraceRpc where
                 TraceRpcSubmitSpan s -> [spanToObject s]
                 TraceRpcEvalTxDecodingError _ -> []
                 TraceRpcEvalTxSpan s -> [spanToObject s]
+                TraceRpcReadMempoolSpan s -> [spanToObject s]
+                TraceRpcWatchMempoolSpan s -> [spanToObject s]
           TraceRpcSync syncTrace ->
             ["kind" .= String "SyncService"]
               <> case syncTrace of
@@ -85,6 +87,8 @@ instance LogFormatting TraceRpc where
     TraceRpcQuery (TraceRpcQueryReadGenesisSpan (SpanBegin _)) -> [CounterM "rpc.request.QueryService.ReadGenesis" Nothing]
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
+    TraceRpcSubmit (TraceRpcReadMempoolSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.ReadMempool" Nothing]
+    TraceRpcSubmit (TraceRpcWatchMempoolSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.WatchMempool" Nothing]
     TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
     TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" Nothing]
     TraceRpcSync (TraceRpcFollowTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FollowTip" Nothing]
@@ -112,6 +116,8 @@ instance MetaTrace TraceRpc where
             TraceRpcSubmitSpan _ -> ["SubmitTx", "Span"]
             TraceRpcEvalTxDecodingError _ -> ["EvalTxDecodingError"]
             TraceRpcEvalTxSpan _ -> ["EvalTx", "Span"]
+            TraceRpcReadMempoolSpan _ -> ["ReadMempool", "Span"]
+            TraceRpcWatchMempoolSpan _ -> ["WatchMempool", "Span"]
       TraceRpcSync syncTrace ->
         "SyncService"
           : case syncTrace of
@@ -135,6 +141,8 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadGenesis", "Span"] -> Just Debug
     ["SubmitService", "SubmitTx", "Span"] -> Just Debug
     ["SubmitService", "EvalTx", "Span"] -> Just Debug
+    ["SubmitService", "ReadMempool", "Span"] -> Just Debug
+    ["SubmitService", "WatchMempool", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
     ["SubmitService", "TxDecodingError"] -> Just Debug -- request error
     ["SubmitService", "TxValidationError"] -> Just Debug -- request error
@@ -157,6 +165,8 @@ instance MetaTrace TraceRpc where
     ["QueryService", "ReadGenesis", "Span"] -> Just "Span for the ReadGenesis UTXORPC method."
     ["SubmitService", "SubmitTx", "Span"] -> Just "Span for the SubmitTx UTXORPC method."
     ["SubmitService", "EvalTx", "Span"] -> Just "Span for the EvalTx UTXORPC method."
+    ["SubmitService", "ReadMempool", "Span"] -> Just "Span for the ReadMempool UTXORPC method."
+    ["SubmitService", "WatchMempool", "Span"] -> Just "Span for the WatchMempool UTXORPC method."
     ["SubmitService", "N2cConnectionError"] ->
       Just
         "Node connection error. This should not happen, as this means that there is an issue in cardano-rpc configuration."
@@ -185,6 +195,10 @@ instance MetaTrace TraceRpc where
       [("rpc.request.SubmitService.SubmitTx", "Span for the SubmitTx UTXORPC method.")]
     ["SubmitService", "EvalTx", "Span"] ->
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
+    ["SubmitService", "ReadMempool", "Span"] ->
+      [("rpc.request.SubmitService.ReadMempool", "Span for the ReadMempool UTXORPC method.")]
+    ["SubmitService", "WatchMempool", "Span"] ->
+      [("rpc.request.SubmitService.WatchMempool", "Span for the WatchMempool UTXORPC method.")]
     ["SyncService", "FetchBlock", "Span"] ->
       [("rpc.request.SyncService.FetchBlock", "Span for the FetchBlock UTXORPC method.")]
     ["SyncService", "ReadTip", "Span"] ->
@@ -203,6 +217,8 @@ instance MetaTrace TraceRpc where
           , ["QueryService", "ReadGenesis", "Span"]
           , ["SubmitService", "SubmitTx", "Span"]
           , ["SubmitService", "EvalTx", "Span"]
+          , ["SubmitService", "ReadMempool", "Span"]
+          , ["SubmitService", "WatchMempool", "Span"]
           , ["SubmitService", "N2cConnectionError"]
           , ["SubmitService", "TxDecodingError"]
           , ["SubmitService", "TxValidationError"]

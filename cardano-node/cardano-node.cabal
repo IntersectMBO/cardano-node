@@ -99,21 +99,11 @@ library
                         Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
-                        Cardano.Node.Tracing.Era.Byron
-                        Cardano.Node.Tracing.Era.HardFork
-                        Cardano.Node.Tracing.Era.Shelley
-                        Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
-                        Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
-                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
-                        Cardano.Node.Tracing.Tracers.ChainDB
-                        Cardano.Node.Tracing.Tracers.Consensus
-                        Cardano.Node.Tracing.Tracers.ConsensusStartupException
                         Cardano.Node.Tracing.Tracers.ForgingStats
-                        Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
@@ -121,7 +111,6 @@ library
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
-                        Cardano.Node.Tracing.Tracers.HasIssuer
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
 
@@ -134,14 +123,11 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.7
-                      , cardano-data
                       , cardano-crypto-class ^>=2.6
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
-                      , cardano-ledger-allegra
                       , cardano-ledger-api
-                      , cardano-ledger-babbage
                       , cardano-ledger-binary >= 1.7.1
                       , cardano-ledger-byron
                       , cardano-ledger-conway >= 1.22.1.0
@@ -149,10 +135,9 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol ^>= 0.1
-                      , cardano-protocol-tpraos >= 1.4
+                      , cardano-protocol ^>= 0.2
                       , cardano-slotting >= 0.2
-                      , cardano-rpc ^>= 11.3
+                      , cardano-rpc ^>= 11.4
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer >= 0.2.1
@@ -167,7 +152,6 @@ library
                       , hashable
                       , hostname
                       , io-classes:{io-classes,strict-stm,si-timers} ^>= 1.8 || ^>= 1.9
-                      , kes-agent ^>=1.3
                       , microlens
                       , mmap
                       , network-mux
@@ -176,19 +160,17 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol} >= 4.0
-                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.2
-                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.1.1
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 5.0
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 1.3
+                      , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.3
                       , prettyprinter
                       , prettyprinter-ansi-terminal
-                      , psqueues
                       , random
                       , resource-registry
                       , safe-exceptions
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
                       , stm <2.5.2 || >=2.5.3
-                      , strict-sop-core
                       , sop-core
                       , sop-extras
                       , text >= 2.0

@@ -14,6 +14,7 @@ import           Cardano.Api
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Binary as L
+import           Cardano.Ledger.Coin (CoinPerByte (..), CompactForm (..))
 import           Cardano.Ledger.Core (MaxPledgeLeverage (..))
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import qualified Cardano.Ledger.Dijkstra.Genesis as Dijkstra
@@ -24,6 +25,7 @@ import qualified Cardano.Ledger.Plutus.Language as L
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (SlotInterval (..))
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Int
@@ -88,6 +90,17 @@ emptyDijkstraGenesis =
                                 , udppMaxEndorserBlockTxsSize = 0
                                 , udppMaxEndorserBlockExUnits = OrdExUnits (ExUnits 0 0)
                                 , udppMaxRefScriptSizePerEndorserBlock = 0
+                                , udppPerasMinCandidateBlockAge = SlotInterval 0
+                                -- The healing factor must be strictly positive.
+                                , udppPerasHealingFactor = fromMaybe (error "impossible") $ boundRational 0.5
+                                , udppPerasCertBoost = 0
+                                , udppPerasTargetCommitteeSize = 1
+                                , udppPerasBootstrapRound = SNothing
+                                , udppPerasQuorumThresholdSafetyMargin = minBound
+                                -- No pricing logic uses these yet, they are enabled by a later
+                                -- intra-era hard fork within the Dijkstra era.
+                                , udppRefInputsCostPerMultiAssetPolicy = Coin 0
+                                , udppRefInputsCostPerDatumByte = CoinPerByte (CompactCoin 0)
                                 }
       in DijkstraGenesis { dgUpgradePParams = upgradePParamsDef }
 

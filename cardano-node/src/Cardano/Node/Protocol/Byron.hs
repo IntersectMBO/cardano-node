@@ -26,14 +26,12 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Cardano.Node.Protocol.Types
-import           Cardano.Node.Tracing.Era.Byron ()
-import           Cardano.Node.Tracing.Era.HardFork ()
-import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types as Node
 import           Cardano.Prelude (canonicalDecodePretty)
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
+import           Ouroboros.Consensus.Tracing ()
 
 import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
