@@ -11,7 +11,7 @@
 # jq's cache format marker is the "layout.version" file: genesis-create-cache-jq
 # writes it, genesis-cache-hit-jq gates the cache hit on it. (Atomic commit is the
 # top-level caller's job; the ripper backend versions via its keys instead.)
-genesis_jq_layout_version=June-22-2026
+genesis_jq_layout_version=October-07-2026
 
 profile-cache-key-input-jq() {
     set -euo pipefail
@@ -79,12 +79,19 @@ genesis-create-cache-jq() {
       genesis zero-spec-conway                    > "$dir/conway-genesis.spec.json"
     fi
 
+    # Dijkstra spec: always the zero stub, never the profile's `.genesis.dijkstra`.
+    # Without --spec-dijkstra, this cardano-cli writes its built-in defaults,
+    # whose plutusV4CostModel has a length the node's genesis parser rejects.
+    # The profile's values are patched in by derive-from-cache instead, as the
+    # cache key does not cover protocol parameters.
+    genesis zero-spec-dijkstra                      > "$dir/dijkstra-genesis.spec.json"
     # TODO if profile_json.composition.dense_pool_density != 1 -> create-testnet-data does not support dense pools
     read -r -a args <<<"$(jq --raw-output '.cli_args.createTestnetDataArgs | join(" ")' "$profile_json")"
     create_testnet_data_args=(
         --spec-shelley "$dir/shelley-genesis.spec.json"
         --spec-alonzo  "$dir/alonzo-genesis.spec.json"
         --spec-conway  "$dir/conway-genesis.spec.json"
+        --spec-dijkstra "$dir/dijkstra-genesis.spec.json"
         --out-dir      "$dir"
         "${args[@]}"
     )
@@ -194,6 +201,16 @@ derive-from-cache-jq() {
       --slurpfile prof "$profile_json" \
       "$outdir"/genesis.conway.json |
       sponge "$outdir"/genesis.conway.json
+
+    # Dijkstra: fill in from the zero spec any field the cached file lacks (an
+    # entry written without --spec-dijkstra), then lay the profile's
+    # `.genesis.dijkstra` over the result, which is where its pparams overlays
+    # land. The zero spec only adds; the profile overrides.
+    jq --argjson zero "$(genesis zero-spec-dijkstra)" \
+       --slurpfile prof "$profile_json" \
+       '$zero * . * ($prof[0].genesis.dijkstra // {})' \
+      "$outdir"/genesis.dijkstra.json |
+      sponge "$outdir"/genesis.dijkstra.json
 
 }
 
