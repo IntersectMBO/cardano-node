@@ -57,6 +57,8 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingResumed, newForgingResumed,
+                   noteForgingResumed)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
@@ -234,6 +236,9 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
   blockForging <- mkBlockForging nullTracer
+  -- Tells the Forge.Stats tracer that forging was (re-)enabled, so the standby
+  -- interval is not booked as missed leadership checks (issue #6698).
+  forgingResumed <- newForgingResumed
   tracers <-
     initTraceDispatcher
       nc
@@ -242,6 +247,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
       networkMagic
       nodeKernelData
       (null blockForging)
+      forgingResumed
 
   startupInfo <- getStartupInfo nc blockType pInfoConfig fp
   mapM_ (traceWith $ startupTracer tracers) startupInfo
@@ -253,7 +259,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingResumed nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -294,6 +300,7 @@ handleSimpleNode
   -> ProtocolInfo blk
   -> (Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
   -> Tracers RemoteAddress LocalAddress blk IO
+  -> ForgingResumed
   -> NodeConfiguration
   -> PartialNodeConfiguration
   -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
@@ -304,7 +311,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingResumed nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -483,6 +490,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
+                                     forgingResumed
                                      blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
@@ -585,6 +593,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
 -- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
+                     -> ForgingResumed
                      -> Api.BlockType blk
                      -> NodeConfiguration
                      -> PartialNodeConfiguration -- ^ original CLI configuration
@@ -599,15 +608,15 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc cmdPc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer kesAgentTracer forgingResumed blockType nc cmdPc networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
-      updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc
+      updateBlockForging startupTracer kesAgentTracer forgingResumed blockType nodeKernel nc
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -627,11 +636,12 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc cmdPc networkMagi
 #ifdef UNIX
 updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> Tracer IO KESAgentClientTrace
+                   -> ForgingResumed
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
                    -> IO ()
-updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
+updateBlockForging startupTracer kesAgentTracer forgingResumed blockType nodeKernel nc = do
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
                                        (ncProtocolConfig nc)
                                        (Just (ncProtocolFiles nc))
@@ -649,10 +659,14 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
           -- TODO: check if runP' has changed
           (_, mkBlockForging) <- Api.protocolInfo runP'
           blockForging <- mkBlockForging kesAgentTracer
+          let enabled = not (null blockForging)
+          -- Starts a new run of slots for Forge.Stats: no leadership check ran
+          -- while forging was disabled, so those slots were not due.
+          when enabled $ noteForgingResumed forgingResumed
           traceWith startupTracer
-                    (BlockForgingUpdate (if null blockForging
-                                          then DisabledBlockForging
-                                          else EnabledBlockForging))
+                    (BlockForgingUpdate (if enabled
+                                          then EnabledBlockForging
+                                          else DisabledBlockForging))
           setBlockForging nodeKernel blockForging
         Nothing ->
           traceWith startupTracer

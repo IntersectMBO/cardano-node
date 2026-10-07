@@ -2,6 +2,16 @@
 
 ## Next version
 
+- `slotsMissed_int` no longer counts the slots that elapse while block forging
+  is disabled. While forging is off there is no forging thread, hence no
+  leadership check events at all, so `Forge.Stats` kept the last slot it had
+  seen and booked the whole standby interval as missed on the first check after
+  forging was re-enabled. The first completed check after resuming now starts a
+  new run of slots, exactly as the first check after start-up does. Genuine
+  gaps, where a producing node did not complete a leadership check, are still
+  counted.
+  ([#6698](https://github.com/IntersectMBO/cardano-node/issues/6698))
+
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the
   configuration consistency check now use the runtime `TraceDecisionEvent`
   type, so the documented message namespaces are
