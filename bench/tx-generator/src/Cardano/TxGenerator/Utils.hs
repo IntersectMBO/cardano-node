@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,27 +13,14 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
+import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
 
-import           Data.Maybe (fromJust)
 import           GHC.Stack
 
-
--- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
--- regardless of which particular era.
-liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
-liftAnyEra f x = case x of
-  InAnyCardanoEra ByronEra a     ->   InAnyCardanoEra ByronEra $ f a
-  InAnyCardanoEra ShelleyEra a   ->   InAnyCardanoEra ShelleyEra $ f a
-  InAnyCardanoEra AllegraEra a   ->   InAnyCardanoEra AllegraEra $ f a
-  InAnyCardanoEra MaryEra a      ->   InAnyCardanoEra MaryEra $ f a
-  InAnyCardanoEra AlonzoEra a    ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a   ->   InAnyCardanoEra BabbageEra $ f a
-  InAnyCardanoEra ConwayEra a    ->   InAnyCardanoEra ConwayEra $ f a
-  InAnyCardanoEra DijkstraEra a  ->   InAnyCardanoEra DijkstraEra $ f a
 
 -- | `keyAddress` determines an address for the relevant era.
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
@@ -67,16 +55,22 @@ includeChange fee spend have = case compare changeValue 0 of
 
 -- some convenience constructors
 
--- | `mkTxFee` reinterprets the `Either` returned by
--- `txFeesExplicitInEra` with `TxFee` constructors.
-mkTxFee :: IsShelleyBasedEra era => L.Coin -> TxFee era
-mkTxFee = TxFeeExplicit shelleyBasedEra
-
--- | `mkTxValidityUpperBound` rules out needing the
--- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
-mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
-mkTxValidityUpperBound slotNo =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
+-- | `toAnyTxInWitness` converts an old-API witness for spending a transaction
+-- input into the experimental API's `Exp.AnyWitness`, decoding a Plutus script
+-- if there is one.
+-- `Exp.legacyWitnessConversion` only looks at the `Exp.WitTxIn` constructor (to
+-- pick the spending purpose) and not at the `TxIn` it carries, so a placeholder
+-- is used: one witness is shared by all the funds paid to a script.
+toAnyTxInWitness :: forall era. Exp.EraCommonConstraints era
+  => Witness WitCtxTxIn era
+  -> Either TxGenError (Exp.AnyWitness (ShelleyLedgerEra era))
+toAnyTxInWitness witness =
+  case Exp.legacyWitnessConversion (convert $ Exp.useEra @era) [(Exp.WitTxIn placeholderTxIn, BuildTxWith witness)] of
+    Right [(_, anyWitness)] -> Right anyWitness
+    Right _                 -> Left $ TxGenError "toAnyTxInWitness: expected exactly one converted witness"
+    Left err                -> Left $ TxGenError $ "toAnyTxInWitness: " ++ show err
+ where
+  placeholderTxIn = mkTxIn "0000000000000000000000000000000000000000000000000000000000000000#0"
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
