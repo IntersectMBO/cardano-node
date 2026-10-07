@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Unreleased (2.5.0.1 proposal)
+
+* Update the network API/protocol dependency bounds to the selected 1.3 integration.
+
 ## 2.4.1 - Mar 2026
 
 * Increase robustness of evaluating trace objects to be forwarded

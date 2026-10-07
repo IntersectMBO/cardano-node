@@ -18,10 +18,9 @@ import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Rpc.Client as Rpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as Submit
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPredicate,
                    serialisePaymentCredential)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type
@@ -123,8 +122,8 @@ hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempA
 
   liftBaseOp (Rpc.withConnection def rpcServer) $ \conn -> do
     _submitResponse <- H.noteShowM . H.evalIO $
-      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf UtxoRpc.SubmitService "submitTx")) $
-        def & U5c.tx .~ (def & U5c.raw .~ serialiseToRawBytes (Exp.SignedTx signedLedgerTx))
+      Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf Submit.SubmitService "submitTx")) $
+        def & Submit.tx .~ (def & Submit.raw .~ serialiseToRawBytes (Exp.SignedTx signedLedgerTx))
 
     -------------------------------------------
     -- Wait for UTxOs to appear at address1

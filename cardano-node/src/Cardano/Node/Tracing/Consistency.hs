@@ -65,7 +65,8 @@ import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (Per
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
                    TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
-import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
+import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent, TracePerasCertInclusionEvent,
+                   TracePerasVoteForgingEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -216,6 +217,10 @@ getAllNamespaces =
                           (TraceTxLogic remotePeer (GenTxId blk) (GenTx blk))])
         txCountersNS = map (nsGetTuple . nsReplacePrefix ["txCounters", "Remote"])
                         (allNamespaces :: [Namespace TxSubmissionCounters])
+        perasCertInclusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inclusion"])
+                        (allNamespaces :: [Namespace (TracePerasCertInclusionEvent blk)])
+        perasVoteForgingNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Forging"])
+                        (allNamespaces :: [Namespace (TracePerasVoteForgingEvent blk)])
         perasCertInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                           remotePeer (TracePerasCertDiffusionInbound blk))])
@@ -475,6 +480,8 @@ getAllNamespaces =
             <> txLogicNS
             <> txCountersNS
 -- Peras
+            <> perasCertInclusionNS
+            <> perasVoteForgingNS
             <> perasCertInboundNS
             <> perasCertOutboundNS
             <> perasVoteInboundNS

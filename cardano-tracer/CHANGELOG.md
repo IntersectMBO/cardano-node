@@ -1,6 +1,8 @@
 # ChangeLog
 
-## NEXT
+## NEXT (0.5.0.1 proposal)
+
+* Update explicit network and diffusion dependency bounds for the selected node integration.
 
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an

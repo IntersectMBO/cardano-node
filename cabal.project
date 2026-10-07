@@ -13,10 +13,14 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-14T13:38:07Z
-  , cardano-haskell-packages 2026-09-22T20:39:47Z
+  , hackage.haskell.org 2026-09-02T14:05:07Z
+  , cardano-haskell-packages 2026-10-06T16:46:26Z
 
 constraints:
+  -- Both time providers export the same C clock symbol in static musl builds.
+  -- DNS 4.2.0.1 uses the modern provider required by TLS.
+  , hourglass < 0
+  , dns ^>= 4.2.0.1
   -- haskell.nix patch does not work for 1.6.8
   -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
   , any.crypton-x509-system < 1.6.8 || >= 1.7
@@ -166,3 +170,99 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+
+-- Temporary public source prerequisites for the coordinated CIP-160 proposals.
+-- Proposed package versions are unreleased; remove after official package delivery.
+-- Remove these overrides after the reviewed package versions reach CHaP.
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-ledger.git
+  tag: 4ab1c0df3373b962c641efb4935aca0e7e68967b
+  --sha256: sha256-+EearRC1REi8n7pRvsR6AmTC/lyLYkxRdvkwUV1Ilk0=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/crypto
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/plutus.git
+  tag: dcbb7e3232c3322557410fe341ec84f3cd78dc04
+  --sha256: sha256-6n+edByIhXRu9+ZfeMhIKLlfkcj/7aRJ1mrH29mn4nE=
+  subdir: plutus-ledger-api
+
+-- Exact public source prerequisites; proposed versions are unreleased.
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-addresses.git
+  tag: 83cf033c671d8a03d95de52c1451195f331d538e
+  --sha256: sha256-L0Bt4ynhocsSopD2xsY+JqajASjSAggrBP46Szbzygg=
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-keys.git
+  tag: b63987bd43d99b82b91d29020ceab089fb61b123
+  --sha256: sha256-7oRxoZjCv/RhnnRWQ8LvI4sknlEGqy81j8uFxuJzOc0=
+  subdir: cardano-keys
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-config.git
+  tag: e7a6f979964d2f613671832af001d06f99a67a86
+  --sha256: sha256-D+PbL2GcvEwCpazxy8cYncl8EUjwuR4H5Wj2HWO3UX0=
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/ouroboros-consensus.git
+  tag: 0c91555c0c0dfeef6cb0ac6facd42b471630f5b0
+  --sha256: sha256-19A5YUoKnfUAc/KBPg3s25HaI+zwMGiIk4Vng3NJXH4=
+
+
+-- Published feature sources retain the complete normal component graph.
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-cli.git
+  tag: 7bc80d20076082ae5ebe17ac03bb47bc41c9ec48
+  --sha256: sha256-Tk0kqzvbntxMrjvVghv6IOzE+nDhU8rKPSoVXH175Xg=
+  subdir: cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/cardano-api.git
+  tag: a3966fb8dca37e796929ae870f0bc8edea521986
+  --sha256: sha256-zhmSimpXLCW+NvoZWMX1HNnEpPOSSsngsXzSwbpx9pE=
+  subdir:
+    cardano-api
+    cardano-api-gen
+    cardano-rpc
+    cardano-wasm
+
+source-repository-package
+  type: git
+  location: https://github.com/colll78/ekg-forward.git
+  tag: 420e68445d1f853274724ccd18c1bd2222843f3a
+  --sha256: sha256-OWGyRyqprIoQi+zzCw5aHk9/bA778dDaVn9pJfspLhE=
+
+-- Temporary upstream DNS prerequisite: https://github.com/kazu-yamamoto/dns/pull/177
+-- Share the modern time provider required by TLS; remove after upstream delivery.
+source-repository-package
+  type: git
+  location: https://github.com/colll78/dns.git
+  tag: a3ef6cdcdb5173d88c2e2a3201f528dbe0df1c0c
+  --sha256: sha256-fOWp3BFVkD4dJvxVtskdOyPg5uN9GUEL7NEj9Z4pBm8=

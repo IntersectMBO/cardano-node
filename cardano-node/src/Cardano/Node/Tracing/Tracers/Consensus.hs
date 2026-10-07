@@ -44,7 +44,8 @@ import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDe
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
-                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
+                   HasTxId, LedgerSupportsMempool, TxMeasurePhase1Metrics (..),
+                   TxMeasurePhase2Metrics (..), txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolRejectionDetails (..), MempoolSize (..),
                    TraceEventMempool (..), jsonMempoolRejectionDetails)
@@ -60,10 +61,6 @@ import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Inbound (NumOb
                    TraceObjectDiffusionInbound (..))
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.Outbound
                    (TraceObjectDiffusionOutbound (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
-                   (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
-                   (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -1097,7 +1094,7 @@ instance
           .= map
             ( \(tx, err) ->
                 Aeson.object $
-                  [ "tx" .= forMachine dtal (txForgetValidated tx)
+                  [ "tx" .= forMachine dtal tx
                   ] <>
                   [ "err" .= forMachine dtal err
                   | dtal >= DDetailed
@@ -1110,7 +1107,7 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
-      , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
+      , "txsInvalidated" .= map (forMachine dtal) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolSyncNotNeeded t) =
@@ -1133,6 +1130,12 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolTipMovedBetweenSTMBlocks"
       ]
+
+  forMachine _dtal (TraceMempoolCapacityChanged capBefore capAfter) =
+    mconcat [ "kind" .= String "TraceMempoolCapacityChanged"
+            , "capacityBefore" .= jsonTxMeasure capBefore
+            , "capacityAfter" .= jsonTxMeasure capAfter
+            ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -1166,6 +1169,15 @@ instance
   asMetrics TraceMempoolAttemptingAdd {} = []
 
   asMetrics TraceMempoolTipMovedBetweenSTMBlocks {} = []
+  asMetrics TraceMempoolCapacityChanged {} = []
+
+jsonTxMeasure :: (TxMeasurePhase1Metrics m, TxMeasurePhase2Metrics m) => m -> Aeson.Value
+jsonTxMeasure measure = Aeson.object
+  [ "txSizeBytes" .= unByteSize32 (txMeasureMetricTxSizeBytes measure)
+  , "exUnitsMemory" .= txMeasureMetricExUnitsMemory measure
+  , "exUnitsSteps" .= txMeasureMetricExUnitsSteps measure
+  , "refScriptsSizeBytes" .= unByteSize32 (txMeasureMetricRefScriptsSizeBytes measure)
+  ]
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1184,6 +1196,7 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
     namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
     namespaceFor TraceMempoolTipMovedBetweenSTMBlocks {} = Namespace [] ["TipMovedBetweenSTMBlocks"]
+    namespaceFor TraceMempoolCapacityChanged {} = Namespace [] ["CapacityChanged"]
 
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
@@ -1194,6 +1207,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
     severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
     severityFor (Namespace [] ["TipMovedBetweenSTMBlocks"]) _ = Just Debug
+    severityFor (Namespace _ ["CapacityChanged"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1241,6 +1255,8 @@ instance MetaTrace (TraceEventMempool blk) where
       "Mempool is about to try to validate and add a transaction."
     documentFor (Namespace _ ["TipMovedBetweenSTMBlocks"]) = Just
       "LedgerDB moved to an alternative fork between two reads during re-sync."
+    documentFor (Namespace _ ["CapacityChanged"]) = Just
+      "The mempool capacity has changed when re-syncing the mempool to the latest tip"
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1252,6 +1268,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["SyncNotNeeded"]
       , Namespace [] ["AttemptAdd"]
       , Namespace [] ["TipMovedBetweenSTMBlocks"]
+      , Namespace [] ["CapacityChanged"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1272,7 +1289,9 @@ instance ( tx ~ GenTx blk
          , Show (TxId (GenTx blk))
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
-         , LogFormatting (ForgeStateUpdateError blk))
+         , LogFormatting (ForgeStateUpdateError blk)
+         , Show (PerasError blk)
+         )
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
     mconcat
@@ -2379,22 +2398,22 @@ allNamespacesObjectDiffusionInbound =
   , Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
   ]
 
-instance LogFormatting (TracePerasCertDiffusionInbound blk) where
+instance LogFormatting (TraceObjectDiffusionInbound PerasRoundNo object) where
   forMachine _ = forMachineObjectDiffusionInbound
   asMetrics = asMetricsObjectDiffusionInbound perasCertMetricsPrefix
 
-instance MetaTrace (TracePerasCertDiffusionInbound blk) where
+instance MetaTrace (TraceObjectDiffusionInbound PerasRoundNo object) where
   namespaceFor = namespaceForObjectDiffusionInbound
   severityFor ns _ = severityForObjectDiffusionInbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionInbound perasCertMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionInbound
 
-instance LogFormatting (TracePerasVoteDiffusionInbound blk) where
+instance LogFormatting (TraceObjectDiffusionInbound PerasVoteId object) where
   forMachine _ = forMachineObjectDiffusionInbound
   asMetrics = asMetricsObjectDiffusionInbound perasVoteMetricsPrefix
 
-instance MetaTrace (TracePerasVoteDiffusionInbound blk) where
+instance MetaTrace (TraceObjectDiffusionInbound PerasVoteId object) where
   namespaceFor = namespaceForObjectDiffusionInbound
   severityFor ns _ = severityForObjectDiffusionInbound ns
   documentFor _ = Nothing
@@ -2485,26 +2504,230 @@ allNamespacesObjectDiffusionOutbound =
   , Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
   ]
 
-instance Show (PerasCert blk)
-      => LogFormatting (TracePerasCertDiffusionOutbound blk) where
+instance Show object
+      => LogFormatting (TraceObjectDiffusionOutbound PerasRoundNo object) where
   forMachine _ = forMachineObjectDiffusionOutbound
   asMetrics = asMetricsObjectDiffusionOutbound perasCertMetricsPrefix
 
-instance MetaTrace (TracePerasCertDiffusionOutbound blk) where
+instance MetaTrace (TraceObjectDiffusionOutbound PerasRoundNo object) where
   namespaceFor = namespaceForObjectDiffusionOutbound
   severityFor ns _ = severityForObjectDiffusionOutbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionOutbound perasCertMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionOutbound
 
-instance Show (PerasVote blk)
-      => LogFormatting (TracePerasVoteDiffusionOutbound blk) where
+instance Show object
+      => LogFormatting (TraceObjectDiffusionOutbound PerasVoteId object) where
   forMachine _ = forMachineObjectDiffusionOutbound
   asMetrics = asMetricsObjectDiffusionOutbound perasVoteMetricsPrefix
 
-instance MetaTrace (TracePerasVoteDiffusionOutbound blk) where
+instance MetaTrace (TraceObjectDiffusionOutbound PerasVoteId object) where
   namespaceFor = namespaceForObjectDiffusionOutbound
   severityFor ns _ = severityForObjectDiffusionOutbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionOutbound perasVoteMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionOutbound
+
+--------------------------------------------------------------------------------
+-- Peras cert inclusion Tracer
+--------------------------------------------------------------------------------
+
+instance
+  Show (PerasCert blk) =>
+  LogFormatting (TracePerasCertInclusionEvent blk)
+  where
+  forMachine _dtal = \case
+    TracePerasCertInclusionNoCertToInclude slotNo ->
+      mconcat
+        [ "kind" .= String "TracePerasCertInclusionNoCertToInclude"
+        , "slot" .= unSlotNo slotNo
+        ]
+    TracePerasCertInclusionRulesDecision slotNo roundNo decision ->
+      mconcat
+        [ "kind" .= String "TracePerasCertInclusionRulesDecision"
+        , "slot" .= unSlotNo slotNo
+        , "round" .= unPerasRoundNo roundNo
+        , "decision" .= String (showT decision)
+        ]
+
+  forHuman = \case
+    TracePerasCertInclusionNoCertToInclude slotNo ->
+      "No Peras certificate available to include in slot "
+        <> showT (unSlotNo slotNo)
+    TracePerasCertInclusionRulesDecision slotNo roundNo decision ->
+      "Peras certificate inclusion rules decided "
+        <> showT decision
+        <> " in slot "
+        <> showT (unSlotNo slotNo)
+        <> ", round "
+        <> showT (unPerasRoundNo roundNo)
+
+instance MetaTrace (TracePerasCertInclusionEvent blk) where
+  namespaceFor TracePerasCertInclusionNoCertToInclude{} =
+    Namespace [] ["NoCertToInclude"]
+  namespaceFor TracePerasCertInclusionRulesDecision{} =
+    Namespace [] ["RulesDecision"]
+
+  severityFor (Namespace _ ["NoCertToInclude"]) _ = Just Debug
+  severityFor (Namespace _ ["RulesDecision"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["NoCertToInclude"]) =
+    Just
+      "There is no Peras certificate available to include in the block being forged."
+  documentFor (Namespace _ ["RulesDecision"]) =
+    Just
+      "The decision taken by the Peras certificate inclusion rules, i.e. whether a\
+      \ certificate is to be included in the block being forged, and why."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["NoCertToInclude"]
+    , Namespace [] ["RulesDecision"]
+    ]
+
+--------------------------------------------------------------------------------
+-- Peras vote forging Tracer
+--------------------------------------------------------------------------------
+
+instance
+  ( StandardHash blk
+  , Show (PerasVote blk)
+  , Show (PerasCert blk)
+  ) =>
+  LogFormatting (TracePerasVoteForgingEvent blk)
+  where
+  forMachine _dtal = \case
+    TracePerasVotingNoVoteAfterFirstSlotInRound roundNo slotInRound ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingNoVoteAfterFirstSlotInRound"
+        , "round" .= unPerasRoundNo roundNo
+        , "slotInRound" .= slotInRound
+        ]
+    TracePerasVotingNotAVoterInRound roundNo ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingNotAVoterInRound"
+        , "round" .= unPerasRoundNo roundNo
+        ]
+    TracePerasVotingRulesDecision roundNo decision ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingRulesDecision"
+        , "round" .= unPerasRoundNo roundNo
+        , "decision" .= String (showT decision)
+        ]
+    TracePerasVotingForgedVote roundNo vote ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingForgedVote"
+        , "round" .= unPerasRoundNo roundNo
+        , "vote" .= String (showT vote)
+        ]
+    TracePerasVotingAddVoteResult roundNo result ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingAddVoteResult"
+        , "round" .= unPerasRoundNo roundNo
+        , "result" .= String (showT result)
+        ]
+    TracePerasVotingAddCertChainSelOutcome roundNo outcome ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingAddCertChainSelOutcome"
+        , "round" .= unPerasRoundNo roundNo
+        , "outcome" .= String (showT outcome)
+        ]
+    TracePerasVotingCantReadEnv err ->
+      mconcat
+        [ "kind" .= String "TracePerasVotingCantReadEnv"
+        , "error" .= String (Text.pack err)
+        ]
+
+  forHuman = \case
+    TracePerasVotingNoVoteAfterFirstSlotInRound roundNo slotInRound ->
+      "Not voting in Peras round "
+        <> showT (unPerasRoundNo roundNo)
+        <> ": past the first slot of the round (slot "
+        <> showT slotInRound
+        <> ")"
+    TracePerasVotingNotAVoterInRound roundNo ->
+      "Not a voter in Peras round " <> showT (unPerasRoundNo roundNo)
+    TracePerasVotingRulesDecision roundNo decision ->
+      "Peras voting rules decided "
+        <> showT decision
+        <> " in round "
+        <> showT (unPerasRoundNo roundNo)
+    TracePerasVotingForgedVote roundNo vote ->
+      "Forged Peras vote in round "
+        <> showT (unPerasRoundNo roundNo)
+        <> ": "
+        <> showT vote
+    TracePerasVotingAddVoteResult roundNo result ->
+      "Adding the Peras vote of round "
+        <> showT (unPerasRoundNo roundNo)
+        <> " to the vote DB: "
+        <> showT result
+    TracePerasVotingAddCertChainSelOutcome roundNo outcome ->
+      "Adding the Peras certificate of round "
+        <> showT (unPerasRoundNo roundNo)
+        <> " to the cert DB: "
+        <> showT outcome
+    TracePerasVotingCantReadEnv err ->
+      "Could not read the Peras voting environment: " <> Text.pack err
+
+instance MetaTrace (TracePerasVoteForgingEvent blk) where
+  namespaceFor TracePerasVotingNoVoteAfterFirstSlotInRound{} =
+    Namespace [] ["NoVoteAfterFirstSlotInRound"]
+  namespaceFor TracePerasVotingNotAVoterInRound{} =
+    Namespace [] ["NotAVoterInRound"]
+  namespaceFor TracePerasVotingRulesDecision{} =
+    Namespace [] ["RulesDecision"]
+  namespaceFor TracePerasVotingForgedVote{} =
+    Namespace [] ["ForgedVote"]
+  namespaceFor TracePerasVotingAddVoteResult{} =
+    Namespace [] ["AddVoteResult"]
+  namespaceFor TracePerasVotingAddCertChainSelOutcome{} =
+    Namespace [] ["AddCertChainSelOutcome"]
+  namespaceFor TracePerasVotingCantReadEnv{} =
+    Namespace [] ["CantReadEnv"]
+
+  severityFor (Namespace _ ["NoVoteAfterFirstSlotInRound"]) _ = Just Debug
+  severityFor (Namespace _ ["NotAVoterInRound"]) _ = Just Debug
+  severityFor (Namespace _ ["RulesDecision"]) _ = Just Info
+  severityFor (Namespace _ ["ForgedVote"]) _ = Just Info
+  severityFor (Namespace _ ["AddVoteResult"]) _ = Just Info
+  severityFor (Namespace _ ["AddCertChainSelOutcome"]) _ = Just Info
+  severityFor (Namespace _ ["CantReadEnv"]) _ = Just Error
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["NoVoteAfterFirstSlotInRound"]) =
+    Just
+      "Votes are only cast in the first slot of a Peras round, and this slot is not it."
+  documentFor (Namespace _ ["NotAVoterInRound"]) =
+    Just
+      "This node was not elected to the voting committee of the current Peras round."
+  documentFor (Namespace _ ["RulesDecision"]) =
+    Just
+      "The decision taken by the Peras voting rules, i.e. whether a vote is to be\
+      \ cast in the current round, and why."
+  documentFor (Namespace _ ["ForgedVote"]) =
+    Just
+      "A Peras vote was forged for the current round."
+  documentFor (Namespace _ ["AddVoteResult"]) =
+    Just
+      "The result of adding the freshly forged vote to the Peras vote DB, which is\
+      \ where it may complete a quorum and yield a new certificate."
+  documentFor (Namespace _ ["AddCertChainSelOutcome"]) =
+    Just
+      "The outcome of handing a certificate generated by the freshly forged vote to\
+      \ chain selection."
+  documentFor (Namespace _ ["CantReadEnv"]) =
+    Just
+      "The Peras voting environment could not be read."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["NoVoteAfterFirstSlotInRound"]
+    , Namespace [] ["NotAVoterInRound"]
+    , Namespace [] ["RulesDecision"]
+    , Namespace [] ["ForgedVote"]
+    , Namespace [] ["AddVoteResult"]
+    , Namespace [] ["AddCertChainSelOutcome"]
+    , Namespace [] ["CantReadEnv"]
+    ]

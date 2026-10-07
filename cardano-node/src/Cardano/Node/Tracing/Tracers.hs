@@ -352,6 +352,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["txCounters", "Remote"]
     configureTracers configReflection trConfig [txCountersTracer]
 
+    !perasCertInclusionTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inclusion"]
+    configureTracers configReflection trConfig [perasCertInclusionTr]
+
+    !perasVoteForgingTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Forging"]
+    configureTracers configReflection trConfig [perasVoteForgingTr]
+
     !txPerasCertIn  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Cert", "Inbound"]
@@ -424,6 +434,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txLogicTracer
       , Consensus.txCountersTracer = mkTracer $
           traceWith txCountersTracer
+      , Consensus.perasCertInclusionTracer = mkTracer $ traceWith perasCertInclusionTr
+      , Consensus.perasVoteForgingTracer = mkTracer $ traceWith perasVoteForgingTr
       , Consensus.perasCertDiffusionInboundTracer = mkTracer $ traceWith txPerasCertIn
       , Consensus.perasCertDiffusionOutboundTracer = mkTracer $ traceWith txPerasCertOut
       , Consensus.perasVoteDiffusionInboundTracer = mkTracer $ traceWith txPerasVoteIn

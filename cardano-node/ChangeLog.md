@@ -2,6 +2,17 @@
 
 ## Next version
 
+- Update ledger/consensus and credential-envelope adapters for the selected
+  dependencies, preserving the LSM cache default and credential envelope type.
+  Render current account/withdrawal/pool and Peras failures, snapshot-policy
+  configuration and mempool-capacity changes. Expose ReadMempool/WatchMempool
+  RPC span namespaces, documentation and request counters. Use the supported
+  randomized responder salt API and display the supported client protocol version.
+
+- Render Receiving purposes by original output index. Missing-redeemer logs
+  preserve every purpose sharing a script hash: singleton values keep their
+  existing JSON shape, while multiple values form an array in source order.
+
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the
   configuration consistency check now use the runtime `TraceDecisionEvent`
   type, so the documented message namespaces are

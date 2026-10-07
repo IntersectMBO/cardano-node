@@ -470,6 +470,20 @@ docTracersFirstPhase condConfigFileName = do
     txCountersTrDoc <- documentTracer (txCountersTr ::
       Logging.Trace IO TxSubmissionCounters)
 
+    perasCertInclusionTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Cert", "Inclusion"]
+    configureTracers configReflection trConfig [perasCertInclusionTr]
+    perasCertInclusionTrDoc <- documentTracer (perasCertInclusionTr ::
+      Logging.Trace IO (Consensus.TracePerasCertInclusionEvent blk))
+
+    perasVoteForgingTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Peras", "Vote", "Forging"]
+    configureTracers configReflection trConfig [perasVoteForgingTr]
+    perasVoteForgingTrDoc <- documentTracer (perasVoteForgingTr ::
+      Logging.Trace IO (Consensus.TracePerasVoteForgingEvent blk))
+
     perasCertInboundTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Cert", "Inbound"]
@@ -835,6 +849,8 @@ docTracersFirstPhase condConfigFileName = do
             <> txLogicTrDoc
             <> txCountersTrDoc
 -- Peras
+            <> perasCertInclusionTrDoc
+            <> perasVoteForgingTrDoc
             <> perasCertInboundTrDoc
             <> perasCertOutboundTrDoc
             <> perasVoteInboundTrDoc

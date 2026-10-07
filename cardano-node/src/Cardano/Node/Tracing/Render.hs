@@ -60,9 +60,9 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as B16
 import           Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NonEmptyMap
+import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -194,13 +194,17 @@ renderMissingRedeemers :: forall era. ()
   => Api.ShelleyBasedEra era
   -> NonEmpty (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)
   -> Aeson.Value
-renderMissingRedeemers sbe scripts = Aeson.object $ NonEmpty.toList $ NonEmpty.map renderTuple scripts
+-- Preserve every purpose for a shared script hash. Singleton values keep the
+-- existing JSON shape; multiple values form an array in source order.
+renderMissingRedeemers sbe scripts =
+  Aeson.object $ map renderTuple $ Map.toList $ foldr addPurpose Map.empty scripts
   where
-    renderTuple :: ()
-      => (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)
-      -> Aeson.Pair
-    renderTuple (scriptPurpose, sHash) =
-      Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose sbe scriptPurpose
+    addPurpose (scriptPurpose, sHash) =
+      Map.insertWith (++) (renderScriptHash sHash) [renderScriptPurpose sbe scriptPurpose]
+    renderTuple (sHash, purposes) =
+      Aeson.fromText sHash .= case purposes of
+        [purpose] -> purpose
+        _ -> Aeson.toJSON purposes
 
 renderIncompleteWithdrawals :: forall payload. Show payload
   => NonEmptyMap Ledger.AccountAddress (Mismatch RelEQ payload)
@@ -281,3 +285,5 @@ renderDijkstraPlutusPurpose = \case
     Aeson.object ["proposing" .= Aeson.toJSON proposal]
   DijkstraGuarding sHash ->
     Aeson.object ["guarding" .= Aeson.toJSON sHash]
+  DijkstraReceiving (AsItem outputIndex) ->
+    Aeson.object ["receiving" .= Aeson.toJSON outputIndex]

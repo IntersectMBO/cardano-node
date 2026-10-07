@@ -1,3 +1,7 @@
+# Unreleased 2.4.0.1
+
+- Update the explicit network API bound to 1.3 for the Dijkstra feature dependency graph. Compilation and runtime validation remain pending.
+
 # Revision history for locli
 
 ## 2.4 -- Jul 2026

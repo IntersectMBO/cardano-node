@@ -24,7 +24,8 @@ import qualified Test.Tasty.Ingredients as T
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "Golden tests"
-  [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Cardano.Testnet.Test.Golden.Config.goldenDefaultConfigYaml
+  [ H.testPropertyNamed "dijkstra_ProtocolConfig" (fromString "dijkstra_ProtocolConfig") Cardano.Testnet.Test.Golden.Config.dijkstraProtocolConfig
+  , H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Cardano.Testnet.Test.Golden.Config.goldenDefaultConfigYaml
   , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Cardano.Testnet.Test.Golden.Help.golden_HelpAll
   , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Cardano.Testnet.Test.Golden.Help.golden_HelpCmds
   , ignoreOnWindows "golden_HelpReadme" Cardano.Testnet.Test.Golden.Help.golden_HelpReadme

@@ -240,7 +240,7 @@ defaultYamlHardforkViaConfig sbe =
         ShelleyBasedEraAlonzo -> ("LastKnownBlockVersion-Major", Aeson.Number 5)
         ShelleyBasedEraBabbage -> ("LastKnownBlockVersion-Major", Aeson.Number 8)
         ShelleyBasedEraConway -> ("LastKnownBlockVersion-Major", Aeson.Number 9)
-        ShelleyBasedEraDijkstra -> ("LastKnownBlockVersion-Major", Aeson.Number 10)
+        ShelleyBasedEraDijkstra -> ("LastKnownBlockVersion-Major", Aeson.Number 12)
       , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
       , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
       ]
@@ -286,7 +286,8 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
                 ]
             ShelleyBasedEraDijkstra ->
-                [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+                [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+                , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
                 , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
                 , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
                 , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)

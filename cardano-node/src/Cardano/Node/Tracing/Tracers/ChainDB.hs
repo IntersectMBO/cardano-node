@@ -14,6 +14,7 @@ module Cardano.Node.Tracing.Tracers.ChainDB
    , fragmentChainDensity
    ) where
 
+import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
@@ -21,6 +22,7 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.HasIssuer
 import           Cardano.Prelude (maximumDef)
+import           Cardano.Slotting.Time (getSlotLength)
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract.CanHardFork
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract.SingleEraBlock
@@ -34,7 +36,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent 
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract (Comparing (..), ReasonForSwitch,
-                   SelectViewReasonForSwitch (..), TiebreakerView, ValidationErr)
+                   SelectViewReasonForSwitch (..), TiebreakerView, ValidationErr, maxRollbacks)
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Protocol.Praos.Common
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -101,6 +103,8 @@ instance (  LogFormatting (Header blk)
           , InspectLedger blk
           , HasIssuer blk
           , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
+          , Show (PerasError blk)
+          , Show (PerasCert blk)
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
     "ChainDB is not clean. Validating all immutable chunks"
@@ -533,6 +537,7 @@ instance ( LogFormatting (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          , HasIssuer blk
+         , Show (PerasError blk)
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
   forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
     "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
@@ -1201,7 +1206,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 -- -- TraceInitChainSelEvent
 -- --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk, Show (PerasError blk))
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
     forHuman ChainDB.InitialChainSelected{} =
@@ -1284,7 +1289,9 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 instance ( LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
          , ConvertRawHash blk
-         , LogFormatting (RealPoint blk))
+         , LogFormatting (RealPoint blk)
+         , Show (PerasError blk)
+         )
          => LogFormatting (ChainDB.TraceValidationEvent blk) where
     forHuman (ChainDB.InvalidBlock err pt) =
         "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
@@ -1682,7 +1689,7 @@ instance MetaTrace (PerasVoteDB.TraceEvent blk) where
   documentFor (Namespace _ ["GarbageCollected"]) = Just "GarbageCollected"
   documentFor _ = Nothing
 
-instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
+instance Show (PerasCert blk) => LogFormatting (PerasVoteDB.TraceEvent blk) where
   forHuman (PerasVoteDB.AddVote voteId _vote result) =
     "Peras vote " <> Text.pack (show voteId) <> ": " <> Text.pack (show result)
   forHuman (PerasVoteDB.GarbageCollected slotNo) =
@@ -1805,6 +1812,8 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
+  forHuman (LedgerDB.ConfiguredSnapshotPolicy info) =
+    "Configured snapshot policy: " <> showT info <> "; mismatches: " <> showT (LedgerDB.snapshotPolicyMismatches info)
   forHuman (LedgerDB.SnapshotRequestDelayed _snapshotRequestTime delayBeforeSnapshotting slots) =
     Text.unwords [ "Scheduling to take ledger state snapshots at slots "
                  , showT (NonEmpty.toList slots)
@@ -1850,6 +1859,30 @@ instance ( StandardHash blk
              " Snapshot was created for a different backend. Convert it with `snapshot-converter`."
         _ -> ""
 
+  forMachine _dtals (LedgerDB.ConfiguredSnapshotPolicy info) =
+    mconcat $
+      [ "kind" .= String "ConfiguredSnapshotPolicy"
+      , "mismatches" .= toJSON (map show (LedgerDB.snapshotPolicyMismatches info))
+      , "securityParam" .= unNonZero (maxRollbacks (LedgerDB.spiSecurityParam info))
+      , "slotLengthSeconds" .= snapshotPolicySeconds (getSlotLength (LedgerDB.spiSlotLengthAtTip info))
+      , "numOfDiskSnapshots"
+          .= LedgerDB.getNumOfDiskSnapshots (LedgerDB.spaNum (LedgerDB.spiArgs info))
+      ]
+        <> case ( LedgerDB.spaFrequency (LedgerDB.spiArgs info)
+                , LedgerDB.spiIntervalSlots info
+                ) of
+          (LedgerDB.SnapshotFrequency fargs, Just intervalSlots) ->
+            [ "intervalSlots" .= unNonZero intervalSlots
+            , "intervalSeconds"
+                .= toJSON (snapshotPolicySeconds <$> LedgerDB.snapshotPolicyIntervalTime info)
+            , "offsetSlots" .= unSlotNo (LedgerDB.sfaOffset fargs)
+            , "rateLimitSeconds" .= snapshotPolicySeconds (LedgerDB.sfaRateLimit fargs)
+            , "writeDelayMinSeconds"
+                .= snapshotPolicySeconds (LedgerDB.minimumDelay (LedgerDB.sfaDelaySnapshotRange fargs))
+            , "writeDelayMaxSeconds"
+                .= snapshotPolicySeconds (LedgerDB.maximumDelay (LedgerDB.sfaDelaySnapshotRange fargs))
+            ]
+          _ -> ["snapshotsDisabled" .= True]
   forMachine _dtals (LedgerDB.SnapshotRequestDelayed snapshotRequestTime delayBeforeSnapshotting slots) =
     mconcat [ "kind" .= String "SnapshotRequestDelayed"
             , "requestTime" .= show snapshotRequestTime
@@ -1874,12 +1907,17 @@ instance ( StandardHash blk
             , "failure" .= show failure ]
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
+    namespaceFor (LedgerDB.ConfiguredSnapshotPolicy info)
+      | null (LedgerDB.snapshotPolicyMismatches info) = Namespace [] ["ConfiguredSnapshotPolicy"]
+      | otherwise = Namespace [] ["ImplausibleSnapshotPolicy"]
     namespaceFor LedgerDB.SnapshotRequestDelayed {} = Namespace [] ["SnapshotRequestDelayed"]
     namespaceFor LedgerDB.SnapshotRequestCompleted {} = Namespace [] ["SnapshotRequestCompleted"]
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
 
+    severityFor (Namespace _ ["ConfiguredSnapshotPolicy"]) _ = Just Info
+    severityFor (Namespace _ ["ImplausibleSnapshotPolicy"]) _ = Just Warning
     severityFor  (Namespace _ ["SnapshotRequestDelayed"]) _ = Just Debug
     severityFor  (Namespace _ ["SnapshotRequestCompleted"]) _ = Just Debug
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
@@ -1887,6 +1925,10 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
+    documentFor (Namespace _ ["ConfiguredSnapshotPolicy"]) = Just
+        "The configured snapshot interval, slot length, write delays and rate limit when opening the ledger database."
+    documentFor (Namespace _ ["ImplausibleSnapshotPolicy"]) = Just
+        "The configured write delay or rate limit is at least as long as the snapshot interval at the current slot length."
     documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
          [ "A snapshot is being written to disk. Two events will be traced, one"
          , " for when the node starts taking the snapshot and another one for"
@@ -1906,12 +1948,17 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     documentFor _ = Nothing
 
     allNamespaces =
-      [ Namespace [] ["TookSnapshot"]
+      [ Namespace [] ["ConfiguredSnapshotPolicy"]
+      , Namespace [] ["ImplausibleSnapshotPolicy"]
+      , Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
       , Namespace [] ["SnapshotRequestDelayed"]
       , Namespace [] ["SnapshotRequestCompleted"]
       ]
+
+snapshotPolicySeconds :: Real a => a -> Double
+snapshotPolicySeconds = realToFrac
 
 --------------------------------------------------------------------------------
 -- LedgerDB TraceReplayEvent
@@ -2885,16 +2932,33 @@ instance ( StandardHash blk
 
 
 instance (   LogFormatting (LedgerError blk)
-           , LogFormatting (HeaderError blk))
+           , LogFormatting (HeaderError blk)
+           , Show (PerasError blk))
         => LogFormatting (ExtValidationError blk) where
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
 
+    forMachine _dtal (ExtValidationErrorPerasEpochContextResolver err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasEpochContextResolver"
+              , "error" .= String (showT err)
+              ]
+    forMachine _dtal (ExtValidationErrorPerasCertInBlock err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasCertInBlock"
+              , "error" .= String (showT err)
+              ]
+
     forHuman (ExtValidationErrorLedger err) =  forHuman err
     forHuman (ExtValidationErrorHeader err) =  forHuman err
 
+    forHuman (ExtValidationErrorPerasEpochContextResolver err) =
+      "Could not resolve the Peras epoch context: " <> showT err
+    forHuman (ExtValidationErrorPerasCertInBlock err) =
+      "Invalid Peras certificate in block: " <> showT err
+
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err
+    asMetrics ExtValidationErrorPerasEpochContextResolver{} = []
+    asMetrics ExtValidationErrorPerasCertInBlock{} = []
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where

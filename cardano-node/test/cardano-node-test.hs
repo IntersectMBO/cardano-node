@@ -4,9 +4,11 @@
 #define UNIX
 #endif
 
-import           Hedgehog.Main (defaultMain)
+import qualified Cardano.Crypto.Init as Crypto
+
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
+import qualified Test.Cardano.Config.Dijkstra
 import qualified Test.Cardano.Config.Mainnet
 #ifdef UNIX
 import qualified Test.Cardano.Node.FilePermissions
@@ -15,8 +17,9 @@ import qualified Test.Cardano.Node.Json
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Node.TopLevel
 import qualified Test.Cardano.Tracing.NewTracing.Consistency
+import qualified Test.Cardano.Tracing.Receiving
 
-import qualified Cardano.Crypto.Init as Crypto
+import           Hedgehog.Main (defaultMain)
 
 main :: IO ()
 main = do
@@ -31,9 +34,11 @@ main = do
       [ Test.Cardano.Node.FilePermissions.tests
       ] <>
 #endif
-      [ Test.Cardano.Config.Mainnet.tests
+      [ Test.Cardano.Config.Dijkstra.tests
+      , Test.Cardano.Config.Mainnet.tests
       , Test.Cardano.Node.Json.tests
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Node.TopLevel.tests
       , Test.Cardano.Tracing.NewTracing.Consistency.tests
+      , Test.Cardano.Tracing.Receiving.tests
       ]

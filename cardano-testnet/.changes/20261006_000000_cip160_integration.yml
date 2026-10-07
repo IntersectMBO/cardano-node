@@ -1,0 +1,5 @@
+pr: 0
+kind:
+  - bugfix
+description: |
+  Align Dijkstra testnet block protocol major with genesis major 12 and the local protected-address proposal. Enable ExperimentalHardForksEnabled only for requested Dijkstra testnets, preserving earlier-era configurations. Add real protected key/native/V4 creation, query, same-database relay restart and spending coverage. Update dependency bounds for the selected Receiving-aware API, CLI, consensus and network packages.

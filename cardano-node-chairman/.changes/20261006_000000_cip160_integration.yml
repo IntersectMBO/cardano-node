@@ -1,0 +1,5 @@
+pr: 0
+kind:
+  - maintenance
+description: |
+  Update crypto-class and protocol dependency bounds for the selected Receiving-aware node integration.

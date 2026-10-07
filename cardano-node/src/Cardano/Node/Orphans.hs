@@ -80,6 +80,6 @@ instance HasTypeProxy (PraosCredentialsSource StandardCrypto) where
 
 -- TODO(11.0): consider moving to `cardano-api`
 instance HasTextEnvelope (PraosCredentialsSource StandardCrypto) where
-  textEnvelopeType _ =
+  textEnvelopeTypes _ = pure $
     "PraosCredentialsSource_"
       <> fromString (Crypto.algorithmNameKES (Proxy @(KES StandardCrypto)))

@@ -174,8 +174,8 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyRegisteredDELEG credential ->
-      [ "kind" .= String "StakeKeyRegisteredDELEG"
+    Conway.DelegAccountAlreadyRegistered (AccountAlreadyRegistered credential) ->
+      [ "kind" .= String "DelegAccountAlreadyRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
       ]
@@ -532,6 +532,10 @@ instance
              , "network" .= network
              , "addrs"   .= addrs
              ]
+  forMachine _dtal (UnsupportedOutputAddresses outputIndexes) =
+    mconcat [ "kind" .= String "UnsupportedOutputAddresses"
+            , "outputIndexes" .= NonEmptySet.toSet outputIndexes
+            ]
   forMachine _dtal (WrongNetworkWithdrawal network addrs) =
     mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
@@ -573,6 +577,10 @@ instance
              , "network" .= network
              , "addrs"   .= addrs
              ]
+  forMachine _dtal (Allegra.UnsupportedOutputAddresses outputIndexes) =
+    mconcat [ "kind" .= String "UnsupportedOutputAddresses"
+            , "outputIndexes" .= NonEmptySet.toSet outputIndexes
+            ]
   forMachine _dtal (Allegra.WrongNetworkWithdrawal network addrs) =
     mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
@@ -643,8 +651,8 @@ instance
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
 instance LogFormatting (ShelleyDelegPredFailure era) where
-  forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
-    mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
+  forMachine _dtal (DelegAccountAlreadyRegistered (AccountAlreadyRegistered alreadyRegistered)) =
+    mconcat [ "kind" .= String "DelegAccountAlreadyRegistered"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
@@ -766,6 +774,27 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
             , "vrfKeyHash" .= String (textShow vrfKeyHash)
             , "error" .= String "Pool with the same VRF Key Hash is already registered"
             ]
+
+
+instance LogFormatting (Dijkstra.DijkstraPoolPredFailure era) where
+  forMachine dtal = \case
+    Dijkstra.StakePoolNotRegisteredOnKeyPOOL poolId ->
+      forMachine dtal (StakePoolNotRegisteredOnKeyPOOL poolId :: ShelleyPoolPredFailure era)
+    Dijkstra.StakePoolRetirementWrongEpochPOOL current intended ->
+      forMachine dtal (StakePoolRetirementWrongEpochPOOL current intended :: ShelleyPoolPredFailure era)
+    Dijkstra.StakePoolCostTooLowPOOL mismatch ->
+      forMachine dtal (StakePoolCostTooLowPOOL mismatch :: ShelleyPoolPredFailure era)
+    Dijkstra.WrongNetworkPOOL mismatch poolId ->
+      forMachine dtal (WrongNetworkPOOL mismatch poolId :: ShelleyPoolPredFailure era)
+    Dijkstra.PoolMedataHashTooBig poolId hashSize ->
+      forMachine dtal (PoolMedataHashTooBig poolId hashSize :: ShelleyPoolPredFailure era)
+    Dijkstra.VRFKeyHashAlreadyRegistered poolId vrfKeyHash ->
+      forMachine dtal (VRFKeyHashAlreadyRegistered poolId vrfKeyHash :: ShelleyPoolPredFailure era)
+    Dijkstra.BlsKeyInvalidProofOfPossession poolId blsKey ->
+      mconcat [ "kind" .= String "BlsKeyInvalidProofOfPossession"
+              , "poolId" .= String (textShow poolId)
+              , "blsKey" .= String (textShow blsKey)
+              ]
 
 
 instance
@@ -926,6 +955,10 @@ instance
              , "network" .= network
              , "addrs"   .= addrs
              ]
+  forMachine _dtal (Alonzo.UnsupportedOutputAddresses outputIndexes) =
+    mconcat [ "kind" .= String "UnsupportedOutputAddresses"
+            , "outputIndexes" .= NonEmptySet.toSet outputIndexes
+            ]
   forMachine _dtal (Alonzo.WrongNetworkWithdrawal network addrs) =
     mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
@@ -1209,10 +1242,6 @@ instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= unWithdrawals rs
-            ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 
@@ -1247,31 +1276,61 @@ instance
   ( LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.EntitiesPredFailure ledgerera) where
   forMachine v (Dijkstra.CertsFailure f) = forMachine v f
-  forMachine _ (Dijkstra.MissingAccountsInWithdrawals withdrawals) =
-    mconcat [ "kind" .= String "MissingAccountsInWithdrawals"
+  forMachine _ (Dijkstra.WithdrawalAccountsMissing withdrawals) =
+    mconcat [ "kind" .= String "WithdrawalAccountsMissing"
             , "withdrawals" .= unWithdrawals withdrawals
             ]
-  forMachine _ (Dijkstra.IncompleteWithdrawals incompleteWithdrawals) =
-    mconcat [ "kind" .= String "IncompleteWithdrawals"
+  forMachine _ (Dijkstra.WithdrawalAmountsInexactInLegacyMode incompleteWithdrawals) =
+    mconcat [ "kind" .= String "WithdrawalAmountsInexactInLegacyMode"
             , "withdrawals" .= String (textShow incompleteWithdrawals)
             ]
-  forMachine _ (Dijkstra.ExceededBalancesInWithdrawals accounts) =
-    mconcat [ "kind" .= String "ExceededBalancesInWithdrawals"
+  forMachine _ (Dijkstra.WithdrawalAmountsExceedingOriginalBalance accounts) =
+    mconcat [ "kind" .= String "WithdrawalAmountsExceedingOriginalBalance"
             , "accounts" .= String (textShow accounts)
             ]
-  forMachine _ (Dijkstra.MissingAccountsInDirectDeposits directDeposits) =
-    mconcat [ "kind" .= String "MissingAccountsInDirectDeposits"
+  forMachine _ (Dijkstra.DirectDepositAccountsMissing directDeposits) =
+    mconcat [ "kind" .= String "DirectDepositAccountsMissing"
             , "directDeposits" .= String (textShow directDeposits)
             ]
-  forMachine _ (Dijkstra.WrongNetworkInWithdrawals network accounts) =
-    mconcat [ "kind" .= String "WrongNetworkInWithdrawals"
+  forMachine _ (Dijkstra.WithdrawalAddressesWithWrongNetwork network accounts) =
+    mconcat [ "kind" .= String "WithdrawalAddressesWithWrongNetwork"
             , "network" .= network
             , "accounts" .= NonEmptySet.toSet accounts
             ]
-  forMachine _ (Dijkstra.WrongNetworkInDirectDeposits network accounts) =
-    mconcat [ "kind" .= String "WrongNetworkInDirectDeposits"
+  forMachine _ (Dijkstra.DirectDepositAddressesWithWrongNetwork network accounts) =
+    mconcat [ "kind" .= String "DirectDepositAddressesWithWrongNetwork"
             , "network" .= network
             , "accounts" .= NonEmptySet.toSet accounts
+            ]
+  forMachine _ (Dijkstra.WithdrawalAccountsMissingFromOriginal withdrawals) =
+    mconcat [ "kind" .= String "WithdrawalAccountsMissingFromOriginal"
+            , "withdrawals" .= unWithdrawals withdrawals
+            ]
+  forMachine _ (Dijkstra.WrongNetworkInAccountBalanceIntervals network accounts) =
+    mconcat [ "kind" .= String "WrongNetworkInAccountBalanceIntervals"
+            , "network" .= network
+            , "accounts" .= NonEmptySet.toSet accounts
+            ]
+  forMachine _ (Dijkstra.WrongNetworkInStartingAccountBalanceIntervals network accounts) =
+    mconcat [ "kind" .= String "WrongNetworkInStartingAccountBalanceIntervals"
+            , "network" .= network
+            , "accounts" .= NonEmptySet.toSet accounts
+            ]
+  forMachine _ (Dijkstra.MissingAccountsInAccountBalanceIntervals accounts) =
+    mconcat [ "kind" .= String "MissingAccountsInAccountBalanceIntervals"
+            , "accounts" .= String (textShow accounts)
+            ]
+  forMachine _ (Dijkstra.BalancesOutsideAccountBalanceIntervals accounts) =
+    mconcat [ "kind" .= String "BalancesOutsideAccountBalanceIntervals"
+            , "accounts" .= String (textShow accounts)
+            ]
+  forMachine _ (Dijkstra.MissingAccountsInStartingAccountBalanceIntervals accounts) =
+    mconcat [ "kind" .= String "MissingAccountsInStartingAccountBalanceIntervals"
+            , "accounts" .= String (textShow accounts)
+            ]
+  forMachine _ (Dijkstra.BalancesOutsideStartingAccountBalanceIntervals accounts) =
+    mconcat [ "kind" .= String "BalancesOutsideStartingAccountBalanceIntervals"
+            , "accounts" .= String (textShow accounts)
             ]
 
 instance
@@ -1451,11 +1510,23 @@ instance
               , "produced" .= mismatchExpected
               , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
               ]
+    Dijkstra.ValueNotConservedInLegacyMode Mismatch {mismatchSupplied, mismatchExpected} ->
+      mconcat [ "kind" .= String "ValueNotConservedInLegacyMode"
+              , "consumed" .= mismatchSupplied
+              , "produced" .= mismatchExpected
+              , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
+              ]
     Dijkstra.WrongNetwork network addrs ->
       mconcat [ "kind" .= String "WrongNetwork"
               , "network" .= network
               , "addrs"   .= NonEmptySet.toSet addrs
               ]
+    Dijkstra.UnsupportedOutputAddresses outputIndexes ->
+      mconcat [ "kind" .= String "UnsupportedOutputAddresses"
+              , "outputIndexes" .= NonEmptySet.toSet outputIndexes
+              ]
+    Dijkstra.ProtectedCollateralReturn ->
+      mconcat [ "kind" .= String "ProtectedCollateralReturn" ]
     Dijkstra.OutputBootAddrAttrsTooBig badOutputs ->
       mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
               , "outputs" .= badOutputs
@@ -1516,10 +1587,6 @@ instance
     Dijkstra.PtrPresentInCollateralReturn output ->
       mconcat [ "kind" .= String "PtrPresentInCollateralReturn"
               , "output" .= output
-              ]
-    Dijkstra.WithdrawalsExceedAccountBalance accounts ->
-      mconcat [ "kind" .= String "WithdrawalsExceedAccountBalance"
-              , "accounts" .= String (textShow accounts)
               ]
 
 instance
@@ -1776,6 +1843,10 @@ instance
       mconcat [ "kind" .= String "WrongNetwork"
               , "network" .= network
               , "addrs"   .= addrs
+              ]
+    Conway.UnsupportedOutputAddresses outputIndexes ->
+      mconcat [ "kind" .= String "UnsupportedOutputAddresses"
+              , "outputIndexes" .= NonEmptySet.toSet outputIndexes
               ]
     Conway.WrongNetworkWithdrawal network addrs ->
       mconcat [ "kind" .= String "WrongNetworkWithdrawal"

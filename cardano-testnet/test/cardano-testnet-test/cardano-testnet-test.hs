@@ -13,6 +13,7 @@ import qualified Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
 import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
+import qualified Cardano.Testnet.Test.Cli.Receiving
 import qualified Cardano.Testnet.Test.Cli.Scripts.Simple.CostCalculation
 import qualified Cardano.Testnet.Test.Cli.Scripts.Simple.Mint
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
@@ -118,7 +119,8 @@ tests = do
         , T.testGroup "API"
         [ignoreOnWindows "actual datum for transaction datum hashes in ref inputs" Cardano.Testnet.Test.Api.TxReferenceInputDatum.hprop_tx_refin_datum]
         , T.testGroup "CLI"
-          [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+          [ ignoreOnWindows "Dijkstra Receiving lifecycle" Cardano.Testnet.Test.Cli.Receiving.hprop_receiving_lifecycle
+          , ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
           -- ShutdownOnSigint fails on Mac with
           -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
