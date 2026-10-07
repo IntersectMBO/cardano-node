@@ -1,8 +1,8 @@
 {
-  "$schema": "https://raw.githubusercontent.com/IntersectMBO/cardano-config/v1/schemas/config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/IntersectMBO/cardano-config/v2/schemas/config.schema.json",
   "Configuration": {
-    "ConsensusConfig": {
-      "ConsensusMode": "PraosMode"
+    "Consensus": {
+      "ConsensusMode": "GenesisMode"
     },
     "HermodTracing": {
       "TraceOptionForwarder": {
@@ -91,7 +91,7 @@
         }
       }
     },
-    "ProtocolConfig": {
+    "Protocol": {
       "AlonzoGenesisFile": "mainnet-alonzo-genesis.json",
       "AlonzoGenesisHash": "7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874",
       "ByronGenesisFile": "mainnet-byron-genesis.json",
@@ -104,18 +104,20 @@
       "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
       "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81"
     },
-    "StorageConfig": {
+    "Storage": {
       "LedgerDB": {
         "Backend": "V2InMemory",
         "QueryBatchSize": 100000,
         "Snapshots": {
+          "Interval": 86400,
+          "MaxDelay": 21600,
+          "MinDelay": 300,
           "NumOfDiskSnapshots": 2,
-          "SlotOffset": 0,
-          "SnapshotInterval": 86400
+          "Offset": 0
         }
       }
     }
   },
   "MinNodeVersion": "11.2.0",
-  "Version": 1
+  "Version": 2
 }

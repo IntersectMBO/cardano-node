@@ -14,10 +14,10 @@
 # Commented-out examples below show the section each key belongs to, so they are
 # correct as written if uncommented.
 
-$schema: https://raw.githubusercontent.com/IntersectMBO/cardano-config/v1/schemas/config.schema.json
+$schema: https://raw.githubusercontent.com/IntersectMBO/cardano-config/v2/schemas/config.schema.json
 
 # The configuration format version this document is written in.
-Version: 1
+Version: 2
 
 ##### Version Information #####
 
@@ -29,7 +29,7 @@ Configuration:
 
   ##### Protocol Configuration #####
 
-  ProtocolConfig:
+  Protocol:
 
     ##### Locations #####
 
@@ -51,8 +51,8 @@ Configuration:
 
   ##### Consensus Configuration #####
 
-  ConsensusConfig:
-    ConsensusMode: PraosMode
+  Consensus:
+    ConsensusMode: GenesisMode
 
   ##### Network Configuration #####
   #
@@ -118,7 +118,7 @@ Configuration:
 
   ##### Storage Configuration #####
 
-  StorageConfig:
+  Storage:
 
     # Additional configuration options can be found at:
     # https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating
@@ -138,10 +138,10 @@ Configuration:
         # The snapshot interval in slots.  Use `securityParam * 40` to provide
         # intra-epoch snapshot redundancy while minimizing potential IOWAIT stall on some
         # spec constrained machines during snapshot write.
-        SnapshotInterval: 86400
+        Interval: 86400
 
         # Slot offset at which snapshot scheduling begins.
-        SlotOffset: 0
+        Offset: 0
 
         # A minimum duration between snapshots, in seconds (used to avoid excessive snapshots while syncing).
         # Default is 10 minutes.
@@ -149,8 +149,8 @@ Configuration:
 
         # Randomised snapshot delay range, in seconds.
         # Both Min and Max need to be specified, otherwise the default delay of (5min, 10min) will be used.
-        # MinDelay: 300
-        # MaxDelay: 600
+        MinDelay: 300
+        MaxDelay: 21600
 
         # The number of disk snapshots to keep.
         NumOfDiskSnapshots: 2
