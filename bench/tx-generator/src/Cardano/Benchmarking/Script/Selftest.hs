@@ -100,7 +100,7 @@ testScript protocolFile submitMode =
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
           , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"
           }
-    era = AnyCardanoEra AllegraEra
+    era = AnyCardanoEra ConwayEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
     genesisWallet = "genesisWallet"
     splitWallet1 = "SplitWallet-1"
