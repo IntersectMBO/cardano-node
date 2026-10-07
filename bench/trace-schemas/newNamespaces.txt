@@ -673,6 +673,9 @@ Startup.RpcUnsupportedBlockType
 Startup.ShelleyBased
 Startup.SocketConfigError
 Startup.Time
+Startup.TraceConfigUpdate
+Startup.TraceConfigUpdateError
+Startup.TraceConfigUpdated
 Startup.WarningDevelopmentNodeToClientVersions
 Startup.WarningDevelopmentNodeToNodeVersions
 StateQueryServer.Receive.Acquire

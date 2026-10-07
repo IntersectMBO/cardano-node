@@ -22,6 +22,8 @@ import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
+import           Cardano.Node.Tracing.Reconfigure (TracingReconfigure, mkTracingReconfigure)
+import           Cardano.Node.Tracing.Registry (ApplyTraceConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics
@@ -69,13 +71,21 @@ initTraceDispatcher ::
   -> NetworkMagic
   -> NodeKernelData blk
   -> Bool
-  -> IO (Tracers RemoteAddress LocalAddress blk  IO)
+  -> IO (Tracers RemoteAddress LocalAddress blk  IO, TracingReconfigure)
 initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
-  trConfig <- readConfigurationWithDefault
-                (FromFile (unConfigPath $ ncConfigFile nc))
-                defaultCardanoConfig
+  let configFile = unConfigPath $ ncConfigFile nc
+  trConfig <- readConfigurationWithDefault (FromFile configFile) defaultCardanoConfig
 
-  (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
+  (kickoffForwarder, kickoffPrometheusSimple, tracers, applyCfg) <- mkTracers trConfig
+
+  -- The trace options can be re-read and re-applied later; everything else the
+  -- configuration decides (forwarding, the Prometheus listener, the periodic
+  -- tracers, the metrics prefix) is settled below and needs a restart.
+  reconfTracing <- mkTracingReconfigure
+                     (startupTracer tracers)
+                     configFile
+                     trConfig
+                     applyCfg
 
   -- The NodeInfo DataPoint needs to be fully evaluated and stored
   -- before it is queried for the first time by cardano-tracer.
@@ -98,7 +108,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
     (maybe ledgerMetricsDefaultFreq periodToInt (Map.lookup "ledgerMetrics" (tcPeriodicTracers trConfig)))
     nodeKernel
 
-  pure tracers
+  pure (tracers, reconfTracing)
  where
   -- this is the backwards compatible default: block producers emit these metrics every second, relays never.
   ledgerMetricsDefaultFreq = if noBlockForging then 0 else 1
@@ -111,6 +121,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
     -> IO ( IO ()
           , IO ()
           , Tracers RemoteAddress LocalAddress blk IO
+          , ApplyTraceConfig
           )
   mkTracers trConfig = mdo
     ekgStore <- EKG.newStore
@@ -149,7 +160,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
           -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
           pure (mempty, mempty, pure ())
 
-    tracers <- mkDispatchTracers
+    (tracers, applyCfg) <- mkDispatchTracers
       stdoutTrace
       fwdTracer
       (Just ekgTrace)
@@ -167,7 +178,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
             Nothing         -> runPrometheusSimple tracePrometheus ekgStore ps
             Just customDoS  -> runPrometheusSimpleWith customDoS tracePrometheus ekgStore ps
 
-    pure (kickoffForwarder, kickoffPrometheusSimple, tracers)
+    pure (kickoffForwarder, kickoffPrometheusSimple, tracers, applyCfg)
 
    where
     -- This backend can only be used globally, i.e. only the namespace root will be considered

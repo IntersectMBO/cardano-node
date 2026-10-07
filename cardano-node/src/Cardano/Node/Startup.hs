@@ -148,6 +148,14 @@ data StartupTrace blk =
   -- | Log RPC is forcefully disabled after a RPC server crash.
   | RpcForceDisabled
 
+  -- | Log that the trace options are about to be re-read and applied.
+  | TraceConfigUpdate
+  -- | Log that the trace options have been re-read and applied.
+  | TraceConfigUpdated
+  -- | Log that the trace options could not be re-read or applied; the
+  -- previous configuration stays in force.
+  | TraceConfigUpdateError Text
+
   | MovedTopLevelOption String
 
 data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile

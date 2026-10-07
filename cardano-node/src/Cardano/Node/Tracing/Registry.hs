@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Every hermod trace the node constructs is declared exactly once, in
@@ -33,10 +34,13 @@ module Cardano.Node.Tracing.Registry
   , documentAll
   , namespacesOf
   , checkAll
+    -- * Applying a configuration
+  , ApplyTraceConfig (..)
+  , applier
   ) where
 
 import           Control.DeepSeq (NFData)
-import           Control.Monad (forM_, void, when)
+import           Control.Monad (forM_, unless, void, when)
 import           Data.Aeson (ToJSON)
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import           Data.List (foldl')
@@ -130,6 +134,48 @@ docOnly reg prefix =
 configureAll :: ConfigReflection -> TraceConfig -> [SomeEntry] -> IO ()
 configureAll configReflection trConfig es =
   forM_ es $ \(SomeEntry e) -> configureTracers configReflection trConfig [entryTrace e]
+
+-- | Applies a trace configuration to every trace the node declared. The same
+-- action serves the configuration applied at start-up and the one re-read on
+-- SIGHUP, so the two cannot drift apart.
+data ApplyTraceConfig = ApplyTraceConfig
+  { -- | Configure every declared trace, then report the reflection, the
+    -- consistency warnings and the effective configuration. Returns the
+    -- warnings so the caller can mention them.
+    applyTraceConfig   :: TraceConfig -> IO NSWarnings
+    -- | Like 'applyTraceConfig', but reports only the effective
+    -- configuration. For putting the previous configuration back after a
+    -- failed apply, where the reflection and the warnings are noise.
+  , restoreTraceConfig :: TraceConfig -> IO ()
+  }
+
+-- | 'registered' is a plain read, so the entries can be taken once and
+-- configured any number of times afterwards.
+applier :: Registry -> IO ApplyTraceConfig
+applier reg = do
+    entries <- registered reg
+    let Backends{bkStdout, bkForward} = regBackends reg
+
+        -- A fresh reflection per pass: 'traceTracerInfo' empties the one it
+        -- reports, so a reflection cannot be used twice.
+        configure trConfig = do
+          configReflection <- emptyConfigReflection
+          configureAll configReflection trConfig entries
+          pure configReflection
+
+    pure ApplyTraceConfig
+      { applyTraceConfig = \trConfig -> do
+          configReflection <- configure trConfig
+          traceTracerInfo bkStdout bkForward configReflection
+          let warnings = checkAll trConfig entries
+          unless (null warnings) $
+            traceConfigWarnings bkStdout bkForward warnings
+          traceEffectiveConfiguration bkStdout bkForward trConfig
+          pure warnings
+      , restoreTraceConfig = \trConfig -> do
+          _ <- configure trConfig
+          traceEffectiveConfiguration bkStdout bkForward trConfig
+      }
 
 -- | Call after 'configureAll': an unconfigured trace cannot be documented.
 documentAll :: [SomeEntry] -> IO DocTracer

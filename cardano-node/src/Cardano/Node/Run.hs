@@ -55,6 +55,7 @@ import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
 import           Cardano.Node.Tracing.API
+import           Cardano.Node.Tracing.Reconfigure (TracingReconfigure (..))
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
@@ -232,7 +233,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
   blockForging <- mkBlockForging CT.nullTracer
-  tracers <-
+  (tracers, reconfTracing) <-
     initTraceDispatcher
       nc
       blockType
@@ -251,7 +252,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers reconfTracing nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -292,6 +293,7 @@ handleSimpleNode
   -> ProtocolInfo blk
   -> (CT.Tracer IO KESAgentClientTrace -> IO [MkBlockForging IO blk])
   -> Tracers RemoteAddress LocalAddress blk IO
+  -> TracingReconfigure
   -> NodeConfiguration
   -> PartialNodeConfiguration
   -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
@@ -302,7 +304,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers reconfTracing nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -416,6 +418,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
     _ <- Signals.installHandler
           Signals.sigHUP
           (Signals.Catch $ do
+            reconfigureTracing reconfTracing
             updateTopologyConfiguration
               (startupTracer tracers) nc
               localRootsVar publicRootsVar useLedgerVar useBootstrapVar
@@ -474,7 +477,8 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
-                installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
+                installSigHUPHandler (startupTracer tracers) reconfTracing
+                                     (Consensus.kesAgentTracer $ consensusTracers tracers)
                                      blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
@@ -576,6 +580,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers nc cm
 
 -- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
+                     -> TracingReconfigure
                      -> CT.Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
@@ -591,14 +596,15 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc cmdPc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer reconfTracing kesAgentTracer blockType nc cmdPc networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
+      reconfigureTracing reconfTracing
       updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar

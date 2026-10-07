@@ -105,6 +105,7 @@ library
                         Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
                         Cardano.Node.Tracing.NodeStartupInfo
+                        Cardano.Node.Tracing.Reconfigure
                         Cardano.Node.Tracing.Registry
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
@@ -254,7 +255,7 @@ test-suite cardano-node-test
                       , hermod-tracing-core
                       , iproute
                       , mtl
-                      , ouroboros-consensus:{ouroboros-consensus, diffusion}
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
                       , transformers
@@ -268,5 +269,6 @@ test-suite cardano-node-test
                         Test.Cardano.Node.POM
                         Test.Cardano.Node.TopLevel
                         Test.Cardano.Tracing.NewTracing.Consistency
+                        Test.Cardano.Tracing.NewTracing.Reconfigure
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"

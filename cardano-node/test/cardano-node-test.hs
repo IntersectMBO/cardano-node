@@ -15,6 +15,7 @@ import qualified Test.Cardano.Node.Json
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Node.TopLevel
 import qualified Test.Cardano.Tracing.NewTracing.Consistency
+import qualified Test.Cardano.Tracing.NewTracing.Reconfigure
 
 import qualified Cardano.Crypto.Init as Crypto
 
@@ -36,4 +37,5 @@ main = do
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Node.TopLevel.tests
       , Test.Cardano.Tracing.NewTracing.Consistency.tests
+      , Test.Cardano.Tracing.NewTracing.Reconfigure.tests
       ]

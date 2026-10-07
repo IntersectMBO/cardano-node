@@ -64,7 +64,6 @@ import           Ouroboros.Network.PeerSelection.PublicRootPeers ()
 import           Ouroboros.Network.Tracing ()
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Control.Monad (unless)
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
@@ -96,7 +95,7 @@ mkDispatchTracers
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
-  -> IO (Tracers RemoteAddress LocalAddress blk IO)
+  -> IO (Tracers RemoteAddress LocalAddress blk IO, ApplyTraceConfig)
 
 mkDispatchTracers trBase trForward mbTrEKG trDataPoint trConfig = do
     registry <- newRegistry ForRuntime Backends
@@ -106,22 +105,12 @@ mkDispatchTracers trBase trForward mbTrEKG trDataPoint trConfig = do
       , bkDataPoint = trDataPoint
       }
     !tracers <- buildNodeTracers registry
-    entries <- registered registry
-
-    configReflection <- emptyConfigReflection
-    configureAll configReflection trConfig entries
-
-    traceTracerInfo trBase trForward configReflection
-
-    let warnings = checkAll trConfig entries
-    unless (null warnings) $
-      traceConfigWarnings trBase trForward warnings
-
-    traceEffectiveConfiguration trBase trForward trConfig
+    apply <- applier registry
+    _warnings <- applyTraceConfig apply trConfig
 
     traceWith (nodeVersionTracer tracers) getNodeVersion
 
-    pure tracers
+    pure (tracers, apply)
 
 -- | The one declaration of every trace the node constructs: each trace is
 -- built once here, through the registry, and assembled into the records the

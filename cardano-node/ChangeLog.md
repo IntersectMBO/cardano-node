@@ -22,6 +22,29 @@
   configuration. `bench/trace-schemas/newNamespaces.txt` is regenerated and now kept current by
   a test. The log output, metrics and forwarding of the node are unchanged.
 
+- `SIGHUP` now reloads the trace options as well as the topology, the RPC configuration and the
+  block-forging credentials: the configuration file is re-read and applied to the traces that are
+  already running, so severities, detail levels, backend routing (`Stdout`/`Forwarder`/`EKG`) and
+  the frequency limiters can be changed without restarting the node. The reload is bracketed by
+  `Startup.TraceConfigUpdate` and `Startup.TraceConfigUpdated` (both `Notice`), with
+  `Startup.TraceConfigUpdateError` (`Error`) on failure. A configuration that cannot be read or
+  cannot be applied is a complete no-op — the previously applied one stays in force — and
+  concurrent reloads are serialised.
+
+  The end marker is itself subject to the configuration just applied, so a reload that silences
+  `Startup` shows the start line and not the end line. The authoritative record of what is in
+  force is hermod's `Reflection.TracerInfoConfig`, which is emitted unconditionally and cannot be
+  configured away.
+
+  Two caveats. The reload is **not atomic**: a message traced between a tracer's reset and its
+  reconfiguration is dropped, so a busy node loses a few messages on every `SIGHUP`. And these
+  settings are decided when the tracing system is built and still need a restart: whether
+  forwarding is enabled and its socket and queue parameters, the PrometheusSimple listener and
+  its DoS parameters, the metrics prefix, the EKG store, the periodic tracer intervals, the data
+  points, the set of tracers itself, and the frequency of a limiter that already exists (adding a
+  limiter key, removing one, or setting it to `0` does take effect; changing one non-zero
+  frequency to another does not).
+
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the
   configuration consistency check now use the runtime `TraceDecisionEvent`
   type, so the documented message namespaces are
