@@ -13,6 +13,8 @@
     "Backend": "V2InMemory",
     "QueryBatchSize": 100000,
     "Snapshots": {
+      "MaxDelay": 1080,
+      "MinDelay": 300,
       "NumOfDiskSnapshots": 2,
       "SlotOffset": 0,
       "SnapshotInterval": 4320
@@ -26,8 +28,7 @@
   "TestMaryHardForkAtEpoch": 0,
   "TestShelleyHardForkAtEpoch": 0,
   "TraceOptionForwarder": {
-    "connQueueSize": 64,
-    "disconnQueueSize": 128,
+    "queueSize": 128,
     "maxReconnectDelay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
@@ -99,6 +100,9 @@
     },
     "Net.Mux.Remote": {
       "severity": "Info"
+    },
+    "Net.Mux.Remote.Bearer": {
+      "severity": "Silence"
     },
     "Net.PeerSelection": {
       "severity": "Info"
