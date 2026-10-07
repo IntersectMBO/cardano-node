@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,30 +9,34 @@ module  Cardano.TxGenerator.Tx
         where
 
 import           Cardano.Api hiding (txId)
+import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as L (PParams, addrTxWitsL, txIdTx, witsTxL)
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO (ToUTxOList)
 
-import           Data.Bifunctor (bimap, second)
+import           Data.Bifunctor (first, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
+import           Lens.Micro ((.~))
 
 
 -- | 'CreateAndStore' is meant to represent building a transaction
 -- from a single number and presenting a function to carry out the
 -- needed side effects.
 -- This type alias is only used in "Cardano.Benchmarking.Wallet".
-type CreateAndStore m era           = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -> m ())
+type CreateAndStore m era           = L.Coin -> (Exp.TxOut (ShelleyLedgerEra era), TxIx -> TxId -> m ())
 
 -- | 'CreateAndStoreList' is meant to represent building a transaction
 -- and presenting a function to carry out the needed side effects.
 -- This type alias is also only used in "Cardano.Benchmarking.Wallet".
 -- The @split@ parameter seems to actually be used for not much more
 -- than lists and records containing lists.
-type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
+type CreateAndStoreList m era split = split -> ([Exp.TxOut (ShelleyLedgerEra era)], TxId -> m ())
 
 
 -- TODO: 'sourceToStoreTransaction' et al need to be broken up
@@ -66,9 +70,7 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
  where
   go inputFunds = do
     let
-      -- 'getFundCoin' unwraps the 'TxOutValue' in a fund field
-      -- so it's all just 'Lovelace' instead of a coproduct
-      -- maintaining distinctions.
+      -- 'getFundCoin' is the ada a fund holds.
       outValues = inToOut $ map getFundCoin inputFunds
       (outputs, toFunds) = mkTxOut outValues
     case txGenerator inputFunds outputs of
@@ -147,42 +149,53 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
--- | 'genTx' seems to mostly be a wrapper for
--- 'Cardano.Api.TxBody.createTransactionBody', which uses
--- the 'Either' convention in lieu of e.g.
--- 'Control.Monad.Trans.Except.ExceptT'. Then the pure function
--- 'Cardano.Api.Tx.makeSignedTransaction' is composed with it and
--- the 'Cardano.Api.Error' is lifted to 'Cardano.TxGenerator.Types.TxGenError'
--- as an 'Cardano.TxGenerator.Types.ApiError' case.
+-- | 'genTx' builds and signs a transaction with the experimental API
+-- ('Exp.makeUnsignedTx', 'Exp.makeKeyWitness' and 'Exp.signTx'), lifting
+-- a 'Exp.MakeUnsignedTxError' to 'Cardano.TxGenerator.Types.TxGenError' as
+-- an 'Cardano.TxGenerator.Types.ApiError' case. The signed ledger transaction
+-- is returned as an old-API 'Tx', which is what the submission code consumes.
 -- The @txGenerator@ arguments of the rest of the functions in this
--- module are all partial applications of this to its first 5 arguments.
--- The 7th argument comes from 'TxGenerator' being a being a type alias
+-- module are all partial applications of this to its first 4 arguments.
+-- The remaining 2 arguments come from 'TxGenerator' being a being a type alias
 -- for a function type -- of two arguments.
 genTx :: forall era. ()
-  => IsShelleyBasedEra era
-  => ShelleyBasedEra era
-  -> LedgerProtocolParameters era
-  -> (TxInsCollateral era, [Fund])
-  -> TxFee era
-  -> TxMetadataInEra era
+  => Exp.EraCommonConstraints era
+  => L.PParams (ShelleyLedgerEra era)
+  -> ([TxIn], [Fund])
+  -- ^ Collateral inputs, and the funds they spend (for their signing keys)
+  -> L.Coin
+  -> TxMetadata
   -> TxGenerator era
-genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
-  = bimap
-      ApiError
-      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
+genTx ledgerParameters (collateral, collFunds) fee metadata inFunds outputs = do
+  unsignedTx <- first ApiError $ Exp.makeUnsignedTx era txBodyContent
+  let keyWitnesses = map (Exp.makeKeyWitness era unsignedTx . WitnessPaymentKey) allKeys
+  case Exp.signTx era [] keyWitnesses unsignedTx of
+    Exp.SignedTx ledgerTx ->
+      return (ShelleyTx (shelleyBasedEra @era) ledgerTx, fromShelleyTxId $ L.txIdTx ledgerTx)
  where
+  era = Exp.useEra @era
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent sbe
-    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
-    & setTxInsCollateral collateral
-    & setTxOuts outputs
-    & setTxFee fee
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
-    & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+  txBodyContent = Exp.defaultTxBodyContent
+    & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @era f)) inFunds)
+    & Exp.setTxInsCollateral collateral
+    & Exp.setTxOuts outputs
+    & Exp.setTxFee fee
+    & Exp.setTxMetadata metadata
+    & Exp.setTxProtocolParams ledgerParameters
 
+
+-- | 'estimateTxFee' estimates the minimum fee of a transaction, counting
+-- @keyWitnesses@ key witnesses instead of the ones it already carries, so that
+-- a signed transaction preview is estimated like its unsigned counterpart.
+estimateTxFee :: Exp.EraCommonConstraints era
+  => L.PParams (ShelleyLedgerEra era)
+  -> Tx era
+  -> Word
+  -> L.Coin
+estimateTxFee ledgerParameters (ShelleyTx _ ledgerTx) keyWitnesses =
+  Exp.evaluateTransactionFee ledgerParameters unsignedTx keyWitnesses 0 0
+ where
+  unsignedTx = Exp.UnsignedTx $ ledgerTx & L.witsTxL . L.addrTxWitsL .~ mempty
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
      Tx era
