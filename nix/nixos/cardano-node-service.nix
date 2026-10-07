@@ -109,7 +109,8 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
-        "${concatMapStringsSep " " (k: "--shelley-bls-key ${k}") cfg.blsKeys}"
+        "${optionalString (cfg.blsKey != null)
+          "--shelley-bls-key ${cfg.blsKey}"}"
         "${optionalString (cfg.shelleyKesAgentSocket != null)
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
@@ -348,14 +349,14 @@ in {
         '';
       };
 
-      blsKeys = mkOption {
-        type = listOf str;
-        default = [];
+      blsKey = mkOption {
+        type = nullOr str;
+        default = null;
         description = ''
-          Leios BLS signing key files. Optional and repeatable; used alongside
-          the KES and VRF keys on a producer that participates in Leios. During
-          a BLS key rotation both the active and the incoming key may be
-          supplied and node uses whichever is active per the on-chain schedule.
+          The Leios BLS signing key file, used alongside the KES and VRF keys
+          on a producer that participates in Leios. The file is either a single
+          text envelope or a JSON array of them, so a rotation pair or a bundle
+          of pool keys goes in the one file; the option is not repeatable.
         '';
       };
 
