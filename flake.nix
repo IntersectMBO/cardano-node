@@ -554,6 +554,7 @@
           (import ./nix/haskell.nix {
             inherit (final) haskell-nix;
             inherit CHaP incl windowsCompilerNixName;
+            haskellNixSource = haskellNix;
             macOS-security = macOS-security (final.pkgs);
             # buildPlatform, not hostPlatform: herald is a developer tool that
             # runs on the machine, so cross shells (e.g. windows) must not try

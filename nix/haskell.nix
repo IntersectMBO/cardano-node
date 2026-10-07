@@ -2,6 +2,7 @@
 # Builds Haskell packages with Haskell.nix
 ############################################################################
 { haskell-nix
+, haskellNixSource
 , incl
 , CHaP
 , macOS-security
@@ -160,6 +161,14 @@ let
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
+            # The locked haskell.nix overlay omits the .patch suffix for >= 1.7.
+            # Replace that defective list while retaining both versioned patches.
+            packages.crypton-x509-system.patches = lib.mkForce [
+              ({ version }:
+                if builtins.compareVersions version "1.7" < 0
+                then haskellNixSource + "/overlays/patches/crypton-x509-system-1.6.patch"
+                else haskellNixSource + "/overlays/patches/crypton-x509-system.patch")
+            ];
             packages.basement.configureFlags = [ "--hsc2hs-option=--cflag=-Wno-int-conversion" ];
             # This fix seems fairly fishy; but somehow it's required to make this work :confused_parrot:
             packages.unix-compat.postPatch = ''

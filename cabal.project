@@ -238,8 +238,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/colll78/cardano-cli.git
-  tag: 7bc80d20076082ae5ebe17ac03bb47bc41c9ec48
-  --sha256: sha256-Tk0kqzvbntxMrjvVghv6IOzE+nDhU8rKPSoVXH175Xg=
+  tag: 24713d80e2dcf43fee20305a894ab1b7b069ce48
+  --sha256: sha256-hGpi99zHh7IsKmb9PajbHqvYEmu+KIwCx/BQ5sdMad8=
   subdir: cardano-cli
 
 source-repository-package
@@ -264,5 +264,5 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/colll78/dns.git
-  tag: a3ef6cdcdb5173d88c2e2a3201f528dbe0df1c0c
-  --sha256: sha256-fOWp3BFVkD4dJvxVtskdOyPg5uN9GUEL7NEj9Z4pBm8=
+  tag: 7bd4304298b38db3da0e72dec2b311f4cd785657
+  --sha256: sha256-HRBHCYqk4Y63M81ry+qs7o6qtottda1RddK84lTSb/E=

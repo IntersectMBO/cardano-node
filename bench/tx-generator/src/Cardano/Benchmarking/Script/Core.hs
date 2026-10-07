@@ -63,7 +63,7 @@ import qualified Data.ByteString as BS (hPut)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
-import           System.IO (IOMode(..), withFile)
+import           System.IO (IOMode (..), withFile)
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -172,7 +172,7 @@ queryEra = do
   AnyCardanoEra era <- mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  caseByronOrShelleyBasedEra
+  inEonForEra
     (liftTxGenError $ TxGenError "queryEra Byron not supported")
     (return . AnyShelleyBasedEra)
     era
