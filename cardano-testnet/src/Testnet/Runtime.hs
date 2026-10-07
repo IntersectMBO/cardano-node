@@ -47,6 +47,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NEL
 import           GHC.Stack
 import qualified GHC.Stack as GHC
+import           Lens.Micro ((^.))
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
@@ -551,14 +552,14 @@ calculateEpochStateDiff current next =
      else ppDiff diffResult
 
 instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.EraStake ledgerera) => ToJSON (L.NewEpochState ledgerera) where
-  toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm) =
+  toJSON newEpochState =
     object
-      [ "currentEpoch" .= nesEL
-      , "priorBlocks" .= nesBprev
-      , "currentEpochBlocks" .= nesBCur
-      , "currentEpochState" .= nesEs
-      , "rewardUpdate" .= nesRu
-      , "currentStakeDistribution" .= nesPd
+      [ "currentEpoch" .= L.nesEL newEpochState
+      , "priorBlocks" .= L.nesBprev newEpochState
+      , "currentEpochBlocks" .= L.nesBcur newEpochState
+      , "currentEpochState" .= L.nesEs newEpochState
+      , "rewardUpdate" .= L.nesRu newEpochState
+      , "currentStakeDistribution" .= (newEpochState ^. L.nesStakePoolDistrG)
       ]
 
 

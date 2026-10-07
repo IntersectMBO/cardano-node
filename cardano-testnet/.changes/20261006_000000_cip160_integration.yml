@@ -3,3 +3,4 @@ kind:
   - bugfix
 description: |
   Align Dijkstra testnet block protocol major with genesis major 12 and the local protected-address proposal. Enable ExperimentalHardForksEnabled only for requested Dijkstra testnets, preserving earlier-era configurations. Add real protected key/native/V4 creation, query, same-database relay restart and spending coverage. Update dependency bounds for the selected Receiving-aware API, CLI, consensus and network packages.
+  Update epoch-state logging for the upstream six-field NewEpochState, preserving outer JSON keys and reading currentStakeDistribution from the current set snapshot. Nested state JSON and CBOR follow the upstream ledger schema.
