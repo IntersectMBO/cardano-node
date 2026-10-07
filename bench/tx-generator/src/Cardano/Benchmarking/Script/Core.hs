@@ -1,9 +1,9 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use uncurry" -}
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -19,6 +19,7 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -65,20 +66,18 @@ import qualified Data.Text as Text (unpack)
 import           Streaming
 import qualified Streaming.Prelude as Streaming
 
-liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
+liftCoreWithEra :: AnyCardanoEra -> (forall era. Exp.EraCommonConstraints era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
-withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
+-- | Transactions are built with the experimental API ("Cardano.Api.Experimental"),
+-- which supports only the current mainnet era and the next one.
+withEra :: AnyCardanoEra -> (forall era. Exp.EraCommonConstraints era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
   case era of
     AnyCardanoEra ConwayEra   -> action AsConwayEra
-    AnyCardanoEra BabbageEra  -> action AsBabbageEra
-    AnyCardanoEra AlonzoEra   -> action AsAlonzoEra
-    AnyCardanoEra MaryEra     -> action AsMaryEra
-    AnyCardanoEra AllegraEra  -> action AsAllegraEra
-    AnyCardanoEra ShelleyEra  -> action AsShelleyEra
-    AnyCardanoEra ByronEra    -> error "byron not supported"
     AnyCardanoEra DijkstraEra -> action AsDijkstraEra
+    AnyCardanoEra otherEra    -> throwE $ UserError $
+      "tx-generator: era " ++ show otherEra ++ " is not supported, use Conway or Dijkstra"
 
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
@@ -99,24 +98,18 @@ defineSigningKey = setEnvKeys
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
-  fundKey  <- getEnvKeys keyName
-  let
-    mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue (shelleyBasedEra @era) lovelace)
-  outValue <- withEra era mkOutValue
-  addFundToWallet wallet txIn outValue fundKey
-
-addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
-addFundToWallet wallet txIn outVal skey = do
+  fundKey   <- getEnvKeys keyName
   walletRef <- getEnvWallets wallet
-  liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
-  where
-    mkFund = Utils.liftAnyEra $ \value -> FundInEra {
+  let
+    mkFund :: forall era. IsShelleyBasedEra era => AsType era -> ActionM FundQueue.Fund
+    mkFund _ = return $ FundQueue.Fund $ InAnyCardanoEra (cardanoEra @era) FundInEra {
            _fundTxIn = txIn
-         , _fundWitness = KeyWitness KeyWitnessForSpending
-         , _fundVal = value
-         , _fundSigningKey = Just skey
+         , _fundWitness = Exp.AnyKeyWitnessPlaceholder
+         , _fundVal = lovelace
+         , _fundSigningKey = Just fundKey
          }
+  fund <- withEra era mkFund
+  liftIO $ walletRefInsertFund walletRef fund
 
 getLocalSubmitTx :: ActionM LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
@@ -230,8 +223,8 @@ localSubmitTx tx = do
 -- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
 -- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 
-toMetadata :: forall era. IsShelleyBasedEra era => Maybe Int -> TxMetadataInEra era
-toMetadata Nothing = TxMetadataNone
+toMetadata :: Maybe Int -> TxMetadata
+toMetadata Nothing = mempty
 toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
   Left err -> error err
@@ -239,7 +232,7 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
 submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM ()
 submitAction era submitMode generator txParams = withEra era $ submitInEra submitMode generator txParams
 
-submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM ()
+submitInEra :: forall era. Exp.EraCommonConstraints era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
@@ -290,13 +283,13 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
-evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: forall era. Exp.EraCommonConstraints era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
   case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters ->
+    Right (LedgerProtocolParameters ledgerParameters) ->
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
@@ -325,7 +318,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.includeChange fee coins
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx ledgerParameters ([], []) fee mempty
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -341,7 +334,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx ledgerParameters ([], []) fee mempty
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -353,7 +346,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet inputs
             inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx shelleyBasedEra ledgerParameters collaterals feeInEra (toMetadata metadataSize)
+            txGenerator = genTx ledgerParameters collaterals fee (toMetadata metadataSize)
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
           fundPreview <- liftIO $ walletPreview wallet inputs
@@ -362,10 +355,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             Right tx -> do
               let
                 txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+                txFeeEstimate = Just $
+                    estimateTxFee ledgerParameters tx (fromIntegral $ inputs + 1)    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
               traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
               -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
@@ -392,21 +383,16 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
         OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
-  where
-    feeInEra = Utils.mkTxFee fee
-
-selectCollateralFunds :: forall era. IsShelleyBasedEra era
-  => Maybe String
-  -> ActionM (TxInsCollateral era, [FundQueue.Fund])
-selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
+selectCollateralFunds ::
+     Maybe String
+  -> ActionM ([TxIn], [FundQueue.Fund])
+selectCollateralFunds Nothing = return ([], [])
 selectCollateralFunds (Just walletName) = do
   cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
-  case forEraMaybeEon (cardanoEra @era) of
-      Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
-      Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
+  return (map getFundTxIn collateralFunds, collateralFunds)
 
 dumpToFile :: FilePath -> TxInMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
@@ -417,7 +403,7 @@ dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 initWallet :: String -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
+interpretPayMode :: forall era. Exp.EraCommonConstraints era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getEnvNetworkId
   case payMode of
@@ -434,9 +420,9 @@ interpretPayMode payMode = do
           return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                  , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
-makePlutusContext :: forall era. IsShelleyBasedEra era
+makePlutusContext :: forall era. Exp.EraCommonConstraints era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
+  -> ActionM (Exp.AnyWitness (ShelleyLedgerEra era), ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
   (script, resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
@@ -524,7 +510,9 @@ makePlutusContext ScriptSpec{..} = do
                               (ScriptDatumForTxIn $ Just scriptData)
                               scriptRedeemer
                               executionUnits
-      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, getScriptData scriptData, scriptFee)
+      in case Utils.toAnyTxInWitness (ScriptWitness ScriptWitnessForSpending scriptWitness) of
+           Left err      -> liftTxGenError err
+           Right witness -> return (witness, script, getScriptData scriptData, scriptFee)
     _ ->
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
