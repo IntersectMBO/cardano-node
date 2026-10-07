@@ -33,7 +33,7 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block
-                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdDijkstra, GenTxIdMary, GenTxIdShelley))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
@@ -188,6 +188,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdDijkstra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId _ = error "TODO: fix incomplete match"
 
   tokIsBlocking :: SingBlockingStyle a -> Bool
