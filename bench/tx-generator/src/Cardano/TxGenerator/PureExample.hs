@@ -7,6 +7,7 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Cardano.Api hiding (txId)
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
@@ -35,12 +36,12 @@ demo' :: FilePath -> IO ()
 demo' parametersFile = do
   protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
   let
-      demoEnv :: TxEnvironment BabbageEra
+      demoEnv :: TxEnvironment ConwayEra
       demoEnv = TxEnvironment {
           txEnvNetworkId = Mainnet
         , txEnvProtocolParams = protocolParameters
-        , txEnvFee = TxFeeExplicit ShelleyBasedEraBabbage 100000
-        , txEnvMetadata = TxMetadataNone
+        , txEnvFee = 100000
+        , txEnvMetadata = mempty
         }
 
   run1 <- foldM (worker $ generateTx demoEnv) (emptyFundQueue `insertFund` genesisFund) [1..10]
@@ -48,7 +49,7 @@ demo' parametersFile = do
   putStrLn $ "Are run results identical? " ++ show (toList run1 == toList run2)
   where
     worker ::
-         Generator (Either TxGenError (Tx BabbageEra))
+         Generator (Either TxGenError (Tx ConwayEra))
       -> FundQueue
       -> Int
       -> IO FundQueue
@@ -68,30 +69,30 @@ signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyD
               , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
 genesisTxIn :: TxIn
-genesisValue :: TxOutValue BabbageEra
+genesisValue :: L.Coin
 
 (genesisTxIn, genesisValue) =
   ( mkTxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0"
-  , lovelaceToTxOutValue ShelleyBasedEraBabbage $ L.Coin 90000000000000
+  , L.Coin 90000000000000
   )
 
 genesisFund :: Fund
 genesisFund
-  = Fund $ InAnyCardanoEra BabbageEra fundInEra
+  = Fund $ InAnyCardanoEra ConwayEra fundInEra
   where
-    fundInEra :: FundInEra BabbageEra
+    fundInEra :: FundInEra ConwayEra
     fundInEra  = FundInEra {
         _fundTxIn = genesisTxIn
       , _fundVal = genesisValue
-      , _fundWitness = KeyWitness KeyWitnessForSpending
+      , _fundWitness = Exp.AnyKeyWitnessPlaceholder
       , _fundSigningKey = Just signingKey
       }
 
 type Generator = State FundQueue
 
 generateTx ::
-     TxEnvironment BabbageEra
-  -> Generator (Either TxGenError (Tx BabbageEra))
+     TxEnvironment ConwayEra
+  -> Generator (Either TxGenError (Tx ConwayEra))
 generateTx TxEnvironment{..}
   = sourceToStoreTransaction
         generator
@@ -100,18 +101,18 @@ generateTx TxEnvironment{..}
         (makeToUTxOList $ repeat computeUTxO)
         addNewOutputFunds
   where
-    TxFeeExplicit _ fee = txEnvFee
+    fee = txEnvFee
 
-    generator :: TxGenerator BabbageEra
+    generator :: TxGenerator ConwayEra
     generator =
       case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
-        Right ledgerParameters ->
-          genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
+        Right (LedgerProtocolParameters ledgerParameters) ->
+          genTx ledgerParameters collateralFunds txEnvFee txEnvMetadata
         Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
-        collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
-        collateralFunds = (TxInsCollateralNone, [])
+        collateralFunds :: ([TxIn], [Fund])
+        collateralFunds = ([], [])
 
 -- Create a transaction that uses all the available funds.
     consumeInputFunds :: Generator (Either TxGenError [Fund])
@@ -131,8 +132,8 @@ generateTx TxEnvironment{..}
 
 
 generateTxM ::
-      TxEnvironment BabbageEra
-  ->  Generator (Either TxGenError (Tx BabbageEra))
+      TxEnvironment ConwayEra
+  ->  Generator (Either TxGenError (Tx ConwayEra))
 generateTxM txEnv
   = do
       inFunds <- get
@@ -141,9 +142,9 @@ generateTxM txEnv
         Left err              -> pure (Left err)
 
 generateTxPure ::
-     TxEnvironment BabbageEra
+     TxEnvironment ConwayEra
   -> FundQueue
-  -> Either TxGenError (Tx BabbageEra, FundQueue)
+  -> Either TxGenError (Tx ConwayEra, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
       (tx, txId) <- generator inputs outputs
@@ -151,18 +152,18 @@ generateTxPure TxEnvironment{..} inQueue
       pure (tx, outQueue)
   where
     inputs = toList inQueue
-    TxFeeExplicit _ fee = txEnvFee
+    fee = txEnvFee
 
-    generator :: TxGenerator BabbageEra
+    generator :: TxGenerator ConwayEra
     generator =
       case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
-        Right ledgerParameters ->
-          genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
+        Right (LedgerProtocolParameters ledgerParameters) ->
+          genTx ledgerParameters collateralFunds txEnvFee txEnvMetadata
         Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
-        collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
-        collateralFunds = (TxInsCollateralNone, [])
+        collateralFunds :: ([TxIn], [Fund])
+        collateralFunds = ([], [])
 
     outValues = computeOutputValues $ map getFundCoin inputs
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
