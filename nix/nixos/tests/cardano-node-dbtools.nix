@@ -41,6 +41,7 @@ in {
   };
 
   testScript = ''
+    import json
     import re
     countRegex = r'Counted (\d+) blocks\.'
 
@@ -53,6 +54,20 @@ in {
     # Epoch length should be >= 2 * stability_window = 2 * 3 * k / f = 600 slots
     # Epoch length ideally should also be divisible by 10k = 500 slots
     print(machine.succeed("cardano-testnet create-env --epoch-length 1000 --output ${testDir}"))
+
+    # create-env omits hashes so its genesis files remain editable. The database
+    # tools require hashes, so pin the generated files before consuming them.
+    config_path = "${testDir}/configuration.yaml"
+    config = json.loads(machine.succeed(f"cat {config_path}"))
+    for era in ["Byron", "Shelley", "Alonzo", "Conway", "Dijkstra"]:
+        genesis_path = "${testDir}/" + config[f"{era}GenesisFile"]
+        command = (
+            f"cardano-cli byron genesis print-genesis-hash --genesis-json {genesis_path}"
+            if era == "Byron"
+            else f"cardano-cli hash genesis-file --genesis {genesis_path}"
+        )
+        config[f"{era}GenesisHash"] = machine.succeed(command).strip()
+    machine.succeed(f"cat > {config_path} <<'GENESIS_CONFIG'\n{json.dumps(config)}\nGENESIS_CONFIG")
 
     print(machine.succeed("echo Synthesize one epoch"))
     print(machine.succeed("db-synthesizer \

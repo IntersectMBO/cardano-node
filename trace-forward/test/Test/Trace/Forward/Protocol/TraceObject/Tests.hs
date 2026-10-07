@@ -10,6 +10,8 @@ import           Ouroboros.Network.Channel
 import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
 
 import qualified Codec.Serialise as CBOR
+import qualified Control.Concurrent.STM as STM
+import qualified Control.Concurrent.STM.TBQueue as TBQueue
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM
@@ -17,6 +19,7 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
+import           Data.IORef (modifyIORef', newIORef, readIORef)
 import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Properties
 import           Network.TypedProtocol.Proofs
@@ -29,14 +32,18 @@ import           Test.Trace.Forward.Protocol.TraceObject.Direct
 import           Test.Trace.Forward.Protocol.TraceObject.Examples
 import           Test.Trace.Forward.Protocol.TraceObject.Item
 
+import           Trace.Forward.Configuration.TraceObject (ForwarderConfiguration (..))
 import           Trace.Forward.Protocol.TraceObject.Acceptor
 import           Trace.Forward.Protocol.TraceObject.Codec
 import           Trace.Forward.Protocol.TraceObject.Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
+import           Trace.Forward.Utils.ForwardSink (ForwardSink (..))
+import           Trace.Forward.Utils.TraceObject (initForwardSink, writeToSink)
 
 tests :: TestTree
 tests = testGroup "Trace.Forward.Protocol.TraceObject"
-  [ testProperty "codec"          prop_codec_TraceObjectForward
+  [ testProperty "full queue reports dropped prefix and retains new item" (once prop_overflow_TraceObjectForward)
+  , testProperty "codec"          prop_codec_TraceObjectForward
   , testProperty "codec 2-splits" prop_codec_splits2_TraceObjectForward
   , testProperty "codec 3-splits" (withNumTests 33 prop_codec_splits3_TraceObjectForward)
   , testProperty "direct"         prop_direct_TraceObjectForward
@@ -148,3 +155,21 @@ prop_channel_IO_TraceObjectForward f (NonNegative n) =
 withNumTests :: Testable prop => Int -> prop -> Property
 withNumTests = withMaxSuccess
 #endif
+
+-- Exercise the unchanged production overload policy without a consumer.
+-- Filling the same capacity as the stress test must flush exactly that prefix.
+prop_overflow_TraceObjectForward :: Property
+prop_overflow_TraceObjectForward = ioProperty $ do
+  droppedRef <- newIORef []
+  sink <- initForwardSink
+    ForwarderConfiguration { forwarderTracer = nullTracer, queueSize = 768 }
+    (\items -> modifyIORef' droppedRef (items :))
+  mapM_ (writeToSink sink) ([0 .. 768] :: [Int])
+  dropped <- readIORef droppedRef
+  retained <- STM.atomically $ TBQueue.flushTBQueue (forwardQueue sink)
+  pure $ conjoin
+    [ counterexample "Overflow callback must report exactly the full old queue"
+        (dropped === [[0 .. 767]])
+    , counterexample "The new object must remain queued after the drop"
+        (retained === [768])
+    ]

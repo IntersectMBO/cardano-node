@@ -12,6 +12,8 @@ import           Cardano.Tracer.Test.Utils
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Control.Concurrent (threadDelay)
+import qualified Control.Concurrent.STM as STM
+import qualified Control.Concurrent.STM.TBQueue as TBQueue
 import           Control.Exception
 import           Control.Monad.Extra
 import           Data.Functor ((<&>))
@@ -31,7 +33,7 @@ import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwarding)
-import           Trace.Forward.Utils.TraceObject (writeToSink)
+import           Trace.Forward.Utils.ForwardSink (ForwardSink (..))
 
 main :: IO ()
 main = do
@@ -148,4 +150,8 @@ getExternalTracerState TestSetup{..} ref = do
            , initOnForwardInterruption = Nothing
            , initOnQueueOverflow       = Nothing
            }
-     pure (externalTracerHdl, forwardTracer (writeToSink forwardSink))
+     -- This lossless transport test admits each object atomically and waits
+     -- for capacity. Production writeToSink intentionally drops a full queue;
+     -- its overload policy is covered by the separate trace-forward test.
+     pure (externalTracerHdl, forwardTracer $ \obj ->
+       STM.atomically $ TBQueue.writeTBQueue (forwardQueue forwardSink) obj)

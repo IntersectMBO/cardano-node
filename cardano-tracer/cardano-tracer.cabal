@@ -363,6 +363,7 @@ test-suite cardano-tracer-test-ext
                       , ouroboros-network:{api, framework}
                       , process
                       , QuickCheck
+                      , stm <2.5.2 || >=2.5.3
                       , tasty
                       , tasty-quickcheck
                       , text
