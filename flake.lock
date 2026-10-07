@@ -189,11 +189,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1785238484,
-        "narHash": "sha256-4+76/0/GQ1tbgzlf7wtviAfBspFzny8Fym2inVYpnDE=",
+        "lastModified": 1791295470,
+        "narHash": "sha256-Bky1JCMU6ye8p4dbAUCwz47f/XAdc835/CEIerhNedg=",
         "owner": "input-output-hk",
         "repo": "cardano-dev",
-        "rev": "9f6ebbd2215e369eafa05550b7142bca614769be",
+        "rev": "9c19e57a76af0f8856ff889a7c3392ffa52bb6c3",
         "type": "github"
       },
       "original": {

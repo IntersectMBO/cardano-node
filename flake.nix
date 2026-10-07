@@ -558,7 +558,8 @@
             # buildPlatform, not hostPlatform: herald is a developer tool that
             # runs on the machine, so cross shells (e.g. windows) must not try
             # to resolve it for a system cardano-dev does not build for.
-            herald = cardano-dev.packages.${final.stdenv.buildPlatform.system}.herald;
+            # null on systems cardano-dev does not publish herald for.
+            herald = cardano-dev.packages.${final.stdenv.buildPlatform.system}.herald or null;
           })
           .appendModule [
             customConfig.haskellNix

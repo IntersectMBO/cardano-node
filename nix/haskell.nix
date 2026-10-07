@@ -64,9 +64,9 @@ let
           cabal
           actionlint
           shellcheck
-          herald
           stylish-haskell
-        ];
+        ]
+        ++ lib.optional (herald != null) herald;
 
         withHoogle = true;
 

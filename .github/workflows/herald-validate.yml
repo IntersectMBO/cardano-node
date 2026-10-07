@@ -33,10 +33,4 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
 
-      - uses: input-output-hk/cardano-dev/actions/herald-validate@4e54328284d3b915d79a0eb20f27d91992baa4b3 # herald-validate-0.0.1.0
-        with:
-          # Per-package `changes-dir` support (used by our .herald.yml)
-          # landed in herald 0.1.2.0, but herald-validate-0.0.1.0 still
-          # defaults to 0.1.1.0. Pin explicitly until herald-validate is
-          # re-released with a newer default, then this can be dropped.
-          herald-ref: github:input-output-hk/cardano-dev/herald-0.1.2.0
+      - uses: input-output-hk/cardano-dev/actions/herald-validate@9106b37910e40be00cda65051922d6ef939fa67a # herald-validate-0.0.1.1
