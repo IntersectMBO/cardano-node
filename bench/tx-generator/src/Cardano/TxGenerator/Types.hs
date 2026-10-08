@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
@@ -21,6 +22,8 @@ import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 
+import           Data.Aeson ((.:), (.=))
+import qualified Data.Aeson as Aeson
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
@@ -38,9 +41,44 @@ type TPSRate              = Double
 
 type TxGenerator era = [Fund] -> [Exp.TxOut (ShelleyLedgerEra era)] -> Either TxGenError (Tx era, TxId)
 
+-- | 'NestedTxGenerator' is 'TxGenerator' for a transaction with sub-transactions:
+-- besides the top-level funds and outputs, it takes the funds and outputs of
+-- each sub-transaction, and also returns the ids of the sub-transactions, in order.
+type NestedTxGenerator era
+  =  [Fund]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
+  -> [([Fund], [Exp.TxOut (ShelleyLedgerEra era)])]
+  -> Either TxGenError (Tx era, TxId, [TxId])
+
 type FundSource m       = m (Either TxGenError [Fund])
 type FundToStore m      = Fund -> m ()
 type FundToStoreList m  = [Fund] -> m ()
+
+-- | The sub-transactions a nested transaction carries (Dijkstra onwards):
+-- 'subTxCount' of them, each spending 'subTxInputs' funds into 'subTxOutputs'
+-- outputs.
+data SubTxShape = SubTxShape
+  { subTxCount   :: !Int
+  , subTxInputs  :: !NumberOfInputsPerTx
+  , subTxOutputs :: !NumberOfOutputsPerTx
+  }
+  deriving (Show, Eq, Generic)
+
+-- | The JSON form is shared by benchmarking scripts and the Nix service
+-- definition in nix/nixos/tx-generator-service.nix.
+instance FromJSON SubTxShape where
+  parseJSON = Aeson.withObject "SubTxShape" $ \o ->
+    SubTxShape
+      <$> o .: "count"
+      <*> o .: "inputs"
+      <*> o .: "outputs"
+
+instance ToJSON SubTxShape where
+  toJSON SubTxShape{subTxCount, subTxInputs, subTxOutputs} = Aeson.object
+    [ "count"   .= subTxCount
+    , "inputs"  .= subTxInputs
+    , "outputs" .= subTxOutputs
+    ]
 
 data PayWithChange
   = PayExact [L.Coin]
