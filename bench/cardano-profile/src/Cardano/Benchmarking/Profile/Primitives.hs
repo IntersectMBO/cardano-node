@@ -78,6 +78,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , traceForwardingOn, traceForwardingOff
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
+  -- Node's TxSubmissionInitDelay.
+  , txSubmissionInitDelay
   -- Node's RTS params.
   , rtsGcNonMoving, rtsGcAllocSize
   , rtsThreads, rtsHeapLimit, rtsEventlogged
@@ -85,7 +87,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
-  , subTxs
+  , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
   , generatorEpochs
@@ -180,7 +182,7 @@ empty = Types.Profile {
   , Types.node = Types.Node {
       Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
-    , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
+    , Types.verbatim = Types.NodeVerbatim (Just True) Nothing   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
     -- There's only this one tracing backend left. We keep this field for the workbench
     -- to be backwards-compatible for the time being.
@@ -644,6 +646,17 @@ shutdownOnBlock block = node
     else n {Types.shutdown_on_block_synced = Just block}
   )
 
+-- | Seconds the nodes wait before asking a new inbound peer, like the
+-- generator, for transactions.
+txSubmissionInitDelay :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+txSubmissionInitDelay i = node
+  (\n ->
+    let v = Types.verbatim n
+    in if isJust (Types.txSubmissionInitDelay v)
+       then error "txSubmissionInitDelay: `TxSubmissionInitDelay` already set."
+       else n {Types.verbatim = v {Types.txSubmissionInitDelay = Just i}}
+  )
+
 shutdownOnOff :: HasCallStack => Types.Profile -> Types.Profile
 shutdownOnOff = node
   (\n ->
@@ -733,6 +746,16 @@ subTxs count ins outs = generator
     if isJust (Types.sub_txs g)
     then error "subTxs: `sub_txs` already set."
     else g {Types.sub_txs = Just $ Types.SubTxs count ins outs}
+  )
+
+-- | Total number of transactions to submit, instead of tps times the
+-- generator's duration.
+txCount :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+txCount i = generator
+  (\g ->
+    if isJust (Types.tx_count g)
+    then error "txCount: `tx_count` already set."
+    else g {Types.tx_count = Just i}
   )
 
 txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile

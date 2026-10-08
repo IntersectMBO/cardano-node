@@ -38292,15 +38292,15 @@
       "delegators_effective": 2,
       "effective_epochs": 1,
       "epoch_duration": 600,
-      "generator_blocks_lower_bound": 1,
+      "generator_blocks_lower_bound": 3,
       "generator_duration": 600,
-      "generator_tx_count": 120,
+      "generator_tx_count": 300,
       "genesis_future_offset": 40,
       "shutdown_time": null,
       "supply_delegated": 2000000000000000,
       "supply_total": 2010000000000000,
       "utxo_delegated": 0,
-      "utxo_generated": 240,
+      "utxo_generated": 3000,
       "utxo_stuffed": 0
     },
     "desc": "Miniature dataset, CI-friendly duration (2-3min), test scale",
@@ -38319,8 +38319,8 @@
         "inputs": 2,
         "outputs": 2
       },
-      "tps": 0.2,
-      "tx_count": 120,
+      "tps": 15,
+      "tx_count": 300,
       "tx_fee": 1000000
     },
     "genesis": {
@@ -40034,7 +40034,8 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true
+        "EnableP2P": true,
+        "TxSubmissionInitDelay": 0
       }
     },
     "overlay": {},

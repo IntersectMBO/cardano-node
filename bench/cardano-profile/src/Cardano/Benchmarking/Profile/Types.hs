@@ -388,8 +388,11 @@ instance Aeson.FromJSON Node where
         <*> o Aeson..:  "shutdown_on_block_synced"
 
 -- Properties passed directly to the node(s) "config.json" file.
-newtype NodeVerbatim = NodeVerbatim
+data NodeVerbatim = NodeVerbatim
   { enableP2P :: Maybe Bool
+    -- | Seconds a node waits before asking a new inbound peer for
+    -- transactions; the node's default is 60.
+  , txSubmissionInitDelay :: Maybe Integer
   }
   deriving (Eq, Show, Generic)
 
@@ -398,8 +401,10 @@ instance Aeson.ToJSON NodeVerbatim where
   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
   -- Therefore, any attempt to set this to false for a profile must be a critical error.
   -- For backwards compatibility with Node < 10.6, we explicitly set EnableP2P = true in the config.
-  toJSON (NodeVerbatim (Just True)) = Aeson.object [ "EnableP2P" Aeson..= True ]
-  toJSON (NodeVerbatim _)           = error "NodeVerbatim: EnableP2P must be true; non-p2p topologies are no longer supported since Node 10.6"
+  toJSON (NodeVerbatim (Just True) delay) = Aeson.object $
+      ("EnableP2P" Aeson..= True)
+    : [ "TxSubmissionInitDelay" Aeson..= d | Just d <- [delay] ]
+  toJSON NodeVerbatim{} = error "NodeVerbatim: EnableP2P must be true; non-p2p topologies are no longer supported since Node 10.6"
 
 instance Aeson.FromJSON NodeVerbatim where
   -- As it is the implicit default on Node 10.6, assumption for the default value changes
@@ -407,6 +412,7 @@ instance Aeson.FromJSON NodeVerbatim where
     Aeson.withObject "NodeVerbatim" $ \o -> do
       NodeVerbatim
         <$> o Aeson..:? "EnableP2P" Aeson..!= Just True
+        <*> o Aeson..:? "TxSubmissionInitDelay"
 
 --------------------------------------------------------------------------------
 
