@@ -21,7 +21,7 @@ module Cardano.Benchmarking.Profile.Types (
 , Node (..)
 , NodeVerbatim (..)
 
-, Generator (..)
+, Generator (..), SubTxs (..)
 , Plutus (..), Redeemer (..)
 
 , Workload (..)
@@ -428,14 +428,45 @@ data Generator = Generator
   , tx_count :: Maybe Integer
   -- TODO: Not used! ???
   , add_tx_size :: Integer
+  -- | Sub-transactions each transaction carries (Dijkstra onwards), if any.
+  , sub_txs :: Maybe SubTxs
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Generator
+-- Fields that are Nothing are left out, so that `sub_txs` only shows up in
+-- the profiles that set it.
+instance Aeson.ToJSON Generator where
+  toJSON     = Aeson.genericToJSON     (Aeson.defaultOptions {Aeson.omitNothingFields = True})
+  toEncoding = Aeson.genericToEncoding (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
 instance Aeson.FromJSON Generator where
   parseJSON = Aeson.genericParseJSON
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+
+-- | The sub-transactions of a transaction: how many, and the inputs and
+-- outputs of each. The JSON keys are those the tx-generator expects.
+data SubTxs = SubTxs
+  { sub_tx_count   :: Integer
+  , sub_tx_inputs  :: Integer
+  , sub_tx_outputs :: Integer
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON SubTxs where
+  toJSON s =
+    Aeson.object
+      [ "count"   Aeson..= sub_tx_count s
+      , "inputs"  Aeson..= sub_tx_inputs s
+      , "outputs" Aeson..= sub_tx_outputs s
+      ]
+
+instance Aeson.FromJSON SubTxs where
+  parseJSON =
+    Aeson.withObject "SubTxs" $ \o ->
+      SubTxs
+        <$> o Aeson..: "count"
+        <*> o Aeson..: "inputs"
+        <*> o Aeson..: "outputs"
 
 data Plutus = Plutus
   { plutusType :: Maybe String -- TODO: Rename in workbench/bash to "plutus_type"

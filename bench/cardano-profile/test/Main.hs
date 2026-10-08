@@ -368,6 +368,7 @@ ciTestBage = Types.Profile {
     , Types.epochs = 2
     , Types.tx_count = Just 9000
     , Types.add_tx_size = 100
+    , Types.sub_txs = Nothing
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
