@@ -62,6 +62,8 @@ import           Control.Monad.Trans.RWS.Strict (ask)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
+import           Data.Type.Equality (TestEquality (..), (:~:) (..))
+import           Lens.Micro ((^.))
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -368,6 +370,53 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
               dumpBudgetSummaryIfExisting
 
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        NestedNtoM walletName payMode inputs outputs metadataSize collateralWallet subTxShape@SubTxShape{..} ->
+          case testEquality (Exp.useEra @era) Exp.DijkstraEra of
+            Nothing -> throwE $ UserError $
+              "NestedNtoM: sub-transactions need the Dijkstra era, not " ++ show (cardanoEra @era)
+            Just Refl -> do
+              wallet <- getEnvWallets walletName
+              collaterals <- selectCollateralFunds collateralWallet
+              (toUTxO, addressOut) <- interpretPayMode payMode
+              traceDebug $ "NestedNtoM output address : " ++ addressOut ++ ", " ++ show subTxShape
+              let
+                fundCount = inputs + subTxCount * subTxInputs
+                fundSource = walletSource wallet fundCount
+                topSplitter = Utils.inputsToOutputsWithFee fee outputs
+                subTxSplitter = Utils.inputsToOutputsWithFee 0 subTxOutputs
+                txGenerator = genNestedTx ledgerParameters collaterals fee (toMetadata metadataSize)
+                toStore = mangle $ repeat toUTxO
+                sourceToStore = sourceToStoreNestedTransaction txGenerator fundSource inputs subTxInputs topSplitter subTxSplitter toStore
+
+              -- A transaction with many sub-transactions easily outgrows maxTxSize or the
+              -- configured fee; check a preview, rather than having every transaction rejected.
+              fundPreview <- liftIO $ walletPreview wallet fundCount
+              if length fundPreview < fundCount
+                then traceDebug $ "NestedNtoM: not enough funds for a Tx preview: " ++ show (length fundPreview)
+                else case nestedTransactionPreview txGenerator fundPreview inputs subTxInputs topSplitter subTxSplitter toStore of
+                  Left err -> liftTxGenError err
+                  Right tx -> do
+                    let
+                      txSize = txSizeInBytes tx
+                      maxTxSize = fromIntegral $ ledgerParameters ^. Ledger.ppMaxTxSizeL
+                      txFeeEstimate = estimateTxFee ledgerParameters tx (fromIntegral $ inputs + 1)    -- 1 key witness per top-level input + 1 collateral
+                    traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+                    traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+                    when (txSize > maxTxSize) $ liftTxGenError $ TxGenError $
+                      "NestedNtoM: a transaction would be " ++ show txSize ++ " bytes, above maxTxSize "
+                        ++ show maxTxSize ++ "; use fewer or smaller sub-transactions"
+                    when (txFeeEstimate > fee) $ liftTxGenError $ TxGenError $
+                      "NestedNtoM: a transaction needs a fee of at least " ++ show txFeeEstimate
+                        ++ ", above the configured " ++ show fee
+                    summary_ <- getEnvSummary
+                    forM_ summary_ $ \summary -> do
+                      let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = Just txFeeEstimate }
+                      setEnvSummary summary'
+                      traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+                    dumpBudgetSummaryIfExisting
+
+              return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era

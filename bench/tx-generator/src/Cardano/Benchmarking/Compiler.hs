@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
@@ -56,6 +57,7 @@ testCompiler o c = case runExcept $ runRWST c o 0 of
 
 compileToScript :: Compiler ()
 compileToScript = do
+  checkSubTxOptions
   initConstants
   nc <- askNixOption getNodeConfigFile >>= maybe
         (throwCompileError $ SomeCompilerError "nodeConfigFile not set in Nix options")
@@ -114,12 +116,13 @@ splittingPhase :: SrcWallet -> Compiler DstWallet
 splittingPhase srcWallet = do
   tx_count <- askNixOption _nix_tx_count
   inputs_per_tx <- askNixOption _nix_inputs_per_tx
+  subTxFunds <- askNixOption _nix_sub_txs <&> maybe 0 (\SubTxShape{subTxCount, subTxInputs} -> subTxCount * subTxInputs)
   era <- askNixOption _nix_era
   txParams <- askNixOption txGenTxParams
   minValuePerInput <- _minValuePerInput <$> evilFeeMagic
   finalDest <- newWallet "final_split_wallet"
   splitSteps <- splitSequenceWalletNames srcWallet finalDest $
-    unfoldSplitSequence (txParamFee txParams) minValuePerInput (tx_count * inputs_per_tx)
+    unfoldSplitSequence (txParamFee txParams) minValuePerInput (tx_count * inputs_per_tx + tx_count * subTxFunds)
   isPlutus <- isAnyPlutusMode
   forM_ (init splitSteps) $ createChange txParams False False era
   createChange txParams True isPlutus era $ last splitSteps
@@ -218,9 +221,13 @@ benchmarkingPhase wallet collateralWallet = do
       | otherwise -> throwCompileError $ SomeCompilerError
           "a benchmark requires at least one entry in targetNodes (or a \
           \submission endpoint to submit through)."
+  subTxs <- askNixOption _nix_sub_txs
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
-    generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
+    padding = Just $ txParamAddTxSize txParams
+    generator = Take txCount $ Cycle $ case subTxs of
+      Nothing    -> NtoM wallet payMode inputs outputs padding collateralWallet
+      Just shape -> NestedNtoM wallet payMode inputs outputs padding collateralWallet shape
   emit $ Submit era submitMode txParams generator
   case submitMode of
     Benchmark {} -> emit WaitBenchmark
@@ -239,6 +246,7 @@ evilFeeMagic = do
   inputs_per_tx <- askNixOption _nix_inputs_per_tx
   outputs_per_tx <- askNixOption _nix_outputs_per_tx
   (Quantity min_utxo_value)  <- lovelaceToQuantity <$> askNixOption _nix_min_utxo_value
+  sub_txs <- askNixOption _nix_sub_txs
   let
     scriptFees = 5000000;           -- FIXME: should be taken from ProtocolParameters
     collateralPercentage = 200;     -- FIXME: should be taken from ProtocolParameters
@@ -248,11 +256,31 @@ evilFeeMagic = do
                else tx_fee;
     safeCollateral = max ((scriptFees + tx_fee) * collateralPercentage `div` 100) min_utxo_value;
     minTotalValue = min_utxo_value * fromIntegral outputs_per_tx + totalFee;
-    minValuePerInput = minTotalValue `div` fromIntegral inputs_per_tx + 1;
+    -- A sub-transaction pays no fee, but its inputs must cover its outputs.
+    minSubTxValuePerInput = case sub_txs of
+      Nothing -> 0
+      Just SubTxShape{subTxInputs, subTxOutputs} ->
+        min_utxo_value * fromIntegral subTxOutputs `div` fromIntegral subTxInputs + 1;
+    minValuePerInput = max (minTotalValue `div` fromIntegral inputs_per_tx + 1) minSubTxValuePerInput;
   return $ Fees {
       _safeCollateral = fromIntegral safeCollateral
     , _minValuePerInput = fromIntegral minValuePerInput
     }
+
+-- | Sub-transactions need the Dijkstra era, and are not yet combined with Plutus.
+checkSubTxOptions :: Compiler ()
+checkSubTxOptions = askNixOption _nix_sub_txs >>= \case
+  Nothing -> pure ()
+  Just shape@SubTxShape{subTxCount, subTxInputs, subTxOutputs} -> do
+    era <- askNixOption _nix_era
+    plutusMode <- isAnyPlutusMode
+    let failWith = throwCompileError . SomeCompilerError . (("sub_txs " ++ show shape ++ ": ") ++)
+    when (era /= AnyCardanoEra DijkstraEra) $
+      failWith $ "sub-transactions need the Dijkstra era, not " ++ show era
+    when plutusMode $
+      failWith "sub-transactions are not supported together with Plutus yet"
+    when (subTxCount < 1 || subTxInputs < 1 || subTxOutputs < 1) $
+      failWith "count, inputs and outputs must all be at least 1"
 
 emit :: Action -> Compiler ()
 emit = tell . DL.singleton

@@ -8,6 +8,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
+import           NestedTxTest (nestedTxTests)
 import           TestnetDiscoveryTest (testnetDiscoveryTests)
 
 main :: IO ()
@@ -17,6 +18,7 @@ tests :: TestTree
 tests =  testGroup "cardano-tx-generator"
   [
     sizedMetadata
+  , nestedTxTests
   , testnetDiscoveryTests
   ]
 

@@ -21,6 +21,7 @@ import           Cardano.TxGenerator.UTxO (ToUTxOList)
 import           Data.Bifunctor (first, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
+import           Data.List.Extra (chunksOf)
 import           Data.Maybe (mapMaybe)
 import           Lens.Micro ((.~))
 
@@ -149,6 +150,68 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
+-- | 'sourceToStoreNestedTransaction' is 'sourceToStoreTransactionNew' for a
+-- transaction with sub-transactions. Of the funds @fundSource@ provides, the
+-- first @topInputs@ are spent by the top-level transaction, and the rest, in
+-- groups of @inputsPerSubTx@, by one sub-transaction each. @topSplitter@ and
+-- @subTxSplitter@ compute the output values of the top-level transaction and of
+-- a sub-transaction. The outputs of a sub-transaction are stored under its own
+-- id, as that is the id their 'TxIn's carry.
+sourceToStoreNestedTransaction ::
+     Monad m
+  => NestedTxGenerator era
+  -> FundSource m
+  -> NumberOfInputsPerTx
+  -> NumberOfInputsPerTx
+  -> ([L.Coin] -> split)
+  -> ([L.Coin] -> split)
+  -> CreateAndStoreList m era split
+  -> m (Either TxGenError (Tx era))
+sourceToStoreNestedTransaction txGenerator fundSource topInputs inputsPerSubTx topSplitter subTxSplitter toStore =
+  fundSource >>= either (return . Left) go
+ where
+  go inputFunds =
+    case nestedTransaction txGenerator inputFunds topInputs inputsPerSubTx topSplitter subTxSplitter toStore of
+      Left err -> return $ Left err
+      Right (tx, storeActions) -> do
+        sequence_ storeActions
+        return $ Right tx
+
+-- | 'nestedTransactionPreview' is 'sourceTransactionPreview' for a transaction
+-- with sub-transactions, see 'sourceToStoreNestedTransaction'.
+nestedTransactionPreview ::
+     NestedTxGenerator era
+  -> [Fund]
+  -> NumberOfInputsPerTx
+  -> NumberOfInputsPerTx
+  -> ([L.Coin] -> split)
+  -> ([L.Coin] -> split)
+  -> CreateAndStoreList m era split
+  -> Either TxGenError (Tx era)
+nestedTransactionPreview txGenerator inputFunds topInputs inputsPerSubTx topSplitter subTxSplitter toStore =
+  fst <$> nestedTransaction txGenerator inputFunds topInputs inputsPerSubTx topSplitter subTxSplitter toStore
+
+-- | Builds a transaction with sub-transactions from the given funds, and
+-- returns it together with the actions that store its outputs (top-level
+-- outputs first, then those of each sub-transaction).
+nestedTransaction ::
+     NestedTxGenerator era
+  -> [Fund]
+  -> NumberOfInputsPerTx
+  -> NumberOfInputsPerTx
+  -> ([L.Coin] -> split)
+  -> ([L.Coin] -> split)
+  -> CreateAndStoreList m era split
+  -> Either TxGenError (Tx era, [m ()])
+nestedTransaction txGenerator inputFunds topInputs inputsPerSubTx topSplitter subTxSplitter toStore = do
+  (tx, txId, subTxIds) <- txGenerator topFunds topOutputs (zip subTxFunds subOutputsList)
+  return (tx, topStore txId : zipWith ($) subTxStores subTxIds)
+ where
+  (topFunds, subTxFundsAll)     = splitAt topInputs inputFunds
+  subTxFunds                    = chunksOf inputsPerSubTx subTxFundsAll
+  (topOutputs, topStore)        = toStore $ topSplitter $ map getFundCoin topFunds
+  (subOutputsList, subTxStores)   = unzip $ map (toStore . subTxSplitter . map getFundCoin) subTxFunds
+
 -- | 'genTx' builds and signs a transaction with the experimental API
 -- ('Exp.makeUnsignedTx', 'Exp.makeKeyWitness' and 'Exp.signTx'), lifting
 -- a 'Exp.MakeUnsignedTxError' to 'Cardano.TxGenerator.Types.TxGenError' as
@@ -166,7 +229,48 @@ genTx :: forall era. ()
   -> L.Coin
   -> TxMetadata
   -> TxGenerator era
-genTx ledgerParameters (collateral, collFunds) fee metadata inFunds outputs = do
+genTx ledgerParameters collateral fee metadata inFunds outputs =
+  signedTopLevelTx ledgerParameters collateral fee metadata inFunds outputs id
+
+-- | 'genNestedTx' is 'genTx' for a Dijkstra transaction that also carries
+-- sub-transactions. Each sub-transaction spends its funds into its outputs,
+-- with no fee, and is signed with the keys of its own funds; the top-level
+-- transaction pays the fee for all of them.
+genNestedTx ::
+     L.PParams (ShelleyLedgerEra DijkstraEra)
+  -> ([TxIn], [Fund])
+  -- ^ Collateral inputs, and the funds they spend (for their signing keys)
+  -> L.Coin
+  -> TxMetadata
+  -> NestedTxGenerator DijkstraEra
+genNestedTx ledgerParameters collateral fee metadata inFunds outputs subTxs = do
+  signedSubTxs <- mapM (uncurry signedSubTx) subTxs
+  (tx, txId) <- signedTopLevelTx ledgerParameters collateral fee metadata inFunds outputs
+                  (Exp.setTxSignedSubTransactions signedSubTxs)
+  return (tx, txId, map Exp.getSignedSubTxId signedSubTxs)
+ where
+  signedSubTx :: [Fund] -> [Exp.TxOut (ShelleyLedgerEra DijkstraEra)] -> Either TxGenError Exp.SignedSubTx
+  signedSubTx subFunds subOutputs = do
+    unsignedSubTx <- first ApiError $ Exp.makeUnsignedSubTx $ Exp.defaultSubTxBodyContent
+      & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @DijkstraEra f)) subFunds)
+      & Exp.setTxOuts subOutputs
+      & Exp.setTxProtocolParams ledgerParameters
+    let keyWitnesses = map (Exp.makeSubTxKeyWitness unsignedSubTx . WitnessPaymentKey) $ mapMaybe getFundKey subFunds
+    return $ Exp.signSubTx [] keyWitnesses unsignedSubTx
+
+-- | Builds and signs a top-level transaction; @extendBody@ can add to its
+-- body content, e.g. sub-transactions.
+signedTopLevelTx :: forall era. ()
+  => Exp.EraCommonConstraints era
+  => L.PParams (ShelleyLedgerEra era)
+  -> ([TxIn], [Fund])
+  -> L.Coin
+  -> TxMetadata
+  -> [Fund]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
+  -> (Exp.TxBodyContent (ShelleyLedgerEra era) -> Exp.TxBodyContent (ShelleyLedgerEra era))
+  -> Either TxGenError (Tx era, TxId)
+signedTopLevelTx ledgerParameters (collateral, collFunds) fee metadata inFunds outputs extendBody = do
   unsignedTx <- first ApiError $ Exp.makeUnsignedTx era txBodyContent
   let keyWitnesses = map (Exp.makeKeyWitness era unsignedTx . WitnessPaymentKey) allKeys
   case Exp.signTx era [] keyWitnesses unsignedTx of
@@ -175,7 +279,7 @@ genTx ledgerParameters (collateral, collFunds) fee metadata inFunds outputs = do
  where
   era = Exp.useEra @era
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = Exp.defaultTxBodyContent
+  txBodyContent = extendBody $ Exp.defaultTxBodyContent
     & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @era f)) inFunds)
     & Exp.setTxInsCollateral collateral
     & Exp.setTxOuts outputs

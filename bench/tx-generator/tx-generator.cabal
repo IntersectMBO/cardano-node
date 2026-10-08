@@ -264,18 +264,24 @@ test-suite tx-generator-test
                       , aeson
                       , bytestring
                       , cardano-api
+                      , cardano-ledger-api
+                      , cardano-ledger-dijkstra
                       , cardano-node
+                      , containers
                       , directory
                       , extra
                       , filepath
+                      , microlens
                       , QuickCheck
                       , tasty
                       , tasty-hunit
                       , tasty-quickcheck
                       , temporary
+                      , text
                       , tx-generator
 
-  other-modules:        TestnetDiscoveryTest
+  other-modules:        NestedTxTest
+                        TestnetDiscoveryTest
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists

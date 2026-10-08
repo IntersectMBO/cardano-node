@@ -26,7 +26,7 @@ things one might do with the connexion.
 module Cardano.Benchmarking.Script.Types (
           Action(..)
         , EndpointUri(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
+        , Generator(Cycle, NestedNtoM, NtoM, OneOf, RoundRobin, SecureGenesis,
                 Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
@@ -152,6 +152,14 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'NestedNtoM' is an 'NtoM' transaction that also carries sub-transactions,
+  -- which needs the Dijkstra era. The top-level transaction spends its N
+  -- inputs into M outputs, pays the fee for the whole transaction and
+  -- carries the metadata. Each sub-transaction spends its own inputs into its
+  -- own outputs, balanced on its own. All the inputs come from the same
+  -- wallet, and all the outputs are paid according to the same 'PayMode'.
+  NestedNtoM :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+        -> !(Maybe Int) -> Maybe String -> !SubTxShape -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to

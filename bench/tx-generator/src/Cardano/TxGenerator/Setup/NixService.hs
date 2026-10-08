@@ -54,6 +54,9 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_tps              :: TPSRate
   , _nix_inputs_per_tx    :: NumberOfInputsPerTx
   , _nix_outputs_per_tx   :: NumberOfOutputsPerTx
+    -- | Sub-transactions for each benchmarking transaction to carry (Dijkstra
+    -- onwards); without them, the benchmarking transactions have none.
+  , _nix_sub_txs          :: Maybe SubTxShape
   , _nix_tx_fee           :: L.Coin
   , _nix_min_utxo_value   :: L.Coin
   , _nix_add_tx_size      :: TxAdditionalSize
