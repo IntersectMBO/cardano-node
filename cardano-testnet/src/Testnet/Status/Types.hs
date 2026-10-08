@@ -3,21 +3,26 @@
 
 module Testnet.Status.Types
   ( CheckStatusOptions (..)
+  , NetworkStatus(..)
+  , NodeProbeResult(..)
+  , NodeState(..)
   , OutputFormat(..)
+  , StatusReport(..)
+  , TipInfo(..)
   ) where
 
 import           Cardano.Api (BlockHeader, BlockNo (..), Hash, SlotNo (..), ToJSON (..))
 
-import           Cardano.Prelude (Nat, ExitCode (..))
+import           Cardano.Prelude (ExitCode (..), Nat)
 
 import           Prelude
 
+import           Data.Aeson (Value, object, (.=))
 import           Data.Default.Class (Default (..))
 import           Data.Time (NominalDiffTime, UTCTime)
 import           System.Process (Pid)
 
 import           Testnet.Manifest (ManifestNodeRole)
-import           Data.Aeson (Value, object, (.=))
 
 -- Option types
 
