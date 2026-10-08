@@ -491,7 +491,11 @@ derive p@(Types.Profile _ _ _ comp gsis _ n gtor _ _ _ ana _ _ _ _) =
       (effective_delegators, delegators_effective) =
         let d = Types.delegators gsis
         in (d, max d (Types.n_pools comp))
-      utxo_generated = generator_tx_count * Types.inputs_per_tx gtor
+      utxo_generated =
+          generator_tx_count
+        * ( Types.inputs_per_tx gtor
+          + maybe 0 (\s -> Types.sub_tx_count s * Types.sub_tx_inputs s) (Types.sub_txs gtor)
+          )
       utxo_stuffed = max 0 (Types.utxo gsis)
 
       -- Dataset:
