@@ -139,6 +139,10 @@ profilesEmpty = map baseNoDataset
   , ciTest genesis    & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
   , ciTest genesis    & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
   , ciTest genesisV12 & P.name "ci-test-v12"      . V.valueLocal . P.traceForwardingOn
+  -- Value workload whose transactions carry 4 sub-transactions of 2 inputs and 2 outputs each.
+  -- A low rate, like ci-test-plutus, so that the UTxO setup fits before the nodes
+  -- shut down at block 8 and the benchmarking phase gets to run.
+  , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueBase . P.tps 0.2 . P.subTxs 4 2 2 . P.traceForwardingOn
   ]
   ++
   ------------------------------------------------------------------------------

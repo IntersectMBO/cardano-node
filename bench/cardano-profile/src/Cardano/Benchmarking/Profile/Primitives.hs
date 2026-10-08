@@ -88,6 +88,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
+  , subTxs
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
   , generatorEpochs
@@ -204,6 +205,7 @@ empty = Types.Profile {
     , Types.epochs = 0
     , Types.tx_count = Nothing
     , Types.add_tx_size = 0
+    , Types.sub_txs = Nothing
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
@@ -741,6 +743,16 @@ txFee i = generator
     if Types.tx_fee g /= 0
     then error "txFee: `tx_fee` already set (not zero)."
     else g {Types.tx_fee = i}
+  )
+
+-- | Sub-transactions each transaction carries (Dijkstra onwards): how many,
+-- and the inputs and outputs of each.
+subTxs :: HasCallStack => Integer -> Integer -> Integer -> Types.Profile -> Types.Profile
+subTxs count ins outs = generator
+  (\g ->
+    if isJust (Types.sub_txs g)
+    then error "subTxs: `sub_txs` already set."
+    else g {Types.sub_txs = Just $ Types.SubTxs count ins outs}
   )
 
 txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile
