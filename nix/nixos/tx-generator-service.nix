@@ -46,6 +46,7 @@ let
         nodeConfigFile
         outputs_per_tx
         sigKey
+        sub_txs
         submissionEndpointProtocol
         submissionEndpointURI
         tps
@@ -109,6 +110,7 @@ in pkgs.commonLib.defServiceModule
         add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";
         inputs_per_tx   = opt int 4          "Inputs per Tx.";
         outputs_per_tx  = opt int 4          "Outputs per Tx.";
+        sub_txs         = mayOpt attrs       "Sub-transactions per Tx (Dijkstra onwards): { count, inputs, outputs }; null for none.";
         tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
         tps             = opt (either float int) 100
                                              "Strength of generated load, in TPS.";
