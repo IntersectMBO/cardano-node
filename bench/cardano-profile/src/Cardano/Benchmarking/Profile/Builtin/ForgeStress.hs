@@ -122,6 +122,8 @@ profilesForgeStress =
       -- forge-stress works better with a smaller block size (64k) for comparative benchmarks.
       n1 = V.genesisVariantVoltaire    . V.hosts 1
       n3 = V.genesisVariantVoltaire64k . V.hosts 3
+      -- As n3, in the Dijkstra era (protocol version 12).
+      n3v12 = P.v12Preview . P.v11Preview . n3
       v6 = V.genesisVariantVoltaire64k . V.hosts 6
   in [
   -- 1 node versions (non-pre).
@@ -148,6 +150,12 @@ profilesForgeStress =
   , fs & P.name "forge-stress-large"            . V.valueLocal . v6 . V.datasetCurrent . durationXL . P.traceForwardingOn
   -- 3 nodes versions (pre)
   , fs & P.name "forge-stress-pre"              . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
+  -- forge-stress-pre in the Dijkstra era, and the same again with transactions carrying
+  -- 4 sub-transactions of 2 inputs and 2 outputs each. The nested one submits a fifth of
+  -- the transactions, so that the generator prepares the same 72000 UTxOs (10 rather than
+  -- 2 per transaction) and its splitting phase ends at the same point; both stay saturated.
+  , fs & P.name "forge-stress-pre-v12"          . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn                                       . P.analysisUnitary
+  , fs & P.name "forge-stress-pre-v12-nested"   . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn . P.subTxs 4 2 2 . P.txCount 7200   . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsA4m"       . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                   . P.rtsGcAllocSize  4 . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsA64m"      . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                   . P.rtsGcAllocSize 64 . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsN3"        . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn  . P.rtsThreads 3                       . P.analysisUnitary
