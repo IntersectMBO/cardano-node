@@ -1,13 +1,14 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Colours that tag a firehose's transactions, so a mempool observer can tell
 -- whose load a mempool is holding.
 module Cardano.Benchmarking.TxFirehose.Color
   ( Color (..)
-  , ColorSpec (..)
-  , parseColorSpec
-  , resolveColor
+  , parseColor
+  , colorFromPublicKey
   , colorHex
   , colorBytes
   , colorFromBytes
@@ -16,7 +17,9 @@ module Cardano.Benchmarking.TxFirehose.Color
   , colorMetadataLabel
   ) where
 
-import Cardano.Api (PaymentKey, VerificationKey, serialiseToRawBytes, verificationKeyHash)
+import Cardano.Api (PaymentKey, VerificationKey, serialiseToRawBytes)
+import Cardano.Crypto.Hash qualified as Hash
+import Cardano.Crypto.Hash.SHA256 (SHA256)
 import Data.Bits (shiftL, (.|.))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -32,24 +35,18 @@ data Color = Color
   }
   deriving (Eq, Ord, Show)
 
--- | What @--color@ asked for: a literal colour, or one derived from the key.
-data ColorSpec
-  = ColorLiteral !Color
-  | ColorFromKey
-  deriving (Eq, Show)
-
 -- | Metadata label carrying the colour, named after the issue this was built for.
 colorMetadataLabel :: Word64
 colorMetadataLabel = 1022
 
--- | Parse @ff0000@, @#ff0000@ or @auto@.
-parseColorSpec :: String -> Either String ColorSpec
-parseColorSpec s
-  | normalised == "auto" = Right ColorFromKey
+-- | Parse @ff0000@ or @#ff0000@. The default colour is derived from a key
+-- (see 'colorFromPublicKey'), so the parser only has to cover the literal.
+parseColor :: String -> Either String Color
+parseColor s
   | length normalised == 6 && all isHexDigit normalised =
-      Right (ColorLiteral (Color (octet 0) (octet 1) (octet 2)))
+      Right (Color (octet 0) (octet 1) (octet 2))
   | otherwise =
-      Left ("not a colour: " ++ s ++ " (expected six hex digits or 'auto')")
+      Left ("not a colour: " ++ s ++ " (expected six hex digits)")
  where
   normalised = map toLower (dropWhile (== '#') s)
 
@@ -59,15 +56,17 @@ parseColorSpec s
     | c >= '0' && c <= '9' = fromIntegral (fromEnum c - fromEnum '0')
     | otherwise = fromIntegral (fromEnum c - fromEnum 'a' + 10)
 
--- | Resolve a spec against the key whose transactions will carry the colour.
-resolveColor :: ColorSpec -> VerificationKey PaymentKey -> Color
-resolveColor (ColorLiteral c) _ = c
-resolveColor ColorFromKey vk = hueColor hue
+-- | Derive a vivid colour from a payment verification key. SHA-256 over the
+-- serialized key picks two bytes of hue; saturation and lightness stay fixed,
+-- so the result is always vivid regardless of the key.
+--
+-- Hashing the public portion keeps a tool that only ever holds the pub key
+-- (e.g. an observer) in sync with one that signs with the matching key.
+colorFromPublicKey :: VerificationKey PaymentKey -> Color
+colorFromPublicKey vk = hueColor hue
  where
-  -- Two bytes of the key hash pick a hue, while saturation and lightness stay
-  -- fixed. Taking hash bytes as RGB directly would leave a good share of keys
-  -- dark or muddy, which is exactly what makes colours hard to tell apart.
-  hue = case BS.unpack (serialiseToRawBytes (verificationKeyHash vk)) of
+  digest = Hash.hashToBytes (Hash.hashWith @SHA256 id (serialiseToRawBytes vk))
+  hue = case BS.unpack digest of
     (hi : lo : _) -> 360 * fromIntegral (word16 hi lo) / 65536
     _ -> 0
 

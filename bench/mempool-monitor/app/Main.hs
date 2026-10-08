@@ -1,5 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Watch one node's mempool over node-to-client and show what colours it
 -- holds, so mempool fragmentation is visible per pool rather than in aggregate.
@@ -8,7 +9,7 @@ module Main (main) where
 import Cardano.Api qualified as Api
 import Cardano.Benchmarking.MempoolMonitor.Render (renderLine, renderPane, tsvHeader, tsvRow)
 import Cardano.Benchmarking.MempoolMonitor.Snapshot (monitorClient)
-import Cardano.Benchmarking.TxFirehose.Color (Color, ColorSpec (ColorFromKey, ColorLiteral), parseColorSpec)
+import Cardano.Benchmarking.TxFirehose.Color (Color, colorFromPublicKey, parseColor)
 import Control.Applicative (optional)
 import Control.Monad (when)
 import Data.Foldable (traverse_)
@@ -31,6 +32,7 @@ data Options = Options
   , optNetworkMagic :: !Natural
   , optLabel :: !(Maybe String)
   , optInterval :: !Double
+  , optOwnKeyFile :: !(Maybe FilePath)
   , optOwnColor :: !(Maybe Color)
   , optTsv :: !(Maybe FilePath)
   }
@@ -39,6 +41,16 @@ main :: IO ()
 main = do
   opts <- parseOptions
   when (optInterval opts <= 0) $ die "--interval must be > 0"
+
+  -- --own-color overrides, --own-key-file derives, neither leaves the local
+  -- share off. Making the two mutually exclusive here means the resolved
+  -- colour is unambiguous rather than depending on a precedence rule.
+  mOwnColor <- case (optOwnColor opts, optOwnKeyFile opts) of
+    (Just _, Just _) ->
+      die "pass either --own-color or --own-key-file, not both"
+    (Just c, Nothing) -> pure (Just c)
+    (Nothing, Just path) -> Just . colorFromPublicKey <$> loadVerificationKey path
+    (Nothing, Nothing) -> pure Nothing
 
   hSetBuffering stdout LineBuffering
   -- A repainting pane is right in a terminal and garbage in a log file, so the
@@ -51,7 +63,7 @@ main = do
       emit snapshot = do
         putStr $
           if pane
-            then renderPane label (optOwnColor opts) snapshot
+            then renderPane label mOwnColor snapshot
             else renderLine label snapshot ++ "\n"
         traverse_ (\h -> hPutStrLn h (tsvRow snapshot)) mTsvHandle
 
@@ -123,11 +135,23 @@ optionsParser =
           <> Opt.help "Seconds between snapshots; a drain is one round trip per tx, so keep it generous"
       )
     <*> optional
+      ( Opt.strOption
+          ( Opt.long "own-key-file"
+              <> Opt.metavar "FILEPATH"
+              <> Opt.help
+                "Payment verification or signing key the attached generator \
+                \uses; the local colour is derived from the public portion. \
+                \This is the default way to pick the local colour."
+          )
+      )
+    <*> optional
       ( Opt.option
-          (Opt.eitherReader readOwnColor)
+          (Opt.eitherReader parseColor)
           ( Opt.long "own-color"
               <> Opt.metavar "HEX"
-              <> Opt.help "This node's own colour, to report the local share"
+              <> Opt.help
+                "Override the local colour with an explicit hex value, e.g. \
+                \ff0000. Mutually exclusive with --own-key-file."
           )
       )
     <*> optional
@@ -138,9 +162,27 @@ optionsParser =
           )
       )
 
--- | @auto@ needs a signing key to resolve, which an observer does not have.
-readOwnColor :: String -> Either String Color
-readOwnColor s = case parseColorSpec s of
-  Right (ColorLiteral c) -> Right c
-  Right ColorFromKey -> Left "--own-color needs an explicit colour, not 'auto'"
-  Left err -> Left err
+-- | Load a payment key file and return its verification key. Accepts both a
+-- verification key file and a signing key file (payment or genesis-utxo),
+-- since the colour derivation only needs the public portion.
+loadVerificationKey :: FilePath -> IO (Api.VerificationKey Api.PaymentKey)
+loadVerificationKey path = do
+  result <- Api.readFileTextEnvelopeAnyOf accepted (Api.File path)
+  case result of
+    Left err ->
+      die $
+        "mempool-monitor: cannot read key "
+          ++ show path
+          ++ ": "
+          ++ show err
+    Right vk -> pure vk
+ where
+  accepted :: [Api.FromSomeType Api.HasTextEnvelope (Api.VerificationKey Api.PaymentKey)]
+  accepted =
+    [ Api.FromSomeType (Api.AsVerificationKey Api.AsPaymentKey) id
+    , Api.FromSomeType (Api.AsVerificationKey Api.AsGenesisUTxOKey) Api.castVerificationKey
+    , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey) Api.getVerificationKey
+    , Api.FromSomeType
+        (Api.AsSigningKey Api.AsGenesisUTxOKey)
+        (Api.castVerificationKey . Api.getVerificationKey)
+    ]

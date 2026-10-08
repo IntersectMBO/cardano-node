@@ -36,6 +36,7 @@ library
   build-depends:    base                 >= 4.14 && < 5
                   , bytestring
                   , cardano-api
+                  , cardano-crypto-class
                   , cardano-ledger-api
                   , cardano-ledger-core
                   , cardano-strict-containers
