@@ -140,9 +140,12 @@ profilesEmpty = map baseNoDataset
   , ciTest genesis    & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
   , ciTest genesisV12 & P.name "ci-test-v12"      . V.valueLocal . P.traceForwardingOn
   -- Value workload whose transactions carry 4 sub-transactions of 2 inputs and 2 outputs each.
-  -- A low rate, like ci-test-plutus, so that the UTxO setup fits before the nodes
-  -- shut down at block 8 and the benchmarking phase gets to run.
-  , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueBase . P.tps 0.2 . P.subTxs 4 2 2 . P.traceForwardingOn
+  -- A fixed transaction count instead of tps times the duration, so that the UTxO setup
+  -- (10 UTxOs per transaction) takes about 2 blocks and the remaining blocks before the
+  -- shutdown at block 8 are full (about 45 of these transactions each); the rate keeps
+  -- the mempool topped up. This relies on the nodes taking a new peer's transactions
+  -- after 1 s (nodes.nix): with the default 60 s, about 3 of those blocks were empty.
+  , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueLocal . P.subTxs 4 2 2 . P.txCount 300 . P.traceForwardingOn
   ]
   ++
   ------------------------------------------------------------------------------
