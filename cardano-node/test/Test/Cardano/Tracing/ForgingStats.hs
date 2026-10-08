@@ -33,10 +33,10 @@ latest = fmap listToMaybe . readIORef
 -- | Feed a run of leadership-check events and return the stats the fold
 --   emitted last. The fold emits on 'TraceStartLeadershipCheck', so each run
 --   ends with one.
-runEvents :: ForgingResumed -> [TraceForgeEvent ()] -> IO (Maybe ForgingStats)
-runEvents resumed events = do
+runEvents :: ForgingStateVar -> [TraceForgeEvent ()] -> IO (Maybe ForgingStats)
+runEvents stateVar events = do
   ioRef <- newIORef []
-  tr <- calcForgeStats resumed (collect ioRef)
+  tr <- calcForgeStats stateVar (collect ioRef)
   mapM_ (traceWith tr) events
   latest ioRef
 
@@ -47,16 +47,16 @@ runEvents resumed events = do
 prop_standbyIsNotMissedSlots :: Property
 prop_standbyIsNotMissedSlots = withTests 1 . property $ do
   stats <- liftIO $ do
-    resumed <- newForgingResumed True
+    stateVar <- newForgingStateVar True
     ioRef    <- newIORef []
-    tr       <- calcForgeStats resumed (collect ioRef)
+    tr       <- calcForgeStats stateVar (collect ioRef)
     -- producing: two consecutive slots
     traceWith tr (TraceNodeNotLeader (SlotNo 100))
     traceWith tr (TraceNodeNotLeader (SlotNo 101))
     -- the credentials go away and a SIGHUP disables forging: no leadership
     -- check events at all for ~240 slots, then a SIGHUP enables it again
-    noteForgingState resumed False
-    noteForgingState resumed True
+    noteForgingState stateVar False
+    noteForgingState stateVar True
     traceWith tr (TraceNodeNotLeader (SlotNo 341))
     traceWith tr (TraceNodeNotLeader (SlotNo 342))
     traceWith tr (TraceStartLeadershipCheck (SlotNo 343))
@@ -67,10 +67,10 @@ prop_standbyIsNotMissedSlots = withTests 1 . property $ do
 --   resume is still counted (cf. issue #2890).
 prop_genuineGapIsStillCounted :: Property
 prop_genuineGapIsStillCounted = withTests 1 . property $ do
-  stats <- liftIO $ runEvents' =<< newForgingResumed True
+  stats <- liftIO $ runEvents' =<< newForgingStateVar True
   (fsSlotsMissedNum <$> stats) === Just 4
  where
-  runEvents' resumed = runEvents resumed
+  runEvents' stateVar = runEvents stateVar
     [ TraceNodeNotLeader (SlotNo 100)
     , TraceNodeNotLeader (SlotNo 101)
     , TraceNodeNotLeader (SlotNo 105)   -- 102..105 were due but not checked
@@ -79,7 +79,7 @@ prop_genuineGapIsStillCounted = withTests 1 . property $ do
 
 -- | 'mkCardanoTracer'' applies its hook twice, once for the message path and
 --   once for the metrics path, so 'calcForgeStats' builds two independent folds
---   over the same events sharing one 'ForgingResumed'. @slotsMissed_int@ comes
+--   over the same events sharing one 'ForgingStateVar'. @slotsMissed_int@ comes
 --   from the metrics fold. Both folds must get a fresh start on resume; a flag
 --   that the fold consumed was taken by whichever ran first, and the other
 --   still booked the standby interval (seen in a workbench cluster as
@@ -87,15 +87,15 @@ prop_genuineGapIsStillCounted = withTests 1 . property $ do
 prop_everyFoldGetsTheResume :: Property
 prop_everyFoldGetsTheResume = withTests 1 . property $ do
   (a, b) <- liftIO $ do
-    resumed <- newForgingResumed True
+    stateVar <- newForgingStateVar True
     refA <- newIORef []; refB <- newIORef []
-    trA <- calcForgeStats resumed (collect refA)   -- message path
-    trB <- calcForgeStats resumed (collect refB)   -- metrics path
+    trA <- calcForgeStats stateVar (collect refA)   -- message path
+    trB <- calcForgeStats stateVar (collect refB)   -- metrics path
     let feed e = traceWith trA e >> traceWith trB e
     feed (TraceNodeNotLeader (SlotNo 100))
     feed (TraceNodeNotLeader (SlotNo 101))
-    noteForgingState resumed False                  -- standby ...
-    noteForgingState resumed True                   -- ... then resume
+    noteForgingState stateVar False                  -- standby ...
+    noteForgingState stateVar True                   -- ... then resume
     feed (TraceNodeNotLeader (SlotNo 341))
     feed (TraceStartLeadershipCheck (SlotNo 342))
     (,) <$> latest refA <*> latest refB
@@ -110,14 +110,14 @@ prop_everyFoldGetsTheResume = withTests 1 . property $ do
 prop_reloadWhileForgingDoesNotMaskGap :: Property
 prop_reloadWhileForgingDoesNotMaskGap = withTests 1 . property $ do
   stats <- liftIO $ do
-    resumed <- newForgingResumed True
+    stateVar <- newForgingStateVar True
     ioRef    <- newIORef []
-    tr       <- calcForgeStats resumed (collect ioRef)
+    tr       <- calcForgeStats stateVar (collect ioRef)
     traceWith tr (TraceNodeNotLeader (SlotNo 100))
     traceWith tr (TraceNodeNotLeader (SlotNo 101))
     -- 102..105 are due but go unchecked; a reload lands in the middle of the
     -- gap and leaves forging on
-    noteForgingState resumed True
+    noteForgingState stateVar True
     traceWith tr (TraceNodeNotLeader (SlotNo 105))
     traceWith tr (TraceStartLeadershipCheck (SlotNo 106))
     latest ioRef
@@ -130,10 +130,10 @@ prop_reloadWhileForgingDoesNotMaskGap = withTests 1 . property $ do
 prop_resumeAbsorbedByLeaderSlotDoesNotExcuseALaterGap :: Property
 prop_resumeAbsorbedByLeaderSlotDoesNotExcuseALaterGap = withTests 1 . property $ do
   stats <- liftIO $ do
-    resumed <- newForgingResumed True
-    noteForgingState resumed False                 -- standby ...
-    noteForgingState resumed True                  -- ... then resume
-    runEvents resumed
+    stateVar <- newForgingStateVar True
+    noteForgingState stateVar False                 -- standby ...
+    noteForgingState stateVar True                  -- ... then resume
+    runEvents stateVar
       [ TraceNodeIsLeader (SlotNo 341)              -- the resume is spent here
       , TraceNodeNotLeader (SlotNo 345)             -- 342..345 were due
       , TraceStartLeadershipCheck (SlotNo 346)
@@ -147,12 +147,12 @@ prop_resumeAbsorbedByLeaderSlotDoesNotExcuseALaterGap = withTests 1 . property $
 prop_severalCyclesGrantOneFreshStart :: Property
 prop_severalCyclesGrantOneFreshStart = withTests 1 . property $ do
   stats <- liftIO $ do
-    resumed <- newForgingResumed True
+    stateVar <- newForgingStateVar True
     ioRef    <- newIORef []
-    tr       <- calcForgeStats resumed (collect ioRef)
+    tr       <- calcForgeStats stateVar (collect ioRef)
     traceWith tr (TraceNodeNotLeader (SlotNo 100))
     traceWith tr (TraceNodeNotLeader (SlotNo 101))
-    mapM_ (noteForgingState resumed) [False, True, False, True]
+    mapM_ (noteForgingState stateVar) [False, True, False, True]
     traceWith tr (TraceNodeNotLeader (SlotNo 341))
     traceWith tr (TraceStartLeadershipCheck (SlotNo 342))
     latest ioRef
@@ -166,13 +166,13 @@ prop_severalCyclesGrantOneFreshStart = withTests 1 . property $ do
 prop_gapStraddlingTheDisableIsForgiven :: Property
 prop_gapStraddlingTheDisableIsForgiven = withTests 1 . property $ do
   stats <- liftIO $ do
-    resumed <- newForgingResumed True
+    stateVar <- newForgingStateVar True
     ioRef    <- newIORef []
-    tr       <- calcForgeStats resumed (collect ioRef)
+    tr       <- calcForgeStats stateVar (collect ioRef)
     traceWith tr (TraceNodeNotLeader (SlotNo 100))
     -- 101..104 are due and go unchecked, then forging is switched off
-    noteForgingState resumed False
-    noteForgingState resumed True
+    noteForgingState stateVar False
+    noteForgingState stateVar True
     traceWith tr (TraceNodeNotLeader (SlotNo 341))
     traceWith tr (TraceStartLeadershipCheck (SlotNo 342))
     latest ioRef

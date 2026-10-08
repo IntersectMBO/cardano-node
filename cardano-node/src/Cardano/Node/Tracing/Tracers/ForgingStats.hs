@@ -4,8 +4,8 @@
 
 module Cardano.Node.Tracing.Tracers.ForgingStats
     ( ForgingStats (..)
-    , ForgingResumed
-    , newForgingResumed
+    , ForgingStateVar
+    , newForgingStateVar
     , noteForgingState
     , calcForgeStats
   ) where
@@ -45,7 +45,7 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 --   Each fold instead remembers the generation it has already accounted for in
 --   its own 'fsResumeGen', so every fold gets exactly one fresh start per
 --   resume, no matter how many folds there are or in which order they run.
-newtype ForgingResumed = ForgingResumed (IORef ForgingState)
+newtype ForgingStateVar = ForgingStateVar (IORef ForgingState)
 
 data ForgingState = ForgingState
   { fgGen     :: !Int   -- ^ how often forging has gone from off to on
@@ -54,8 +54,8 @@ data ForgingState = ForgingState
 
 -- | Takes the state the node starts in: a node started with
 --   @--start-as-non-producing-node@, or without usable credentials, starts off.
-newForgingResumed :: Bool -> IO ForgingResumed
-newForgingResumed enabled = ForgingResumed <$> newIORef (ForgingState 0 enabled)
+newForgingStateVar :: Bool -> IO ForgingStateVar
+newForgingStateVar enabled = ForgingStateVar <$> newIORef (ForgingState 0 enabled)
 
 -- | Call this wherever block forging is switched on or off, with the state it
 --   is in afterwards, and call it /before/ 'setBlockForging': consensus'
@@ -64,8 +64,8 @@ newForgingResumed enabled = ForgingResumed <$> newIORef (ForgingState 0 enabled)
 --   runs the check for the current slot immediately. Noting the state
 --   afterwards would let the fold see the first event of the new run while the
 --   generation was still the old one -- and book the whole standby interval.
-noteForgingState :: ForgingResumed -> Bool -> IO ()
-noteForgingState (ForgingResumed ref) enabled =
+noteForgingState :: ForgingStateVar -> Bool -> IO ()
+noteForgingState (ForgingStateVar ref) enabled =
   atomicModifyIORef' ref $ \st ->
     ( ForgingState { fgGen     = if enabled && not (fgEnabled st)
                                    then fgGen st + 1
@@ -75,8 +75,8 @@ noteForgingState (ForgingResumed ref) enabled =
 
 -- | The current generation. Read only -- never cleared, so that every fold can
 --   observe the same resume independently.
-currentResumeGen :: ForgingResumed -> IO Int
-currentResumeGen (ForgingResumed ref) = fgGen <$> readIORef ref
+currentResumeGen :: ForgingStateVar -> IO Int
+currentResumeGen (ForgingStateVar ref) = fgGen <$> readIORef ref
 
 --------------------------------------------------------------------------------
 -- ForgingStats Tracer
@@ -143,12 +143,12 @@ instance MetaTrace ForgingStats where
 emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats 0 0 0 0 0 0
 
-calcForgeStats :: ForgingResumed
+calcForgeStats :: ForgingStateVar
   -> Trace IO ForgingStats
   -> IO (Trace IO (TraceForgeEvent blk))
-calcForgeStats resumed tr =
+calcForgeStats stateVar tr =
   let tr' = contramap unfold tr
-  in foldCondTraceM (calculateForgingStats resumed) emptyForgingStats
+  in foldCondTraceM (calculateForgingStats stateVar) emptyForgingStats
       (\case
           Consensus.TraceStartLeadershipCheck{} -> True
           _  -> False
@@ -156,26 +156,26 @@ calcForgeStats resumed tr =
       tr'
 
 calculateForgingStats :: MonadIO m
-  => ForgingResumed
+  => ForgingStateVar
   -> ForgingStats
   -> LoggingContext
   -> TraceForgeEvent blk
   -> m ForgingStats
-calculateForgingStats _resumed stats _context
+calculateForgingStats _stateVar stats _context
     TraceNodeCannotForge {} =
       pure $ stats  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum stats + 1 }
-calculateForgingStats resumed stats _context
+calculateForgingStats stateVar stats _context
     (TraceNodeIsLeader (SlotNo slot)) = do
       -- A completed leadership check: record the generation, so a resume
       -- accounted for here cannot also suppress a later, genuine gap.
-      gen <- liftIO (currentResumeGen resumed)
+      gen <- liftIO (currentResumeGen stateVar)
       pure $ stats  { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1
                     , fsLastSlot = fromIntegral slot
                     , fsResumeGen = gen }
-calculateForgingStats _resumed stats _context
+calculateForgingStats _stateVar stats _context
     TraceForgedBlock {} =
         pure $ stats  { fsBlocksForgedNum  = fsBlocksForgedNum stats + 1 }
-calculateForgingStats resumed stats _context
+calculateForgingStats stateVar stats _context
     (TraceNodeNotLeader (SlotNo slot')) = do
       -- Node is not a leader again: The number of blocks forged by
       -- this node should now be equal to the number of slots when
@@ -184,7 +184,7 @@ calculateForgingStats resumed stats _context
       -- The first completed check after forging was (re-)enabled starts a new
       -- run of slots: while forging was disabled no leadership check ran, so
       -- the elapsed slots were not missed, they were not due.
-      gen <- liftIO (currentResumeGen resumed)
+      gen <- liftIO (currentResumeGen stateVar)
       let justResumed = gen /= fsResumeGen stats
           slot = fromIntegral slot'
       if justResumed || fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
@@ -194,4 +194,4 @@ calculateForgingStats resumed stats _context
           in pure $ stats { fsLastSlot = slot
                           , fsResumeGen = gen
                           , fsSlotsMissedNum = fsSlotsMissedNum stats + missed }
-calculateForgingStats _resumed stats _context _message = pure stats
+calculateForgingStats _stateVar stats _context _message = pure stats
