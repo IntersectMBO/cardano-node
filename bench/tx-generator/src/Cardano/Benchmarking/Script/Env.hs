@@ -39,6 +39,7 @@ module Cardano.Benchmarking.Script.Env (
         , askNixSvcOpts
         , askEnvThreads
         , traceDebug
+        , traceWarning
         , traceError
         , traceBenchTxSubmit
         , getBenchTracers
@@ -318,6 +319,10 @@ traceBenchTxSubmit tag msg = do
 -- | Submit an error message to the `Tracer.BenchTracers`.
 traceError :: String -> ActionM ()
 traceError = traceBenchTxSubmit (Tracer.TraceBenchTxSubError . Text.pack)
+
+-- | Submit a warning to the `Tracer.BenchTracers`.
+traceWarning :: String -> ActionM ()
+traceWarning = traceBenchTxSubmit (Tracer.TraceBenchTxSubWarning . Text.pack)
 
 -- | Submit a debug message to the `Tracer.BenchTracers`.
 traceDebug :: String -> ActionM ()

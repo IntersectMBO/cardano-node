@@ -90,6 +90,7 @@ countScriptTxns = sum . map actionTxCount
       Split{}         -> 1
       SplitN{}        -> 1
       NtoM{}          -> 1
+      NestedNtoM{}    -> 1
       Cycle g         -> if genTxCount g < 0 then (-1) else maxBound
       Take i g        -> min i (genTxCount g)
       Sequence gs     -> guardedSum $ map genTxCount gs

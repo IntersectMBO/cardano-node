@@ -287,6 +287,10 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind" .= A.String "TraceBenchTxSubDebug"
               , "msg"  .= A.String (Text.pack s)
               ]
+    TraceBenchTxSubWarning s ->
+      mconcat [ "kind" .= A.String "TraceBenchTxSubWarning"
+              , "msg"  .= A.String s
+              ]
     TraceBenchTxSubError s ->
       mconcat [ "kind" .= A.String "TraceBenchTxSubError"
               , "msg"  .= A.String s
@@ -317,10 +321,12 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubRateLimit {} = Namespace [] ["BenchTxSubRateLimit"]
     namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["BenchTxSubSummary"]
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
+    namespaceFor TraceBenchTxSubWarning {} = Namespace [] ["BenchTxSubWarning"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
     namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
     namespaceFor TraceBenchForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
 
+    severityFor (Namespace _ ["BenchTxSubWarning"]) _ = Just Warning
     severityFor _ _ = Just Info
 
     documentFor _ = Just ""
@@ -341,6 +347,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["BenchTxSubRateLimit"]
         , Namespace [] ["BenchTxSubSummary"]
         , Namespace [] ["BenchTxSubDebug"]
+        , Namespace [] ["BenchTxSubWarning"]
         , Namespace [] ["BenchTxSubError"]
         , Namespace [] ["BenchPlutusBudgetSummary"]
         , Namespace [] ["ForwardingInterrupted"]
