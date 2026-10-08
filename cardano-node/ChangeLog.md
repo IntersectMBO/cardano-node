@@ -9,7 +9,12 @@
   forging was re-enabled. The first completed check after resuming now starts a
   new run of slots, exactly as the first check after start-up does. Genuine
   gaps, where a producing node did not complete a leadership check, are still
-  counted.
+  counted. Only an off-to-on transition counts as a resume: every `SIGHUP`
+  re-reads the credentials, so one sent to reload the topology or the RPC config
+  alone must not discard a gap that accumulated before the signal. Such a reload
+  does still restart the forging threads, and for KES-agent credentials that
+  costs the re-handshake window during which the hot key is poisoned; those
+  slots are counted, because forging was enabled and no check completed.
   ([#6698](https://github.com/IntersectMBO/cardano-node/issues/6698))
 
 - Fix `BlockFetch.Decision` trace namespace drift: documentation and the

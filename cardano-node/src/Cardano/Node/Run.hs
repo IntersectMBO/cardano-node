@@ -58,7 +58,7 @@ import           Cardano.Node.Tracing (Tracers (..))
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingResumed, newForgingResumed,
-                   noteForgingResumed)
+                   noteForgingState)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
@@ -236,9 +236,11 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
   blockForging <- mkBlockForging nullTracer
-  -- Tells the Forge.Stats tracer that forging was (re-)enabled, so the standby
-  -- interval is not booked as missed leadership checks (issue #6698).
+  -- Tells the Forge.Stats tracer when forging is switched on, so the standby
+  -- interval is not booked as missed leadership checks (issue #6698). The
+  -- initial state is the one 'rnNodeKernelHook' below installs.
   forgingResumed <- newForgingResumed
+                       (not (ncStartAsNonProducingNode nc) && not (null blockForging))
   tracers <-
     initTraceDispatcher
       nc
@@ -649,6 +651,7 @@ updateBlockForging startupTracer kesAgentTracer forgingResumed blockType nodeKer
     Left err ->
       case wasFileRemovedFromScope err of
         Just (Api.FileDoesNotExistError _) -> do
+          noteForgingState forgingResumed False
           traceWith startupTracer (BlockForgingUpdate DisabledBlockForging)
           setBlockForging nodeKernel []
         _NothingOrOtherFileError ->
@@ -660,9 +663,12 @@ updateBlockForging startupTracer kesAgentTracer forgingResumed blockType nodeKer
           (_, mkBlockForging) <- Api.protocolInfo runP'
           blockForging <- mkBlockForging kesAgentTracer
           let enabled = not (null blockForging)
-          -- Starts a new run of slots for Forge.Stats: no leadership check ran
-          -- while forging was disabled, so those slots were not due.
-          when enabled $ noteForgingResumed forgingResumed
+          -- Only an off-to-on transition starts a new run of slots for
+          -- Forge.Stats; a reload that leaves forging on changes nothing.
+          -- Before 'setBlockForging': the forging thread consensus forks there
+          -- checks the current slot at once, so the fold must already see the
+          -- new generation by the time the first event arrives.
+          noteForgingState forgingResumed enabled
           traceWith startupTracer
                     (BlockForgingUpdate (if enabled
                                           then EnabledBlockForging

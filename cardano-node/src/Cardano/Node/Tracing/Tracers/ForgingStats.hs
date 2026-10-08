@@ -6,7 +6,7 @@ module Cardano.Node.Tracing.Tracers.ForgingStats
     ( ForgingStats (..)
     , ForgingResumed
     , newForgingResumed
-    , noteForgingResumed
+    , noteForgingState
     , calcForgeStats
   ) where
 
@@ -21,14 +21,21 @@ import           Data.Aeson (Value (..), (.=))
 import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 
 
--- | Counts how often block forging has been (re-)enabled, so that the slots
---   which elapsed while forging was disabled are not booked as missed
---   leadership checks.
+-- | The node's own record of whether block forging is on, and of how often it
+--   has gone from off to on, so that the slots which elapsed while it was off
+--   are not booked as missed leadership checks. The node has to keep this
+--   itself: consensus takes the forging credentials through 'setBlockForging'
+--   and offers nothing to read the current state back.
 --
 --   While forging is disabled there is no forging thread, hence no leadership
 --   check events at all (see @forkBlockForging@ in consensus' @NodeKernel@), so
 --   'fsLastSlot' stays at the last slot before standby and the gap would
 --   otherwise be counted on the next completed check.
+--
+--   Only the off-to-on transition counts. Every @SIGHUP@ re-reads the
+--   credentials, including one sent for a topology or RPC change alone, and a
+--   reload that leaves forging on must not reset the count -- a genuine gap
+--   that had accumulated before the signal would be discarded with it.
 --
 --   This is a counter rather than a flag that the fold clears, because
 --   'mkCardanoTracer'' applies its hook twice -- once for the message path and
@@ -38,20 +45,38 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 --   Each fold instead remembers the generation it has already accounted for in
 --   its own 'fsResumeGen', so every fold gets exactly one fresh start per
 --   resume, no matter how many folds there are or in which order they run.
-newtype ForgingResumed = ForgingResumed (IORef Int)
+newtype ForgingResumed = ForgingResumed (IORef ForgingState)
 
-newForgingResumed :: IO ForgingResumed
-newForgingResumed = ForgingResumed <$> newIORef 0
+data ForgingState = ForgingState
+  { fgGen     :: !Int   -- ^ how often forging has gone from off to on
+  , fgEnabled :: !Bool  -- ^ whether it is on now
+  }
 
--- | Call this whenever block forging is enabled, including the initial
---   transition out of non-producing mode.
-noteForgingResumed :: ForgingResumed -> IO ()
-noteForgingResumed (ForgingResumed ref) = atomicModifyIORef' ref (\n -> (n + 1, ()))
+-- | Takes the state the node starts in: a node started with
+--   @--start-as-non-producing-node@, or without usable credentials, starts off.
+newForgingResumed :: Bool -> IO ForgingResumed
+newForgingResumed enabled = ForgingResumed <$> newIORef (ForgingState 0 enabled)
+
+-- | Call this wherever block forging is switched on or off, with the state it
+--   is in afterwards, and call it /before/ 'setBlockForging': consensus'
+--   @blockForgingController@ re-forks the forging threads at once and
+--   @knownSlotWatcher@ has @wInitial = Nothing@, so a freshly forked thread
+--   runs the check for the current slot immediately. Noting the state
+--   afterwards would let the fold see the first event of the new run while the
+--   generation was still the old one -- and book the whole standby interval.
+noteForgingState :: ForgingResumed -> Bool -> IO ()
+noteForgingState (ForgingResumed ref) enabled =
+  atomicModifyIORef' ref $ \st ->
+    ( ForgingState { fgGen     = if enabled && not (fgEnabled st)
+                                   then fgGen st + 1
+                                   else fgGen st
+                   , fgEnabled = enabled }
+    , () )
 
 -- | The current generation. Read only -- never cleared, so that every fold can
 --   observe the same resume independently.
 currentResumeGen :: ForgingResumed -> IO Int
-currentResumeGen (ForgingResumed ref) = readIORef ref
+currentResumeGen (ForgingResumed ref) = fgGen <$> readIORef ref
 
 --------------------------------------------------------------------------------
 -- ForgingStats Tracer
