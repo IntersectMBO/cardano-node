@@ -346,7 +346,7 @@ ciTestBage = Types.Profile {
   , Types.node = Types.Node {
       Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
-    , Types.verbatim = Types.NodeVerbatim (Just True)     -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
+    , Types.verbatim = Types.NodeVerbatim (Just True) Nothing     -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = True
     , Types.tracing_backend = "trace-dispatcher"
     , Types.rts_flags_override = []
