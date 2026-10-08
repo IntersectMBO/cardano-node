@@ -88,7 +88,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
-  , subTxs
+  , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
   , generatorEpochs
@@ -753,6 +753,16 @@ subTxs count ins outs = generator
     if isJust (Types.sub_txs g)
     then error "subTxs: `sub_txs` already set."
     else g {Types.sub_txs = Just $ Types.SubTxs count ins outs}
+  )
+
+-- | Total number of transactions to submit, instead of tps times the
+-- generator's duration.
+txCount :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+txCount i = generator
+  (\g ->
+    if isJust (Types.tx_count g)
+    then error "txCount: `tx_count` already set."
+    else g {Types.tx_count = Just i}
   )
 
 txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile
