@@ -166,3 +166,36 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+
+-- TEMPORARY, for review only: remove both stanzas before merging.
+--
+-- hermod-tracing-api 1.1.0, hermod-tracing-core 1.0.1 and
+-- hermod-tracing-prometheus 1.1.0 are not on CHaP yet; they are
+-- IntersectMBO/hermod-tracing#21. ouroboros-network is pinned because its
+-- tracing sublibraries provide their LogFormatting instances against
+-- hermod-tracing-api rather than trace-dispatcher, and no version bound can
+-- express that: the flipped packages keep their released version numbers.
+--
+-- Once both are published these stanzas go, and the bounds already in the
+-- .cabal files resolve from CHaP unchanged.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/hermod-tracing.git
+  tag: 669277989719e9da50e7dad3945355fbd69ac7a8
+  subdir:
+    hermod-tracing-api
+    hermod-tracing-core
+    hermod-tracing-prometheus
+    hermod-trace-resources
+  --sha256: sha256-Na/GlZVp+HtxKz4ClKRO6DxD0o/Zb3tspmUV2IpVZMI=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 746dcc2c4fe0edc58f19eeaa8e6e4012b59a9e6b
+  subdir:
+    network-mux
+    ouroboros-network
+    cardano-diffusion
+    ntp-client
+  --sha256: sha256-aZr/KWYWXKPGEkhoOplZmS3Q/6vG5oOAkKdCEWS1E9Y=
