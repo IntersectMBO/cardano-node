@@ -4,11 +4,13 @@
 module Testnet.Status.Types
   ( CheckStatusOptions (..)
   , NetworkStatus(..)
+  , NodeAnswer(..)
   , NodeProbeResult(..)
   , NodeState(..)
   , OutputFormat(..)
   , StatusReport(..)
   , TipInfo(..)
+  , exitCodeForStatus
   ) where
 
 import           Cardano.Api (BlockHeader, BlockNo (..), Hash, SlotNo (..), ToJSON (..))
@@ -79,6 +81,13 @@ instance ToJSON NodeState where
   toJSON NodeUnreachable = "unreachable"
   toJSON NodeDown        = "down"
 
+-- | What a node said when it was asked for its chain tip.
+data NodeAnswer
+  = AnsweredTip !TipInfo -- ^ it has blocks; this is the newest
+  | AnsweredNoBlocks     -- ^ it answered, but it has no blocks yet
+  | NoAnswer             -- ^ it refused, failed, or did not answer in time
+  deriving (Eq, Show)
+
 -- | A node's chain tip.
 data TipInfo = TipInfo
   { tipSlot    :: !SlotNo
@@ -117,11 +126,12 @@ instance ToJSON NodeProbeResult where
     , "tip"      .= probeNodeTipInfo n
     ]
 
+-- | Output of status command
 data StatusReport = StatusReport
   { reportOutputDir          :: !FilePath
   , reportCheckedAt          :: !UTCTime
   , reportStatus             :: !NetworkStatus
-  , reportBestTip            :: !(Maybe TipInfo)         -- ^ the most tip of all nodes
+  , reportBestTip            :: !(Maybe TipInfo)         -- ^ the freshest tip of all nodes
   , reportNodes              :: ![NodeProbeResult]       -- ^ empty for 'NoTestnet'
   , reportProblemExplanation :: !(Maybe String)          -- ^ why there is no testnet
   } deriving (Eq, Show)
@@ -143,10 +153,10 @@ instance ToJSON StatusReport where
       exitCodeNumber ExitSuccess = 0
       exitCodeNumber (ExitFailure n) = n
 
-      -- | Convert the network state to an exit code
-      exitCodeForStatus :: NetworkStatus -> ExitCode
-      exitCodeForStatus NetworkRunning = ExitSuccess
-      exitCodeForStatus NetworkDegraded = ExitSuccess
-      exitCodeForStatus NetworkStalled = ExitFailure 3
-      exitCodeForStatus NetworkStopped = ExitFailure 4
-      exitCodeForStatus NoTestnet = ExitFailure 5
+-- | Convert the network state to an exit code
+exitCodeForStatus :: NetworkStatus -> ExitCode
+exitCodeForStatus NetworkRunning = ExitSuccess
+exitCodeForStatus NetworkDegraded = ExitSuccess
+exitCodeForStatus NetworkStalled = ExitFailure 3
+exitCodeForStatus NetworkStopped = ExitFailure 4
+exitCodeForStatus NoTestnet = ExitFailure 5
