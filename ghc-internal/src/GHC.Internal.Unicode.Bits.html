@@ -1,0 +1,320 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE UnboxedTuples #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE UnliftedNewtypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE BlockArguments #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Module      :  GHC.Internal.Unicode.Bits</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Copyright   : (c) 2020 Andrew Lelechenko</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--               (c) 2020 Composewell Technologies</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- License     : BSD-3-Clause</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Maintainer  :  streamly@composewell.com</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Stability   :  internal</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Portability :  non-portable (GHC extensions)</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- Fast, static bitmap lookup utilities</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html"><span class="hs-identifier">GHC.Internal.Unicode.Bits</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#lookupIntN"><span class="hs-identifier">lookupIntN</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#lookupBit64"><span class="hs-identifier">lookupBit64</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#newByteArrayFromWord8List"><span class="hs-identifier">newByteArrayFromWord8List</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#byteArrayLookupIntN"><span class="hs-identifier">byteArrayLookupIntN</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#copyAddrToWord8List"><span class="hs-identifier">copyAddrToWord8List</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier">UnicodeByteArray</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Bits.html"><span class="hs-identifier">GHC.Internal.Bits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Bits.html#finiteBitSize"><span class="hs-identifier">finiteBitSize</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Internal.Bits.html#popCount"><span class="hs-identifier">popCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-pragma">{-# SOURCE</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="annot"><a href="GHC.Internal.ByteOrder.html"><span class="hs-identifier">GHC.Internal.ByteOrder</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html"><span class="hs-identifier">GHC.Prim</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.ST.html"><span class="hs-identifier">GHC.Internal.ST</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Num.html"><span class="hs-identifier">GHC.Internal.Num</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.List.html"><span class="hs-identifier">GHC.Internal.List</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Word.html"><span class="hs-identifier">GHC.Internal.Word</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- | @lookup64 addr index@ looks up the bit stored at bit index @index@ using a</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- bitmap starting at the address @addr@. Looks up the 64-bit word containing</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- the bit and then the bit in that word. The caller must make sure that the</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- 64-bit word at the byte address (addr + index / 64) * 8 is legally</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- accessible memory.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#lookupBit64"><span class="hs-identifier hs-type">lookupBit64</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-49"></span><span id="lookupBit64"><span class="annot"><span class="annottext">lookupBit64 :: Addr# -&gt; Int -&gt; Bool
+</span><a href="GHC.Internal.Unicode.Bits.html#lookupBit64"><span class="hs-identifier hs-var hs-var">lookupBit64</span></a></span></span><span> </span><span id="local-6989586621679739318"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739318"><span class="hs-identifier hs-var">addr#</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739319"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739319"><span class="hs-identifier hs-var">index#</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#W%23"><span class="hs-identifier hs-var">W#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679739320"><span class="hs-identifier hs-var">word##</span></a></span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#and%23"><span class="hs-operator hs-var">`and#`</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679739321"><span class="hs-identifier hs-var">bitMask##</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679739327"><span class="annot"><span class="annottext">fbs :: Int
+</span><a href="#local-6989586621679739327"><span class="hs-identifier hs-var">fbs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739328"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739328"><span class="hs-identifier hs-var">fbs#</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Int
+forall b. FiniteBits b =&gt; b -&gt; Int
+</span><a href="GHC.Internal.Bits.html#finiteBitSize"><span class="hs-identifier hs-var">finiteBitSize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739337"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739337"><span class="hs-identifier hs-var">logFbs#</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739327"><span class="hs-identifier hs-var">fbs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">31</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">63</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a. Bits a =&gt; a -&gt; Int
+</span><a href="GHC.Internal.Bits.html#popCount"><span class="hs-identifier hs-var">popCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739327"><span class="hs-identifier hs-var">fbs</span></a></span><span> </span><span class="hs-comment">-- this is a really weird architecture</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679739338"><span class="annot"><span class="annottext">wordIndex# :: Int#
+</span><a href="#local-6989586621679739338"><span class="hs-identifier hs-var hs-var">wordIndex#</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739319"><span class="hs-identifier hs-var">index#</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#uncheckedIShiftRL%23"><span class="hs-operator hs-var">`uncheckedIShiftRL#`</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739337"><span class="hs-identifier hs-var">logFbs#</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621679739320"><span class="annot"><span class="annottext">word## :: Word#
+</span><a href="#local-6989586621679739320"><span class="hs-identifier hs-var hs-var">word##</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteOrder
+</span><a href="GHC.Internal.ByteOrder.html#targetByteOrder"><span class="hs-identifier hs-var">targetByteOrder</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">ByteOrder
+</span><a href="GHC.Internal.ByteOrder.html#BigEndian"><span class="hs-identifier hs-var">BigEndian</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#byteSwap%23"><span class="hs-identifier hs-var">byteSwap#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr# -&gt; Int# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#indexWordOffAddr%23"><span class="hs-identifier hs-var">indexWordOffAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739318"><span class="hs-identifier hs-var">addr#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739338"><span class="hs-identifier hs-var">wordIndex#</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">ByteOrder
+</span><a href="GHC.Internal.ByteOrder.html#LittleEndian"><span class="hs-identifier hs-var">LittleEndian</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Int# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#indexWordOffAddr%23"><span class="hs-identifier hs-var">indexWordOffAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739318"><span class="hs-identifier hs-var">addr#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739338"><span class="hs-identifier hs-var">wordIndex#</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679739342"><span class="annot"><span class="annottext">bitIndex# :: Int#
+</span><a href="#local-6989586621679739342"><span class="hs-identifier hs-var hs-var">bitIndex#</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739319"><span class="hs-identifier hs-var">index#</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#andI%23"><span class="hs-operator hs-var">`andI#`</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739328"><span class="hs-identifier hs-var">fbs#</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679739321"><span class="annot"><span class="annottext">bitMask## :: Word#
+</span><a href="#local-6989586621679739321"><span class="hs-identifier hs-var hs-var">bitMask##</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word#
+</span><span class="hs-number">1##</span></span><span> </span><span class="annot"><span class="annottext">Word# -&gt; Int# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#uncheckedShiftL%23"><span class="hs-operator hs-var">`uncheckedShiftL#`</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739342"><span class="hs-identifier hs-var">bitIndex#</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><span class="hs-comment">{-| @lookupIntN addr index@ looks up for the @index@-th @8@-bits word in
+the bitmap starting at @addr@, then convert it to an Int.
+
+The caller must make sure that:
+
+* @ceiling (addr + (n * 8))@ is legally accessible @Word8@.
+
+@since base-0.3.0
+-}</span></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#lookupIntN"><span class="hs-identifier hs-type">lookupIntN</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Bitmap address</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Word index</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Resulting word as 'Int'</span></span><span>
+</span><span id="line-77"></span><span id="lookupIntN"><span class="annot"><span class="annottext">lookupIntN :: Addr# -&gt; Int -&gt; Int
+</span><a href="GHC.Internal.Unicode.Bits.html#lookupIntN"><span class="hs-identifier hs-var hs-var">lookupIntN</span></a></span></span><span> </span><span id="local-6989586621679739343"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739343"><span class="hs-identifier hs-var">addr#</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739344"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739344"><span class="hs-identifier hs-var">index#</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679739345"><span class="annot"><span class="annottext">word## :: Word#
+</span><a href="#local-6989586621679739345"><span class="hs-identifier hs-var hs-var">word##</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8# -&gt; Word#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#word8ToWord%23"><span class="hs-identifier hs-var">word8ToWord#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr# -&gt; Int# -&gt; Word8#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#indexWord8OffAddr%23"><span class="hs-identifier hs-var">indexWord8OffAddr#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739343"><span class="hs-identifier hs-var">addr#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739344"><span class="hs-identifier hs-var">index#</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-var">I#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word# -&gt; Int#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#word2Int%23"><span class="hs-identifier hs-var">word2Int#</span></a></span><span> </span><span class="annot"><span class="annottext">Word#
+</span><a href="#local-6989586621679739345"><span class="hs-identifier hs-var">word##</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">data</span><span> </span><span id="UnicodeByteArray"><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-var">UnicodeByteArray</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnicodeByteArray"><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-var">UnicodeByteArray</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#ByteArray%23"><span class="hs-identifier hs-type">ByteArray#</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#byteArrayLookupIntN"><span class="hs-identifier hs-type">byteArrayLookupIntN</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-type">UnicodeByteArray</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-84"></span><span id="byteArrayLookupIntN"><span class="annot"><span class="annottext">byteArrayLookupIntN :: UnicodeByteArray -&gt; Int -&gt; Int
+</span><a href="GHC.Internal.Unicode.Bits.html#byteArrayLookupIntN"><span class="hs-identifier hs-var hs-var">byteArrayLookupIntN</span></a></span></span><span> </span><span id="local-6989586621679739347"><span class="annot"><span class="annottext">UnicodeByteArray
+</span><a href="#local-6989586621679739347"><span class="hs-identifier hs-var">ba</span></a></span></span><span> </span><span id="local-6989586621679739348"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739348"><span class="hs-identifier hs-var">idx</span></a></span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-type">UnicodeByteArray</span></a></span><span> </span><span id="local-6989586621679739349"><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739349"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnicodeByteArray
+</span><a href="#local-6989586621679739347"><span class="hs-identifier hs-var">ba</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Addr# -&gt; Int -&gt; Int
+</span><a href="GHC.Internal.Unicode.Bits.html#lookupIntN"><span class="hs-identifier hs-var">lookupIntN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteArray# -&gt; Addr#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#byteArrayContents%23"><span class="hs-identifier hs-var">byteArrayContents#</span></a></span><span> </span><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739349"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739348"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#newByteArrayFromWord8List"><span class="hs-identifier hs-type">newByteArrayFromWord8List</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Internal.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-type">UnicodeByteArray</span></a></span><span>
+</span><span id="line-89"></span><span id="newByteArrayFromWord8List"><span class="annot"><span class="annottext">newByteArrayFromWord8List :: [Word8] -&gt; UnicodeByteArray
+</span><a href="GHC.Internal.Unicode.Bits.html#newByteArrayFromWord8List"><span class="hs-identifier hs-var hs-var">newByteArrayFromWord8List</span></a></span></span><span> </span><span id="local-6989586621679739350"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679739350"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall s. ST s UnicodeByteArray) -&gt; UnicodeByteArray
+forall a. (forall s. ST s a) -&gt; a
+</span><a href="GHC.Internal.ST.html#runST"><span class="hs-identifier hs-var">runST</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. ST s UnicodeByteArray) -&gt; UnicodeByteArray)
+-&gt; (forall s. ST s UnicodeByteArray) -&gt; UnicodeByteArray
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STRep s UnicodeByteArray -&gt; ST s UnicodeByteArray
+forall s a. STRep s a -&gt; ST s a
+</span><a href="GHC.Internal.ST.html#ST"><span class="hs-identifier hs-var">ST</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679739353"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739353"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; State# s -&gt; (# State# s, MutableByteArray# s #)
+forall d. Int# -&gt; State# d -&gt; (# State# d, MutableByteArray# d #)
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#newPinnedByteArray%23"><span class="hs-identifier hs-var">newPinnedByteArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739354"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739353"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679739355"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739355"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679739356"><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739356"><span class="hs-identifier hs-var">mba</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679739357"><span class="annot"><span class="annottext">s2 :: State# s
+</span><a href="#local-6989586621679739357"><span class="hs-identifier hs-var hs-var">s2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s -&gt; Int# -&gt; [Word8] -&gt; State# s -&gt; State# s
+forall {d}.
+MutableByteArray# d -&gt; Int# -&gt; [Word8] -&gt; State# d -&gt; State# d
+</span><a href="#local-6989586621679739358"><span class="hs-identifier hs-var">fillByteArray</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739356"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">0#</span></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679739350"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739355"><span class="hs-identifier hs-var">s1</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s -&gt; State# s -&gt; (# State# s, ByteArray# #)
+forall d.
+MutableByteArray# d -&gt; State# d -&gt; (# State# d, ByteArray# #)
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#unsafeFreezeByteArray%23"><span class="hs-identifier hs-var">unsafeFreezeByteArray#</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739356"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739357"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679739359"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739359"><span class="hs-identifier hs-var">s3</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679739360"><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739360"><span class="hs-identifier hs-var">fba</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739359"><span class="hs-identifier hs-var">s3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteArray# -&gt; UnicodeByteArray
+</span><a href="GHC.Internal.Unicode.Bits.html#UnicodeByteArray"><span class="hs-identifier hs-var">UnicodeByteArray</span></a></span><span> </span><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739360"><span class="hs-identifier hs-var">fba</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739354"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739354"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; Int
+forall a. [a] -&gt; Int
+</span><a href="GHC.Internal.List.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679739350"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679739358"><span class="annot"><span class="annottext">fillByteArray :: MutableByteArray# d -&gt; Int# -&gt; [Word8] -&gt; State# d -&gt; State# d
+</span><a href="#local-6989586621679739358"><span class="hs-identifier hs-var hs-var">fillByteArray</span></a></span></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# d
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679739362"><span class="annot"><span class="annottext">State# d
+</span><a href="#local-6989586621679739362"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State# d
+</span><a href="#local-6989586621679739362"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="#local-6989586621679739358"><span class="hs-identifier hs-var">fillByteArray</span></a></span><span> </span><span id="local-6989586621679739363"><span class="annot"><span class="annottext">MutableByteArray# d
+</span><a href="#local-6989586621679739363"><span class="hs-identifier hs-var">mba</span></a></span></span><span> </span><span id="local-6989586621679739364"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739364"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679739365"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679739365"><span class="hs-identifier hs-var">y</span></a></span></span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679739366"><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679739366"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679739367"><span class="annot"><span class="annottext">State# d
+</span><a href="#local-6989586621679739367"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.Word.html#W8%23"><span class="hs-identifier hs-type">W8#</span></a></span><span> </span><span id="local-6989586621679739369"><span class="annot"><span class="annottext">Word8#
+</span><a href="#local-6989586621679739369"><span class="hs-identifier hs-var">y#</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679739365"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span id="local-6989586621679739370"><span class="annot"><span class="annottext">s' :: State# d
+</span><a href="#local-6989586621679739370"><span class="hs-identifier hs-var hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MutableByteArray# d -&gt; Int# -&gt; Word8# -&gt; State# d -&gt; State# d
+forall d.
+MutableByteArray# d -&gt; Int# -&gt; Word8# -&gt; State# d -&gt; State# d
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#writeWord8Array%23"><span class="hs-identifier hs-var">writeWord8Array#</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# d
+</span><a href="#local-6989586621679739363"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739364"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Word8#
+</span><a href="#local-6989586621679739369"><span class="hs-identifier hs-var">y#</span></a></span><span> </span><span class="annot"><span class="annottext">State# d
+</span><a href="#local-6989586621679739367"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">MutableByteArray# d -&gt; Int# -&gt; [Word8] -&gt; State# d -&gt; State# d
+</span><a href="#local-6989586621679739358"><span class="hs-identifier hs-var">fillByteArray</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# d
+</span><a href="#local-6989586621679739363"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739364"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#%2B%23"><span class="hs-operator hs-var">+#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">1#</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Word8]
+</span><a href="#local-6989586621679739366"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">State# d
+</span><a href="#local-6989586621679739370"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="GHC.Internal.Unicode.Bits.html#copyAddrToWord8List"><span class="hs-identifier hs-type">copyAddrToWord8List</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#Addr%23"><span class="hs-identifier hs-type">Addr#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Internal.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span><span id="copyAddrToWord8List"><span class="annot"><span class="annottext">copyAddrToWord8List :: Addr# -&gt; Int -&gt; [Word8]
+</span><a href="GHC.Internal.Unicode.Bits.html#copyAddrToWord8List"><span class="hs-identifier hs-var hs-var">copyAddrToWord8List</span></a></span></span><span> </span><span id="local-6989586621679739371"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739371"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679739372"><span class="annot"><span class="annottext">len :: Int
+</span><a href="#local-6989586621679739372"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739373"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739373"><span class="hs-identifier hs-var">len'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall s. ST s [Word8]) -&gt; [Word8]
+forall a. (forall s. ST s a) -&gt; a
+</span><a href="GHC.Internal.ST.html#runST"><span class="hs-identifier hs-var">runST</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. ST s [Word8]) -&gt; [Word8])
+-&gt; (forall s. ST s [Word8]) -&gt; [Word8]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STRep s [Word8] -&gt; ST s [Word8]
+forall s a. STRep s a -&gt; ST s a
+</span><a href="GHC.Internal.ST.html#ST"><span class="hs-identifier hs-var">ST</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679739374"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739374"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; State# s -&gt; (# State# s, MutableByteArray# s #)
+forall d. Int# -&gt; State# d -&gt; (# State# d, MutableByteArray# d #)
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#newByteArray%23"><span class="hs-identifier hs-var">newByteArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739373"><span class="hs-identifier hs-var">len'</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739374"><span class="hs-identifier hs-var">s0</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679739375"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739375"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679739376"><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739376"><span class="hs-identifier hs-var">mba</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679739377"><span class="annot"><span class="annottext">s2 :: State# s
+</span><a href="#local-6989586621679739377"><span class="hs-identifier hs-var hs-var">s2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr#
+-&gt; MutableByteArray# s -&gt; Int# -&gt; Int# -&gt; State# s -&gt; State# s
+forall d.
+Addr#
+-&gt; MutableByteArray# d -&gt; Int# -&gt; Int# -&gt; State# d -&gt; State# d
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#copyAddrToByteArray%23"><span class="hs-identifier hs-var">copyAddrToByteArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679739371"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739376"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">0#</span></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739373"><span class="hs-identifier hs-var">len'</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739375"><span class="hs-identifier hs-var">s1</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s -&gt; State# s -&gt; (# State# s, ByteArray# #)
+forall d.
+MutableByteArray# d -&gt; State# d -&gt; (# State# d, ByteArray# #)
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#unsafeFreezeByteArray%23"><span class="hs-identifier hs-var">unsafeFreezeByteArray#</span></a></span><span> </span><span class="annot"><span class="annottext">MutableByteArray# s
+</span><a href="#local-6989586621679739376"><span class="hs-identifier hs-var">mba</span></a></span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739377"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679739378"><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739378"><span class="hs-identifier hs-var">s3</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679739379"><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739379"><span class="hs-identifier hs-var">fba</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">State# s
+</span><a href="#local-6989586621679739378"><span class="hs-identifier hs-var">s3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteArray# -&gt; Int -&gt; Int -&gt; [Word8]
+</span><a href="#local-6989586621679739380"><span class="hs-identifier hs-var">readByteFromArray</span></a></span><span> </span><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739379"><span class="hs-identifier hs-var">fba</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739372"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="#local-6989586621679739380"><span class="hs-identifier hs-type">readByteFromArray</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#ByteArray%23"><span class="hs-identifier hs-type">ByteArray#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Internal.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679739380"><span class="annot"><span class="annottext">readByteFromArray :: ByteArray# -&gt; Int -&gt; Int -&gt; [Word8]
+</span><a href="#local-6989586621679739380"><span class="hs-identifier hs-var hs-var">readByteFromArray</span></a></span></span><span> </span><span id="local-6989586621679739381"><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739381"><span class="hs-identifier hs-var">ba</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679739382"><span class="annot"><span class="annottext">from :: Int
+</span><a href="#local-6989586621679739382"><span class="hs-identifier hs-var">from</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#I%23"><span class="hs-identifier hs-type">I#</span></a></span><span> </span><span id="local-6989586621679739383"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739383"><span class="hs-identifier hs-var">from'</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679739384"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739384"><span class="hs-identifier hs-var">to</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Word8# -&gt; Word8
+</span><a href="GHC.Internal.Word.html#W8%23"><span class="hs-identifier hs-var">W8#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteArray# -&gt; Int# -&gt; Word8#
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Prim.html#indexWord8Array%23"><span class="hs-identifier hs-var">indexWord8Array#</span></a></span><span> </span><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739381"><span class="hs-identifier hs-var">ba</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679739383"><span class="hs-identifier hs-var">from'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; [Word8] -&gt; [Word8]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739382"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739384"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ByteArray# -&gt; Int -&gt; Int -&gt; [Word8]
+</span><a href="#local-6989586621679739380"><span class="hs-identifier hs-var">readByteFromArray</span></a></span><span> </span><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679739381"><span class="hs-identifier hs-var">ba</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739382"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679739384"><span class="hs-identifier hs-var">to</span></a></span><span>
+</span><span id="line-118"></span></pre></body></html>
