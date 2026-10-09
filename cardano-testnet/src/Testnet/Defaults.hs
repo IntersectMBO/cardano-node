@@ -16,6 +16,7 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultDijkstraGenesis
   , defaultCommitteeKeyPair
   , defaultCommitteeName
   , defaultCommitteeKeysDir
@@ -82,6 +83,8 @@ import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import           Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
@@ -195,6 +198,26 @@ defaultConwayGenesis = do
       , cgExtraConfig = SNothing
       }
 
+-- | The Dijkstra genesis from cardano-api, with the PlutusV4 cost model cut down to the
+-- number of parameters that the genesis decoder accepts. cardano-api builds the cost model
+-- from the full parameter list of the current Plutus version, but the ledger requires a
+-- genesis file to carry exactly 'Ledger.costModelInitParamCount' parameters.
+defaultDijkstraGenesis :: DijkstraGenesis
+defaultDijkstraGenesis =
+  DijkstraGenesis
+    { dgUpgradePParams = upgradePParams{udppPlutusV4CostModel = plutusV4CostModel}
+    }
+  where
+    upgradePParams = dgUpgradePParams Api.dijkstraGenesisDefaults
+    plutusV4CostModel =
+      case Ledger.mkCostModel Ledger.PlutusV4 plutusV4Params of
+        Left err -> error $ "defaultDijkstraGenesis: invalid PlutusV4 cost model: " <> show err
+        Right costModel -> costModel
+    plutusV4Params =
+      take (Ledger.costModelInitParamCount Ledger.PlutusV4)
+        . Ledger.getCostModelParams
+        $ udppPlutusV4CostModel upgradePParams
+
 -- | The only era supported by cardano-testnet for the moment.
 -- It's important to keep the era parameterization everywhere, for ease of development
 -- when new eras roll out.
@@ -252,6 +275,10 @@ defaultYamlHardforkViaConfig sbe =
   hardforkViaConfig sbe' =
     Aeson.fromList $
       ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+      -- Dijkstra is still experimental. Without this flag the node declares PV11 as its
+      -- maximum protocol version, so it cannot forge once the ledger is at PV12 (its own
+      -- blocks are rejected with ObsoleteNode), and it ignores the Dijkstra genesis file.
+      : ("ExperimentalHardForksEnabled", Aeson.Bool True)
       : (case sbe' of
             ShelleyBasedEraShelley ->
                 [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0) ]
@@ -414,7 +441,7 @@ eraToProtocolVersion =
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Word32) -> ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
-  case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
+  case (`ProtVer` fromIntegral minorProtVer) <$> Ledger.mkVersion majorProtVer of
     Just pVer -> pVer
     Nothing -> error "mkProtVer: invalid protocol version"
 

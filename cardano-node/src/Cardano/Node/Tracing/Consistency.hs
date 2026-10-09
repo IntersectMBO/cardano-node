@@ -31,12 +31,7 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
-import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -60,15 +55,13 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion,
-                   TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
-import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
-                   TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing (ClientMetrics, ConsensusStartupException,
+                   ReplayBlockStats)
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
@@ -216,24 +209,6 @@ getAllNamespaces =
                           (TraceTxLogic remotePeer (GenTxId blk) (GenTx blk))])
         txCountersNS = map (nsGetTuple . nsReplacePrefix ["txCounters", "Remote"])
                         (allNamespaces :: [Namespace TxSubmissionCounters])
-        perasCertInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasCertDiffusionInbound blk))])
-        perasCertOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Outbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasCertDiffusionOutbound blk))])
-        perasVoteInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Inbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasVoteDiffusionInbound blk))])
-        perasVoteOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Outbound"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
-                          remotePeer (TracePerasVoteDiffusionOutbound blk))])
-        perasCertDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Remote"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
-                          (TraceSendRecv (PerasCertDiffusion blk)))])
-        perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
-                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
-                          (TraceSendRecv (PerasVoteDiffusion blk)))])
         localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
                                             ["TxSubmission", "LocalServer"])
                         (allNamespaces :: [Namespace
@@ -474,13 +449,6 @@ getAllNamespaces =
             <> kesAgentNS
             <> txLogicNS
             <> txCountersNS
--- Peras
-            <> perasCertInboundNS
-            <> perasCertOutboundNS
-            <> perasVoteInboundNS
-            <> perasVoteOutboundNS
-            <> perasCertDiffusionNS
-            <> perasVoteDiffusionNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

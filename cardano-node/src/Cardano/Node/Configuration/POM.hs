@@ -53,6 +53,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapsh
                    mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import           Ouroboros.Network.Hashable (mkSaltIO)
 import qualified Ouroboros.Network.Mux as Mux
 import           Ouroboros.Network.OrphanInstances ()
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
@@ -74,7 +75,6 @@ import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
-import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -213,7 +213,7 @@ data NodeConfiguration
 --
 -- * `NoResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
 -- * `ResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
---   with a `randomIO` generated salt and `getNumCapabilities`.
+--   with a `mkSaltIO` generated salt and `getNumCapabilities`.
 --
 data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffinity deriving (Eq, Show, Generic, FromJSON)
 
@@ -221,7 +221,7 @@ data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffini
 getForkPolicy :: Hashable peerAddr => ResponderCoreAffinityPolicy -> IO (Mux.ForkPolicy peerAddr)
 getForkPolicy = \case
   NoResponderCoreAffinity -> pure Mux.noBindForkPolicy
-  ResponderCoreAffinity -> Mux.responderForkPolicy <$> randomIO <*> getNumCapabilities
+  ResponderCoreAffinity -> Mux.responderForkPolicy <$> mkSaltIO <*> getNumCapabilities
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
@@ -499,8 +499,7 @@ instance FromJSON PartialNodeConfiguration where
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
+                   zip [ void mTopLevelSnapInterval, void mTopLevelSnapNum]
                        ["SnapshotInterval", "NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 

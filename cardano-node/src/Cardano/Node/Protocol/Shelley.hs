@@ -34,10 +34,6 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Types
-import           Cardano.Node.Tracing.Era.HardFork ()
-import           Cardano.Node.Tracing.Era.Shelley ()
-import           Cardano.Node.Tracing.Formatting ()
-import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
@@ -45,6 +41,7 @@ import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..
                    PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
+import           Ouroboros.Consensus.Tracing ()
 
 import           Control.Exception (IOException)
 import           Control.Monad
@@ -54,7 +51,7 @@ import qualified Data.Text as T
 import           System.Directory (getFileSize)
 import           System.FilePath (takeDirectory)
 import           System.FS.API (SomeHasFS (..))
-import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.API.Types (MountPoint (..))
 import           System.FS.IO (ioHasFS)
 import qualified System.IO.MMap as MMap
 
