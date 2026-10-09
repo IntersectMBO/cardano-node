@@ -27,6 +27,7 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar)
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
@@ -69,8 +70,9 @@ initTraceDispatcher ::
   -> NetworkMagic
   -> NodeKernelData blk
   -> Bool
+  -> ForgingStateVar
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
-initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
+initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging forgingStateVar = do
   trConfig <- readConfigurationWithDefault
                 (FromFile (unConfigPath $ ncConfigFile nc))
                 defaultCardanoConfig
@@ -153,6 +155,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
       (Just ekgTrace)
       dpTracer
       trConfig
+      forgingStateVar
 
     let
       kickoffPrometheusSimple = case prometheusSimple of

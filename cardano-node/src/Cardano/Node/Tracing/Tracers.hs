@@ -32,7 +32,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
-import           Cardano.Node.Tracing.Tracers.ForgingStats (calcForgeStats)
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar, calcForgeStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
@@ -86,9 +86,10 @@ mkDispatchTracers
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
+  -> ForgingStateVar
   -> IO (Tracers RemoteAddress LocalAddress blk IO)
 
-mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
+mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig forgingStateVar = do
 
     configReflection <- emptyConfigReflection
 
@@ -143,6 +144,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig = do
 
     !consensusTr <-
       mkConsensusTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig nodeKernel
+        forgingStateVar
 
     !nodeToClientTr <-
       mkNodeToClientTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
@@ -209,8 +211,10 @@ mkConsensusTracers :: forall blk.
   -> Trace IO DataPoint
   -> TraceConfig
   -> NodeKernelData blk
+  -> ForgingStateVar
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
-mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig _nodeKernel = do
+mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig _nodeKernel
+                   forgingStateVar = do
     !chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                  ["ChainSync", "Client"]
@@ -299,7 +303,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !forgeStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Stats"]
-                calcForgeStats
+                (calcForgeStats forgingStateVar)
     configureTracers configReflection trConfig [forgeStatsTr]
 
     !blockchainTimeTr   <- mkCardanoTracer
