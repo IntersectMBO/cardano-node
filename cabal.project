@@ -146,6 +146,17 @@ allow-older:
   , cardano-api:ouroboros-consensus
   , dmq-node:ouroboros-consensus
 
+  -- TEMPORARY: cardano-keys-11.0.0.0 (CHaP, a cardano-api dependency) pins
+  -- cardano-protocol^>=0.2, excluding the 0.1.1.0 that this project's
+  -- cardano-ledger SRP above provides. The ledger SRP tag is pinned in
+  -- lockstep with ouroboros-consensus's own cardano-ledger SRP (see that
+  -- comment -- don't bump either independently, it's broken Shelley/Ledger/
+  -- Mempool.hs before), so bridge this one with allow-older instead of
+  -- chasing a coordinated bump. Nothing cardano-keys actually uses from
+  -- cardano-protocol changed between 0.1.1.0 and 0.2.0.0 that would affect
+  -- it (that bump was BlockHeader/VersionInfo work for Dijkstra).
+  , cardano-keys:cardano-protocol
+
 -- cabal-allow-newer begin
 if impl(ghc >= 9.14)
   allow-newer:
