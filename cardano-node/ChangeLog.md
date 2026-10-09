@@ -2,6 +2,14 @@
 
 ## Next version
 
+- Standard handles now always use UTF-8, independent of the system code page or
+  locale. On Windows, stdout traces were written in the legacy code page, so the
+  JSON lines were not valid UTF-8. Characters outside that code page, such as in
+  a non-ASCII host name or `TraceOptionNodeName`, crashed the node at startup.
+  The same crash happened on Linux under a non-UTF-8 locale such as `LC_ALL=C`.
+  `main` now runs under `withCP65001` and `withUtf8`.
+  ([#6711](https://github.com/IntersectMBO/cardano-node/issues/6711))
+
 - `slotsMissed_int` no longer counts the slots that elapse while block forging
   is disabled. While forging is off there is no forging thread, hence no
   leadership check events at all, so `Forge.Stats` kept the last slot it had

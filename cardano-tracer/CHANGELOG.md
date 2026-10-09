@@ -2,6 +2,9 @@
 
 ## NEXT
 
+* Standard handles now always use UTF-8 (on Windows also the console code page),
+  independent of the system code page or locale.
+
 ## 0.5.0 (June 2026)
 * Timeseries query endpoint: `POST /timeseries/query` now expects an
   `application/x-www-form-urlencoded` body (Prometheus wire format).
