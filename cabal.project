@@ -35,6 +35,10 @@ package acts
   flags: -finitary
 
 packages:
+  -- Local while consensus' PraosWithLeios split lands in cardano-api
+  ../cardano-api/cardano-api
+  ../cardano-api/cardano-api-gen
+  ../cardano-api/cardano-rpc
   cardano-node
   cardano-node-capi
   cardano-node-chairman
@@ -105,15 +109,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: cbd100331abaf65d20e9362c75039db0ff50c080
-  --sha256: sha256-XczLGTo/tO3TClBW/jLoO5TFWz3t1nJe4gLKeiSfuoE=
+  tag: ef4aa801189ad9be68283256c139e67e60dec77a
+  --sha256: sha256-NdXo9u9RP37hIp9EB4PM65nJhGQeePDDjGdGnK8N+K0=
 
 -- Points to cardano-ledger/leios-prototype
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: d93c654699c8f10c883a625168f65dd387abc695
-  --sha256: sha256-iRshuIFnyh6a+NfxXmkfbOzbbMm5YUcezwHyRQwp7dg=
+  tag: f832964ff2d928be03b81db757711226b0ada703
+  --sha256: sha256-M4qjoSjiw3bPsa+N1dBb1DU46//Dl991WzwxisZ4B90=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -139,23 +143,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42
-  --sha256: sha256-fIqpI2whstetodpiONmUDVgnhTpzXeq1/gmzuHItK5A=
+  tag: a48ea7a88cd8cc0349013c3b9f99fd3444f26c3b
+  --sha256: sha256-VY0/lP3VFMKwQyCTE7PKzZyBjsR1ZSF77ftwEhn2U/U=
   subdir:
     ouroboros-network
     cardano-diffusion
     network-mux
 
--- Points to cardano-api/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-api
-  tag: 8749531d1b09f8ab5c50c3ac7b41cb4bb8ed9445
-  --sha256: sha256-9892q0kBsCy5CLrYPjxHv5C7GOK/41XZZ5Z3JBZpB9E=
-  subdir:
-    cardano-api
-    cardano-api-gen
-    cardano-rpc
 
 -- Points to cardano-cli/leios-prototype
 source-repository-package
