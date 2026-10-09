@@ -4,6 +4,7 @@
 module Testnet.Status.Types
   ( CheckStatusOptions (..)
   , NetworkStatus(..)
+  , NodeAnswer(..)
   , NodeProbeResult(..)
   , NodeState(..)
   , OutputFormat(..)
@@ -79,6 +80,13 @@ instance ToJSON NodeState where
   toJSON NodeUnreachable = "unreachable"
   toJSON NodeDown        = "down"
 
+-- | What a node said when it was asked for its chain tip.
+data NodeAnswer
+  = AnsweredTip !TipInfo -- ^ it has blocks; this is the newest
+  | AnsweredNoBlocks     -- ^ it answered, but it has no blocks yet
+  | NoAnswer             -- ^ it refused, failed, or did not answer in time
+  deriving (Eq, Show)
+
 -- | A node's chain tip.
 data TipInfo = TipInfo
   { tipSlot    :: !SlotNo
@@ -117,6 +125,7 @@ instance ToJSON NodeProbeResult where
     , "tip"      .= probeNodeTipInfo n
     ]
 
+-- | Output of status command
 data StatusReport = StatusReport
   { reportOutputDir          :: !FilePath
   , reportCheckedAt          :: !UTCTime

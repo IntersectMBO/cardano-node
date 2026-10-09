@@ -26,6 +26,7 @@ module Testnet.Types
   , nodeGrpcServer
   , nodeConnectionInfo
   , testnetNodeConnectionInfo
+  , testnetEpochSlots
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -228,8 +229,13 @@ testnetNodeConnectionInfo testnetMagic node =
   LocalNodeConnectInfo
     { localNodeSocketPath= nodeSocketPath node
     , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
-    , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+    , localConsensusModeParams=CardanoModeParams testnetEpochSlots }
 
+
+-- | The Byron epoch size used when connecting to a testnet node. Shared with
+-- @cardano-testnet status@, so that both connect in the same way.
+testnetEpochSlots :: EpochSlots
+testnetEpochSlots = EpochSlots 21600
 
 data SpoNodeKeys = SpoNodeKeys
   { poolNodeKeysCold :: KeyPair StakePoolKey

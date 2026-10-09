@@ -10,15 +10,17 @@
 module Testnet.Signal
   ( hardKillProcess
   , interruptNodesOnSigINT
+  , isProcessAlive
   ) where
 
 #ifdef UNIX
 import           Control.Monad
-import           System.Posix.Signals (Handler (..), installHandler, raiseSignal, sigINT,
-                   sigKILL, signalProcess)
-import           System.Process (ProcessHandle, getPid, interruptProcessGroupOf)
+import           System.IO.Error (isDoesNotExistError, tryIOError)
+import           System.Posix.Signals (Handler (..), installHandler, nullSignal, raiseSignal,
+                   sigINT, sigKILL, signalProcess)
+import           System.Process (Pid, ProcessHandle, getPid, interruptProcessGroupOf)
 #else
-import           System.Process (ProcessHandle, terminateProcess)
+import           System.Process (Pid, ProcessHandle, terminateProcess)
 #endif
 
 import           Data.List.NonEmpty (NonEmpty)
@@ -48,4 +50,19 @@ hardKillProcess :: ProcessHandle -> IO ()
 hardKillProcess hProcess = getPid hProcess >>= mapM_ (signalProcess sigKILL)
 #else
 hardKillProcess = terminateProcess
+#endif
+
+-- | Whether a process with the given pid exists: 'Just' the answer on unix,
+-- where signal 0 checks this without sending anything, and 'Nothing' on
+-- Windows. A dead process that nobody has waited for yet (a zombie) still
+-- exists, and so does an unrelated process that reuses the pid.
+isProcessAlive :: Pid -> IO (Maybe Bool)
+#ifdef UNIX
+isProcessAlive pid = do
+  result <- tryIOError $ signalProcess nullSignal pid
+  pure . Just $ case result of
+    Left e | isDoesNotExistError e -> False -- no such process
+    _ -> True -- signalled, or not allowed to: either way it exists
+#else
+isProcessAlive _ = pure Nothing
 #endif
