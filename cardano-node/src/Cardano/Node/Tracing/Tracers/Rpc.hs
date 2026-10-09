@@ -231,7 +231,6 @@ instance MetaTrace TraceRpc where
           , ["SyncService", "FetchBlock", "Span"]
           , ["SyncService", "ReadTip", "Span"]
           , ["SyncService", "FollowTip", "Span"]
-          , ["QueryService", "ReadGenesis", "Span"]
           , ["QueryService", "ReadEraSummary", "Span"]
           , ["SyncService", "FetchBlockNotFound"]
           , ["SyncService", "NodeKernelAccessUnavailable"]
