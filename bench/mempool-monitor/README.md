@@ -13,11 +13,16 @@ how pools *differ*, so an aggregate view hides exactly the thing under test.
       --socket-path /path/to/node.socket \
       --testnet-magic 164 \
       --label bp1 \
-      --own-color ff0000 \
+      --own-key-file payment.skey \
       --interval 10
 
-`--own-color` is optional and only used to report the local share, that is how
-much of this mempool came from the generator attached to this node.
+The local colour, used to report the share of this mempool that came from the
+generator attached to this node, is derived from a payment key by default:
+`--own-key-file` loads a signing or verification key and hashes the public
+portion the same way `tx-firehose` does, so pointing both tools at the same
+`payment.skey` makes them agree without a hex value changing hands.
+`--own-color HEX` is an explicit override. Either flag is optional; omit both
+to see the mempool without a local-share line.
 
 ## What it shows
 

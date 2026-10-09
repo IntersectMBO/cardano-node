@@ -50,27 +50,29 @@ clear min-UTxO; otherwise the build fails (traced as `TxFirehose.Build.Fail`).
 
 ## Colouring the load
 
-`--color` tags every generated tx with a colour in metadata label `1022`, three
-bytes of RGB. A mempool observer can then attribute each tx to the firehose that
-made it, which is what makes mempool fragmentation visible when several
-generators feed different parts of a network.
+Every generated tx carries a colour in metadata label `1022`, three bytes of
+RGB. A mempool observer can then attribute each tx to the firehose that made
+it, which is what makes mempool fragmentation visible when several generators
+feed different parts of a network.
 
-    --color ff0000    # or #ff0000
-    --color auto      # derive one from the signing key
+By default the colour is derived from the signing key: SHA-256 over the
+verification key picks a hue, with saturation and lightness fixed so the result
+is always vivid. The same key loaded elsewhere (e.g. by `mempool-monitor
+--own-key-file`) resolves to the same colour. Pass `--color HEX` to override
+with an explicit value, e.g. `--color ff0000`.
 
-`auto` hashes the verification key and takes a hue from it, keeping saturation
-and lightness fixed so the result is always vivid. Hues are uniform over the
-circle, but at fixed saturation and lightness there are only about 1500
-distinguishable colours, so with a handful of generators expect some pairs to
-land close together. **Assign explicit colours for a run whose whole point is
-telling generators apart**; `auto` is for convenience.
+Hues are uniform over the circle, but at fixed saturation and lightness there
+are only about 1500 distinguishable colours, so with a handful of generators
+expect some pairs to land close together. **Assign explicit colours for a run
+whose whole point is telling generators apart**; the key-derived default is for
+convenience.
 
 The colour is printed on stderr at startup, as a swatch when stderr is a
 terminal and as bare hex otherwise (`NO_COLOR` is honoured).
 
 Metadata is not free: the auxiliary data hash alone is 32 bytes in the body, so
 a coloured tx runs roughly 45 bytes larger. That is about +20% on a minimal
-228-byte tx, so coloured runs are not byte-comparable with uncoloured baselines.
+228-byte tx.
 
 ## Output
 
@@ -83,10 +85,8 @@ sev, host, thread, ns, data}`). Namespaces:
 - `TxFirehose.Build.Fail`
 - `TxFirehose.Exit.MaxErrors`
 
-Both submit events carry a `color` field when `--color` is set, so each
-transaction is attributable in the log as well as in its metadata. The field is
-absent rather than null without `--color`, leaving uncoloured runs' logs
-unchanged.
+Both submit events carry a `color` field, so each transaction is attributable
+in the log as well as in its metadata.
 
 Pipe stderr into Loki/Vector to filter on `ns` in Grafana.
 

@@ -45,11 +45,10 @@ import Cardano.Api
 import Cardano.Api qualified as Api
 import Cardano.Benchmarking.TxFirehose.Color
   ( Color
-  , ColorSpec
+  , colorFromPublicKey
   , colorHex
   , colorSwatch
-  , parseColorSpec
-  , resolveColor
+  , parseColor
   )
 import Cardano.Benchmarking.TxFirehose.Tx
   ( BuiltTx (BuiltTx, btxId, btxInputs, btxOutputs, btxSigned, btxSize)
@@ -68,7 +67,6 @@ import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.List (isInfixOf, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -107,7 +105,7 @@ data Options = Options
   , optOutputsPerTx :: !Natural
   , optFee :: !Integer
   , optMaxConsecutiveErrors :: !Int
-  , optColor :: !(Maybe ColorSpec)
+  , optColor :: !(Maybe Color)
   }
 
 parseOptions :: IO Options
@@ -188,11 +186,12 @@ optionsParser =
       )
     <*> optional
       ( Opt.option
-          (Opt.eitherReader parseColorSpec)
+          (Opt.eitherReader parseColor)
           ( Opt.long "color"
-              <> Opt.metavar "HEX|auto"
+              <> Opt.metavar "HEX"
               <> Opt.help
-                "Tag every tx with this colour as metadata, e.g. ff0000, or 'auto' to derive one from the signing key"
+                "Tag every tx with this colour as metadata, e.g. ff0000. \
+                \Default: derive one from the signing key."
           )
       )
 
@@ -220,13 +219,14 @@ main = do
   -- Dispatch on whatever era the node reports; the tx builder is
   -- generic over ShelleyBasedEra.
   -- Resolve the colour once, here, so the swatch we print and the metadata we
-  -- attach cannot disagree.
-  let mColor = flip resolveColor (Api.getVerificationKey signingKey) <$> optColor opts
-  traverse_ announceColor mColor
+  -- attach cannot disagree. The default is derived from the signing key, which
+  -- the same key loaded elsewhere (e.g. by an observer) can reproduce.
+  let color = fromMaybe (colorFromPublicKey (Api.getVerificationKey signingKey)) (optColor opts)
+  announceColor color
 
   currentEra <- queryCurrentEra connInfo
   runInEra currentEra $ \sbe ->
-    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk mColor
+    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color
 
 -- | Show the colour on stderr at startup, as a block when the terminal can
 -- render it and as bare hex otherwise.
@@ -278,9 +278,9 @@ runFirehoseInEra ::
   NetworkId ->
   SigningKey Api.PaymentKey ->
   Maybe (Api.VerificationKey Api.StakeKey) ->
-  Maybe Color ->
+  Color ->
   IO ()
-runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk mColor = do
+runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color = do
   trace "TxFirehose.Startup.Query" "Info" $
     Aeson.object ["address" .= T.pack (show addrAny), "era" .= show sbe]
 
@@ -300,7 +300,7 @@ runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk mColor = do
       { localChainSyncClient = NoLocalChainSyncClient
       , localStateQueryClient = Nothing
       , localTxSubmissionClient =
-          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds mColor)
+          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds color)
       , localTxMonitoringClient = Nothing
       }
  where
@@ -319,18 +319,16 @@ mkFirehoseClient ::
   AddressInEra era ->
   SigningKey Api.PaymentKey ->
   Map TxIn Integer ->
-  Maybe Color ->
+  Color ->
   LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
-mkFirehoseClient sbe opts addr sk initialFunds mColor =
+mkFirehoseClient sbe opts addr sk initialFunds color =
   LocalTxSubmissionClient (step initialFunds 0)
  where
   !period = round (1_000_000 / optTps opts) :: Int
   !target = fromIntegral (optOutputsPerTx opts) :: Int
   !mFixedInputs = fromIntegral <$> optInputsPerTx opts :: Maybe Int
   !maxErrs = optMaxConsecutiveErrors opts
-  -- Present only when there is a colour, so uncoloured runs keep the log shape
-  -- the digest scripts already read.
-  colorField = ["color" .= colorHex c | Just c <- [mColor]]
+  colorField = ["color" .= colorHex color]
 
   -- With a fixed input count we can only ever build a tx while that many
   -- funds are on hand; ramping instead always has a move, down to one
@@ -356,7 +354,7 @@ mkFirehoseClient sbe opts addr sk initialFunds mColor =
           inFunds
           (optOutputsPerTx opts)
           (Coin (optFee opts))
-          mColor of
+          color of
           Left err -> do
             trace "TxFirehose.Build.Fail" "Error" $
               Aeson.object ["error" .= T.pack err]

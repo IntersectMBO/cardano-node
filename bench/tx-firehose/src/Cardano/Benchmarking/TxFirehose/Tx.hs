@@ -70,9 +70,9 @@ buildTx ::
   [Fund] ->
   Natural ->
   Coin ->
-  Maybe Color ->
+  Color ->
   Either String (BuiltTx era)
-buildTx sbe destAddr signingKey inFunds numOutputs fee mColor
+buildTx sbe destAddr signingKey inFunds numOutputs fee color
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
@@ -94,18 +94,16 @@ buildTx sbe destAddr signingKey inFunds numOutputs fee mColor
           ++ " per output"
   | otherwise = Right built
  where
-  -- Optional colour, carried as transaction metadata so a mempool observer
-  -- can attribute the tx to the firehose that made it.
+  -- Colour tag, carried as transaction metadata so a mempool observer can
+  -- attribute the tx to the firehose that made it.
   -- Via cardano-api for the same reason signing is: it case-analyses the era,
   -- so the aux-data constraints resolve where an era-generic build cannot.
   mAuxData :: StrictMaybe (TxAuxData (Api.ShelleyLedgerEra era))
   mAuxData = maybeToStrictMaybe (Api.toAuxiliaryData sbe metadataInEra Api.TxAuxScriptsNone)
 
-  metadataInEra = case mColor of
-    Nothing -> Api.TxMetadataNone
-    Just color ->
-      Api.TxMetadataInEra sbe . Api.makeTransactionMetadata $
-        Map.singleton colorMetadataLabel (Api.TxMetaBytes (colorBytes color))
+  metadataInEra =
+    Api.TxMetadataInEra sbe . Api.makeTransactionMetadata $
+      Map.singleton colorMetadataLabel (Api.TxMetaBytes (colorBytes color))
 
   -- Body: pure ledger, era-generic via EraTxBody. The aux-data hash has to be
   -- in place before signing, since the witness covers it.
