@@ -39,13 +39,11 @@ timelineFromLogObjects :: Run -> (LogObjectSource, [LogObject])
                        -> Either Text (LogObjectSource, (RunScalars, [SlotStats UTCTime]))
 timelineFromLogObjects _ (f, []) =
   Left $ "timelineFromLogObjects:  zero logobjects from " <> pack (logObjectSourceFile f)
-timelineFromLogObjects run@Run{genesis} (f, xs') =
+timelineFromLogObjects run@Run{genesis} (f, xs) =
   Right . (f,)
   $ foldl' (timelineStep run f) zeroTimelineAccum xs
   & (aRunScalars &&& reverse . aSlotStats)
  where
-   xs = filter (not . ("DecodeError" `textRefEquals`) . loKind) xs'
-
    firstRelevantLogObjectTime :: UTCTime
    firstRelevantLogObjectTime = loAt (head xs) `max` systemStart genesis
    firstLogObjectHost :: Host
@@ -187,7 +185,8 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   LogObject{loBody=LOMempoolRejectedTx} ->
     forTAHead accum
       (\s-> s { slRejectedTx = slRejectedTx cur + 1 })
-  LogObject{loBody=LOLedgerTookSnapshot} ->
+  -- we only count snapshot completion events (those that have an enclosedTime in their trace)
+  LogObject{loBody=LOLedgerTookSnapshot{loEnclosedTime=SJust{}}} ->
     forTAHead accum
       (\s-> s { slChainDBSnap = slChainDBSnap cur + 1 })
   LogObject{loBody=LOLedgerMetrics _ utxo density} ->
