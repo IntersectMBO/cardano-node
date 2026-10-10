@@ -37,7 +37,6 @@ import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..),
                    OuroborosBundle, RunMiniProtocol (..))
-import           Ouroboros.Network.PerasSupport (PerasSupport (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing.Codec (decodeRemoteAddress,
                    encodeRemoteAddress)
@@ -116,7 +115,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   -- via the Leios chunks; they are unused on the tx-generator initiator path.
   myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-                ByteString ByteString ByteString
+                ByteString ByteString ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
@@ -169,11 +168,6 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
                                              (cPeerSharingCodec myCodecs)
                                              channel
                                              (peerSharingClientPeer peerSharingClientNull)
-            -- TODO Peras is not supported here
-            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras cert diffusion is unsupported"
-            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras vote diffusion is unsupported"
             }
           n2nVer
           n2nData
