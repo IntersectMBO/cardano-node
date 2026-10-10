@@ -144,6 +144,7 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
+import           Control.ResourceRegistry (withRegistry)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
 import           Data.Bifunctor (first)
@@ -178,11 +179,12 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
+import           Ouroboros.Consensus.Storage.LeiosDB (LeiosDbHandle (closeLeiosDbHandle),
+                   newLeiosDBInMemory, newLeiosDBSQLite)
 import           GHC.Stack
 import Ouroboros.Consensus.Block (MkBlockForging(mkBlockForging))
 
 import qualified LeiosDemoLogic as Leios
-import           LeiosDemoDb (LeiosDbHandle (close), newLeiosDBInMemory, newLeiosDBSQLite)
 import           LeiosDemoTypes (TraceLeiosKernel (TraceLeiosDb))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -376,270 +378,273 @@ handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic on
   either Exception.throwIO pure
     =<< checkDbMarker (ioHasFS dbMarkerMountPoint) dbMarkerMountPoint networkMagic
 
-  leiosDB <- case ncLeiosDbConfig nc of
-    LeiosDbInMemory -> newLeiosDBInMemory
-    LeiosDbSQLite -> do
-      -- Each partition follows the node's own split: the volatile one
-      -- churns and is swept, so it belongs on the performant volume with
-      -- the VolatileDB; the immutable one only grows, so it belongs with
-      -- the ImmutableDB. Identical under 'OnePathForAllDbs'.
-      let resolvedVolPath = nonImmutableDbPath dbPath </> "leios.vol.db"
-          resolvedImmPath = immutableDbPath dbPath </> "leios.imm.db"
-      newLeiosDBSQLite
-        (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
-        resolvedVolPath
-        resolvedImmPath
+  let openLeiosDb leiosDbRegistry = case ncLeiosDbConfig nc of
+          LeiosDbInMemory -> newLeiosDBInMemory
+          LeiosDbSQLite -> do
+            -- Each partition follows the node's own split: the volatile one
+            -- churns and is swept, so it belongs on the performant volume with
+            -- the VolatileDB; the immutable one only grows, so it belongs with
+            -- the ImmutableDB. Identical under 'OnePathForAllDbs'.
+            let resolvedVolPath = nonImmutableDbPath dbPath </> "leios.vol.db"
+                resolvedImmPath = immutableDbPath dbPath </> "leios.imm.db"
+            newLeiosDBSQLite
+              leiosDbRegistry
+              (contramap TraceLeiosDb (Consensus.leiosKernelTracer (consensusTracers tracers)))
+              resolvedVolPath
+              resolvedImmPath
 
-  -- Orderly shutdown of the LeiosDB: everything below has stopped by then, so
-  -- this flushes the pending writes and closes the connections.
-  (`Exception.finally` close leiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
-    traceWith (startupTracer tracers)
-              (StartupP2PInfo (ncDiffusionMode nc))
-    nt@NetworkTopology
-      { useLedgerPeers
-      , peerSnapshotPath
-      , extraConfig
-      } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
-    let (localRoots, publicRoots) = producerAddresses nt
-    traceWith (startupTracer tracers)
-            $ NetworkConfig localRoots
-                            publicRoots
-                            useLedgerPeers
-                            (PeerSnapshotFile <$> peerSnapshotPath)
-    case ncPeerSharing nc of
-      PeerSharingEnabled
-        | hasProtocolFile (ncProtocolFiles nc) ->
-            traceWith (startupTracer tracers) . NetworkConfigUpdateWarning . Text.pack $
-                 "Mainnet block producers may not meet the Praos performance guarantees "
-              <> "and host IP address will be leaked since peer sharing is enabled."
-      _otherwise -> pure ()
-    localRootsVar   <- newTVarIO localRoots
-    publicRootsVar  <- newTVarIO publicRoots
-    useLedgerVar    <- newTVarIO useLedgerPeers
-    useBootstrapVar <- newTVarIO extraConfig
-    ledgerPeerSnapshotPathVar <- newTVarIO (PeerSnapshotFile <$> peerSnapshotPath)
-    ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
-                                            (startupTracer tracers)
-                                            nc
-                                            networkMagic
-                                            True
-                                            (readTVar ledgerPeerSnapshotPathVar)
-                                            (readTVar useLedgerVar)
-                                            (const . pure $ ())
-    rpcConfigVar <- newTVarIO (ncRpcConfig nc)
+  withRegistry $ \leiosDbRegistry -> do
+    leiosDB <- openLeiosDb leiosDbRegistry
+    -- Orderly shutdown of the LeiosDB: everything below has stopped by then, so
+    -- this flushes the pending writes and closes the connections.
+    (`Exception.finally` closeLeiosDbHandle leiosDB) $ withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
+      traceWith (startupTracer tracers)
+                (StartupP2PInfo (ncDiffusionMode nc))
+      nt@NetworkTopology
+        { useLedgerPeers
+        , peerSnapshotPath
+        , extraConfig
+        } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
+      let (localRoots, publicRoots) = producerAddresses nt
+      traceWith (startupTracer tracers)
+              $ NetworkConfig localRoots
+                              publicRoots
+                              useLedgerPeers
+                              (PeerSnapshotFile <$> peerSnapshotPath)
+      case ncPeerSharing nc of
+        PeerSharingEnabled
+          | hasProtocolFile (ncProtocolFiles nc) ->
+              traceWith (startupTracer tracers) . NetworkConfigUpdateWarning . Text.pack $
+                   "Mainnet block producers may not meet the Praos performance guarantees "
+                <> "and host IP address will be leaked since peer sharing is enabled."
+        _otherwise -> pure ()
+      localRootsVar   <- newTVarIO localRoots
+      publicRootsVar  <- newTVarIO publicRoots
+      useLedgerVar    <- newTVarIO useLedgerPeers
+      useBootstrapVar <- newTVarIO extraConfig
+      ledgerPeerSnapshotPathVar <- newTVarIO (PeerSnapshotFile <$> peerSnapshotPath)
+      ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
+                                              (startupTracer tracers)
+                                              nc
+                                              networkMagic
+                                              True
+                                              (readTVar ledgerPeerSnapshotPathVar)
+                                              (readTVar useLedgerVar)
+                                              (const . pure $ ())
+      rpcConfigVar <- newTVarIO (ncRpcConfig nc)
 
-    let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = ncRpcConfig nc
-    when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles nc) && not (ncStartAsNonProducingNode nc)) $
-      traceWith (startupTracer tracers) RpcEnabledOnBlockProducer
-    when rpcIsEnabled $
-      warnRpcEndpointSecurity (startupTracer tracers) rpcEndpointConfig
+      let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = ncRpcConfig nc
+      when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles nc) && not (ncStartAsNonProducingNode nc)) $
+        traceWith (startupTracer tracers) RpcEnabledOnBlockProducer
+      when rpcIsEnabled $
+        warnRpcEndpointSecurity (startupTracer tracers) rpcEndpointConfig
 
-    let nodeArgs = RunNodeArgs
-          { rnGenesisConfig  = ncGenesisConfig nc
-          , rnTraceConsensus = consensusTracers tracers
-          , rnTraceNTN       = nodeToNodeTracers tracers
-          , rnTraceNTC       = nodeToClientTracers tracers
-          , rnProtocolInfo   = pInfo
-          , rnMempoolTimeoutConfig = Just $ MempoolTimeoutConfig
-              { mempoolTimeoutSoft     = ncMempoolTimeoutSoft nc
-              , mempoolTimeoutHard     = ncMempoolTimeoutHard nc
-              , mempoolTimeoutCapacity = ncMempoolTimeoutCapacity nc
-              }
-          , rnNodeKernelHook = \registry nodeKernel -> do
-              -- set the initial block forging
-              blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
+      let nodeArgs = RunNodeArgs
+            { rnGenesisConfig  = ncGenesisConfig nc
+            , rnTraceConsensus = consensusTracers tracers
+            , rnTraceNTN       = nodeToNodeTracers tracers
+            , rnTraceNTC       = nodeToClientTracers tracers
+            , rnProtocolInfo   = pInfo
+            , rnMempoolTimeoutConfig = Just $ MempoolTimeoutConfig
+                { mempoolTimeoutSoft     = ncMempoolTimeoutSoft nc
+                , mempoolTimeoutHard     = ncMempoolTimeoutHard nc
+                , mempoolTimeoutCapacity = ncMempoolTimeoutCapacity nc
+                }
+            , rnNodeKernelHook = \registry nodeKernel -> do
+                -- set the initial block forging
+                blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
-              unless (ncStartAsNonProducingNode nc) $
-                setBlockForging nodeKernel blockForging
+                unless (ncStartAsNonProducingNode nc) $
+                  setBlockForging nodeKernel blockForging
 
-              maybeSpawnOnSlotSyncedShutdownHandler
-                (ncShutdownConfig nc)
-                (shutdownTracer tracers)
-                registry
-                (Node.getChainDB nodeKernel)
-              onKernel nodeKernel
-          , rnPeerSharing    = ncPeerSharing nc
-          , rnGetUseBootstrapPeers = readTVar useBootstrapVar
-          , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
-          , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
-          , rnFeatureFlags = mempty -- TODO(10.7) forward this to CLI options?
-          , rnLeiosDb = leiosDB
-          }
+                maybeSpawnOnSlotSyncedShutdownHandler
+                  (ncShutdownConfig nc)
+                  (shutdownTracer tracers)
+                  registry
+                  (Node.getChainDB nodeKernel)
+                onKernel nodeKernel
+            , rnPeerSharing    = ncPeerSharing nc
+            , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+            , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
+            , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
+            , rnFeatureFlags = mempty -- TODO(10.7) forward this to CLI options?
+            , rnLeiosDb = leiosDB
+            }
 #ifdef UNIX
-    -- initial `SIGHUP` handler, which rereads the topology file and the RPC config from the main configuration file
-    -- but doesn't update block forging. The latter is only possible once
-    -- consensus initialised (e.g. reapplied all blocks).
-    _ <- Signals.installHandler
-          Signals.sigHUP
-          (Signals.Catch $ do
-            updateTopologyConfiguration
-              (startupTracer tracers) nc
-              localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-              ledgerPeerSnapshotPathVar
-            void $ updateLedgerPeerSnapshot
-              (startupTracer tracers)
-              nc
-              networkMagic
-              True
-              (readTVar ledgerPeerSnapshotPathVar)
-              (readTVar useLedgerVar)
-              (writeTVar ledgerPeerSnapshotVar)
-            updateRpcConfiguration (startupTracer tracers) cmdPc rpcConfigVar
-            traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
-          )
-          Nothing
+      -- initial `SIGHUP` handler, which rereads the topology file and the RPC config from the main configuration file
+      -- but doesn't update block forging. The latter is only possible once
+      -- consensus initialised (e.g. reapplied all blocks).
+      _ <- Signals.installHandler
+            Signals.sigHUP
+            (Signals.Catch $ do
+              updateTopologyConfiguration
+                (startupTracer tracers) nc
+                localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                ledgerPeerSnapshotPathVar
+              void $ updateLedgerPeerSnapshot
+                (startupTracer tracers)
+                nc
+                networkMagic
+                True
+                (readTVar ledgerPeerSnapshotPathVar)
+                (readTVar useLedgerVar)
+                (writeTVar ledgerPeerSnapshotVar)
+              updateRpcConfiguration (startupTracer tracers) cmdPc rpcConfigVar
+              traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
+            )
+            Nothing
 #endif
-    nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-    cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-    nodeKernelAccessRef <- newIORef Nothing
-    installSigTermHandler SigTermDuringRuntime
-    void $
-      let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
-          diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
-              Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
-              Cardano.Diffusion.genesisPeerSelectionTargets =
-                PeerSelectionTargets {
-                  targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
-                  targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
-                  targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
-                  targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
-                  targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
-                  targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
-                  targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
-                },
-              Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
-              Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
+      nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+      cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+      nodeKernelAccessRef <- newIORef Nothing
+      installSigTermHandler SigTermDuringRuntime
+      void $
+        let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
+            diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
+                Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
+                Cardano.Diffusion.genesisPeerSelectionTargets =
+                  PeerSelectionTargets {
+                    targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
+                    targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
+                    targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
+                    targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
+                    targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
+                    targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
+                    targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
+                  },
+                Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
+                Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
+              }
+
+            diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
+            diffusionConfiguration =
+              mkDiffusionConfiguration
+                publicIPv4SocketOrAddr
+                publicIPv6SocketOrAddr
+                localSocketOrPath
+                publicPeerSelectionVar
+                nForkPolicy cForkPolicy
+                (readTVar localRootsVar)
+                (readTVar publicRootsVar)
+                (readTVar useLedgerVar)
+                (readTVar ledgerPeerSnapshotVar)
+                nc
+        in
+        withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic nodeKernelAccessRef) $ \_ ->
+          Node.run
+            nodeArgs {
+                rnNodeKernelHook = \registry nodeKernel -> do
+                  -- reinstall `SIGHUP` handler
+                  installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
+                                       forgingStateVar
+                                       blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                       useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+                                       rpcConfigVar
+                  -- populate node kernel access for RPC server
+                  (shelleyGenesisHash, shelleyGenesisFile) <- case ncProtocolConfig nc of
+                    NodeProtocolConfigurationCardano _ shelleyCfg _ _ _ _ _ ->
+                      runExceptT (readGenesis (npcShelleyGenesisFile shelleyCfg) (npcShelleyGenesisFileHash shelleyCfg)) >>=
+                        either
+                          (Exception.throwIO . FatalError . showT)
+                          ( pure .
+                            (\h ->
+                              ( Api.GenesisHashShelley . (\(GenesisHash g) -> g) $ h
+                              , File (unGenesisFile (npcShelleyGenesisFile shelleyCfg))
+                              )
+                            ) . snd
+                          )
+                  rnNodeKernelHook nodeArgs registry nodeKernel
+                  mkNodeKernelAccess
+                    (rpcTracer tracers)
+                    shelleyGenesisHash
+                    shelleyGenesisFile
+                    blockType
+                    nodeKernel
+                    >>= writeIORef nodeKernelAccessRef
             }
+            StdRunNodeArgs
+              { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              , srnChainDbValidateOverride      = ncValidateDB nc
+              , srnDatabasePath                 = dbPath
+              , srnDiffusionConfiguration       = diffusionConfiguration
+              , srnDiffusionArguments           = diffusionNodeArguments
+              , srnDiffusionTracers             = diffusionTracers tracers
+              , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
+              , srnTraceChainDB                 = chainDBTracer tracers
+              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
+              , srnLeiosMinOfferLead            = Leios.MkLeiosMinOfferLead . unLeiosMinOfferLead <$> ncLeiosMinOfferLead nc
+              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+              , srnQueryBatchSize               = queryBatchSize
+              , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
+              }
+   where
+    customizeChainSyncTimeout :: ChainSyncIdleTimeout
+    customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
+      NoTimeoutOverride -> Configuration.defaultChainSyncIdleTimeout
+      TimeoutOverride t | t == 0    -> ChainSyncNoIdleTimeout
+                        | otherwise -> ChainSyncIdleTimeout t
 
-          diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
-          diffusionConfiguration =
-            mkDiffusionConfiguration
-              publicIPv4SocketOrAddr
-              publicIPv6SocketOrAddr
-              localSocketOrPath
-              publicPeerSelectionVar
-              nForkPolicy cForkPolicy
-              (readTVar localRootsVar)
-              (readTVar publicRootsVar)
-              (readTVar useLedgerVar)
-              (readTVar ledgerPeerSnapshotVar)
-              nc
-      in
-      withAsync (rpcServerLoop (startupTracer tracers) (rpcTracer tracers) rpcConfigVar networkMagic nodeKernelAccessRef) $ \_ ->
-        Node.run
-          nodeArgs {
-              rnNodeKernelHook = \registry nodeKernel -> do
-                -- reinstall `SIGHUP` handler
-                installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
-                                     forgingStateVar
-                                     blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
-                                     useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-                                     rpcConfigVar
-                -- populate node kernel access for RPC server
-                (shelleyGenesisHash, shelleyGenesisFile) <- case ncProtocolConfig nc of
-                  NodeProtocolConfigurationCardano _ shelleyCfg _ _ _ _ _ ->
-                    runExceptT (readGenesis (npcShelleyGenesisFile shelleyCfg) (npcShelleyGenesisFileHash shelleyCfg)) >>=
-                      either
-                        (Exception.throwIO . FatalError . showT)
-                        ( pure .
-                          (\h ->
-                            ( Api.GenesisHashShelley . (\(GenesisHash g) -> g) $ h
-                            , File (unGenesisFile (npcShelleyGenesisFile shelleyCfg))
-                            )
-                          ) . snd
-                        )
-                rnNodeKernelHook nodeArgs registry nodeKernel
-                mkNodeKernelAccess
-                  (rpcTracer tracers)
-                  shelleyGenesisHash
-                  shelleyGenesisFile
-                  blockType
-                  nodeKernel
-                  >>= writeIORef nodeKernelAccessRef
-          }
-          StdRunNodeArgs
-            { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-            , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-            , srnChainDbValidateOverride      = ncValidateDB nc
-            , srnDatabasePath                 = dbPath
-            , srnDiffusionConfiguration       = diffusionConfiguration
-            , srnDiffusionArguments           = diffusionNodeArguments
-            , srnDiffusionTracers             = diffusionTracers tracers
-            , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
-            , srnTraceChainDB                 = chainDBTracer tracers
-            , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-            , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
-            , srnLeiosMinOfferLead            = Leios.MkLeiosMinOfferLead . unLeiosMinOfferLead <$> ncLeiosMinOfferLead nc
-            , srnSnapshotPolicyArgs           = snapshotPolicyArgs
-            , srnQueryBatchSize               = queryBatchSize
-            , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
-            }
- where
-  customizeChainSyncTimeout :: ChainSyncIdleTimeout
-  customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
-    NoTimeoutOverride -> Configuration.defaultChainSyncIdleTimeout
-    TimeoutOverride t | t == 0    -> ChainSyncNoIdleTimeout
-                      | otherwise -> ChainSyncIdleTimeout t
+    logStartupWarnings :: IO ()
+    logStartupWarnings = do
+      let developmentNtnVersions =
+            case latestReleasedNodeVersion (Proxy @blk) of
+              (Just ntnVersion, _) -> filter (> ntnVersion)
+                                    . Map.keys
+                                    $ supportedNodeToNodeVersions (Proxy @blk)
+              (Nothing, _)         -> Map.keys
+                                    $ supportedNodeToNodeVersions (Proxy @blk)
+          developmentNtcVersions =
+            case latestReleasedNodeVersion (Proxy @blk) of
+              (_, Just ntcVersion) -> filter (> ntcVersion)
+                                    . Map.keys
+                                    $ supportedNodeToClientVersions (Proxy @blk)
+              (_, Nothing)         -> Map.keys
+                                    $ supportedNodeToClientVersions (Proxy @blk)
+      when (  ncExperimentalProtocolsEnabled nc
+           && not (null developmentNtnVersions))
+         $ traceWith (startupTracer tracers)
+                     (WarningDevelopmentNodeToNodeVersions
+                       developmentNtnVersions)
 
-  logStartupWarnings :: IO ()
-  logStartupWarnings = do
-    let developmentNtnVersions =
-          case latestReleasedNodeVersion (Proxy @blk) of
-            (Just ntnVersion, _) -> filter (> ntnVersion)
-                                  . Map.keys
-                                  $ supportedNodeToNodeVersions (Proxy @blk)
-            (Nothing, _)         -> Map.keys
-                                  $ supportedNodeToNodeVersions (Proxy @blk)
-        developmentNtcVersions =
-          case latestReleasedNodeVersion (Proxy @blk) of
-            (_, Just ntcVersion) -> filter (> ntcVersion)
-                                  . Map.keys
-                                  $ supportedNodeToClientVersions (Proxy @blk)
-            (_, Nothing)         -> Map.keys
-                                  $ supportedNodeToClientVersions (Proxy @blk)
-    when (  ncExperimentalProtocolsEnabled nc
-         && not (null developmentNtnVersions))
-       $ traceWith (startupTracer tracers)
-                   (WarningDevelopmentNodeToNodeVersions
-                     developmentNtnVersions)
-
-    when (  ncExperimentalProtocolsEnabled nc
-         && not (null developmentNtcVersions))
-       $ traceWith (startupTracer tracers)
-                   (WarningDevelopmentNodeToClientVersions
-                     developmentNtcVersions)
+      when (  ncExperimentalProtocolsEnabled nc
+           && not (null developmentNtcVersions))
+         $ traceWith (startupTracer tracers)
+                     (WarningDevelopmentNodeToClientVersions
+                       developmentNtcVersions)
 
 
-  logDeprecatedLedgerDBOptions :: IO ()
-  logDeprecatedLedgerDBOptions =
-    case deprecatedOpts of
-      DeprecatedOptions [] -> pure ()
-      DeprecatedOptions opts ->
-        mapM_ (traceWith (startupTracer tracers) . MovedTopLevelOption) opts
+    logDeprecatedLedgerDBOptions :: IO ()
+    logDeprecatedLedgerDBOptions =
+      case deprecatedOpts of
+        DeprecatedOptions [] -> pure ()
+        DeprecatedOptions opts ->
+          mapM_ (traceWith (startupTracer tracers) . MovedTopLevelOption) opts
 
-  limitToLatestReleasedVersion :: forall k v.
-       Ord k
-    => ((Maybe NodeToNodeVersion, Maybe NodeToClientVersion) -> Maybe k)
-    -> Map k v
-    -> Map k v
-  limitToLatestReleasedVersion prj =
-      if ncExperimentalProtocolsEnabled nc then id
-      else
-      case prj $ latestReleasedNodeVersion (Proxy @blk) of
-        Nothing       -> id
-        Just version_ -> Map.takeWhileAntitone (<= version_)
+    limitToLatestReleasedVersion :: forall k v.
+         Ord k
+      => ((Maybe NodeToNodeVersion, Maybe NodeToClientVersion) -> Maybe k)
+      -> Map k v
+      -> Map k v
+    limitToLatestReleasedVersion prj =
+        if ncExperimentalProtocolsEnabled nc then id
+        else
+        case prj $ latestReleasedNodeVersion (Proxy @blk) of
+          Nothing       -> id
+          Just version_ -> Map.takeWhileAntitone (<= version_)
 
-  LedgerDbConfiguration
-    snapshotPolicyArgs
-    queryBatchSize
-    ldbBackend
-    deprecatedOpts = ncLedgerDbConfig nc
+    LedgerDbConfiguration
+      snapshotPolicyArgs
+      queryBatchSize
+      ldbBackend
+      deprecatedOpts = ncLedgerDbConfig nc
 
---------------------------------------------------------------------------------
--- SIGHUP Handlers
---------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------
+  -- SIGHUP Handlers
+  --------------------------------------------------------------------------------
 
--- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
+  -- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
                      -> ForgingStateVar
