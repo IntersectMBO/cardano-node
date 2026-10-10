@@ -101,7 +101,6 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
-                        Cardano.Node.Tracing.Cdf
                         Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
@@ -144,7 +143,7 @@ library
                       , cardano-prelude
                       , cardano-protocol ^>= 0.2
                       , cardano-slotting >= 0.2
-                      , cardano-rpc ^>= 11.5
+                      , cardano-rpc ^>= 11.4
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer >= 0.2.1
@@ -172,7 +171,6 @@ library
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.3
                       , prettyprinter
                       , prettyprinter-ansi-terminal
-                      , psqueues
                       , random
                       , resource-registry
                       , safe-exceptions
@@ -259,6 +257,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
+                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml
