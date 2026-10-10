@@ -66,7 +66,9 @@ startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
   setEnvProtocol protocol
-  setEnvGenesis $ getGenesis protocol
+  case getShelleyGenesisDir nodeConfig of
+    Nothing  -> error "startProtocol: unreachable, protocol is already Cardano"
+    Just dir -> setEnvShelleyGenesis dir (getShelleyGenesis protocol)
   iomgr <- askIOManager
 
   networkId <- liftIO $ protocolToNetworkId protocol
