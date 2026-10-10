@@ -88211,7 +88211,33 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true
+        "EnableP2P": true,
+        "TraceOptions": {
+          "Mempool.AddedTx": {
+            "severity": "Silence"
+          },
+          "Mempool.RejectedTx": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.AddedToMempool": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.CanRequestMoreTxs": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.CannotRequestMoreTxs": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.Collected": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.Processed": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.RejectedFromMempool": {
+            "severity": "Silence"
+          }
+        }
       }
     },
     "overlay": {},
@@ -90041,7 +90067,33 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true
+        "EnableP2P": true,
+        "TraceOptions": {
+          "Mempool.AddedTx": {
+            "severity": "Silence"
+          },
+          "Mempool.RejectedTx": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.AddedToMempool": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.CanRequestMoreTxs": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.CannotRequestMoreTxs": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.Collected": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.Processed": {
+            "severity": "Silence"
+          },
+          "TxSubmission.TxInbound.RejectedFromMempool": {
+            "severity": "Silence"
+          }
+        }
       }
     },
     "overlay": {},
