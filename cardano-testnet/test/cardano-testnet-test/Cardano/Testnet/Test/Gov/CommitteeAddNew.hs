@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
 
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
+import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -75,10 +76,10 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
       mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
       nSpos = fromIntegral $ creationNumPools creationOptions
-      ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+      era = Exp.DijkstraEra
+      ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       eraName = eraToString era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
@@ -242,7 +243,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
     )
 
   -- double check that we're starting with an empty committee
-  committeeMembers <- getCommitteeMembers epochStateView ceo
+  committeeMembers <- getCommitteeMembers epochStateView era
   committeeMembers `H.assertWith` null
 
   signedProposalTx <-
@@ -304,7 +305,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
   H.noteShow_ ccCredentials
 
   newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole)
-    <- fromList <$> getCommitteeMembers epochStateView ceo
+    <- fromList <$> getCommitteeMembers epochStateView era
 
   -- check that the committee is actually what we expect
   newCommitteeMembers === fromList ccCredentials
@@ -322,10 +323,10 @@ getCommitteeMembers
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ConwayEraOnwards era
+  -> Exp.Era era
   -> m [L.Credential L.ColdCommitteeRole]
-getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
-  govState <- getGovState epochStateView ceo
+getCommitteeMembers epochStateView era = withFrozenCallStack $ do
+  govState <- getGovState epochStateView (convert era)
   fmap (Map.keys . L.committeeMembers) . H.nothingFail $ strictMaybeToMaybe $ govState ^. L.cgsCommitteeL
 
 committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()

@@ -43,7 +43,7 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       ceo = convert era
       sbe = convert era
       cEra = AnyCardanoEra $ toCardanoEra sbe
@@ -89,7 +89,7 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
                              drepRegTxBody1 [Some drepKeyPair1, Some $ paymentKeyInfoPair wallet0]
 
-  failToSubmitTx execConfig cEra drepSignedRegTx1 "ConwayDRepIncorrectDeposit"
+  failToSubmitTx execConfig cEra drepSignedRegTx1 "DijkstraDRepIncorrectDeposit"
 
   -- DRep 2 (enough deposit)
 
