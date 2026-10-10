@@ -393,6 +393,8 @@ data NodeVerbatim = NodeVerbatim
     -- | Seconds a node waits before asking a new inbound peer for
     -- transactions; the node's default is 60.
   , txSubmissionInitDelay :: Maybe Integer
+    -- | Per-namespace tracer options, merged into those the workbench sets.
+  , traceOptions :: Maybe Aeson.Object
   }
   deriving (Eq, Show, Generic)
 
@@ -401,9 +403,10 @@ instance Aeson.ToJSON NodeVerbatim where
   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
   -- Therefore, any attempt to set this to false for a profile must be a critical error.
   -- For backwards compatibility with Node < 10.6, we explicitly set EnableP2P = true in the config.
-  toJSON (NodeVerbatim (Just True) delay) = Aeson.object $
+  toJSON (NodeVerbatim (Just True) delay traceOpts) = Aeson.object $
       ("EnableP2P" Aeson..= True)
     : [ "TxSubmissionInitDelay" Aeson..= d | Just d <- [delay] ]
+   ++ [ "TraceOptions" Aeson..= t | Just t <- [traceOpts] ]
   toJSON NodeVerbatim{} = error "NodeVerbatim: EnableP2P must be true; non-p2p topologies are no longer supported since Node 10.6"
 
 instance Aeson.FromJSON NodeVerbatim where
@@ -413,6 +416,7 @@ instance Aeson.FromJSON NodeVerbatim where
       NodeVerbatim
         <$> o Aeson..:? "EnableP2P" Aeson..!= Just True
         <*> o Aeson..:? "TxSubmissionInitDelay"
+        <*> o Aeson..:? "TraceOptions"
 
 --------------------------------------------------------------------------------
 

@@ -106,6 +106,23 @@ valueXLBlock = V.valueBase . P.tps 100
 valueXXLBlock :: Types.Profile -> Types.Profile
 valueXXLBlock = V.valueBase . P.tps 900
 
+-- Without the node tracers that fire for every transaction submitted. A
+-- transaction carrying sub-transactions is traced like any other, so they
+-- would otherwise make for different log line rates between profiles whose
+-- blocks hold different numbers of transactions. Only the per-slot mempool
+-- columns of the analysis use these messages.
+silenceTxTracers :: Types.Profile -> Types.Profile
+silenceTxTracers = P.silenceTracers
+  [ "TxSubmission.TxInbound.CanRequestMoreTxs"
+  , "TxSubmission.TxInbound.CannotRequestMoreTxs"
+  , "TxSubmission.TxInbound.Collected"
+  , "TxSubmission.TxInbound.Processed"
+  , "TxSubmission.TxInbound.AddedToMempool"
+  , "TxSubmission.TxInbound.RejectedFromMempool"
+  , "Mempool.AddedTx"
+  , "Mempool.RejectedTx"
+  ]
+
 -- Chain framegment creation with varying tx in and out counts.
 -- This duplicates valueLocal, parametrizing ins and outs.
 valueInOut :: Integer -> Types.Profile -> Types.Profile
@@ -154,8 +171,10 @@ profilesForgeStress =
   -- 4 sub-transactions of 2 inputs and 2 outputs each. The nested one submits a fifth of
   -- the transactions, so that the generator prepares the same 72000 UTxOs (10 rather than
   -- 2 per transaction) and its splitting phase ends at the same point; both stay saturated.
-  , fs & P.name "forge-stress-pre-v12"          . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn                                       . P.analysisUnitary
-  , fs & P.name "forge-stress-pre-v12-nested"   . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn . P.subTxs 4 2 2 . P.txCount 7200   . P.analysisUnitary
+  -- Both without per-transaction tracers, as a full block holds about 170 flat but only
+  -- 45 nested transactions.
+  , fs & P.name "forge-stress-pre-v12"          . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn . silenceTxTracers                                     . P.analysisUnitary
+  , fs & P.name "forge-stress-pre-v12-nested"   . V.valueLocal . n3v12 . V.datasetOct2021 . durationM . P.traceForwardingOn . silenceTxTracers . P.subTxs 4 2 2 . P.txCount 7200 . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsA4m"       . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                   . P.rtsGcAllocSize  4 . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsA64m"      . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                   . P.rtsGcAllocSize 64 . P.analysisUnitary
   , fs & P.name "forge-stress-pre-rtsN3"        . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn  . P.rtsThreads 3                       . P.analysisUnitary

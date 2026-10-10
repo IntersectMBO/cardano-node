@@ -80,6 +80,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's TxSubmissionInitDelay.
   , txSubmissionInitDelay
+  -- Node's tracers.
+  , silenceTracers
   -- Node's RTS params.
   , rtsGcNonMoving, rtsGcAllocSize
   , rtsThreads, rtsHeapLimit, rtsEventlogged
@@ -119,8 +121,12 @@ import           Data.Maybe (isJust)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson           as Aeson
+import qualified Data.Aeson.Key       as Key
+import qualified Data.Aeson.KeyMap    as KeyMap
 -- Package: scientific.
 import qualified Data.Scientific as Scientific
+-- Package: text.
+import qualified Data.Text as Text
 -- Package: time.
 import qualified Data.Time as Time
 -- Package: self.
@@ -182,7 +188,7 @@ empty = Types.Profile {
   , Types.node = Types.Node {
       Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
-    , Types.verbatim = Types.NodeVerbatim (Just True) Nothing   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
+    , Types.verbatim = Types.NodeVerbatim (Just True) Nothing Nothing   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
     -- There's only this one tracing backend left. We keep this field for the workbench
     -- to be backwards-compatible for the time being.
@@ -655,6 +661,20 @@ txSubmissionInitDelay i = node
     in if isJust (Types.txSubmissionInitDelay v)
        then error "txSubmissionInitDelay: `TxSubmissionInitDelay` already set."
        else n {Types.verbatim = v {Types.txSubmissionInitDelay = Just i}}
+  )
+
+-- | Silence these tracer namespaces. Name individual messages
+-- (e.g. "Mempool.AddedTx"): the workbench's own tracing configuration takes
+-- precedence for the namespaces it sets.
+silenceTracers :: HasCallStack => [Text.Text] -> Types.Profile -> Types.Profile
+silenceTracers namespaces = node
+  (\n ->
+    let v = Types.verbatim n
+    in if isJust (Types.traceOptions v)
+       then error "silenceTracers: `TraceOptions` already set."
+       else n {Types.verbatim = v {Types.traceOptions = Just $ KeyMap.fromList
+              [ (Key.fromText ns, Aeson.object ["severity" Aeson..= ("Silence" :: Text.Text)])
+              | ns <- namespaces ]}}
   )
 
 shutdownOnOff :: HasCallStack => Types.Profile -> Types.Profile
