@@ -106,17 +106,16 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic,
                    TxSubmissionCounters)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import qualified LeiosDemoOnlyTestFetch as LF
-import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
-                   TraceLeiosKernel, TraceLeiosPeer)
-import           Network.TypedProtocol.Codec (AnyMessage)
-
 import qualified Codec.CBOR.Term as CBOR
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
 import qualified Network.Socket as Socket
+
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 
 
 -- | Check the configuration in the given file.
@@ -329,11 +328,15 @@ getAllNamespaces =
         leiosNotifyNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosNotify", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote))])
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
         leiosFetchNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosFetch", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))])
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)))])
 
 -- Diffusion
 

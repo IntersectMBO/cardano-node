@@ -129,6 +129,10 @@ import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
 
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 import           Paths_cardano_node (version)
 
 
@@ -513,6 +517,38 @@ docTracersFirstPhase condConfigFileName = do
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
         (TraceSendRecv (PerasVoteDiffusion blk))))
 
+-- Leios
+
+    leiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [leiosKernelTr]
+    leiosKernelTrDoc <- documentTracer (leiosKernelTr ::
+      Logging.Trace IO TraceLeiosKernel)
+
+    leiosPeerTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosPeer"]
+    configureTracers configReflection trConfig [leiosPeerTr]
+    leiosPeerTrDoc <- documentTracer (leiosPeerTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer TraceLeiosPeer))
+
+    leiosNotifyTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosNotify", "Remote"]
+    configureTracers configReflection trConfig [leiosNotifyTr]
+    leiosNotifyTrDoc <- documentTracer (leiosNotifyTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote))))
+
+    leiosFetchTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTr]
+    leiosFetchTrDoc <- documentTracer (leiosFetchTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))))
+
 -- Node to client
 
     keepAliveClientTr <- mkCardanoTracer
@@ -835,6 +871,11 @@ docTracersFirstPhase condConfigFileName = do
             <> perasVoteOutboundTrDoc
             <> perasCertDiffusionTrDoc
             <> perasVoteDiffusionTrDoc
+-- Leios
+            <> leiosKernelTrDoc
+            <> leiosPeerTrDoc
+            <> leiosNotifyTrDoc
+            <> leiosFetchTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc
