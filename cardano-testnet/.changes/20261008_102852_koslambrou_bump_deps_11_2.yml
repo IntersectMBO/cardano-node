@@ -1,0 +1,10 @@
+pr: 6677
+kind:
+  - maintenance
+description: |
+  Bumped `cardano-api` to 11.8, `cardano-cli` to 11.3, `cardano-crypto-class` to 2.6,
+  `ouroboros-network` to 1.3 and `cardano-diffusion` to 1.3 for the 11.2 release, and
+  adapted to the new APIs.
+  Added `Testnet.Defaults.defaultDijkstraGenesis`, which trims the cardano-api Dijkstra
+  genesis defaults so that the PlutusV4 cost model carries exactly the number of
+  parameters the ledger's genesis decoder accepts.

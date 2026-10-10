@@ -39,16 +39,10 @@ import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
-import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ChainDB
-import           Cardano.Node.Tracing.Tracers.Consensus
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -81,6 +75,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
@@ -517,7 +512,6 @@ docTracersFirstPhase condConfigFileName = do
     perasVoteDiffusionTrDoc <- documentTracer (perasVoteDiffusionTr ::
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
         (TraceSendRecv (PerasVoteDiffusion blk))))
-
 
 -- Node to client
 
