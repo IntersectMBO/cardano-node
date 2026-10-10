@@ -6,7 +6,6 @@
   ...
 }: let
   inherit (builtins) fromJSON readFile;
-  inherit (cfg.cardanoNodePackages) cardanoLib;
 
   cfg = config.services.cardano-submit-api;
 in {
@@ -27,7 +26,7 @@ in {
 
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = cardanoLib.defaultSubmitApiConfig;
+        default = cfg.environment.submitApiConfig;
         description = "Tracing configuration passed to submit-api.";
       };
 
@@ -51,6 +50,21 @@ in {
         type = lib.types.str;
         default = "127.0.0.1";
         description = "Host address submit-api binds to.";
+      };
+
+      metricsPort = lib.mkOption {
+        type = lib.types.port;
+        default = 8081;
+        description = ''
+          The port submit-api serves prometheus metrics on.
+
+          The metrics server always binds all interfaces; listenAddress applies
+          only to the web API.  Firewall this port if that is not wanted.
+
+          If this port is already bound, submit-api retries on the next port up
+          rather than aborting startup, so the effective port may differ.  The
+          last Metrics.Started trace reports the port actually bound.
+        '';
       };
 
       network = lib.mkOption {
@@ -109,6 +123,7 @@ in {
         exec ${cfg.package}/bin/cardano-submit-api --socket-path "$CARDANO_NODE_SOCKET_PATH" ${envFlag} \
               --port ${toString cfg.port} \
               --listen-address ${cfg.listenAddress} \
+              --metrics-port ${toString cfg.metricsPort} \
               --config ${builtins.toFile "submit-api.json" (builtins.toJSON cfg.config)}
       '';
       systemd.services.cardano-submit-api = {
@@ -117,12 +132,11 @@ in {
             ExecStart = config.services.cardano-submit-api.script;
             DynamicUser = true;
 
-            # The api connects to the node over a UNIX socket that only becomes
-            # available once the node has started; `after` orders startup but does
-            # not wait for the socket. Default to restarting until it is reachable
-            # rather than failing permanently on a fresh boot. These are mkDefault
-            # so a consumer can impose a bounded restart + start-limit policy that
-            # lets persistent failures surface as a failed unit for alerting.
+            # The api starts and listens whether or not the node is up and
+            # needs no restart loop to wait for it. The node socket is opened
+            # per submission.  This policy serves to restart a transient
+            # failure or otherwise create an alertable condition on a
+            # persistent failure.
             Restart = lib.mkDefault "always";
             RestartSec = lib.mkDefault 1;
           }

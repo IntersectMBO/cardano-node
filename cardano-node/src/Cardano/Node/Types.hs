@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -49,7 +50,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Cardano.Rpc.Server.Config (RpcConfigF (..))
+import           Cardano.Rpc.Server.Config (RpcConfigF (..), RpcEndpoint (..), RpcTlsFiles (..))
 
 import           Control.Exception
 import           Data.Aeson
@@ -511,12 +512,37 @@ instance AdjustFilePaths a => AdjustFilePaths (Last a) where
 instance AdjustFilePaths (File a b) where
   adjustFilePaths f (File p) = File $ f p
 
+instance AdjustFilePaths RpcTlsFiles where
+  adjustFilePaths f (RpcTlsFiles cert key chain) =
+    RpcTlsFiles
+      (adjustFilePaths f cert)
+      (adjustFilePaths f key)
+      (map (adjustFilePaths f) chain)
+
+instance AdjustFilePaths RpcEndpoint where
+  adjustFilePaths f = \case
+    RpcEndpointUnixSocket sp -> RpcEndpointUnixSocket (adjustFilePaths f sp)
+    RpcEndpointHttp ip port -> RpcEndpointHttp ip port
+    RpcEndpointHttps ip port tls -> RpcEndpointHttps ip port (adjustFilePaths f tls)
+
 instance Functor f => AdjustFilePaths (RpcConfigF f) where
-  adjustFilePaths f (RpcConfig isEnabled rpcSocketPath nodeSocketPath) =
-    RpcConfig
-      isEnabled
-      (adjustFilePaths f <$> rpcSocketPath)
-      (adjustFilePaths f <$> nodeSocketPath)
+  adjustFilePaths f rpcConfig@RpcConfig{rpcEndpoint, nodeSocketPath} =
+    rpcConfig
+      { rpcEndpoint = adjustEndpoint <$> rpcEndpoint
+      , nodeSocketPath = adjustFilePaths f <$> nodeSocketPath
+      }
+   where
+    adjustEndpoint (RpcEndpointUnixSocket socketPath) = RpcEndpointUnixSocket $ adjustFilePaths f socketPath
+    adjustEndpoint endpoint@RpcEndpointHttp{} = endpoint
+    adjustEndpoint (RpcEndpointHttps host port tlsFiles) =
+      RpcEndpointHttps host port (adjustTlsFiles tlsFiles)
+
+    adjustTlsFiles RpcTlsFiles{certificateFile, privateKeyFile, chainCertificateFiles} =
+      RpcTlsFiles
+        { certificateFile = adjustFilePaths f certificateFile
+        , privateKeyFile = adjustFilePaths f privateKeyFile
+        , chainCertificateFiles = adjustFilePaths f <$> chainCertificateFiles
+        }
 
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath

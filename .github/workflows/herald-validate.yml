@@ -1,0 +1,36 @@
+name: Changelog check
+#
+# Validates changelog fragments on every pull request:
+#   - All fragment files parse correctly and reference valid projects/kinds
+#   - Modified projects have at least one changelog fragment (--diff)
+#   - PR numbers inside fragments match the pull request number (--pr)
+
+permissions:
+  contents: read
+
+on:
+  merge_group:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  validate:
+    # Skip for merge_group: batched diffs would cause false positives and
+    # PR number context is unavailable.  The trigger is kept so the check
+    # reports "skipped" (passes) when this is a required status check.
+    if: ${{ github.event_name != 'merge_group' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Fetch full history so herald can determine the fork point
+          # for --diff and --pr checks
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - uses: input-output-hk/cardano-dev/actions/herald-validate@9106b37910e40be00cda65051922d6ef939fa67a # herald-validate-0.0.1.1

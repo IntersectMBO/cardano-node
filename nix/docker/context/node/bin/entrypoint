@@ -35,11 +35,29 @@ if [[ ${1:-} != "cli" ]]; then
     # Re-assert restrictive perms in case an earlier run left them looser.
     chmod 700 "$CARDANO_RUNTIME_DIR"
   fi
+
+  # A stale directory left by a previous run of this container is safe to
+  # reuse; one in use by a live same-role container is not, and the mkdir
+  # above cannot tell them apart. An exclusive lock can. The fd survives the
+  # exec into the run-* scripts, so the lock is held for the lifetime of the
+  # process and released by the kernel on exit.
+  exec 9>"$CARDANO_RUNTIME_DIR/.lock"
+  if ! flock -n 9; then
+    echo "ERROR: $CARDANO_RUNTIME_DIR is in use by another container." >&2
+    echo "Sharing a /tmp mount across same-role containers is unsupported;" >&2
+    echo "give each container its own /tmp, such as a tmpfs or emptyDir." >&2
+    exit 1
+  fi
 fi
+
+# Cli mode is dispatched before the NETWORK modes.
+if [[ ${1:-} == "cli" ]]; then
+  # Run cardano-cli with the provided entrypoint args
+  exec /usr/local/bin/run-client "$@"
 
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
-if [[ -n ${NETWORK:-} ]]; then
+elif [[ -n ${NETWORK:-} ]]; then
 
   # If either CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env vars are set, iohk-nix
   # pre-defined NETWORK configuration will be used as a starting point and
@@ -143,10 +161,6 @@ if [[ -n ${NETWORK:-} ]]; then
 elif [[ ${1:-} == "run" ]]; then
   # Run cardano-node using "custom" mode.
   exec /usr/local/bin/run-node "$@"
-
-elif [[ ${1:-} == "cli" ]]; then
-  # Run cardano-cli with the provided entrypoint args
-  exec /usr/local/bin/run-client "$@"
 
 else
   echo "Nothing to do!  Available modes of operation are:"

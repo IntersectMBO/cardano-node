@@ -13,6 +13,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Lens as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default.Class (def)
+import qualified Data.List.NonEmpty as NEL
 import           Lens.Micro ((^?))
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
@@ -46,7 +47,7 @@ hprop_mainnet_params = integrationRetryWorkspace 2 "mainnet-params" $ \tmpDir ->
     } <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
   -- Get a running node
-  TestnetNode{nodeSprocket} <- H.headM testnetNodes
+  let TestnetNode{nodeSprocket} = NEL.head testnetNodes
 
   -- Get on-chain parameters from running node
   execConfig <- mkExecConfig tmpDir nodeSprocket testnetMagic

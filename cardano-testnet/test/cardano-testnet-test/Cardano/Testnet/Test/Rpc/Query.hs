@@ -32,6 +32,7 @@ import           Control.Exception
 import           Control.Monad
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as M
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
@@ -60,12 +61,12 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       sbe = convert era
       eraName = eraToString sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
-      runtimeOptions = def{runtimeEnableRpc = RpcEnabled}
+      runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
 
   tr@TestnetRuntime
     { testnetMagic
     , configurationFile
-    , testnetNodes = node0@TestnetNode{nodeSprocket} : _
+    , testnetNodes = node0@TestnetNode{nodeSprocket} :| _
     } <-
     createAndRunTestnet creationOptions runtimeOptions conf
 
@@ -81,9 +82,9 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   ----------
   QueryTipLocalStateOutput{localStateChainTip} <-
     H.noteShowM $ execCliStdoutToJson execConfig [eraName, "query", "tip"]
-  (slot, blockHash, blockNo) <- case localStateChainTip of
+  (slot, blockHash', blockNo') <- case localStateChainTip of
     ChainTipAtGenesis -> H.failure -- impossible
-    ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNo) -> pure (slot, SBS.fromShort hash, blockNo)
+    ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNo') -> pure (slot, SBS.fromShort hash, blockNo')
 
   -----------------------------------
   -- Compute expected tip timestamp
@@ -120,8 +121,8 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- Test readParams response
   ---------------------------
   pparamsResponse ^. U5c.ledgerTip . U5c.slot === slot
-  pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash
-  pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNo
+  pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash'
+  pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNo'
   H.assertWithinTolerance (pparamsResponse ^. U5c.ledgerTip . U5c.timestamp) expectedTimestampMs 1000
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide

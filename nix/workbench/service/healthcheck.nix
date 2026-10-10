@@ -221,12 +221,11 @@ in {
         port=$(echo "''${producers}" | ${jq}/bin/jq --raw-output ".[''${key}].port")
         msg "Executing 'cardano-cli ping' to \"''${host}:''${port}\""
         # If the ping fails the whole script must fail!
-        ${cardano-cli} ping            \
-          --magic "''${network_magic}" \
-          --count 3                    \
-          --json                       \
-          --host "''${host}"           \
-          --port "''${port}"
+        ${cardano-cli} ping                    \
+          --network-magic "''${network_magic}" \
+          --count 3                            \
+          --json                               \
+          "''${host}:''${port}"
       done
     }
 

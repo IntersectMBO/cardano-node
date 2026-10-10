@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -27,6 +28,7 @@ import qualified Cardano.Api as Api
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.Shelley.State as L
+import           Cardano.Node.Testnet.Paths (defaultNodePidFile, defaultSocketName)
 
 import           Prelude
 
@@ -40,8 +42,9 @@ import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSC
-import           Data.List (isInfixOf, uncons)
+import           Data.List (isInfixOf)
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NEL
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
@@ -51,13 +54,13 @@ import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (waitForProcess)
+import           System.Timeout (timeout)
 
 import           Testnet.Filepath
-import           Cardano.Node.Testnet.Paths (defaultSocketName)
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run (ProcessError (..), initiateProcess)
-import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated,
-                   procCustom, procKesAgent, procNode)
+import           Testnet.Process.RunIO (execCli_, execKesAgentControl_, liftIOAnnotated, procCustom,
+                   procKesAgent, procNode)
 import           Testnet.Types (TestnetKesAgent (..), TestnetNode (..),
                    TestnetRuntime (configurationFile), showIpv4Address, testnetSprockets)
 
@@ -137,7 +140,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallS
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
-      nodePidFile = logDir </> node </> "node.pid"
+      nodePidFile = unTmpAbsPath tp </> defaultNodePidFile node
       socketRelPath = socketDir </> node </> defaultSocketName
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
@@ -222,6 +225,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallS
     pure $ TestnetNode
       { nodeName = node
       , poolKeys = Nothing -- they're set in the function caller, if present
+      , nodeRpcEndpoint = Nothing -- set by the caller when RPC is enabled
       , nodeIpv4 = ipv4
       , nodePort = port
       , nodeSprocket = sprocket
@@ -486,9 +490,9 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     False -> do
       liftIOAnnotated $ appendFile logFile ""
 
-      let socketPath = case uncons (testnetSprockets testnetRuntime) of
-            Just (sprocket, _) -> H.sprocketSystemName sprocket
-            Nothing            -> throwString "No testnet sprocket available"
+      let socketPath = H.sprocketSystemName . NEL.head $ testnetSprockets testnetRuntime
+
+      fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
 
       fs <- liftIOAnnotated $ mkNodeConfigFs (configurationFile testnetRuntime)
 
@@ -509,9 +513,9 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             -> SlotNo
             -> BlockNo
             -> StateT (Maybe AnyNewEpochState) IO ConditionResult
-    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo) = handleException $ do
+    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo') = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
-          blockLabel = "#### BLOCK " <> show blockNo <> " ####"
+          blockLabel = "#### BLOCK " <> show blockNo' <> " ####"
       liftIOAnnotated . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
 
       -- store epoch state for logging of differences
@@ -573,5 +577,10 @@ asyncRegister_ act = GHC.withFrozenCallStack $ do
         )
         cleanUp
   where
+    -- 'H.cancel' waits for the cancelled thread to finish. Resource release actions
+    -- run with asynchronous exceptions masked, so if the thread does not act on the
+    -- cancellation (e.g. it is blocked in a foreign call), an unbounded wait here
+    -- would wedge the test run with no output and no way to interrupt it. Rather
+    -- leak the thread than block forever.
     cleanUp :: H.Async a -> IO ()
-    cleanUp = H.cancel
+    cleanUp a = void . timeout 15_000_000 $ H.cancel a

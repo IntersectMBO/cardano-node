@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                11.0.1
+version:                11.1.1
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -13,7 +13,7 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-data-files:             data/all-profiles-coay.json
+data-files:             data/all-profiles.json
                         data/db-sync/epoch_param.json
                         data/db-sync/cost_model.json
                         data/genesis/epoch-timeline.json

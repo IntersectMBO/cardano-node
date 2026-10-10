@@ -20,6 +20,7 @@ import           Prelude
 import           Control.Monad (unless, void)
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           System.Exit
@@ -59,7 +60,7 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

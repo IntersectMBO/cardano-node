@@ -28,18 +28,20 @@ module Cardano.Node.Configuration.POM
 where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
+import           Cardano.Ledger.BaseTypes.NonZero (nonZero)
 import           Cardano.Logging.Types
 import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConsensusMode)
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..), LeiosMinOfferLead)
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPAddress (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfig, RpcConfigF (..),
-                   makeRpcConfig)
+                   RpcEndpoint (..), RpcTlsFiles (..), defaultRpcListenAddress, makeRpcConfig)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
@@ -47,9 +49,12 @@ import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigF
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs)
+                   SnapshotDelayRange (..), SnapshotFrequency (..), SnapshotFrequencyArgs (..),
+                   SnapshotInterval (..), SnapshotPolicyArgs (..), defaultSnapshotPolicyArgs,
+                   mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import           Ouroboros.Network.Hashable (mkSaltIO)
 import qualified Ouroboros.Network.Mux as Mux
 import           Ouroboros.Network.OrphanInstances ()
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
@@ -57,19 +62,20 @@ import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionIn
                    TxSubmissionLogicVersion (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
-import           Control.Monad (unless, void, when)
+import           Control.Monad (filterM, unless, void, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
+import           Data.Word (Word16)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
-import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -212,7 +218,7 @@ data NodeConfiguration
 --
 -- * `NoResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
 -- * `ResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
---   with a `randomIO` generated salt and `getNumCapabilities`.
+--   with a `mkSaltIO` generated salt and `getNumCapabilities`.
 --
 data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffinity deriving (Eq, Show, Generic, FromJSON)
 
@@ -220,7 +226,7 @@ data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffini
 getForkPolicy :: Hashable peerAddr => ResponderCoreAffinityPolicy -> IO (Mux.ForkPolicy peerAddr)
 getForkPolicy = \case
   NoResponderCoreAffinity -> pure Mux.noBindForkPolicy
-  ResponderCoreAffinity -> Mux.responderForkPolicy <$> randomIO <*> getNumCapabilities
+  ResponderCoreAffinity -> Mux.responderForkPolicy <$> mkSaltIO <*> getNumCapabilities
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
@@ -417,11 +423,7 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
-      pncRpcConfig <-
-        RpcConfig
-          <$> (Last <$> v .:? "EnableRpc")
-          <*> (Last <$> v .:? "RpcSocketPath")
-          <*> pure mempty
+      pncRpcConfig <- parsePartialRpcConfig v
 
       txSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
       let parseInitDelay =
@@ -497,37 +499,60 @@ instance FromJSON PartialNodeConfiguration where
                 ]
               Nothing -> return Nothing
 
+      defaultSnapshotFrequencyArgs = case spaFrequency defaultSnapshotPolicyArgs of
+        SnapshotFrequency sfa -> sfa
+        DisableSnapshots -> error "defaultSnapshotPolicyArgs unexpectedly disables snapshots"
+
       parseLedgerDbConfig v = do
         let snapInterval x = do
               si <- x .:? "SnapshotInterval"
               when (any (<= 0) si) $ fail $ "Non-positive SnapshotInterval: " <> show si
-              pure $ RequestedSnapshotInterval . secondsToDiffTime <$> si
-            snapNum x      = fmap RequestedNumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
+              pure $ fmap (RequestedSnapshotInterval . fromJust . nonZero) si
+            snapNum x      = fmap NumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
 
         mTopLevelSnapInterval <- snapInterval v
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
-                       ["SnapshotInterval", "NumOfDiskSnapshots"]
+                   zip
+                    [void mTopLevelSnapInterval, void mTopLevelSnapNum]
+                    ["SnapshotInterval", "NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 
         mLedgerDB <- v .:? "LedgerDB"
         case mLedgerDB of
            Nothing -> do
-             let si = fromMaybe DefaultSnapshotInterval mTopLevelSnapInterval
-                 sn = fromMaybe DefaultNumOfDiskSnapshots mTopLevelSnapNum
-                 spArgs = SnapshotPolicyArgs si sn
+             let si = fromMaybe (sfaInterval defaultSnapshotFrequencyArgs) mTopLevelSnapInterval
+                 sn = fromMaybe (spaNum defaultSnapshotPolicyArgs) mTopLevelSnapNum
+                 sf = defaultSnapshotFrequencyArgs { sfaInterval = si }
+                 spArgs = SnapshotPolicyArgs (SnapshotFrequency sf) sn
              return $ Just $ LedgerDbConfiguration spArgs DefaultQueryBatchSize V2InMemory deprecatedOpts
 
            Just ledgerDB -> flip (withObject "LedgerDB") ledgerDB $ \o -> do
              -- Parse snapshot options from an object, honouring any top-level
              -- (deprecated) SnapshotInterval / NumOfDiskSnapshots overrides.
              let parseSnapshotOpts s = do
-                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= DefaultSnapshotInterval
-                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= DefaultNumOfDiskSnapshots
-                   pure $ SnapshotPolicyArgs sInterval sNum
+                   sInterval  <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval s) .!= sfaInterval defaultSnapshotFrequencyArgs
+                   sNum       <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum s)           .!= spaNum defaultSnapshotPolicyArgs
+                   sOffset    <- s .:? "SlotOffset" .!= sfaOffset defaultSnapshotFrequencyArgs
+                   sRateLimit <- (fmap secondsToDiffTime <$> s .:? "RateLimit") .!= sfaRateLimit defaultSnapshotFrequencyArgs
+                   sMinDelay  <- s .:? "MinDelay"
+                   sMaxDelay  <- s .:? "MaxDelay"
+                   sDelayRange <-
+                         case (sMinDelay, sMaxDelay) of
+                           (Just minDelay, Just maxDelay) ->
+                             if minDelay <= maxDelay then
+                               pure (SnapshotDelayRange (secondsToDiffTime minDelay) (secondsToDiffTime maxDelay))
+                             else fail $ "Invalid ledger snapshot delay range, MinDelay > MaxDelay: "
+                                       <> show minDelay <> " > " <> show maxDelay
+                           _ -> pure (sfaDelaySnapshotRange defaultSnapshotFrequencyArgs)
+                   let sf = SnapshotFrequencyArgs {
+                           sfaInterval = sInterval
+                         , sfaOffset = sOffset
+                         , sfaRateLimit = sRateLimit
+                         , sfaDelaySnapshotRange = sDelayRange
+                         }
+                   pure $ SnapshotPolicyArgs (SnapshotFrequency sf) sNum
 
              qsize    <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend  <- o .:? "Backend" .!= "V2InMemory"
@@ -535,15 +560,38 @@ instance FromJSON PartialNodeConfiguration where
                "V2InMemory" -> return V2InMemory
                "V2LSM" -> do
                  lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
-                 pure $ V2LSM lsmPath
+                 lsmExportPath :: Maybe FilePath <- o .:? "LSMExportPath"
+                 pure $ V2LSM lsmPath lsmExportPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
 
-             -- Snapshot options can either come from a nested object under
-             -- "Snapshots" or fall back to the legacy top-level fields.
+             -- Keys consumed by 'parseSnapshotOpts'.  Only one of `o` or the
+             -- `Snapshots` object is ever read, so a key appearing in both
+             -- places is a misconfiguration rather than an override.
+             let snapshotOptionKeys =
+                   [ "SnapshotInterval", "NumOfDiskSnapshots", "SlotOffset"
+                   , "RateLimit", "MinDelay", "MaxDelay" ]
+                 presentIn obj k = isJust <$> (obj .:? k :: Aeson.Parser (Maybe Value))
+
+             -- A named policy (e.g. `Snapshots: Mithril`) selects a whole predefined
+             -- set of args; an object is parsed field-by-field; absence falls back to
+             -- the legacy top-level options for backward compatibility.
              mSnapshotsVal <- o .:? "Snapshots"
              spArgs <- case mSnapshotsVal of
-               Just sv -> withObject "Snapshots" parseSnapshotOpts sv
                Nothing -> parseSnapshotOpts o
+               Just sv -> do
+                 -- Both a named policy and an object shadow the flat options, so
+                 -- this check has to precede either branch.
+                 shadowed <- filterM (presentIn o) snapshotOptionKeys
+                 unless (null shadowed) $ fail $
+                      "Snapshot options " <> show shadowed <> " are set directly under "
+                   <> "`LedgerDB`, but a `LedgerDB.Snapshots` block is also present. "
+                   <> "Only the latter is read. Move them into `LedgerDB.Snapshots`."
+                 case sv of
+                   String name -> case name of
+                     "Mithril" -> pure mithrilSnapshotPolicyArgs
+                     _ -> fail $ "Unknown named ledger snapshot policy: " <> Text.unpack name
+                              <> ". Expected \"Mithril\" or an object with snapshot options."
+                   _ -> withObject "Snapshots" parseSnapshotOpts sv
 
              pure $ Just $ LedgerDbConfiguration spArgs qsize selector deprecatedOpts
 
@@ -687,6 +735,46 @@ instance FromJSON PartialNodeConfiguration where
           , npcCheckpointsFileHash
           }
 
+      parsePartialRpcConfig v = do
+        enableRpc <- Last <$> v .:? "EnableRpc"
+        mSocketPath <- v .:? "RpcSocketPath"
+        mListenAddress <- fmap unNodeHostIPAddress <$> v .:? "RpcListenAddress"
+        mListenPort :: Maybe Word16 <- v .:? "RpcListenPort"
+        mTlsFiles <- parseRpcTlsFiles v
+        rpcEndpoint <- case (mSocketPath, mListenAddress, mListenPort, mTlsFiles) of
+          (Just _, Just _, _, _) -> fail "RpcSocketPath and RpcListenAddress are mutually exclusive"
+          (Just _, _, Just _, _) -> fail "RpcSocketPath and RpcListenPort are mutually exclusive"
+          (Just _, _, _, Just _) -> fail "RpcSocketPath and TLS configuration are mutually exclusive"
+          (Just socketPath, Nothing, Nothing, Nothing) -> pure . Just $ RpcEndpointUnixSocket socketPath
+          (Nothing, Just _, Nothing, _) -> fail "RpcListenAddress requires RpcListenPort to be set"
+          (Nothing, _, Nothing, Just _) -> fail "TLS configuration requires RpcListenPort to be set"
+          (Nothing, _, Just listenPort, Just tlsFiles) ->
+            pure . Just $
+              RpcEndpointHttps (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort) tlsFiles
+          (Nothing, _, Just listenPort, Nothing) ->
+            pure . Just $
+              RpcEndpointHttp (fromMaybe defaultRpcListenAddress mListenAddress) (fromIntegral listenPort)
+          (Nothing, Nothing, Nothing, Nothing) -> pure Nothing
+        pure (mempty :: PartialRpcConfig){isEnabled = enableRpc, rpcEndpoint = Last rpcEndpoint}
+
+      parseRpcTlsFiles v = do
+        mCertificateFile <- v .:? "RpcTlsCertificateFile"
+        mPrivateKeyFile <- v .:? "RpcTlsPrivateKeyFile"
+        mChainCertificateFiles <- v .:? "RpcTlsChainCertificateFiles"
+        case (mCertificateFile, mPrivateKeyFile) of
+          (Just certificateFile, Just privateKeyFile) ->
+            pure . Just $
+              RpcTlsFiles
+                { certificateFile
+                , privateKeyFile
+                , chainCertificateFiles = fromMaybe [] mChainCertificateFiles
+                }
+          (Nothing, Nothing)
+            | Just _ <- mChainCertificateFiles ->
+                fail "RpcTlsChainCertificateFiles requires RpcTlsCertificateFile and RpcTlsPrivateKeyFile to be set"
+            | otherwise -> pure Nothing
+          _ -> fail "RpcTlsCertificateFile and RpcTlsPrivateKeyFile must be set together"
+
 -- | Default configuration is mainnet
 defaultPartialNodeConfiguration :: PartialNodeConfiguration
 defaultPartialNodeConfiguration =
@@ -702,8 +790,14 @@ defaultPartialNodeConfiguration =
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncProtocolConfig = mempty
-    , pncMaxConcurrencyBulkSync = mempty
-    , pncMaxConcurrencyDeadline = mempty
+    , -- Leaving these unset means "do not override the block-fetch defaults",
+      -- which are 1 and 1 (see 'Cardano.defaultBlockFetchConfiguration'). State
+      -- that value instead of implying it, so that the configuration the node
+      -- runs on says what the concurrency is. cardano-config's own default layer
+      -- pins the same 1, so the two must be changed together, and either one
+      -- changing on its own shows up as a divergence at startup.
+      pncMaxConcurrencyBulkSync = Last (Just (MaxConcurrencyBulkSync 1))
+    , pncMaxConcurrencyDeadline = Last (Just (MaxConcurrencyDeadline 1))
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -721,7 +815,13 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
-    , pncChainSyncIdleTimeout     = mempty
+    , pncChainSyncIdleTimeout     =
+        Last (Just (case Cardano.defaultChainSyncIdleTimeout of
+                      Cardano.ChainSyncIdleTimeout t -> t
+                      -- 'customizeChainSyncTimeout' in "Cardano.Node.Run" reads
+                      -- 0 back as "no idle timeout".
+                      Cardano.ChainSyncNoIdleTimeout -> 0))
+      -- https://ouroboros-network.cardano.intersectmbo.org/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultChainSyncIdleTimeout
     , pncMempoolTimeoutSoft       = mempty
     , pncMempoolTimeoutHard       = mempty
     , pncMempoolTimeoutCapacity   = mempty

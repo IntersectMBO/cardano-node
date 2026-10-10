@@ -1,0 +1,5 @@
+pr: 6696
+kind:
+  - documentation
+description: |
+  Added a core maintainers section to the README.

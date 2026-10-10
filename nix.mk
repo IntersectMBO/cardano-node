@@ -11,7 +11,7 @@ workbench-ci-test smoke: ## Workbench:  test a-la Hydra, the ci-test profile, fu
 	ID=`jq -r .meta.tag result-ci-test/meta.json`; test -e "run/$$ID" || mv result-ci-test "run/$$ID"
 
 ##  Use the -keep targets to debug failures:
-##    /tmp/nix-build-workbench-run-supervisor-ci-test-bage.drv-*
+##    /tmp/nix-build-workbench-run-supervisor-ci-test.drv-*
 ##  ..will contain the run directory.
 workbench-ci-test-trace: CI_TEST_NIXATTR = workbench-ci-test-trace
 workbench-ci-test-trace: workbench-ci-test

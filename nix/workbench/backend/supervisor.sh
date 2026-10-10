@@ -39,7 +39,6 @@ case "$op" in
 
         setenvjq    'port_shift_ekg'        100
         setenvjq    'port_shift_prometheus' 200
-        setenvjq    'port_shift_rtview'     300
         setenvjqstr 'supervisor_conf'      "$backend_dir"/supervisor.conf
         ;;
 
@@ -124,11 +123,9 @@ case "$op" in
             local basePort=$(                   envjq 'basePortTracer')
             local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
             local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
-            local port_rtview=$((    basePort+$(envjq 'port_shift_rtview')))
             cat <<EOF
   - EKG URL (node-0):                                  http://localhost:$port_ekg/node-0
   - Prometheus URL (node-0):                           http://localhost:$port_prometheus/node-0
-  - RTView URL (depending on cardano-tracer build):    http://localhost:$port_rtview
 EOF
 
         else cat <<EOF
@@ -401,6 +398,32 @@ EOF
         else
             touch "${dir}"/flag/cluster-stopping
             echo " All workloads exited  -- after $(yellow ${elapsed})s" >&2
+        fi
+        ;;
+
+    wait-generator-stopped )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        local start_time=$(date +%s)
+        msg_ne "supervisor:  waiting until generator is stopped: 000000"
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+            && \
+            supervisorctl status generator > /dev/null
+        do
+            echo -ne "\b\b\b\b\b\b"
+            printf "%6d" "$(($(date +%s) - start_time))"
+            sleep 1
+        done >&2
+        echo -ne "\b\b\b\b\b\b"
+        local elapsed=$(($(date +%s) - start_time))
+        if test -f "${dir}"/flag/cluster-stopping
+        then
+            echo " Termination requested -- after $(yellow ${elapsed})s" >&2
+        else
+            touch "${dir}"/flag/cluster-stopping
+            echo " Generator exited      -- after $(yellow ${elapsed})s" >&2
         fi
         ;;
 

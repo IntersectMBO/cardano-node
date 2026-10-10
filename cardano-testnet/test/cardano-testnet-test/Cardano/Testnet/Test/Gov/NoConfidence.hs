@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import qualified Data.Text as Text
@@ -114,7 +115,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
     , configurationFile
     } <- liftToIntegration $ cardanoTestnet (creationNodes creationOptions) def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 

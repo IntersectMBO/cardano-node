@@ -50,7 +50,7 @@ case "$op" in
 
     profile-json | json | show | pj )
         local usage="USAGE: wb profile $op [NAME=<current-shell-profile>"
-        local name=${1:-${WB_SHELL_PROFILE:?variable unset, no profile name to use as a default.}}
+        local name=${1:-${WB_SHELL_PROFILE_NAME:?variable unset, no profile name to use as a default.}}
 
         if test -f  "$name"
         then jq '.' "$name"
@@ -64,8 +64,9 @@ case "$op" in
 
           profile json $name \
         | jq -r              \
+            --arg era "${WB_SHELL_ERA_NAME:-}" \
             '
-              [ "  - era:                \(.era)"
+              [ "  - era:                \($era)"
               , "  - epoch slots:        \(.genesis.epoch_length)"
               , "  - slot duration:      \(.genesis.slot_duration)"
               , "  - k:                  \(.genesis.parameter_k)"

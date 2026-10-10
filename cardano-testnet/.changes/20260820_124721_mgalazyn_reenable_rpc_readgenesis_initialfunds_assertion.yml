@@ -1,0 +1,5 @@
+pr: 6657
+kind:
+  - test
+description: |
+  Strengthened the UTxO RPC `ReadGenesis` test: re-enabled the `initialFunds` assertion and upgraded it to an exact comparison with the funds embedded in the genesis file, checked the returned genesis hash against the Blake2b-256 hash of the Shelley genesis file, and added coverage for the `FAILED_PRECONDITION` error when the genesis file changes after node startup.

@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.K3 (
-  profilesNoEraK3
+  profilesK3
 ) where
 
 --------------------------------------------------------------------------------
@@ -18,8 +18,8 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraK3 :: [Types.Profile]
-profilesNoEraK3 =
+profilesK3 :: [Types.Profile]
+profilesK3 =
   ------------------------------------------------------------------------------
   -- k3: 3 nodes and no "--shutdown-on-slot-synced" and no "--shutdown-on-block-synced"
   ------------------------------------------------------------------------------
@@ -27,7 +27,7 @@ profilesNoEraK3 =
           P.empty
         & P.fixedLoaded
         . P.uniCircle . V.hosts 3 . P.loopback
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . P.epochLength 600 . P.activeSlotsCoeff 0.05 . P.parameterK 3
         . V.datasetCurrent -- 10000000 UTxO (10000kU), 1300000 delegators (1300kD)
         . V.fundsDefault

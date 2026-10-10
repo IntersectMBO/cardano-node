@@ -54,11 +54,7 @@ let serviceConfigToJSON =
         #     "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
         #     "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
         # };
-      } // pkgs.lib.optionalAttrs ((cfg.RTView or {}) != {})
-      {
-        hasRTView = cfg.RTView;
-      }
-      // pkgs.lib.optionalAttrs ((cfg.timeseries or {}) != {})
+      } // pkgs.lib.optionalAttrs ((cfg.timeseries or {}) != {})
       {
         hasTimeseries = cfg.timeseries;
       };
@@ -83,7 +79,6 @@ in pkgs.commonLib.defServiceModule
         connectTo       = mayOpt str           "Socket path or HOST:PORT: connect to.";
         logRoot         = opt    str null      "Log storage root directory.";
         rotation        = opt    attrs {}      "Log rotation overrides: see cardano-tracer documentation.";
-        RTView          = opt    attrs {}      "RTView config overrides: see cardano-tracer documentation.";
         timeseries      = opt    attrs {}      "Timeseries config: {epHost, epPort}. Enables the POST /timeseries/query endpoint.";
         ekgPortBase     = opt    int 3100      "EKG port base.";
         ekgRequestFreq  = opt    int 1         "EKG request frequency";

@@ -12,13 +12,14 @@ module Cardano.Node.Tracing.API
   ( initTraceDispatcher
   ) where
 
+import           Cardano.Api (BlockType)
+
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer
 import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
 import           Cardano.Network.NodeToNode (RemoteAddress)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
@@ -26,9 +27,11 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar)
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node.GSM
@@ -41,9 +44,7 @@ import           Prelude
 import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
-import           "contra-tracer" Control.Tracer (traceWith)
-import           "trace-dispatcher" Control.Tracer (nullTracer)
-import           Data.Functor.Contravariant ((>$<))
+import           "contra-tracer" Control.Tracer (nullTracer, traceWith)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
@@ -64,22 +65,32 @@ initTraceDispatcher ::
   , LogFormatting (TraceGsmEvent (Tip blk))
   )
   => NodeConfiguration
-  -> SomeConsensusProtocol
+  -> Maybe TraceConfig
+     -- ^ The tracing configuration, when it was already resolved alongside the
+     -- rest of the node configuration (see
+     -- 'Cardano.Node.Configuration.CardanoConfigResolve.rncTraceConfig').
+     -- 'Nothing' means read it from the configuration file, as ever.
+  -> BlockType blk
+  -> TopLevelConfig blk
   -> NetworkMagic
   -> NodeKernelData blk
   -> Bool
+  -> ForgingStateVar
   -> IO (Tracers RemoteAddress LocalAddress blk  IO)
-initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
-  trConfig <- readConfigurationWithDefault
-                (unConfigPath $ ncConfigFile nc)
-                defaultCardanoConfig
+initTraceDispatcher nc mTrConfig blockType cfg networkMagic nodeKernel noBlockForging forgingStateVar = do
+  trConfig <- case mTrConfig of
+    Just resolved -> pure resolved
+    Nothing ->
+      readConfigurationWithDefault
+        (FromFile (unConfigPath $ ncConfigFile nc))
+        defaultCardanoConfig
 
   (kickoffForwarder, kickoffPrometheusSimple, tracers) <- mkTracers trConfig
 
   -- The NodeInfo DataPoint needs to be fully evaluated and stored
   -- before it is queried for the first time by cardano-tracer.
   -- Hence, we delay initiating the forwarding connection.
-  nodeInfo <- prepareNodeInfo nc p trConfig =<< getCurrentTime
+  nodeInfo <- prepareNodeInfo nc blockType cfg trConfig =<< getCurrentTime
   nodeInfo `deepseq` traceWith (nodeInfoTracer tracers) nodeInfo
 
   kickoffForwarder
@@ -152,7 +163,7 @@ initTraceDispatcher nc p networkMagic nodeKernel noBlockForging = do
       (Just ekgTrace)
       dpTracer
       trConfig
-      p
+      forgingStateVar
 
     let
       kickoffPrometheusSimple = case prometheusSimple of

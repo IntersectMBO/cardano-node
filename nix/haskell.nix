@@ -6,6 +6,7 @@
 , CHaP
 , macOS-security
 , windowsCompilerNixName
+, herald
 }:
 let
 
@@ -63,9 +64,9 @@ let
           cabal
           actionlint
           shellcheck
-          scriv
           stylish-haskell
-        ];
+        ]
+        ++ lib.optional (herald != null) herald;
 
         withHoogle = true;
 
@@ -135,8 +136,14 @@ let
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             package-keys = ["plutus-tx-plugin"];
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
-
-            # GHC 9.6.7 haddock panics on TopTx type family (tyConStupidTheta)
+          })
+          # The haddock of GHC < 9.12.3 panics on `type data` declarations, e.g. the
+          # TopTx type family or AllLedgerPeers ("tyConStupidTheta" panic, GHC issue
+          # #25739, fixed in GHC 9.12.3). Disable haddock of the affected dependencies
+          # for those compilers only, so that shells with a fixed compiler (e.g. the
+          # `.#haddock` one used by github-page.yml) still provide dependencies with
+          # documentation.
+          ({ config, lib, ... }: lib.mkIf (lib.versionOlder config.compiler.version "9.12.3") {
             packages.cardano-api.components.library.doHaddock = false;
             packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
@@ -148,8 +155,8 @@ let
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
-            packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
-            packages.cardano-diffusion.components.library.doHaddock = false; # Currently broken
+            packages.ouroboros-network.components.library.doHaddock = false;
+            packages.cardano-diffusion.components.library.doHaddock = false;
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
@@ -160,6 +167,58 @@ let
             '';
             packages.unix-time.postPatch = ''
               sed -i 's/mingwex//g' unix-time.cabal
+            '';
+            # cardano-addresses 4.0.8 dropped its cardano-crypto dependency and
+            # vendored a byte-identical copy of that package's ed25519-donna
+            # cbits, so the two libraries define the same 15 C symbols. GHC's
+            # RTS linker loads whole units when it runs Template Haskell under
+            # wine and refuses the duplicates, which breaks the Windows cross
+            # build of anything pulling in both -- cardano-api depends on each.
+            # Give cardano-addresses' copy a prefix of its own: -optc-D renames
+            # every definition and use inside its c-sources, and the six
+            # foreign imports are renamed to match. Deleting the vendored
+            # c-sources instead does not work: the unit then fails to load,
+            # because the RTS linker resolves a unit against its own declared
+            # dependencies and cardano-crypto is no longer one of them.
+            #
+            # TODO: report this upstream at
+            # https://github.com/IntersectMBO/cardano-addresses -- it should
+            # either depend on cardano-crypto again, as 4.0.2 did, or give its
+            # own copy a distinct prefix. Drop this workaround once a fixed
+            # release reaches CHaP.
+            packages.cardano-addresses.components.library.ghcOptions =
+              map (sym: "-optc-D${sym}=cardano_addresses_${sym}") [
+                "cardano_crypto_ed25519_extend"
+                "cardano_crypto_ed25519_point_add"
+                "cardano_crypto_ed25519_publickey"
+                "cardano_crypto_ed25519_randombytes_unsafe"
+                "cardano_crypto_ed25519_scalar_add"
+                "cardano_crypto_ed25519_sign"
+                "cardano_crypto_ed25519_sign_open"
+                "wallet_encrypted_change_pass"
+                "wallet_encrypted_derive_private"
+                "wallet_encrypted_derive_public"
+                "wallet_encrypted_from_secret"
+                "wallet_encrypted_new_from_mkg"
+                "wallet_encrypted_sign"
+                "clear"
+                "scalar_add_no_overflow"
+              ];
+            packages.cardano-addresses.postPatch = ''
+              substituteInPlace lib/Cardano/Address/Crypto/Wallet/Encrypted.hs \
+                --replace-fail 'foreign import ccall "wallet_encrypted_' \
+                               'foreign import ccall "cardano_addresses_wallet_encrypted_'
+            '';
+            # haskell.nix's overlays/windows.nix selects
+            # ./patches/crypton-x509-system (no .patch suffix) for
+            # crypton-x509-system >= 1.7, and that path does not exist, so
+            # evaluating the Windows cross build fails outright. Drop the
+            # broken entry and make the same edit here instead, the way
+            # cardano-cli's flake does: mingw-w64 names the import library
+            # lowercase, so extra-libraries has to say crypt32, not Crypt32.
+            packages.crypton-x509-system.patches = lib.mkForce [ ];
+            packages.crypton-x509-system.postPatch = ''
+              substituteInPlace crypton-x509-system.cabal --replace-fail 'Crypt32' 'crypt32'
             '';
             #packages.plutus-core.components.library.preBuild = ''
             #  export ISERV_ARGS="-v +RTS -Dl"
@@ -203,6 +262,7 @@ let
             packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
             packages.cardano-submit-api.components.exes.cardano-submit-api.postInstall = postInstall "cardano-submit-api";
             packages.cardano-profile.components.exes.cardano-profile.postInstall = postInstall "cardano-profile";
+            packages.cardano-tracer.components.exes.cardano-tracer.postInstall = postInstall "cardano-tracer";
             packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
             packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
@@ -211,6 +271,7 @@ let
               exportCliPath = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportNodePath = "export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportSubmitApiPath = "export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}";
+              exportTracerPath = "export CARDANO_TRACER=${config.hsPkgs.cardano-tracer.components.exes.cardano-tracer}/bin/cardano-tracer${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportChairmanPath = "export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}";
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
@@ -222,6 +283,7 @@ let
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/manifest.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
                 "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
@@ -280,6 +342,7 @@ let
                   ${exportCliPath}
                   ${exportNodePath}
                   ${exportSubmitApiPath}
+                  ${exportTracerPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 ''
                 # the cardano-testnet-tests and chairman-tests, use sockets stored in a temporary directory
@@ -303,7 +366,10 @@ let
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
+                  filteredProjectBase = incl ../. (cardanoTestnetGoldenFiles ++ [
+                    # golden_HelpReadme checks the help blocks embedded in the README:
+                    "cardano-testnet/README.md"
+                  ]);
                 in
                 ''
                   ${exportCliPath}
@@ -416,6 +482,34 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           ]
             (name: { flags.asserts = true; });
         }];
+      };
+      # Used by the "Haddock documentation" workflow through devShells.haddock
+      # (see flake.nix): a compiler recent enough to avoid the `type data`
+      # haddock panic worked around above. Hoogle is not needed there and would
+      # be built with the alternative compiler.
+      haddocked = final.appendModule {
+        compiler-nix-name = "ghc9124";
+        shell.withHoogle = lib.mkForce false;
+        shell.tools = lib.mkForce {};
+      };
+      # Available through `nix develop .#ghc9141`: a dev shell on GHC 9.14,
+      # matching the `ghc: 9.14` entry of the haskell.yml CI matrix. Hoogle and
+      # the shell tools are dropped, as they would have to be rebuilt with the
+      # alternative compiler.
+      ghc9141 = final.appendModule {
+        compiler-nix-name = "ghc9141";
+        shell.withHoogle = lib.mkForce false;
+        shell.tools = lib.mkForce {};
+        # The `cabal` in shell.nativeBuildInputs is cabal-install 3.10.3.0,
+        # which refuses to drive GHC >= 9.10:
+        #
+        #   Warning: Unknown/unsupported 'ghc' version detected (Cabal 3.10.3.0
+        #   supports 'ghc' version < 9.10): .../ghc is version 9.14.1
+        #
+        # Add nixpkgs' cabal-install 3.16.1.0, matching the `cabal: 3.16` of
+        # haskell.yml's build matrix. It is prebuilt against nixpkgs' own GHC,
+        # so unlike shell.tools it does not get rebuilt with this compiler.
+        shell.nativeBuildInputs = lib.mkBefore [final.pkgs.pkgsBuildBuild.cabal-install];
       };
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))

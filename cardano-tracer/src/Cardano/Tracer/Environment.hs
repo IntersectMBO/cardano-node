@@ -1,19 +1,10 @@
-{-# LANGUAGE CPP #-}
-
 module Cardano.Tracer.Environment
   ( TracerEnv (..)
-  , TracerEnvRTView (..)
   ) where
 
 import           Cardano.Logging.Types
 import           Cardano.Timeseries.Component (TimeseriesHandle)
 import           Cardano.Tracer.Configuration
-#if RTVIEW
-import           Cardano.Tracer.Handlers.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.State.TraceObjects
-#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
@@ -39,17 +30,3 @@ data TracerEnv = TracerEnv
   , teMetricsHelp           :: ![(Text, Builder)]
   , teTimeseriesHandle      :: !(Maybe TimeseriesHandle)
   }
-
-#if RTVIEW
--- | Environment for all functions.
-data TracerEnvRTView = TracerEnvRTView
-  { teSavedTO               :: !SavedTraceObjects
-  , teBlockchainHistory     :: !BlockchainHistory
-  , teResourcesHistory      :: !ResourcesHistory
-  , teTxHistory             :: !TransactionsHistory
-  , teEventsQueues          :: !EventsQueues
-  , teRTViewPageOpened      :: !WebPageStatus
-  }
-#else
-data TracerEnvRTView = TracerEnvRTView
-#endif

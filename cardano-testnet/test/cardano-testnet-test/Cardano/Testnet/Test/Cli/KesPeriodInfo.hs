@@ -27,6 +27,7 @@ import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
 import qualified Data.IP as IP
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -77,7 +78,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , wallets=wallet0:_
     , testnetNodes
     } <- createAndRunTestnet cTestnetOptions def conf
-  node1sprocket <- H.headM $ testnetSprockets runTime
+  let node1sprocket = NEL.head $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
@@ -226,7 +227,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.createDirectoryIfMissing_ testSpoDir
   let topology = defaultP2PTopology
                    [ RelayAccessAddress (IP.IPv4 $ IP.fromHostAddress nodeIpv4) nodePort
-                     | TestnetNode{nodeIpv4,nodePort} <- testnetNodes
+                     | TestnetNode{nodeIpv4,nodePort} <- NEL.toList testnetNodes
                    ]
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 

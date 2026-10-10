@@ -1,0 +1,80 @@
+# Herald configuration
+# Changelog and release automation for PVP-versioned Haskell projects
+
+# Git repository in owner/repo format (used for PR links in changelogs)
+git-repo: IntersectMBO/cardano-node
+
+# No global changes-dir: each project below declares its own changes-dir,
+# so fragments live beside the package they describe and the 'project:'
+# field can be omitted in them.
+
+# Change kinds and their properties
+#
+# Each kind defines:
+#   notable: if true, changes of this kind appear in the changelog
+#           if false, they still bump the version but are omitted from the changelog text
+#   bump:    PVP version component to bump when this kind is present
+#           0.1.0.0 = bump 2nd component (breaking changes)
+#           0.0.1.0 = bump 3rd component (features, compatible changes)
+#           0.0.0.1 = bump 4th component (patches, internal changes)
+#
+# The highest bump across all fragment kinds determines the final version bump.
+kinds:
+  breaking:
+    bump: 0.1.0.0
+    description: the API has changed in a breaking way
+  bugfix:
+    bump: 0.0.0.1
+    description: fixes a defect
+  compatible:
+    bump: 0.0.1.0
+    description: the API has changed but is non-breaking
+  documentation:
+    notable: false
+    bump: 0.0.0.1
+    description: change in code docs, haddocks
+  feature:
+    bump: 0.0.1.0
+    description: introduces a new feature
+  maintenance:
+    notable: false
+    bump: 0.0.0.1
+    description: not directly related to the code
+  optimisation:
+    bump: 0.0.0.1
+    description: measurable performance improvements
+  refactoring:
+    notable: false
+    bump: 0.0.0.1
+    description: code quality improvements
+  release:
+    notable: false
+    bump: 0.0.0.1
+    description: related to a new release preparation
+  test:
+    notable: false
+    bump: 0.0.0.1
+    description: fixes or modifies tests
+
+# Projects in this repository
+#
+# Each project needs:
+#   changelog:     path to the project's CHANGELOG.md (relative to repo root)
+#   cabal-file:    (optional) path to the project's .cabal file (version is read/updated here)
+#   version-file:  (optional) path to a plain-text version file (alternative to cabal-file)
+#   changes-dir:   directory for this project's changelog fragments (relative to repo root)
+#
+# cabal-file and version-file are mutually exclusive.
+projects:
+  cardano-node-chairman:
+    changelog: cardano-node-chairman/CHANGELOG.md
+    cabal-file: cardano-node-chairman/cardano-node-chairman.cabal
+    changes-dir: cardano-node-chairman/.changes
+  cardano-submit-api:
+    changelog: cardano-submit-api/CHANGELOG.md
+    cabal-file: cardano-submit-api/cardano-submit-api.cabal
+    changes-dir: cardano-submit-api/.changes
+  cardano-testnet:
+    changelog: cardano-testnet/CHANGELOG.md
+    cabal-file: cardano-testnet/cardano-testnet.cabal
+    changes-dir: cardano-testnet/.changes

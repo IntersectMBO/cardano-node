@@ -37,6 +37,7 @@ import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..),
                    OuroborosBundle, RunMiniProtocol (..))
+import           Ouroboros.Network.PerasSupport (PerasSupport (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing.Codec (decodeRemoteAddress,
                    encodeRemoteAddress)
@@ -106,7 +107,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     OuroborosApplication $ fold bundle
 
   n2nVer :: NodeToNodeVersion
-  n2nVer = NodeToNodeV_14
+  n2nVer = NodeToNodeV_16
   blkN2nVer :: BlockNodeToNodeVersion blk
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
@@ -158,6 +159,10 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
                                              (cTxSubmission2Codec myCodecs)
                                              channel
                                              (txSubmissionClientPeer myTxSubClient)
+            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
+            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
             , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                           runPeer
                                              mempty

@@ -19,6 +19,7 @@ import           Prelude
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.Resource.Internal
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import           Data.Time.Clock
 import           GHC.Conc (ThreadStatus (..), threadStatus)
 import           GHC.Stack
@@ -61,7 +62,7 @@ hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sa
   TestnetRuntime{configurationFile, testnetNodes}
     <- createAndRunTestnet creationOptions def conf
 
-  nr@TestnetNode{nodeSprocket} <- H.headM testnetNodes
+  let nr@TestnetNode{nodeSprocket} = NEL.head testnetNodes
   let socketPath = nodeSocketPath nr
 
   H.note_ $ "Sprocket: " <> show nodeSprocket

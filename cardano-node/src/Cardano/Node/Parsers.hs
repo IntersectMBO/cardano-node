@@ -1,45 +1,55 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | The node's @run@ command line.
+--
+-- The individual option parsers come from @cardano-config@
+-- ('Cardano.Configuration.CliArgs'), which is the one definition of the node's
+-- flags, their metavars and their help text; this module assembles them into a
+-- 'PartialNodeConfiguration' and converts cardano-config's types to the node's
+-- (see 'Cardano.Node.Configuration.CardanoConfigAdapter').
+--
+-- What is still defined here is what cardano-config does not carry:
+--
+--   * the deprecated mempool capacity flags, which cardano-config dropped by
+--     design (the setting belongs in the configuration file);
+--   * the three deprecated aliases, @--delegation-certificate@,
+--     @--signing-key@ and @--non-producing-node@, which cardano-config knows
+--     only by their current spellings;
+--   * the Leios BLS voting key, @--shelley-bls-key@.
 module Cardano.Node.Parsers
   ( nodeCLIParser
   , parseConfigFile
   , parserHelpHeader
   , parserHelpOptions
   , renderHelpDoc
-  , parseHostPort
   ) where
 
-import           Cardano.Logging.Types
-import qualified Cardano.Logging.Types as Net
+import qualified Cardano.Configuration.CliArgs as Cfg
+import           Cardano.Configuration.CliArgs (parseConfigFile)
+import           Cardano.Node.Configuration.CardanoConfigAdapter
+                   (credentialsToProtocolFilepaths, fromCfgDbPaths, fromCfgGrpcEndpoint,
+                   fromCfgTracerConnection, toNodeShutdownOn)
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
-                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
+                   NodeHostIPv6Address (NodeHostIPv6Address))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
-import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Types
-import           Cardano.Prelude (ConvertText (..))
+import           Cardano.Node.Configuration.Socket (SocketConfig (..))
+import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..), ShutdownOn (..))
+import           Cardano.Node.Types (ConfigYamlFilePath (..), ProtocolFilepaths (..),
+                   TopologyFile (..))
 import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ByteSize32 (..))
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 
-import           Data.Char (isDigit)
-import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Word (Word16, Word32)
+import           Data.Word (Word32)
 import           Options.Applicative hiding (str, switch)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import qualified Prettyprinter.Internal as PP
-import           System.Posix.Types (Fd (..))
-import           Text.Read (readMaybe)
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
@@ -53,39 +63,37 @@ nodeCLIParser = subparser
 nodeRunParser :: Parser PartialNodeConfiguration
 nodeRunParser = do
   -- Filepaths
-  topFp <- lastOption parseTopologyFile
-  dbFp <- lastOption parseNodeDatabasePaths
-  validate <- lastOption parseValidateDB
-  socketFp <- lastOption $ parseSocketPath "socket-path" "Path to a cardano-node socket"
-  traceForwardSocket <- lastOption parseTracerSocketMode
-  nodeConfigFp <- lastOption parseConfigFile
+  topFp <- lastOption Cfg.parseTopologyFile
+  dbFp <- Last . fmap fromCfgDbPaths <$> Cfg.parseNodeDatabasePaths
+  validate <- lastOption Cfg.parseValidateDB
+  socketFp <- lastOption (File <$> Cfg.parseSocketPath)
+  traceForwardSocket <- lastOption (fromCfgTracerConnection <$> Cfg.parseTracerSocketMode)
+  nodeConfigFp <- lastOption Cfg.parseConfigFile
 
   -- Protocol files
-  byronCertFile   <- optional parseByronDelegationCert
-  byronKeyFile    <- optional parseByronSigningKey
-  shelleyKESSource  <- optional parseKesSourceFilePath
-  shelleyVRFFile  <- optional parseVrfKeyFilePath
-  shelleyBLSFile  <- optional parseBlsKeyFilePath
-  shelleyCertFile <- optional parseOperationalCertFilePath
-  shelleyBulkCredsFile <- optional parseBulkCredsFilePath
+  credentials <- Cfg.parseCredentials
+  deprecatedByronCertFile <- optional parseByronDelegationCertDeprecated
+  deprecatedByronKeyFile <- optional parseByronSigningKeyDeprecated
+  blsKeyFile <- optional parseBlsKeyFilePath
   startAsNonProducingNode <- (\depr new -> Last depr <> Last new)
                          <$> parseStartAsNonProducingNodeDeprecated
-                         <*> parseStartAsNonProducingNode
+                         <*> Cfg.parseStartAsNonProducingNode
 
   -- Node Address
-  nIPv4Address <- lastOption parseHostIPv4Addr
-  nIPv6Address <- lastOption parseHostIPv6Addr
-  nPortNumber  <- lastOption parsePort
+  nIPv4Address <- lastOption (NodeHostIPv4Address <$> Cfg.parseHostIPv4Addr)
+  nIPv6Address <- lastOption (NodeHostIPv6Address <$> Cfg.parseHostIPv6Addr)
+  nPortNumber  <- lastOption Cfg.parsePort
 
   -- Shutdown
-  shutdownIPC <- lastOption parseShutdownIPC
-  shutdownOnLimit <- lastOption parseShutdownOn
+  shutdownIPC <- lastOption Cfg.parseShutdownIPC
+  shutdownOnLimit <- lastOption (toNodeShutdownOn <$> Cfg.parseShutdownOn)
 
   -- Hidden options (to be removed eventually)
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   -- gRPC
-  pncRpcConfig <- parseRpcConfig
+  rpcIsEnabled <- lastOption Cfg.parseEnableGrpc
+  rpcEndpoint <- lastOption (fromCfgGrpcEndpoint <$> Cfg.parseGrpcEndpoint)
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -99,18 +107,23 @@ nodeRunParser = do
            , pncDatabaseFile = dbFp
            , pncDiffusionMode = mempty
            , pncExperimentalProtocolsEnabled = mempty
-           , pncProtocolFiles = Last $ Just ProtocolFilepaths
-             { byronCertFile
-             , byronKeyFile
-             , shelleyKESSource
-             , shelleyVRFFile
-             , shelleyBLSFile
-             , shelleyCertFile
-             , shelleyBulkCredsFile
-             }
+           , pncProtocolFiles =
+               Last . Just $
+                 withDeprecatedByronCredentials
+                   deprecatedByronCertFile
+                   deprecatedByronKeyFile
+                   (credentialsToProtocolFilepaths credentials)
+                   { shelleyBLSFile = blsKeyFile }
            , pncValidateDB = validate
-           , pncShutdownConfig =
-               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
+           , -- An absent @--shutdown-on-*@ means 'NoShutdown' rather than
+             -- "unset", which is what the node has always resolved it to.
+             -- cardano-config's parser has no such fallback, so it is applied
+             -- here.
+             pncShutdownConfig =
+               Last . Just $
+                 ShutdownConfig
+                   (getLast shutdownIPC)
+                   (Just (fromMaybe NoShutdown (getLast shutdownOnLimit)))
            , pncStartAsNonProducingNode = startAsNonProducingNode
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
@@ -145,123 +158,64 @@ nodeRunParser = do
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
-           , pncRpcConfig
+           , pncRpcConfig =
+               (mempty :: PartialRpcConfig)
+                 { isEnabled = rpcIsEnabled
+                 , rpcEndpoint
+                 }
            , pncTxSubmissionLogicVersion = mempty
            , pncTxSubmissionInitDelay = mempty
            , pncLeiosDbConfig = mempty
            , pncLeiosMinOfferLead = mempty
            }
 
-parseSocketPath :: Text -- ^ option name
-                -> Text -- ^ help text
-                -> Parser SocketPath
-parseSocketPath optionName helpMessage =
-  fmap File $ strOption $ mconcat
-    [ long (toS optionName)
-    , help (toS helpMessage)
-    , completer (bashCompleter "file")
-    , metavar "FILEPATH"
-    ]
+-- | Fill the Byron credentials in from the deprecated aliases where
+-- cardano-config's parser, which knows only the current spellings, left a hole.
+withDeprecatedByronCredentials ::
+  Maybe FilePath -> Maybe FilePath -> ProtocolFilepaths -> ProtocolFilepaths
+withDeprecatedByronCredentials cert key files =
+  files
+    { byronCertFile = byronCertFile files <|> cert
+    , byronKeyFile = byronKeyFile files <|> key
+    }
 
+-- | Deprecated alias of @--byron-delegation-certificate@.
+parseByronDelegationCertDeprecated :: Parser FilePath
+parseByronDelegationCertDeprecated =
+  strOption (long "delegation-certificate" <> Opt.internal)
 
--- leave hostname untouched, non-empty
--- 0 <= port <= 65535
-parseNodeAddress :: Opt.ReadM Net.HowToConnect
-parseNodeAddress = Opt.eitherReader parseHostPort
+-- | Deprecated alias of @--byron-signing-key@.
+parseByronSigningKeyDeprecated :: Parser FilePath
+parseByronSigningKeyDeprecated =
+  strOption (long "signing-key" <> Opt.internal)
 
-parseHostPort :: String -> Either String Net.HowToConnect
-parseHostPort str
-  | (portRev, ':' : hostRev) <- break (== ':') (reverse str)
-  = if
-    | null hostRev        -> Left "parseHostPort: Empty host."
-    | null portRev        -> Left "parseHostPort: Empty port."
-    | all isDigit portRev
-    , Just port <- readMaybe @Word16 (reverse portRev) -> if
-      | 0 <= port, port <= 65535 -> Right (Net.RemoteSocket (Text.pack (reverse hostRev)) port)
-      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
-    | otherwise -> Left "parseHostPort: Non-numeric port."
-  | otherwise
-  = Left "parseHostPort: No colon found."
-
-parseTracerSocketMode :: Parser (Net.HowToConnect, ForwarderMode)
-parseTracerSocketMode =
-  asum
-    [ fmap (, Responder) $ option parseNodeAddress $ mconcat
-      [ long "tracer-socket-network-accept"
-      , help "Accept incoming cardano-tracer connection on HOST:PORT"
-      , metavar "HOST:PORT"
-      ]
-    , fmap (, Initiator) $ option parseNodeAddress $ mconcat
-      [ long "tracer-socket-network-connect"
-      , help "Connect to cardano-tracer listening on HOST:PORT"
-      , metavar "HOST:PORT"
-      ]
-    , fmap (\host -> (Net.LocalPipe host, Responder)) $ strOption $ mconcat
-      [ long "tracer-socket-path-accept"
-      , help "Accept incoming cardano-tracer connection at local socket"
-      , completer (bashCompleter "file")
-      , metavar "FILEPATH"
-      ]
-    , fmap (\host -> (Net.LocalPipe host, Initiator)) $ strOption $ mconcat
-      [ long "tracer-socket-path-connect"
-      , help "Connect to cardano-tracer listening on a local socket"
-      , completer (bashCompleter "file")
-      , metavar "FILEPATH"
-      ]
-    ]
-
-parseHostIPv4Addr :: Parser NodeHostIPv4Address
-parseHostIPv4Addr =
-    Opt.option (eitherReader parseNodeHostIPv4Address) (
-          long "host-addr"
-       <> metavar "IPV4"
-       <> help "An optional IPv4 address"
-    )
-
-parseHostIPv6Addr :: Parser NodeHostIPv6Address
-parseHostIPv6Addr =
-    Opt.option (eitherReader parseNodeHostIPv6Address) (
-          long "host-ipv6-addr"
-       <> metavar "IPV6"
-       <> help "An optional IPv6 address"
-    )
-
-parseNodeHostIPv4Address :: String -> Either String NodeHostIPv4Address
-parseNodeHostIPv4Address str =
-  maybe
-    (Left $
-      "Failed to parse IPv4 address: " ++ str ++
-      ". If you want to specify an IPv6 address, use --host-ipv6-addr option.")
-    (Right . NodeHostIPv4Address)
-    (readMaybe str)
-
-parseNodeHostIPv6Address :: String -> Either String NodeHostIPv6Address
-parseNodeHostIPv6Address str =
-  maybe
-    (Left $
-      "Failed to parse IPv6 address: " ++ str ++
-      ". If you want to specify an IPv4 address, use --host-addr option.")
-    (Right . NodeHostIPv6Address)
-    (readMaybe str)
-
-parsePort :: Parser PortNumber
-parsePort =
-    Opt.option ((fromIntegral :: Int -> PortNumber) <$> auto) (
-          long "port"
-       <> metavar "PORT"
-       <> help "The port number"
-       <> value 0 -- Use an ephemeral port
-    )
-
-parseConfigFile :: Parser FilePath
-parseConfigFile =
+parseBlsKeyFilePath :: Parser FilePath
+parseBlsKeyFilePath =
   strOption
-    ( long "config"
-    <> metavar "NODE-CONFIGURATION"
-    <> help "Configuration file for the cardano-node"
-    <> completer (bashCompleter "file")
+    ( long "shelley-bls-key"
+        <> metavar "FILEPATH"
+        <> help
+             ( "Path to the BLS (Leios) signing key: a single text envelope, "
+            <> "or a JSON array of them to vote with every key that holds a "
+            <> "committee seat (e.g. a rotation pair, or a bundle of pool keys)."
+             )
+        <> completer (bashCompleter "file")
     )
 
+-- | Deprecated alias of @--start-as-non-producing-node@.
+parseStartAsNonProducingNodeDeprecated :: Parser (Maybe Bool)
+parseStartAsNonProducingNodeDeprecated =
+  flag Nothing (Just True) $ mconcat
+    [ long "non-producing-node"
+    , help $ mconcat
+        [ "DEPRECATED, use --start-as-non-producing-node instead. "
+        , "This option will be removed in one of the future versions of cardano-node."
+        ]
+    , hidden
+    ]
+
+-- | Deprecated, and not carried by cardano-config: the mempool capacity is a
+-- configuration file setting (@MempoolCapacityBytesOverride@).
 parseMempoolCapacityOverride :: Parser MempoolCapacityBytesOverride
 parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
   where
@@ -279,196 +233,6 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
         (  long "no-mempool-capacity-override"
         <> help "[DEPRECATED: Set it in config file] Don't override mempool capacity"
         )
-
-parseNodeDatabasePaths :: Parser NodeDatabasePaths
-parseNodeDatabasePaths = parseDbPath <|> parseMultipleDbPaths
-
-parseDbPath :: Parser NodeDatabasePaths
-parseDbPath =
-    fmap OnePathForAllDbs $
-        strOption $
-            mconcat
-                [ long "database-path"
-                , metavar "FILEPATH"
-                , help "Directory where the state is stored."
-                , completer (bashCompleter "file")
-                ]
-
-parseMultipleDbPaths :: Parser NodeDatabasePaths
-parseMultipleDbPaths = MultipleDbPaths <$> parseImmutableDbPath <*> parseVolatileDbPath
-
-parseVolatileDbPath :: Parser FilePath
-parseVolatileDbPath = strOption $
-  mconcat
-    [ long "volatile-database-path"
-    , metavar "FILEPATH"
-    , help "Directory where the state is stored."
-    , completer (bashCompleter "file")
-    ]
-
-parseImmutableDbPath :: Parser FilePath
-parseImmutableDbPath = strOption $
-  mconcat
-    [ long "immutable-database-path"
-    , metavar "FILEPATH"
-    , help "Directory where the state is stored."
-    , completer (bashCompleter "file")
-    ]
-
-
--- | This parser will always override configuration option, even if the
--- `--validate-db` is not present.  This is fine for `--validate-db` switch,
--- but might not be for something else.  See `parseStartAsNonProducingNode` for
--- an alternative solution.
-parseValidateDB :: Parser Bool
-parseValidateDB =
-    Opt.switch (
-         long "validate-db"
-      <> help "Validate all on-disk database files"
-    )
-
-parseShutdownIPC :: Parser Fd
-parseShutdownIPC =
-  Opt.option (Fd <$> auto) (
-           long "shutdown-ipc"
-        <> metavar "FD"
-        <> help "Shut down the process when this inherited FD reaches EOF"
-        <> hidden
-      )
-
-parseTopologyFile :: Parser FilePath
-parseTopologyFile =
-    strOption (
-            long "topology"
-         <> metavar "FILEPATH"
-         <> help "The path to a file describing the topology."
-         <> completer (bashCompleter "file")
-    )
-
-parseByronDelegationCert :: Parser FilePath
-parseByronDelegationCert =
-  strOption ( long "byron-delegation-certificate"
-    <> metavar "FILEPATH"
-    <> help "Path to the delegation certificate."
-    <> completer (bashCompleter "file")
-    )
-  <|>
-  strOption
-    ( long "delegation-certificate"
-    <> Opt.internal
-    )
-
-parseByronSigningKey :: Parser FilePath
-parseByronSigningKey =
-  strOption ( long "byron-signing-key"
-            <> metavar "FILEPATH"
-            <> help "Path to the Byron signing key."
-            <> completer (bashCompleter "file")
-            )
-  <|>
-  strOption ( long "signing-key"
-            <> Opt.internal
-            )
-
-parseOperationalCertFilePath :: Parser FilePath
-parseOperationalCertFilePath =
-  strOption
-    ( long "shelley-operational-certificate"
-        <> metavar "FILEPATH"
-        <> help "Path to the delegation certificate."
-        <> completer (bashCompleter "file")
-    )
-
-parseBulkCredsFilePath :: Parser FilePath
-parseBulkCredsFilePath =
-  strOption
-    ( long "bulk-credentials-file"
-        <> metavar "FILEPATH"
-        <> help "Path to the bulk pool credentials file."
-        <> completer (bashCompleter "file")
-    )
-
-parseKesSourceFilePath :: Parser KESSource
-parseKesSourceFilePath = asum
-  [ KESKeyFilePath <$>
-      strOption
-        ( long "shelley-kes-key"
-            <> metavar "FILEPATH"
-            <> help "Path to the KES signing key."
-            <> completer (bashCompleter "file")
-        )
-  , KESAgentSocketPath <$>
-      strOption
-        ( long "shelley-kes-agent-socket"
-            <> metavar "SOCKET_FILEPATH"
-            <> help "Path to the KES Agent socket"
-            <> completer (bashCompleter "file")
-        )
-  ]
-
-parseVrfKeyFilePath :: Parser FilePath
-parseVrfKeyFilePath =
-  strOption
-    ( long "shelley-vrf-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the VRF signing key."
-        <> completer (bashCompleter "file")
-    )
-
-parseBlsKeyFilePath :: Parser FilePath
-parseBlsKeyFilePath =
-  strOption
-    ( long "shelley-bls-key"
-        <> metavar "FILEPATH"
-        <> help
-             ( "Path to the BLS (Leios) signing key: a single text envelope, "
-            <> "or a JSON array of them to vote with every key that holds a "
-            <> "committee seat (e.g. a rotation pair, or a bundle of pool keys)."
-             )
-        <> completer (bashCompleter "file")
-    )
-
-parseStartAsNonProducingNodeDeprecated :: Parser (Maybe Bool)
-parseStartAsNonProducingNodeDeprecated =
-  flag Nothing (Just True) $ mconcat
-    [ long "non-producing-node"
-    , help $ mconcat
-        [ "DEPRECATED, use --start-as-non-producing-node instead. "
-        , "This option will be removed in one of the future versions of cardano-node."
-        ]
-    , hidden
-    ]
-
--- | A parser which returns `Nothing` or `Just True`; the default value is set
--- in `defaultPartialNodeConfiguration`.  This allows to set this option either
--- in the configuration file or as command line flag.
-parseStartAsNonProducingNode :: Parser (Maybe Bool)
-parseStartAsNonProducingNode =
-  flag Nothing (Just True) $ mconcat
-    [ long "start-as-non-producing-node"
-    , help $ mconcat
-        [ "Start the node as a non block producing node even if "
-        , "credentials are specified."
-        ]
-    ]
-
-parseRpcConfig :: Parser PartialRpcConfig
-parseRpcConfig = do
-  isEnabled <- lastOption parseRpcToggle
-  socketPath <- lastOption parseRpcSocketPath
-  pure $ RpcConfig isEnabled socketPath mempty
-  where
-    parseRpcToggle :: Parser Bool
-    parseRpcToggle =
-      Opt.flag' True $ mconcat
-        [ long "grpc-enable"
-        , help "[EXPERIMENTAL] Enable node gRPC endpoint."
-        ]
-    parseRpcSocketPath :: Parser SocketPath
-    parseRpcSocketPath =
-      parseSocketPath
-        "grpc-socket-path"
-        "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

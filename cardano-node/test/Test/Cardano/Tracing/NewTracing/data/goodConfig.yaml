@@ -11,8 +11,14 @@ TraceOptions:
     severity: Info
     detail:   DMinimal
 
+  BlockFetch.Client.ClientMetrics:
+    severity: Info
+
   BlockFetch.Client.CompletedBlockFetch:
     maxFrequency: 2.0
+
+  BlockFetch.Decision.PeerStarvedUs:
+    severity: Info
 
   BlockFetch.Server:
     severity: Info

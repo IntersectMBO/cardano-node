@@ -254,14 +254,12 @@ getBenchTracers = do
   case mTracer of
     Just tracer -> pure tracer
     Nothing -> do
-      -- If this occurs, it may be worthwhile to output it in more ways
-      -- because the tracer isn't actually initialized.
+      -- Deliberately not `traceError`: that goes through
+      -- `traceBenchTxSubmit`, which calls back into `getBenchTracers`,
+      -- and again into this branch, causing infinite recursion.
       let errMsg = "Env.getBenchTracers: attempted to set tracer before\
                    \  STM.TVar init"
-      traceError errMsg
-      liftIO $ do
-        putStrLn errMsg
-        IO.hPutStrLn IO.stderr errMsg
+      liftIO $ IO.hPutStrLn IO.stderr errMsg
       pure $ error errMsg
 
 -- | Read accessor for `envGenesis`.

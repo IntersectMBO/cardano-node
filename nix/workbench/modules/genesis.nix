@@ -212,55 +212,9 @@ in
         default = { };
       };
 
-      byron = mkOption {
-        description = "Byron protocol parameters";
-        type = types.submodule {
-          freeformType = json.type;
-          config = mkDefault {
-            heavyDelThd = "300000";
-            maxBlockSize = "641000";
-            maxHeaderSize = "200000";
-            maxProposalSize = "700";
-            maxTxSize = "4096";
-            mpcThd = "200000";
-            scriptVersion = 0;
-            slotDuration = "20000";
-            softforkRule = {
-              initThd = "900000";
-              minThd = "600000";
-              thdDecrement = "100000";
-            };
-            txFeePolicy = {
-              multiplier = "439460";
-              summand = "155381";
-            };
-            unlockStakeEpoch = "184467";
-            updateImplicit = "10000";
-            updateProposalThd = "100000";
-            updateVoteThd = "100000";
-          };
-        };
-        default = { };
-      };
-
-      create-staked-args = mkOption {
-        description = "Arguments to cardano-cli genesis create-staked";
-        type = types.separatedString " ";
-      };
-
       create-testnet-data-args = mkOption {
         description = "Arguments to cardano-cli genesis create-testnet-data";
         type = types.separatedString " ";
-      };
-
-      byron-genesis-args = mkOption {
-        description = "Arguments to cardano-cli byron genesis genesis";
-        type = types.separatedString " ";
-      };
-
-      pool-relays = mkOption {
-        description = "pool-relays.json";
-        type = types.submodule { freeformType = json.type; };
       };
 
       cache-key = mkOption {
@@ -290,21 +244,6 @@ in
 
       total_supply = genesis.funds_balance + derived.supply_delegated;
 
-      create-staked-args = concatStringsSep " " ([
-        "--supply ${toString genesis.funds_balance}"
-        "--gen-utxo-keys ${toString genesis.utxo_keys}"
-        "--gen-genesis-keys ${toString composition.n_bft_hosts}"
-        "--supply-delegated ${toString derived.supply_delegated}"
-        "--gen-pools ${toString composition.n_pools}"
-        "--gen-stake-delegs ${toString derived.delegators_effective}"
-        "--num-stuffed-utxo ${toString derived.utxo_stuffed}"
-        "--testnet-magic ${toString genesis.network_magic}"
-      ]
-      ++ optional (composition.dense_pool_density != 1) [
-        "--bulk-pool-cred-files ${toString composition.n_dense_hosts}"
-        "--bulk-pools-per-file ${toString composition.dense_pool_density}"
-      ]);
-
       create-testnet-data-args = concatStringsSep " " [
         "--total-supply ${toString genesis.total_supply}"
         "--utxo-keys ${toString genesis.utxo_keys}"
@@ -316,17 +255,6 @@ in
         "--stuffed-utxo ${toString derived.utxo_stuffed}"
         "--testnet-magic ${toString genesis.network_magic}"
       ];
-
-      byron-genesis-args = concatStringsSep " " ([
-        "--k ${toString genesis.parameter_k}"
-        "--protocol-magic ${toString genesis.network_magic}"
-        "--n-poor-addresses 1"
-        "--n-delegate-addresses 1"
-        "--total-balance 300000"
-        "--delegate-share 0.9"
-        "--avvm-entry-count 0"
-        "--avvm-entry-balance 0"
-      ]);
 
       cache-key-input = {
         inherit (composition) n_pools n_bft_hosts n_dense_hosts dense_pool_density;
@@ -342,15 +270,10 @@ in
             ++ optional (genesis.dreps != 0) [ "${toString genesis.dreps}Dr" ]
             ++ [
             "${toString (derived.utxo_stuffed / 1000)}kU"
+            "v2"
             (substring 0 7 (builtins.hashString "sha1" (builtins.toJSON genesis.cache-key-input)))
           ]);
 
-      pool-relays = mapAttrs'
-        (name: value: {
-          name = toString value.i;
-          value = [{ "single host name" = { dnsName = name; port = value.port; }; }];
-        })
-        config.node-specs;
     };
   };
 }

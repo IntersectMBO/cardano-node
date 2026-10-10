@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Filepath
   ( TmpAbsolutePath(..)
@@ -12,23 +11,22 @@ module Testnet.Filepath
   , mkNodeConfigFs
   ) where
 
+import           Cardano.Api (File (..))
+
+import           Cardano.Node.Testnet.Paths (defaultLogsDir, defaultSocketDir)
+
 import           Prelude
 
 import           Data.String (IsString (..))
 import           System.Directory (makeAbsolute)
 import           System.FilePath
+import           System.FS.API (SomeHasFS (..))
+import           System.FS.API.Types (MountPoint (MountPoint))
+import           System.FS.IO (ioHasFS)
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
 import           RIO (Display (..))
-
-import           Cardano.Api (File (..))
-
-import           Cardano.Node.Testnet.Paths (defaultSocketDir)
-
-import           System.FS.API (SomeHasFS (..))
-import           System.FS.API.Types (MountPoint (MountPoint))
-import           System.FS.IO (ioHasFS)
 
 
 makeSprocket
@@ -58,7 +56,7 @@ makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
 makeTmpBaseAbsPath (TmpAbsolutePath fp) = addTrailingPathSeparator $ takeDirectory fp
 
 makeLogDir :: TmpAbsolutePath -> FilePath
-makeLogDir (TmpAbsolutePath fp) = addTrailingPathSeparator $ fp </> "logs"
+makeLogDir (TmpAbsolutePath fp) = addTrailingPathSeparator $ fp </> defaultLogsDir
 
 mkNodeConfigFs :: File content direction -> IO (SomeHasFS IO)
 mkNodeConfigFs configFile = do

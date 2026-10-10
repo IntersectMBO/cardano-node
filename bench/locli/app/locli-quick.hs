@@ -4,11 +4,10 @@
 
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-redundant-constraints -Wno-unused-top-binds #-}
 
-import           Cardano.Api (ExceptT, SlotNo (..), runExceptT)
-
 import           Cardano.Analysis.API.Ground (JsonInputFile (..))
 import           Cardano.Analysis.Reducer
 import           Cardano.Analysis.Reducer.Util
+import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Unlog.BackendDB
 import           Cardano.Unlog.BackendFile (readRunLogsBare)
 import           Cardano.Unlog.LogObject (LogObject (..), RunLogs (..), rlLogs)
@@ -17,6 +16,7 @@ import           Cardano.Util hiding (toDouble)
 
 import           Prelude hiding (log, seq)
 
+import           Control.Monad.Except (ExceptT, runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Either
 import           Data.Function (on)

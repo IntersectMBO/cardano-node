@@ -8,6 +8,7 @@ Usage: cardano-testnet create-env
   [--active-slots-coeff DOUBLE]
   [--params-file FILEPATH | --params-mainnet]
   --output DIRECTORY
+  
 
   Create a sandbox for Cardano testnet
 

@@ -19,6 +19,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
@@ -62,7 +63,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , wallets=wallet0:_
     } <- createAndRunTestnet creationOptions def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)

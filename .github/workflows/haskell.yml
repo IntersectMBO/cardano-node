@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: [&ghc-stable "9.6", &ghc-latest "9.12"]
+        ghc: [&ghc-stable "9.6", &ghc-latest "9.12", "9.14"]
         cabal: [&cabal-version "3.16"]
         sys:
           - { os: ubuntu-latest, shell: bash }
@@ -53,6 +53,8 @@ jobs:
             sys:
               os: windows-latest
               shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
+          - ghc: *ghc-latest
+            validate-manifest: true
     defaults:
       run:
         shell: ${{ matrix.sys.shell }}
@@ -102,9 +104,13 @@ jobs:
     - name: Install gRPC system dependencies
       uses: input-output-hk/cardano-dev/actions/grpc-deps@64bbe67966d5ee404a795803a2b56718baebffb4 # grpc-deps-0.0.1.0
 
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         persist-credentials: false
+
+    - name: Enable long paths on Windows
+      if: runner.os == 'Windows'
+      run: git config --system core.longpaths true
 
     - name: Cache and install Cabal dependencies
       uses: input-output-hk/cardano-dev/actions/cabal-cache@e811e25d3927d62ba87f1762ea51c36e65f0b09a # cabal-cache-0.0.1.0
@@ -123,6 +129,34 @@ jobs:
         KEEP_WORKSPACE: 1
       run: |
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
+
+    - name: Validate produced manifest files against schema
+      if: matrix.validate-manifest
+      run: |
+        # This job has no nix, that is why we pin the version with pipx separately.
+        pipx install check-jsonschema==0.37.1
+        # Node sockets live under this directory, so it must stay well below
+        # the 108-character unix socket path limit ($RUNNER_TEMP is short).
+        dir="$RUNNER_TEMP/manifest-schema-check"
+        log="$RUNNER_TEMP/manifest-schema-check.log"
+        "$(cabal list-bin cardano-testnet)" cardano --output-dir "$dir" > "$log" 2>&1 &
+        testnet_pid=$!
+        # The manifest is written at readiness, so the file appearing is the ready signal.
+        for _ in $(seq 1 120); do
+          if [ -f "$dir/manifest.json" ]; then break; fi
+          if ! kill -0 "$testnet_pid" 2>/dev/null; then break; fi
+          sleep 5
+        done
+        # SIGINT, not SIGTERM: the harness tears its nodes down on SIGINT only
+        # (see Testnet.Signal.interruptNodesOnSigINT).
+        kill -INT "$testnet_pid" 2>/dev/null || true
+        wait "$testnet_pid" 2>/dev/null || true
+        if [ ! -f "$dir/manifest.json" ]; then
+          echo "ERROR: testnet did not produce $dir/manifest.json in time"
+          tail -n 100 "$log"
+          exit 1
+        fi
+        check-jsonschema --schemafile cardano-testnet/schemas/manifest.schema.json "$dir/manifest.json"
 
     - name: Tar failed tests workspaces
       if: ${{ failure() }}
@@ -208,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         persist-credentials: false
 

@@ -77,8 +77,10 @@
 
     # Cardano-node tests
     machine.succeed("systemctl status cardano-node-${env}.service")
+    # Pipefail keeps a cli failure from being masked by jq, and selecting
+    # .sample fails the assertion on empty output or a changed json shape.
     out = machine.succeed(
-      "${getExe cardano-cli} ping -h 127.0.0.1 -c 1 -m ${getMagic env} -q --json | ${getExe jq} -c"
+      "set -o pipefail; ${getExe cardano-cli} ping -c 1 -m ${getMagic env} -q --json 127.0.0.1:3001 | ${getExe jq} -ec .sample"
     )
     print("ping ${env}:", out)
 

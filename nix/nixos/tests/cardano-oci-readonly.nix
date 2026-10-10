@@ -36,6 +36,12 @@ in {
       virtualisation.diskSize = 10240;
       virtualisation.memorySize = 4096;
       virtualisation.docker.enable = true;
+
+      # Keep dhcpcd off docker's ephemeral interfaces. Starting and stopping
+      # containers churns veth pairs, dhcpcd tries to manage each one, and
+      # dhcpcd 10.3.1 segfaults probing one for an IPv4LL address. Harmless to
+      # the assertions but it core dumps and buries real errors in the log.
+      networking.dhcpcd.denyInterfaces = ["veth*" "docker0"];
     };
   };
 
@@ -101,6 +107,39 @@ in {
     )
     machine.succeed("docker rm -f n1")
 
+    # The runtime dir is a fixed path, so two same-role containers sharing one
+    # /tmp would otherwise both write it and the last writer would win. Both
+    # containers here run as the default root, i.e. the same UID, which is the
+    # case the directory ownership check cannot catch on its own.
+    machine.succeed(
+        "docker run -d --name s1 -v shtmp:/tmp "
+        "-v s1data:/data -v s1ipc:/ipc -v s1logs:/logs "
+        "-e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' "
+        "${imageRef}"
+    )
+    machine.wait_until_succeeds("docker exec s1 test -f ${rt}/env", timeout=60)
+
+    status, out = machine.execute(
+        "docker run --rm -v shtmp:/tmp -e NETWORK=${network} ${imageRef} 2>&1"
+    )
+    assert status != 0, f"expected non-zero exit for a shared /tmp; got: {out}"
+    assert "is in use by another container" in out, f"missing lock error; got: {out}"
+
+    # Once the holder is gone the lock is released, so the same volume, now
+    # carrying a stale runtime dir, must still be usable. This is what separates
+    # the lock from a blanket refusal whenever the directory already exists.
+    machine.succeed("docker rm -f s1")
+    machine.succeed(
+        "docker run -d --name s2 -v shtmp:/tmp "
+        "-v s2data:/data -v s2ipc:/ipc -v s2logs:/logs "
+        "-e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' "
+        "${imageRef}"
+    )
+    machine.wait_until_succeeds("docker exec s2 test -f ${rt}/env", timeout=60)
+    machine.succeed("docker rm -f s2")
+
     # Read-only root WITHOUT a writable /tmp must fail fast with guidance.
     status, out = machine.execute(
         "docker run --rm --read-only -e NETWORK=${network} ${imageRef} 2>&1"
@@ -110,6 +149,42 @@ in {
 
     # Cli mode must NOT require a writable /tmp (read-only, no tmpfs).
     machine.succeed("docker run --rm --read-only ${imageRef} cli version")
+
+    # Cli mode is dispatched before the NETWORK modes, so a NETWORK left in the
+    # environment, with or without a merge var, must neither start a node nor
+    # reach the merge block, which writes to the runtime dir cli mode skips.
+    machine.succeed(
+        "docker run --rm --read-only -e NETWORK=${network} ${imageRef} cli version"
+    )
+    machine.succeed(
+        "docker run --rm --read-only -e NETWORK=${network} "
+        "-e CARDANO_CONFIG_JSON_MERGE='${configMerge}' ${imageRef} cli version"
+    )
+
+    # Operator-supplied RTS flags are appended after the image's baked +RTS
+    # block and merge with it. `-po` covers .prof, .hp and .ticky only, so an
+    # eventlog without its own `-ol` is created in the container cwd (/) and the
+    # RTS aborts before main under a read-only root. /logs must be a writable
+    # mount here or the baked `-t/logs/cardano-node.stats` aborts first, which
+    # would pass the exit-code check for the wrong reason.
+    status, out = machine.execute(
+        "docker run --rm --read-only --tmpfs /tmp -v e0logs:/logs "
+        "-e NETWORK=${network} ${imageRef} +RTS -l -RTS 2>&1"
+    )
+    assert status != 0, f"expected non-zero exit for -l without -ol; got: {out}"
+    assert "initEventLogFileWriter" in out, f"expected an eventlog open failure; got: {out}"
+
+    # Given `-ol` under a writable mount it starts and writes the eventlog there.
+    machine.succeed(
+        "docker run -d --name e1 --read-only --tmpfs /tmp --user 1000:0 "
+        "-v e1data:/data -v e1ipc:/ipc -v e1logs:/logs "
+        "-e NETWORK=${network} "
+        "${imageRef} +RTS -l -ol/logs/cardano-node.eventlog -RTS"
+    )
+    machine.wait_until_succeeds(
+        "docker exec e1 test -s /logs/cardano-node.eventlog", timeout=60
+    )
+    machine.succeed("docker rm -f e1")
 
     # Tracer image: same read-only + non-root + merge-mode behavior as the
     # node, minus the genesis/topology rewrites as tracer config has no

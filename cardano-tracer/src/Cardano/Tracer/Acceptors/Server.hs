@@ -53,14 +53,13 @@ import           Trace.Forward.Utils.Version (ForwardingVersion (..), Forwarding
 
 runAcceptorsServer
   :: TracerEnv
-  -> TracerEnvRTView
   -> Net.HowToConnect
   -> ( EKGF.AcceptorConfiguration
      , TF.AcceptorConfiguration TraceObject
      , DPF.AcceptorConfiguration
      )
   -> IO ()
-runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig, dpfConfig) =
+runAcceptorsServer tracerEnv howToConnect (ekgConfig, tfConfig, dpfConfig) =
   withIOManager \iocp -> do
   traceWith (teTracer tracerEnv) $ TracerSockListen (show howToConnect)
   case howToConnect of
@@ -74,7 +73,7 @@ runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig,
         -- there is no mechanism to disable some of them.
         appResponder
           [ (runEKGAcceptor          tracerEnv ekgConfig errorHandler, 1)
-          , (runTraceObjectsAcceptor tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
+          , (runTraceObjectsAcceptor tracerEnv tfConfig errorHandler, 2)
           , (runDataPointsAcceptor   tracerEnv dpfConfig errorHandler, 3)
           ]
 
@@ -89,7 +88,7 @@ runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig,
         -- there is no mechanism to disable some of them.
         appResponder
           [ (runEKGAcceptor          tracerEnv ekgConfig errorHandler, 1)
-          , (runTraceObjectsAcceptor tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
+          , (runTraceObjectsAcceptor tracerEnv tfConfig errorHandler, 2)
           , (runDataPointsAcceptor   tracerEnv dpfConfig errorHandler, 3)
           ]
  where
@@ -107,9 +106,6 @@ runAcceptorsServer tracerEnv tracerEnvRTView howToConnect ( ekgConfig, tfConfig,
   errorHandler connId = do
     deregisterNodeId tracerEnv (connIdToNodeId connId)
     removeDisconnectedNode tracerEnv connId
-#if RTVIEW
-    notifyAboutNodeDisconnected tracerEnvRTView connId
-#endif
 
 doListenToForwarderLocal
   :: Snocket IO LocalSocket LocalAddress
@@ -191,19 +187,16 @@ runEKGAcceptor tracerEnv ekgConfig errorHandler =
 runTraceObjectsAcceptor
   :: Show addr
   => TracerEnv
-  -> TracerEnvRTView
   -> TF.AcceptorConfiguration TraceObject
   -> (ConnectionId addr -> IO ())
   -> RunMiniProtocol 'Mux.ResponderMode
                      initiatorCtx
                      (ResponderContext addr)
                      LBS.ByteString IO Void ()
-runTraceObjectsAcceptor tracerEnv
-  tracerEnvRTView
-  tfConfig errorHandler =
+runTraceObjectsAcceptor tracerEnv tfConfig errorHandler =
   acceptTraceObjectsResp
     tfConfig
-    (traceObjectsHandler tracerEnv tracerEnvRTView . connIdToNodeId . rcConnectionId)
+    (traceObjectsHandler tracerEnv . connIdToNodeId . rcConnectionId)
     (errorHandler . rcConnectionId)
 
 runDataPointsAcceptor

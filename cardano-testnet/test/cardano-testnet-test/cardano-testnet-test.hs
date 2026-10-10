@@ -22,6 +22,7 @@ import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
 import qualified Cardano.Testnet.Test.DumpConfig
+import qualified Cardano.Testnet.Test.EnableTracer
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
@@ -34,9 +35,14 @@ import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
+import qualified Cardano.Testnet.Test.Manifest
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
+import qualified Cardano.Testnet.Test.Rpc.EraSummary
 import qualified Cardano.Testnet.Test.Rpc.Eval
+import qualified Cardano.Testnet.Test.Rpc.FetchBlock
+import qualified Cardano.Testnet.Test.Rpc.FollowTip
+import qualified Cardano.Testnet.Test.Rpc.Genesis
 import qualified Cardano.Testnet.Test.Rpc.Query
 import qualified Cardano.Testnet.Test.Rpc.SearchUtxos
 import qualified Cardano.Testnet.Test.Rpc.Transaction
@@ -142,15 +148,24 @@ tests = do
         ]
         , T.testGroup "Cardano-testnet"
           [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
+          , ignoreOnMacAndWindows "Enable Tracer" Cardano.Testnet.Test.EnableTracer.hprop_enable_tracer
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
+          , ignoreOnWindows "Writes a machine-readable manifest on startup" Cardano.Testnet.Test.Manifest.hprop_manifest
+          , ignoreOnWindows "Stale manifest is removed by createTestnetEnv" Cardano.Testnet.Test.Manifest.hprop_manifest_stale
+          , H.testPropertyNamed "Manifest Windows pipe path" (fromString "hprop_manifest_windows_pipe_path")
+              Cardano.Testnet.Test.Manifest.hprop_manifest_windows_pipe_path
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
         ]
     , T.testGroup "RPC"
-        [ ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
+        [ ignoreOnWindows "RPC FetchBlock" Cardano.Testnet.Test.Rpc.FetchBlock.hprop_rpc_fetch_block
+        , ignoreOnWindows "RPC FollowTip" Cardano.Testnet.Test.Rpc.FollowTip.hprop_rpc_follow_tip
+        , ignoreOnWindows "RPC ReadGenesis" Cardano.Testnet.Test.Rpc.Genesis.hprop_rpc_read_genesis
+        , ignoreOnWindows "RPC ReadEraSummary" Cardano.Testnet.Test.Rpc.EraSummary.hprop_rpc_read_era_summary
+        , ignoreOnWindows "RPC Query Protocol Params" Cardano.Testnet.Test.Rpc.Query.hprop_rpc_query_pparams
         , ignoreOnWindows "RPC SearchUtxos" Cardano.Testnet.Test.Rpc.SearchUtxos.hprop_rpc_search_utxos
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx

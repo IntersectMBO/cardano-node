@@ -16,6 +16,7 @@ import           Prelude
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.List.NonEmpty as NEL
 import           GHC.Stack.Types (HasCallStack)
 import           System.Exit (ExitCode (..))
 import qualified System.Process as IO
@@ -43,7 +44,7 @@ nodesProduceBlocks envDir TestnetRuntime{testnetNodes, testnetMagic} = do
   TestnetNode
     { nodeProcessHandle
     , nodeSprocket
-    } <- case filter isTestnetNodeSpo testnetNodes of
+    } <- case NEL.filter isTestnetNodeSpo testnetNodes of
       [spoNode] -> pure spoNode
       spoNodes -> do
         H.note_ $ "Number of SPO nodes different than 1. SPO nodes: " <> show (nodeName <$> spoNodes)
@@ -62,9 +63,9 @@ nodesProduceBlocks envDir TestnetRuntime{testnetNodes, testnetMagic} = do
 
     case tip of
       ChainTipAtGenesis -> H.failure
-      ChainTip _ _ (BlockNo blockNo) ->
+      ChainTip _ _ (BlockNo blockNo') ->
         -- Blocks have been produced if the tip of the chain is > 0
-        H.assertWith blockNo (> 0)
+        H.assertWith blockNo' (> 0)
 
   -- If everything went fine, terminate the node and exit with success
   exit <- H.evalIO $ do

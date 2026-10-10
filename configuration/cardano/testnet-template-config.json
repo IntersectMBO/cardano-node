@@ -16,7 +16,8 @@
     "QueryBatchSize": 100000,
     "Snapshots": {
       "NumOfDiskSnapshots": 2,
-      "SnapshotInterval": 216
+      "SlotOffset": 0,
+      "SnapshotInterval": 4320
     }
   },
   "MaxConcurrencyDeadline": 4,

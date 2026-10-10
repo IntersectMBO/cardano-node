@@ -28,8 +28,8 @@ import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersi
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (PeerSnapshotFile (..))
+import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
 import           Cardano.Slotting.Slot (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
@@ -37,7 +37,6 @@ import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
 import           Ouroboros.Consensus.Config
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Ledger.Query (getSystemStart)
-import           Ouroboros.Consensus.Node (pInfoConfig)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
@@ -145,8 +144,18 @@ data StartupTrace blk =
   | RpcConfigUpdate Text
   -- | Log RPC configuration update error
   | RpcConfigUpdateError Text
+  -- | Log that node kernel access is not supported for the running block type.
+  | RpcUnsupportedBlockType Text
   -- | Log RPC is forcefully disabled after a RPC server crash.
   | RpcForceDisabled
+  -- | Warn that the RPC (gRPC) server is enabled on a block-producing node.
+  | RpcEnabledOnBlockProducer
+  -- | Warn that the RPC (gRPC) server is listening on a non-loopback address.
+  | RpcListeningOnPublicAddress RpcEndpoint
+  -- | Warn that 'SSLKEYLOGFILE' is set, so the RPC TLS listener will write TLS session key-log material.
+  | RpcTlsKeyLogEnabled Text
+  -- | Warn that the RPC TLS private key file is readable by group or others.
+  | RpcTlsPrivateKeyPermissive Text
 
   | MovedTopLevelOption String
 
@@ -204,18 +213,19 @@ data BasicInfoNetwork = BasicInfoNetwork {
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo
-  :: NodeConfiguration
-  -> SomeConsensusProtocol
+  :: Api.ConfigSupportsNode blk
+  => NodeConfiguration
+  -> Api.BlockType blk
+  -> TopLevelConfig blk
   -> TraceConfig
   -> UTCTime
   -> IO NodeInfo
-prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
+prepareNodeInfo nc blockType cfg tc nodeStartTime = do
   nodeName <- prepareNodeName
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
   let getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
       systemStartTime :: UTCTime
       systemStartTime =
-        case whichP of
+        case blockType of
           Api.ByronBlockType ->
             getSystemStartByron
           Api.ShelleyBlockType ->

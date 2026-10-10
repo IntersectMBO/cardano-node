@@ -19,7 +19,6 @@ import           Cardano.Node.Protocol
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 import           Ouroboros.Consensus.Config.SupportsNode
 import           Ouroboros.Consensus.Node.ProtocolInfo
 
@@ -113,12 +112,14 @@ run RunOpts
       Left err -> putStrLn (docToString $ prettyError err) >> exitFailure
       Right (p, _) -> pure p
 
-  (k , nId) <- case p of
-            SomeConsensusProtocol _ runP -> do
-              ProtocolInfo { pInfoConfig } <- fst <$> Api.protocolInfo @IO runP
-              pure ( Consensus.configSecurityParam pInfoConfig
-                   , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
-                   )
+  (k , nId) <-
+    case p of
+      SomeConsensusProtocol _ runP -> do
+        ProtocolInfo { pInfoConfig } <- fst <$> Api.protocolInfo @IO runP
+        pure
+          ( Consensus.configSecurityParam pInfoConfig
+          , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
+          )
 
   let consensusModeParams = getConsensusMode k ptclConfig
 

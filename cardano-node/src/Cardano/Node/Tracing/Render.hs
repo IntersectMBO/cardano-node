@@ -40,6 +40,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import           Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..))
 import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
@@ -220,14 +221,13 @@ renderScriptPurpose :: ()
   -> Aeson.Value
 renderScriptPurpose sbe =
   Api.forEraInEon
-    (Api.convert sbe)
+    (Api.toCardanoEra sbe)
     (const Aeson.Null)
     (\case
       Api.AlonzoEraOnwardsAlonzo -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsBabbage -> renderAlonzoPlutusPurpose
       Api.AlonzoEraOnwardsConway -> renderConwayPlutusPurpose
-      -- TODO: fix
-      Api.AlonzoEraOnwardsDijkstra -> undefined
+      Api.AlonzoEraOnwardsDijkstra -> renderDijkstraPlutusPurpose
     )
 
 renderAlonzoPlutusPurpose :: ()
@@ -261,3 +261,23 @@ renderConwayPlutusPurpose = \case
     Aeson.object ["voting" .= Aeson.toJSON voter]
   ConwayProposing proposal ->
     Aeson.object ["proposing" .= Aeson.toJSON proposal]
+
+renderDijkstraPlutusPurpose :: ()
+  => (Ledger.EraPParams era, Aeson.ToJSON (Ledger.TxCert era))
+  => DijkstraPlutusPurpose AsItem era
+  -> Aeson.Value
+renderDijkstraPlutusPurpose = \case
+  DijkstraSpending (AsItem txin) ->
+    Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
+  DijkstraMinting pid ->
+    Aeson.object ["minting" .= Aeson.toJSON pid]
+  DijkstraWithdrawing (AsItem rwdAcct) ->
+    Aeson.object ["withdrawing" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  DijkstraCertifying cert ->
+    Aeson.object ["certifying" .= Aeson.toJSON cert]
+  DijkstraVoting voter ->
+    Aeson.object ["voting" .= Aeson.toJSON voter]
+  DijkstraProposing proposal ->
+    Aeson.object ["proposing" .= Aeson.toJSON proposal]
+  DijkstraGuarding sHash ->
+    Aeson.object ["guarding" .= Aeson.toJSON sHash]

@@ -21,13 +21,13 @@ let
 
   testnet_magic = profile.genesis.network_magic;
   gov_action_deposit =
-    if __hasAttr "conway" profile.genesis
+    if (profile.genesis.conway or null) != null
     then profile.genesis.conway.govActionDeposit
     else throw "Conway genesis needed!"
   ;
   # Where to obtain the genesis funds from.
-  genesis_funds_vkey = "../../genesis/cache-entry/utxo-keys/utxo2.vkey";
-  genesis_funds_skey = "../../genesis/cache-entry/utxo-keys/utxo2.skey";
+  genesis_funds_vkey = "../../genesis/utxo-keys/utxo2/utxo.vkey";
+  genesis_funds_skey = "../../genesis/utxo-keys/utxo2/utxo.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 
@@ -951,7 +951,7 @@ function governance_create_constitution {
     --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
-    --deposit-return-stake-verification-key-file ../../genesis/cache-entry/stake-delegators/delegator0/staking.vkey \
+    --deposit-return-stake-verification-key-file ../../genesis/stake-delegators/delegator1/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -1024,8 +1024,8 @@ function governance_create_withdrawal {
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
-    --deposit-return-stake-verification-key-file  ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
-    --funds-receiving-stake-verification-key-file ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
+    --deposit-return-stake-verification-key-file  ../../genesis/stake-delegators/"delegator$((node_i + 1))"/staking.vkey \
+    --funds-receiving-stake-verification-key-file ../../genesis/stake-delegators/"delegator$((node_i + 1))"/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -1225,10 +1225,10 @@ function governance_vote_proposal {
       --yes                                                        \
       --governance-action-tx-id "''${proposal_tx_id}"              \
       --governance-action-index "0"                                \
-      --drep-verification-key-file ../../genesis/cache-entry/drep-keys/drep"''${drep_i}"/drep.vkey \
+      --drep-verification-key-file ../../genesis/drep-keys/drep"''${drep_i}"/drep.vkey \
       --out-file "''${vote_filename}".action
     vote_file_params_array+=("--vote-file ''${vote_filename}.action")
-    signing_key_file_params_array+=("--signing-key-file ../../genesis/cache-entry/drep-keys/drep''${drep_i}/drep.skey")
+    signing_key_file_params_array+=("--signing-key-file ../../genesis/drep-keys/drep''${drep_i}/drep.skey")
   done
 
   local tx_filename=./proposal."''${proposal_tx_id}"."''${dreps_array[0]}"-"''${dreps_array[-1]}"

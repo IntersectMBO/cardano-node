@@ -1,6 +1,10 @@
 # Changelog for Cardano-submit-api
 
-## vNext
+## 11.1.1 -- 2026-08-31
+
+- `TxSubmitWebApiError` is now a newtype over its only remaining constructor, `TxSubmitFail`. `TxSubmitDecodeHex`, `TxSubmitEmpty`, `TxSubmitDecodeFail` and `TxSubmitBadTx` are gone, along with their `ToJSON` output: every submission failure is already reported through `TxCmdError`.
+  (breaking)
+  [PR 6604](https://github.com/IntersectMBO/cardano-node/pull/6604)
 
 ## 10.2 -- Jan 2026
 

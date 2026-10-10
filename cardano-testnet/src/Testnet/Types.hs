@@ -20,9 +20,12 @@ module Testnet.Types
   , relayNodes
   , testnetSprockets
   , TestnetNode(..)
+  , NodeRpcEndpoint(..)
   , nodeSocketPath
   , nodeRpcSocketPath
+  , nodeGrpcServer
   , nodeConnectionInfo
+  , testnetNodeConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -54,15 +57,21 @@ import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+import qualified Cardano.Rpc.Client as Rpc
 import           Cardano.Rpc.Server.Config (nodeSocketPathToRpcSocketPath)
 
 import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as A
+import           Data.Functor ((<&>))
+import           Data.IP (IP (..))
 import           Data.List (intercalate)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
+import qualified Data.Yaml as Yaml
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
@@ -119,23 +128,25 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
   , testnetMagic :: !Int -- TODO change to Word32
-  , testnetNodes :: ![TestnetNode]
+  , testnetNodes :: !(NonEmpty TestnetNode)
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
+  , prometheusPort :: !(Maybe PortNumber)
   }
 
-testnetSprockets :: TestnetRuntime -> [Sprocket]
+testnetSprockets :: TestnetRuntime -> NonEmpty Sprocket
 testnetSprockets = fmap nodeSprocket . testnetNodes
 
 spoNodes :: TestnetRuntime -> [TestnetNode]
-spoNodes = filter isTestnetNodeSpo . testnetNodes
+spoNodes = NEL.filter isTestnetNodeSpo . testnetNodes
 
 relayNodes :: TestnetRuntime -> [TestnetNode]
-relayNodes = filter (not . isTestnetNodeSpo) . testnetNodes
+relayNodes = NEL.filter (not . isTestnetNodeSpo) . testnetNodes
 
 data TestnetNode = TestnetNode
   { nodeName :: !String
   , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
+  , nodeRpcEndpoint :: Maybe NodeRpcEndpoint -- ^ Nothing when RPC is disabled
   , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
@@ -144,6 +155,22 @@ data TestnetNode = TestnetNode
   , nodeStderr :: !FilePath
   , nodeProcessHandle :: !IO.ProcessHandle
   }
+
+-- | Where a testnet node's gRPC server listens
+data NodeRpcEndpoint
+  = NodeRpcUnixSocket SocketPath
+  | NodeRpcHttp IP PortNumber
+  deriving (Eq, Show)
+
+instance Pretty NodeRpcEndpoint where
+  pretty = \case
+    NodeRpcUnixSocket socketPath -> pretty ("unix socket " :: String) <> pretty (unFile socketPath)
+    NodeRpcHttp ip port ->
+      -- A URL needs brackets around an IPv6 host; grapesy's bracket-less 'show' is used for binding instead.
+      let host = case ip of
+            IPv4 _ -> pshow ip
+            IPv6 _ -> pretty ("[" :: String) <> pshow ip <> pretty ("]" :: String)
+      in pretty ("http://" :: String) <> host <> pretty (":" :: String) <> pshow port
 
 data TestnetKesAgent = TestnetKesAgent
   { kesAgentName :: !String
@@ -166,6 +193,21 @@ nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 nodeRpcSocketPath :: TestnetNode -> SocketPath
 nodeRpcSocketPath = nodeSocketPathToRpcSocketPath . nodeSocketPath
 
+-- | gRPC client connection target of the node, when RPC is enabled
+nodeGrpcServer :: TestnetNode -> Maybe Rpc.Server
+nodeGrpcServer node = nodeRpcEndpoint node <&> \case
+  NodeRpcUnixSocket socketPath -> Rpc.ServerUnix $ unFile socketPath
+  NodeRpcHttp ip port ->
+    Rpc.ServerInsecure Rpc.Address
+      { Rpc.addressHost = show ip
+      , Rpc.addressPort = port
+      -- grapesy falls back to bare 'addressHost' for the HTTP/2 ':authority' when this is
+      -- Nothing, but RFC 3986 requires an IPv6 literal to be bracketed in that position.
+      , Rpc.addressAuthority = case ip of
+          IPv4 _ -> Nothing
+          IPv6 _ -> Just $ "[" <> show ip <> "]"
+      }
+
 -- | Connection data for a node in the testnet
 nodeConnectionInfo :: MonadTest m
                    => TestnetRuntime
@@ -176,11 +218,17 @@ nodeConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} index =
     Nothing -> do
       H.note_ $ "There is no node in the testnet with index: " <> show index <> ". Number of nodes: " <> show (length testnetNodes)
       H.failure
-    Just node ->
-        pure LocalNodeConnectInfo
-              { localNodeSocketPath= nodeSocketPath node
-              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
-              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+    Just node -> pure $ testnetNodeConnectionInfo testnetMagic node
+
+-- | Connection data for the given node of a testnet with the given magic
+testnetNodeConnectionInfo :: Int -- ^ testnet magic
+                          -> TestnetNode
+                          -> LocalNodeConnectInfo
+testnetNodeConnectionInfo testnetMagic node =
+  LocalNodeConnectInfo
+    { localNodeSocketPath= nodeSocketPath node
+    , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+    , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
 
 
 data SpoNodeKeys = SpoNodeKeys
@@ -233,7 +281,7 @@ getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStac
   where
     decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
     decodeNodeConfiguration (File file) = do
-      partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
+      partialNodeCfg <- modifyError show $ ExceptT $ Yaml.decodeFileEither file
       fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
     decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
     decodeGenesisFile fp = withExceptT (docToString . prettyError) $

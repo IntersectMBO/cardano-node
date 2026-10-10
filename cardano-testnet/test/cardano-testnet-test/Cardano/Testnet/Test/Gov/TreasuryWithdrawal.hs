@@ -29,6 +29,7 @@ import           Control.Monad
 import           Control.Monad.State.Class
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
@@ -82,7 +83,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node@TestnetNode{nodeSprocket} <- H.headM testnetNodes
+  let node@TestnetNode{nodeSprocket} = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow nodeSprocket
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

@@ -25,6 +25,7 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
@@ -87,7 +88,7 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

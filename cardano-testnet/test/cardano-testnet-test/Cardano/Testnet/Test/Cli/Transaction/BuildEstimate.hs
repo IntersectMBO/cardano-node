@@ -17,6 +17,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           GHC.Stack
 import           System.FilePath ((</>))
@@ -61,7 +62,7 @@ hprop_tx_build_estimate = integrationRetryWorkspace 2 "transaction-build-estimat
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

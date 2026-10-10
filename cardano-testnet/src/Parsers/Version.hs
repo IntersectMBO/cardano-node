@@ -35,6 +35,7 @@ runVersionOptions VersionOptions = do
     , " - ", compilerName, "-", showVersion compilerVersion
     , "\ngit rev ", T.unpack $(gitRev)
     , "\nbuilt against cardano-api ", VERSION_cardano_api
+    , "\nbuilt against cardano-rpc ", VERSION_cardano_rpc
     , "\nbuilt against cardano-cli ", VERSION_cardano_cli
     ]
 

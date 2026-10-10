@@ -31,7 +31,7 @@ Additional checks:
 ## High-level flow
 
 1. **Find relevant Haskell files**
-   - Scans `cardano-node/src`, `cardano-submit-api/src`, `cardano-tracer/src`, `trace-forward/src`, `trace-resources/src`, and several tracing-related directories in `ouroboros-network`, `ouroboros-consensus`, and `hermod-tracing`.
+   - Scans `cardano-node/src`, `cardano-submit-api/src`, `cardano-tracer/src`, `trace-forward/src`, and several tracing-related directories in `ouroboros-network`, `ouroboros-consensus`, and `hermod-tracing`.
    - Warns when any configured source directory is missing, instead of silently ignoring it.
    - Keeps only `.hs` files that contain `forMachine` or `namespaceFor`.
 

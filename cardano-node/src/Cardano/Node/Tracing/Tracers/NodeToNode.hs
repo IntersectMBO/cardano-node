@@ -13,8 +13,6 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Cardano.Node.Queries (ConvertTxId)
-import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 import qualified LeiosDemoOnlyTestFetch as LF
 import qualified LeiosDemoOnlyTestNotify as LN
 import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
@@ -26,6 +24,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, Has
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Storage.LedgerDB.Forker (ResolveLeiosBlock,
                    headerLeiosAnnouncement)
+import           Ouroboros.Consensus.Tracing (ConvertTxId, renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -461,7 +460,7 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 instance MetaTrace (TraceKeepAliveClient remotePeer) where
   namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
 
-  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
+  severityFor (Namespace _ ["KeepAliveClient"]) _ = Just Info
   severityFor _ _ = Nothing
 
   documentFor (Namespace _ ["KeepAliveClient"]) = Just

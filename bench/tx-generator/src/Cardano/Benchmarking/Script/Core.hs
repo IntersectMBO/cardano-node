@@ -1,6 +1,8 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use uncurry" -}
 
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,7 +10,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -32,6 +33,8 @@ import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, S
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
+import qualified Cardano.Benchmarking.Script.Ogmios as OgmiosBackend
+import qualified Cardano.Benchmarking.Script.Submission as Submission
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
@@ -57,10 +60,11 @@ import           Prelude
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.Trans.RWS.Strict (ask)
-import           "contra-tracer" Control.Tracer (mkTracer)
+import qualified Data.ByteString as BS (hPut)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
+import           System.IO (IOMode(..), withFile)
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -169,7 +173,7 @@ queryEra = do
   AnyCardanoEra era <- mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  caseByronOrShelleyBasedEra
+  inEonForEra
     (liftTxGenError $ TxGenError "queryEra Byron not supported")
     (return . AnyShelleyBasedEra)
     era
@@ -243,17 +247,27 @@ submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> T
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
-    NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
-    DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
+    SubmitToEndpoint endpoint -> case endpoint of
+      OgmiosEndpoint (EndpointUri uri) -> do
+        tracers <- getBenchTracers
+        Submission.runSubmitTransport
+          (Submission.onRejectionFor generator)
+          (OgmiosBackend.withOgmiosTransport (Submission.traceProgress tracers) uri)
+          txStream
+    DumpToFile filePath -> liftIO $
+      withFile filePath AppendMode $ \hdl ->
+        Streaming.toHandle hdl $ Streaming.map (either (error . show) show) txStream
+    WriteCBORList filePath -> liftIO $
+      withFile filePath AppendMode $ \hdl ->
+        Streaming.mapM_ (either (error . show) (BS.hPut hdl . serialiseToCBOR)) txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
-  forceTx (Right _) = return ()
+  forceTx (Right tx) = let !_ = tx in return ()
   forceTx (Left err) = error $ show err
-  showTx (Left err) = error $ show err
-  showTx (Right tx) = '\n' : show tx
-   -- todo: use Streaming.run
+
+   -- INVESTIGATE: Can Streaming.run be used here?
   submitAll :: (Tx era -> ActionM ()) -> TxStream IO era -> ActionM ()
   submitAll callback stream = do
     step <- liftIO $ Streaming.inspect stream
@@ -402,12 +416,6 @@ selectCollateralFunds (Just walletName) = do
   case forEraMaybeEon (cardanoEra @era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
-
-dumpToFile :: FilePath -> TxInMode -> ActionM ()
-dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
-
-dumpToFileIO :: FilePath -> TxInMode -> IO ()
-dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
 initWallet :: String -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name

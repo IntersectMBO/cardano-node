@@ -35,24 +35,16 @@ import qualified System.IO as Sys
 
 
 
-rtViewConfigWarning :: Text
-rtViewConfigWarning = "RTView requested in config but cardano-tracer was built without it"
-
 data TracerTrace
-  -- | Static information about the build.
   = TracerBuildInfo
-    { ttBuiltWithRTView      :: Bool
-    }
   | TracerParamsAre
     { ttConfigPath           :: FilePath
     , ttStateDir             :: Maybe FilePath
     , ttMinLogSeverity       :: Maybe SeverityS }
   | TracerConfigIs
     { ttConfig               :: TracerConfig
-    , ttWarnRTViewMissing    :: Bool
     }
   | TracerInitStarted
-  | TracerInitEventQueues
   | TracerInitDone
   | TracerAddNewNodeIdMapping
     { ttBimapping :: !(NodeId, NodeName)
@@ -70,7 +62,6 @@ data TracerTrace
     }
   | TracerStartedAcceptors
     { ttAcceptorsAddr        :: Network }
-  | TracerStartedRTView
   | TracerStartedReforwarder
   | TracerSockListen
     { ttListenAt             :: FilePath }
@@ -82,7 +73,6 @@ data TracerTrace
   | TracerSockConnected
     { ttConnectedTo          :: FilePath }
   | TracerShutdownInitiated
-  | TracerShutdownHistBackup
   | TracerShutdownComplete
   | TracerError
     { ttError                :: Text }
@@ -105,16 +95,13 @@ data TraceBundle = TraceBundle{
 }
 
 instance LogFormatting TracerTrace where
-  forHuman t@TracerConfigIs{ttWarnRTViewMissing = True} =
-      rtViewConfigWarning <> ": " <> forHuman t {ttWarnRTViewMissing = False}
   forHuman (TracerForwardingInterrupted howToConnect msg) =
       T.pack $ "connection with " <> show howToConnect <> " failed: " <> msg
   forHuman _ = ""
 
   forMachine _dtal = \case
-    TracerBuildInfo{..} -> mconcat
-      [ "builtWithRTView" .= ttBuiltWithRTView
-      , "kind"            .= AE.String "TracerBuildInfo"
+    TracerBuildInfo -> mconcat
+      [ "kind" .= AE.String "TracerBuildInfo"
       ]
     TracerParamsAre{..} -> mconcat
       [ "configPath"     .= ttConfigPath
@@ -122,17 +109,12 @@ instance LogFormatting TracerTrace where
       , "minLogSeverity" .= ttMinLogSeverity
       , "kind"           .= AE.String "TracerParamsAre"
       ]
-    TracerConfigIs{..} -> mconcat $
-      [ "config"            .= ttConfig
-      , "kind"              .= AE.String "TracerConfigIs" ] ++
-      [ "warnRTViewMissing" .= rtViewConfigWarning
-      | ttWarnRTViewMissing
+    TracerConfigIs{..} -> mconcat
+      [ "config" .= ttConfig
+      , "kind"   .= AE.String "TracerConfigIs"
       ]
     TracerInitStarted -> mconcat
       [ "kind" .= AE.String "TracerInitStarted"
-      ]
-    TracerInitEventQueues -> mconcat
-      [ "kind" .= AE.String "TracerInitEventQueues"
       ]
     TracerInitDone -> mconcat
       [ "kind" .= AE.String "TracerInitDone"
@@ -162,9 +144,6 @@ instance LogFormatting TracerTrace where
       [ "kind"          .= AE.String "TracerStartedAcceptors"
       , "AcceptorsAddr" .= ttAcceptorsAddr
       ]
-    TracerStartedRTView -> mconcat
-      [ "kind" .= AE.String "TracerStartedRTView"
-      ]
     TracerStartedReforwarder -> mconcat
       [ "kind" .= AE.String "TracerStartedReforwarder"
       ]
@@ -187,9 +166,6 @@ instance LogFormatting TracerTrace where
       ]
     TracerShutdownInitiated -> mconcat
       [ "kind" .= AE.String "TracerShutdownInitiated"
-      ]
-    TracerShutdownHistBackup -> mconcat
-      [ "kind" .= AE.String "TracerShutdownHistBackup"
       ]
     TracerShutdownComplete -> mconcat
       [ "kind" .= AE.String "TracerShutdownComplete"
@@ -214,7 +190,6 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerParamsAre {} = Namespace [] ["ParamsAre"]
     namespaceFor TracerConfigIs {} = Namespace [] ["ConfigIs"]
     namespaceFor TracerInitStarted = Namespace [] ["InitStart"]
-    namespaceFor TracerInitEventQueues = Namespace [] ["EventQueues"]
     namespaceFor TracerInitDone = Namespace [] ["InitDone"]
     namespaceFor TracerAddNewNodeIdMapping {} = Namespace [] ["AddNewNodeIdMapping"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
@@ -222,14 +197,12 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerStartedTimeseries{} = Namespace [] ["StartedTimeseriers"]
     namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
-    namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
     namespaceFor TracerStartedReforwarder = Namespace [] ["StartedReforwarder"]
     namespaceFor TracerSockListen {} = Namespace [] ["SockListen"]
     namespaceFor TracerSockIncoming {} = Namespace [] ["SockIncoming"]
     namespaceFor TracerSockConnecting {} = Namespace [] ["SockConnecting"]
     namespaceFor TracerSockConnected {} = Namespace [] ["SockConnected"]
     namespaceFor TracerShutdownInitiated = Namespace [] ["ShutdownInitiated"]
-    namespaceFor TracerShutdownHistBackup = Namespace [] ["ShutdownHistBackup"]
     namespaceFor TracerShutdownComplete = Namespace [] ["ShutdownComplete"]
     namespaceFor TracerMissingCertificate {} = Namespace [] ["MissingCertificate"]
     namespaceFor TracerError {} = Namespace [] ["Error"]
@@ -240,7 +213,6 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
     severityFor (Namespace _ ["ConfigIs"]) _ = Just Warning
     severityFor (Namespace _ ["InitStart"]) _ = Just Info
-    severityFor (Namespace _ ["EventQueues"]) _ = Just Info
     severityFor (Namespace _ ["InitDone"]) _ = Just Info
     severityFor (Namespace _ ["AddNewNodeIdMapping"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
@@ -248,7 +220,6 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["StartedTimeseries"]) _ = Just Info
     severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
-    severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
     severityFor (Namespace _ ["StartedReforwarder"]) _ = Just Info
     severityFor (Namespace _ ["SockListen"]) _ = Just Info
     severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
@@ -256,7 +227,6 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["SockConnected"]) _ = Just Info
     severityFor (Namespace _ ["MissingCertificate"]) _ = Just Warning
     severityFor (Namespace _ ["ShutdownInitiated"]) _ = Just Warning
-    severityFor (Namespace _ ["ShutdownHistBackup"]) _ = Just Info
     severityFor (Namespace _ ["ShutdownComplete"]) _ = Just Warning
     severityFor (Namespace _ ["Error"]) _ = Just Error
     severityFor (Namespace _ ["Resources"]) _ = Just Info
@@ -270,7 +240,6 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["ParamsAre"]
       , Namespace [] ["ConfigIs"]
       , Namespace [] ["InitStart"]
-      , Namespace [] ["EventQueues"]
       , Namespace [] ["InitDone"]
       , Namespace [] ["AddNewNodeIdMapping"]
       , Namespace [] ["StartedLogRotator"]
@@ -278,7 +247,6 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["StartedTimeseries"]
       , Namespace [] ["StartedMonitoring"]
       , Namespace [] ["StartedAcceptors"]
-      , Namespace [] ["StartedRTView"]
       , Namespace [] ["StartedReforwarder"]
       , Namespace [] ["SockListen"]
       , Namespace [] ["SockIncoming"]
@@ -286,7 +254,6 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["SockConnected"]
       , Namespace [] ["MissingCertificate"]
       , Namespace [] ["ShutdownInitiated"]
-      , Namespace [] ["ShutdownHistBackup"]
       , Namespace [] ["ShutdownComplete"]
       , Namespace [] ["Error"]
       , Namespace [] ["Resources"]

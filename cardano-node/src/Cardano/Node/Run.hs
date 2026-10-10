@@ -29,12 +29,14 @@ import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
 import qualified Cardano.Crypto.Init as Crypto
+import           Cardano.Node.Configuration.CardanoConfigResolve
+                   (CrossCheck (..), ResolvedNodeConfiguration (..),
+                   buildNodeConfiguration)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), TimeoutOverride (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration,
-                   parseNodeConfigurationFP, getForkPolicy)
+                   getForkPolicy)
 import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    SocketOrSocketInfo, SocketOrSocketInfo' (..), gatherConfiguredSockets,
                    getSocketOrSocketInfoAddr)
@@ -42,26 +44,30 @@ import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..), LeiosMinOfferLead (unLeiosMinOfferLead))
 import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), installSigTermHandler)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
 import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..),
-                   ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
+                   ShelleyProtocolInstantiationError (PraosLeaderCredentialsError), readGenesis)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
+import           Cardano.Rpc.Server.NodeKernelAccess (NodeKernelAccess, mkNodeKernelAccess)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar, newForgingStateVar,
+                   noteForgingState)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
+import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Logging.Types (LogFormatting)
+import           Cardano.Logging.Types (LogFormatting, TraceConfig)
 import           Cardano.Logging.Utils (showT)
 
 import qualified Ouroboros.Consensus.Config as Consensus
@@ -127,7 +133,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Control.Applicative (empty)
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent (killThread, getNumCapabilities)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
@@ -143,11 +149,11 @@ import           Data.Bits
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
 import           Data.Functor.Identity (Identity (..))
-import           Data.IORef (IORef, newIORef, writeIORef)
-import           Data.IP (toSockAddr)
+import           Data.IP (IP (..), isMatchedTo, makeAddrRange, toIPv4, toIPv6, toSockAddr)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.IORef (IORef, newIORef, writeIORef)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
@@ -159,11 +165,12 @@ import qualified Data.Text.IO as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Network.DNS (Resolver)
 import           Network.Socket (Socket)
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath (isAbsolute, (</>))
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, doesFileExist,
+                   makeAbsolute)
+import           System.Environment (lookupEnv)
+import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
-import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
@@ -172,6 +179,7 @@ import           System.Win32.File
 #endif
 import           Ouroboros.Consensus.Mempool (MempoolTimeoutConfig(..))
 import           GHC.Stack
+import Ouroboros.Consensus.Block (MkBlockForging(mkBlockForging))
 
 import qualified LeiosDemoLogic as Leios
 import           LeiosDemoDb (LeiosDbHandle (close), newLeiosDBInMemory, newLeiosDBSQLite)
@@ -185,22 +193,30 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-  installSigTermHandler
+  installSigTermHandler SigTermDuringStartup
 
   Crypto.cryptoInit
 
-  nc@NodeConfiguration
-    { ncProtocolConfig
-    , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
-    } <- buildNodeConfiguration cmdPc
-
   let earlyTracer = stdoutTracer
+
+  ResolvedNodeConfiguration
+    { rncConfiguration = nc@NodeConfiguration
+        { ncProtocolConfig
+        , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
+        }
+    , rncTraceConfig
+    , rncReport
+    } <- buildNodeConfiguration CrossCheckWithCardanoConfig cmdPc
+
+  -- What the configuration parsers had to say: which one read the file, and, for
+  -- a legacy configuration, where the two of them disagree. All non-fatal.
+  mapM_ (traceWith earlyTracer) rncReport
   traceWith earlyTracer $ "Node configuration: " <> show nc
 
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-  (consensusProtocol, shelleyGenesisHash) <-
+  (consensusProtocol, _shelleyGenesisHash) <-
     runThrowExceptT $
       mkConsensusProtocol
        ncProtocolConfig
@@ -208,47 +224,20 @@ runNode cmdPc = do
        -- don't need these.
        (Just ncProtocolFiles)
 
-  handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash
+  handleNodeWithTracers cmdPc nc rncTraceConfig consensusProtocol
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
--- | Read node configuration from a file specified in 'PartialNodeConfiguration'
-buildNodeConfiguration :: HasCallStack
-                       => PartialNodeConfiguration -- ^ defaults
-                       -> IO NodeConfiguration
-buildNodeConfiguration partialConf = do
-  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
-  either
-    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
-    pure
-    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
-
--- | Workaround to ensure that the main thread throws an async exception on
--- receiving a SIGTERM signal.
-installSigTermHandler :: IO ()
-installSigTermHandler = do
-#ifdef UNIX
-  -- Similar implementation to the RTS's handling of SIGINT (see GHC's
-  -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
-  runThreadIdWk <- mkWeakThreadId =<< myThreadId
-  _ <- Signals.installHandler
-    Signals.sigTERM
-    (Signals.CatchOnce $ do
-      runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId -> Exception.throwTo runThreadId ExitSuccess
-    )
-    Nothing
-#endif
-  return ()
-
 handleNodeWithTracers
   :: PartialNodeConfiguration
   -> NodeConfiguration
+  -> Maybe TraceConfig
+     -- ^ The tracing configuration, when the configuration parser resolved it
+     -- too; 'Nothing' leaves it to trace-dispatcher to read the file.
   -> SomeConsensusProtocol
-  -> Api.GenesisHashShelley
   -> IO ()
-handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
+handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) = do
   (ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
@@ -258,15 +247,23 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyG
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
   blockForging <- mkBlockForging nullTracer
+  -- Tells the Forge.Stats tracer when forging is switched on, so the standby
+  -- interval is not booked as missed leadership checks (issue #6698). The
+  -- initial state is the one 'rnNodeKernelHook' below installs.
+  forgingStateVar <- newForgingStateVar
+                       (not (ncStartAsNonProducingNode nc) && not (null blockForging))
   tracers <-
     initTraceDispatcher
       nc
-      p
+      mTrConfig
+      blockType
+      pInfoConfig
       networkMagic
       nodeKernelData
       (null blockForging)
+      forgingStateVar
 
-  startupInfo <- getStartupInfo nc p fp
+  startupInfo <- getStartupInfo nc blockType pInfoConfig fp
   mapM_ (traceWith $ startupTracer tracers) startupInfo
   traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
   -- sends initial BlockForgingUpdate
@@ -276,7 +273,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) shelleyG
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic
+  handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -313,17 +310,20 @@ handleSimpleNode
     ( Api.Protocol IO blk
     )
   => Api.BlockType blk
-  -> Api.GenesisHashShelley
   -> Api.ProtocolInfoArgs IO blk
   -> Tracers RemoteAddress LocalAddress blk IO
+  -> ForgingStateVar
   -> NodeConfiguration
+  -> PartialNodeConfiguration
+  -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
+  -- overrides are preserved when re-reading the YAML file.
   -> NetworkMagic
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKernel = do
+handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -335,11 +335,7 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  pInfo <- fst <$> Api.protocolInfo @IO runP
-
-  let NodeProtocolConfigurationCardano _ shelleyProtocolConfig _ _ _ _ _ = ncProtocolConfig nc
-      shelleyGenesisFile :: Api.ShelleyGenesisFile In
-      shelleyGenesisFile = File . unGenesisFile $ npcShelleyGenesisFile shelleyProtocolConfig
+  (pInfo, mkBlockForging) <- Api.protocolInfo @IO runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -432,6 +428,12 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
                                             (const . pure $ ())
     rpcConfigVar <- newTVarIO (ncRpcConfig nc)
 
+    let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = ncRpcConfig nc
+    when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles nc) && not (ncStartAsNonProducingNode nc)) $
+      traceWith (startupTracer tracers) RpcEnabledOnBlockProducer
+    when rpcIsEnabled $
+      warnRpcEndpointSecurity (startupTracer tracers) rpcEndpointConfig
+
     let nodeArgs = RunNodeArgs
           { rnGenesisConfig  = ncGenesisConfig nc
           , rnTraceConsensus = consensusTracers tracers
@@ -445,7 +447,6 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
               }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              (_, mkBlockForging) <- Api.protocolInfo runP
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $
@@ -483,7 +484,7 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
-            updateRpcConfiguration (startupTracer tracers) (ncConfigFile nc) rpcConfigVar
+            updateRpcConfiguration (startupTracer tracers) cmdPc rpcConfigVar
             traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
           )
           Nothing
@@ -491,6 +492,7 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     nodeKernelAccessRef <- newIORef Nothing
+    installSigTermHandler SigTermDuringRuntime
     void $
       let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
           diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
@@ -529,9 +531,23 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
               rnNodeKernelHook = \registry nodeKernel -> do
                 -- reinstall `SIGHUP` handler
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
-                                     blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                     forgingStateVar
+                                     blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
+                -- populate node kernel access for RPC server
+                (shelleyGenesisHash, shelleyGenesisFile) <- case ncProtocolConfig nc of
+                  NodeProtocolConfigurationCardano _ shelleyCfg _ _ _ _ _ ->
+                    runExceptT (readGenesis (npcShelleyGenesisFile shelleyCfg) (npcShelleyGenesisFileHash shelleyCfg)) >>=
+                      either
+                        (Exception.throwIO . FatalError . showT)
+                        ( pure .
+                          (\h ->
+                            ( Api.GenesisHashShelley . (\(GenesisHash g) -> g) $ h
+                            , File (unGenesisFile (npcShelleyGenesisFile shelleyCfg))
+                            )
+                          ) . snd
+                        )
                 rnNodeKernelHook nodeArgs registry nodeKernel
                 mkNodeKernelAccess
                   (rpcTracer tracers)
@@ -626,8 +642,10 @@ handleSimpleNode blockType shelleyGenesisHash runP tracers nc networkMagic onKer
 -- | The P2P SIGHUP handler can update block forging, reconfigure network topology and restart gRPC.
 installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
+                     -> ForgingStateVar
                      -> Api.BlockType blk
                      -> NodeConfiguration
+                     -> PartialNodeConfiguration -- ^ original CLI configuration
                      -> NetworkMagic
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                      -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
@@ -639,15 +657,15 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc cmdPc networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
-      updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc
+      updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -658,7 +676,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic node
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
-      updateRpcConfiguration startupTracer (ncConfigFile nc) rpcConfigVar
+      updateRpcConfiguration startupTracer cmdPc rpcConfigVar
     )
     Nothing
 #endif
@@ -667,18 +685,22 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic node
 #ifdef UNIX
 updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> Tracer IO KESAgentClientTrace
+                   -> ForgingStateVar
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
                    -> IO ()
-updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
-  eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
-                                       (ncProtocolConfig nc)
-                                       (Just (ncProtocolFiles nc))
+updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc = do
+  eitherSomeProtocol <-
+    runExceptT $
+      mkConsensusProtocol
+        (ncProtocolConfig nc)
+        (Just (ncProtocolFiles nc))
   case eitherSomeProtocol of
     Left err ->
       case wasFileRemovedFromScope err of
         Just (Api.FileDoesNotExistError _) -> do
+          noteForgingState forgingStateVar False
           traceWith startupTracer (BlockForgingUpdate DisabledBlockForging)
           setBlockForging nodeKernel []
         _NothingOrOtherFileError ->
@@ -687,12 +709,19 @@ updateBlockForging startupTracer kesAgentTracer blockType nodeKernel nc = do
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          (_, mkBlockForging) <- Api.protocolInfo runP'
+          (_, mkBlockForging) <- Api.protocolInfo @IO runP'
           blockForging <- mkBlockForging kesAgentTracer
+          let enabled = not (null blockForging)
+          -- Only an off-to-on transition starts a new run of slots for
+          -- Forge.Stats; a reload that leaves forging on changes nothing.
+          -- Before 'setBlockForging': the forging thread consensus forks there
+          -- checks the current slot at once, so the fold must already see the
+          -- new generation by the time the first event arrives.
+          noteForgingState forgingStateVar enabled
           traceWith startupTracer
-                    (BlockForgingUpdate (if null blockForging
-                                          then DisabledBlockForging
-                                          else EnabledBlockForging))
+                    (BlockForgingUpdate (if enabled
+                                          then EnabledBlockForging
+                                          else DisabledBlockForging))
           setBlockForging nodeKernel blockForging
         Nothing ->
           traceWith startupTracer
@@ -790,7 +819,6 @@ updateLedgerPeerSnapshot startupTracer NodeConfiguration { ncConsensusMode } net
             | otherwise -> oops $
                 "NetworkMagic " <> showT networkMagic <> " doesn't match "
                 <> "peer snapshot NetworkMagic " <> showT magic
-          LedgerPeerSnapshotV2 {} -> oops "Unsupported legacy peer snapshot version."
         case afterSlot of
           Always -> do
             traceL $ LedgerPeerSnapshotLoaded fileSlot
@@ -837,28 +865,35 @@ rpcServerLoop startupTracer rpcTracer rpcConfigVar networkMagic nodeKernelAccess
       atomically . modifyTVar rpcConfigVar $ \config -> config{isEnabled = Identity False}
 
 #ifdef UNIX
--- | Reload RPC configuration from the configuration file
-updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer tracing the configuration reload
-                       -> ConfigYamlFilePath -- ^ node configuration file, to reload configuration from
+-- | Reload RPC configuration by re-reading the YAML config file and merging
+-- with CLI overrides, exactly like startup does via 'buildNodeConfiguration'.
+updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer for configuration reload events
+                       -> PartialNodeConfiguration -- ^ original CLI configuration, merged with re-read YAML on reload
                        -> StrictTVar IO RpcConfig -- ^ TVar storing RPC configuration
                        -> IO ()
-updateRpcConfiguration tracer configFilePath rpcConfigVar = do
-  result <- fmap (join . first Exception.displayException)
-              . try @Exception.SomeException
-              . fmap makeNodeConfiguration
-              . parseNodeConfigurationFP
-              $ Just configFilePath
+updateRpcConfiguration tracer cmdPc rpcConfigVar = do
+  -- A reload only wants the new values; the parser cross-check already ran (and
+  -- was reported) at startup.
+  result <-
+    try @Exception.SomeException $
+      rncConfiguration <$> buildNodeConfiguration SkipCrossCheck cmdPc
   case result of
     Left err ->
       -- reload failure, we don't do anything this time
-      traceWith tracer (RpcConfigUpdateError $ pack err)
-    Right NodeConfiguration{ncRpcConfig=newConfig} ->
+      traceWith tracer (RpcConfigUpdateError $ pack (Exception.displayException err))
+    Right newNc@NodeConfiguration{ncRpcConfig=newConfig} ->
       join . atomically $ do
         oldConfig <- readTVar rpcConfigVar
         if oldConfig /= newConfig
           then do
             writeTVar rpcConfigVar newConfig
-            pure . traceWith tracer . RpcConfigUpdate . pack $ show newConfig
+            let RpcConfig{isEnabled = Identity rpcIsEnabled, rpcEndpoint = Identity rpcEndpointConfig} = newConfig
+            pure $ do
+              traceWith tracer . RpcConfigUpdate . pack $ show newConfig
+              when (rpcIsEnabled && hasProtocolFile (ncProtocolFiles newNc) && not (ncStartAsNonProducingNode newNc)) $
+                traceWith tracer RpcEnabledOnBlockProducer
+              when rpcIsEnabled $
+                warnRpcEndpointSecurity tracer rpcEndpointConfig
           else
             pure $ pure ()
 #endif
@@ -919,6 +954,59 @@ checkVRFFilePermissions _ (File vrfPrivKey) = do
   hasPermission fModeA fModeB = fModeA .&. fModeB /= gENERIC_NONE
 #endif
 
+-- | Warn about security-relevant aspects of the configured RPC endpoint:
+-- listening on a non-loopback address, TLS session key-log tracing enabled
+-- via 'SSLKEYLOGFILE', and an overly permissive TLS private key file.
+-- Unlike 'checkVRFFilePermissions' none of these ever refuse to start the
+-- node - a misconfigured RPC endpoint is not as sensitive as the
+-- block-producer's VRF key.
+warnRpcEndpointSecurity :: Tracer IO (StartupTrace blk) -> RpcEndpoint -> IO ()
+warnRpcEndpointSecurity tracer endpoint = do
+  warnIfRpcListensPublicly tracer endpoint
+  case endpoint of
+    RpcEndpointHttps _ _ tlsFiles -> do
+      warnIfTlsKeyLogEnabled tracer
+      checkRpcTlsPrivateKeyPermissions tracer tlsFiles
+    _otherEndpoint -> pure ()
+
+-- | Non-loopback predicate for 'IP' addresses (127.0.0.0/8 for IPv4, ::1 for
+-- IPv6).
+isLoopbackIp :: IP -> Bool
+isLoopbackIp (IPv4 ip4) = ip4 `isMatchedTo` makeAddrRange (toIPv4 [127, 0, 0, 0]) 8
+isLoopbackIp (IPv6 ip6) = ip6 == toIPv6 [0, 0, 0, 0, 0, 0, 0, 1]
+
+-- | Warn if the RPC endpoint is bound to a non-loopback address: the RPC
+-- server is unauthenticated, so anyone who can reach it can query the node
+-- and submit transactions.
+warnIfRpcListensPublicly :: Tracer IO (StartupTrace blk) -> RpcEndpoint -> IO ()
+warnIfRpcListensPublicly tracer = \case
+  RpcEndpointUnixSocket{} -> pure ()
+  endpoint@(RpcEndpointHttp ip _) ->
+    unless (isLoopbackIp ip) . traceWith tracer $ RpcListeningOnPublicAddress endpoint
+  endpoint@(RpcEndpointHttps ip _ _) ->
+    unless (isLoopbackIp ip) . traceWith tracer $ RpcListeningOnPublicAddress endpoint
+
+-- | Warn if 'SSLKEYLOGFILE' is set: the node will write TLS session key-log
+-- material for the RPC TLS listener to that file.
+warnIfTlsKeyLogEnabled :: Tracer IO (StartupTrace blk) -> IO ()
+warnIfTlsKeyLogEnabled tracer = do
+  mKeyLogFile <- lookupEnv "SSLKEYLOGFILE"
+  forM_ mKeyLogFile $ traceWith tracer . RpcTlsKeyLogEnabled . pack
+
+-- | Warn if the RPC TLS private key file is readable by group or others.
+-- Silently does nothing if the file does not exist: grapesy already fails
+-- loudly when it can't load the TLS credentials.
+checkRpcTlsPrivateKeyPermissions :: Tracer IO (StartupTrace blk) -> RpcTlsFiles -> IO ()
+#ifdef UNIX
+checkRpcTlsPrivateKeyPermissions tracer RpcTlsFiles{privateKeyFile = File keyPath} = do
+  exists <- doesFileExist keyPath
+  when exists $ do
+    fm <- fileMode <$> getFileStatus keyPath
+    when (fm `intersectFileModes` (groupModes `unionFileModes` otherModes) /= nullFileMode) $
+      traceWith tracer . RpcTlsPrivateKeyPermissive $ pack keyPath
+#else
+checkRpcTlsPrivateKeyPermissions _ _ = pure ()
+#endif
 
 mkDiffusionConfiguration
   :: Maybe SocketOrSocketInfo -- ^ ipv4

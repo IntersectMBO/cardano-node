@@ -13,11 +13,7 @@ main =
 tracerInfo :: ParserInfo TracerParams
 tracerInfo = info
   (parseTracerParams <**> helper <**> versionOption)
-#if RTVIEW
-  (fullDesc <> header "cardano-tracer/with RTView - the logging and monitoring service for Cardano nodes.")
-#else
-  (fullDesc <> header "cardano-tracer/without RTView - the logging and monitoring service for Cardano nodes.")
-#endif
+  (fullDesc <> header "cardano-tracer - the logging and monitoring service for Cardano nodes.")
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption

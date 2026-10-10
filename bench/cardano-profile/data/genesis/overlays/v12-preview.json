@@ -1,0 +1,12 @@
+{
+  "description": "Preview overlay for protocol version 12 (Dijkstra era).",
+  "epoch_params": {
+    "shelley": {
+      "protocolParams": {
+        "protocolVersion": {
+          "major": 12
+        }
+      }
+    }
+  }
+}

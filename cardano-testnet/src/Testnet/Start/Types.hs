@@ -20,6 +20,8 @@ module Testnet.Start.Types
   , NumPools(..)
   , NumRelays(..)
   , RpcSupport(..)
+  , RpcHttpOptions(..)
+  , TraceSupport(..)
   , creationNumPools
   , creationNumRelays
 
@@ -52,6 +54,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Rpc.Server.Config (defaultRpcListenAddress)
 
 import           Prelude
 
@@ -61,12 +64,14 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (parseFail)
 import           Data.Char (toLower)
 import           Data.Default.Class
+import           Data.IP (IP)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import qualified Network.HTTP.Simple as HTTP
+import           Network.Socket (PortNumber)
 import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
@@ -167,8 +172,23 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   } deriving (Eq, Show)
 
 data RpcSupport
-  = RpcDisabled
-  | RpcEnabled
+  = RpcDisabled -- ^ No gRPC endpoint
+  | RpcEnabledUnixSocket -- ^ gRPC over the node's default unix socket (@rpc.sock@)
+  | RpcEnabledHttp RpcHttpOptions -- ^ gRPC over HTTP\/2 without TLS (h2c)
+  deriving (Eq, Show)
+
+-- | Listener options for the gRPC HTTP (h2c) endpoints
+data RpcHttpOptions = RpcHttpOptions
+  { rpcHttpListenAddress :: IP
+  , rpcHttpListenPortBase :: Maybe PortNumber -- ^ node i listens on base+i-1; random free ports when Nothing
+  } deriving (Eq, Show)
+
+instance Default RpcHttpOptions where
+  def = RpcHttpOptions defaultRpcListenAddress Nothing
+
+data TraceSupport
+  = TraceDisabled -- ^ Do not enable tracing
+  | TraceEnabled  -- ^ Enable tracing over cardano-tracer
   deriving (Eq, Show)
 
 -- | Options for creating a testnet environment (genesis files, topology, ports).
@@ -201,14 +221,22 @@ instance Default TestnetCreationOptions where
 data TestnetRuntimeOptions = TestnetRuntimeOptions
   { runtimeEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   , runtimeEnableRpc :: RpcSupport -- ^ Whether to enable gRPC endpoints in all testnet nodes
+  , runtimeEnableTracer :: TraceSupport -- ^ Whether to enable cardano-tracer support for all testnet nodes
   , runtimeKESSource :: PraosCredentialsSource
+  , runtimeEnableChainStallWatchdog :: Bool
+    -- ^ Whether to run a background watchdog that kills the testnet with a diagnosis as
+    -- soon as the chain has provably stopped producing blocks forever (see
+    -- "Testnet.ChainWatchdog"). On by default; disable it only for tests that
+    -- legitimately halt all block production.
   } deriving (Eq, Show)
 
 instance Default TestnetRuntimeOptions where
   def = TestnetRuntimeOptions
     { runtimeEnableNewEpochStateLogging = True
     , runtimeEnableRpc = RpcDisabled
+    , runtimeEnableTracer = TraceDisabled
     , runtimeKESSource = def
+    , runtimeEnableChainStallWatchdog = True
     }
 
 -- | Options specific to the @--node-env@ path: the environment directory

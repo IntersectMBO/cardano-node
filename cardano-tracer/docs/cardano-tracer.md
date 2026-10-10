@@ -22,7 +22,6 @@
     - [Prometheus HTTP service discovery](#prometheus-http-service-discovery)
   - [EKG Monitoring](#ekg-monitoring)
   - [Verbosity](#verbosity)
-  - [RTView](#rtview)
 
 # Introduction
 
@@ -559,6 +558,4 @@ The optional field `verbosity` specifies the verbosity level for the `cardano-tr
 
 Please note that if you skip this field, `ErrorsOnly` verbosity will be used by default.
 
-## RTView
 
-It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes. Please read its documentation [here](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md).

@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
@@ -26,6 +27,7 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Data (Typeable)
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Word (Word16)
@@ -59,8 +61,9 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = Exp.ConwayEra
+      ceo = convert era
+      sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNumDReps = 1
@@ -76,7 +79,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node
@@ -146,15 +149,15 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
                                     maxEpochsToWaitAfterProposal
 
   -- Now we register two new DReps
-  drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
-  delegateToDRep execConfig epochStateView sbe work "drep2-delegation"
+  drep2 <- registerDRep execConfig epochStateView era work "drep2" wallet1
+  delegateToDRep execConfig epochStateView era work "drep2-delegation"
                  wallet2 (defaultDelegatorStakeKeyPair 2) drep2
 
-  drep3 <- registerDRep execConfig epochStateView ceo work "drep3" wallet0
-  delegateToDRep execConfig epochStateView sbe work "drep3-delegation"
+  drep3 <- registerDRep execConfig epochStateView era work "drep3" wallet0
+  delegateToDRep execConfig epochStateView era work "drep3-delegation"
                  wallet1 (defaultDelegatorStakeKeyPair 3) drep3
 
-  expirationDates <- checkDRepState epochStateView sbe $ \m ->
+  expirationDates <- checkDRepState epochStateView era $ \m ->
     if length m == 3
        then Just $ Map.map drepExpiry m
        else Nothing
