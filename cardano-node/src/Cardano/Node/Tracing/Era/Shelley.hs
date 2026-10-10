@@ -81,6 +81,7 @@ import qualified Data.Set.NonEmpty as NonEmptySet
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text.Encoding
+
 import qualified LeiosDemoTypes as Leios
 
 {- HLINT ignore "Use :" -}
@@ -1627,7 +1628,7 @@ instance
 
 instance
   ( Ledger.Crypto crypto
-  ) => LogFormatting (Praos.BasePraosValidationErr pext crypto) where
+  ) => LogFormatting (Praos.PolyPraosValidationErr pext crypto) where
   forMachine _ err' =
     case err' of
       Praos.VRFKeyUnknown unknownKeyHash ->
