@@ -1198,16 +1198,16 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1785407305,
-        "narHash": "sha256-8Ay4GLKQGeJwGQPLliUNvgfkKCHFVUeASWFu/e0SxqM=",
+        "lastModified": 1789639081,
+        "narHash": "sha256-l6ACwepW8R5zsx1iNw9VOzdRfOWhfSE3+GcP6VkX8Zc=",
         "owner": "IntersectMBO",
         "repo": "mithril",
-        "rev": "23e124d99320adea6eb3eca361132c6c43d59cfa",
+        "rev": "3f6cb73f491eb3195d02318643e40836fb093acc",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "refs/tags/2630.0",
+        "ref": "refs/tags/2630.1-hotfix",
         "repo": "mithril",
         "type": "github"
       }
