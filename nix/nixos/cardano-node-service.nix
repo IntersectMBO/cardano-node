@@ -49,6 +49,13 @@ let
     then "/etc/cardano-node/topology-${toString i}.json"
     else selectTopology i;
 
+  # POM reads these only as TargetNumberOf*, cardano-config only as
+  # DeadlineTargetNumberOf*, so the name depends on the dialect. mkEnvelope
+  # would rename the legacy spelling, but emitting the one the dialect uses
+  # keeps the published config canonical and keeps a key the operator cannot
+  # restate out of the rename warning below.
+  deadlinePrefix = optionalString (cfg.configFormat == "enveloped") "Deadline";
+
   baseConfig =
     recursiveUpdate
       (cfg.nodeConfig
@@ -58,13 +65,13 @@ let
         // {
           MaxConcurrencyBulkSync = 2;
         } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
-          TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+          "${deadlinePrefix}TargetNumberOfRootPeers" = cfg.targetNumberOfRootPeers;
         } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
-          TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+          "${deadlinePrefix}TargetNumberOfKnownPeers" = cfg.targetNumberOfKnownPeers;
         } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
-          TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+          "${deadlinePrefix}TargetNumberOfEstablishedPeers" = cfg.targetNumberOfEstablishedPeers;
         } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
-          TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+          "${deadlinePrefix}TargetNumberOfActivePeers" = cfg.targetNumberOfActivePeers;
         }
       ) cfg.extraNodeConfig;
 
