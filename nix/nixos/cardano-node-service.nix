@@ -79,8 +79,12 @@ let
           });
     in i: let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
+    publishedConfig =
+      if cfg.configFormat == "enveloped"
+      then cfg.cardanoNodePackages.cardanoLib.mkEnvelope instanceConfig
+      else instanceConfig;
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
-      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
+      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON publishedConfig);
     consensusParams = {
       RealPBFT = [
         "${optionalString (cfg.signingKey != null)
@@ -790,6 +794,29 @@ in {
         type = nullOrStr;
         default = null;
         description = ''The actual configuration file.'';
+      };
+
+      configFormat = mkOption {
+        type = enum [
+          "legacy"
+          "enveloped"
+        ];
+        default = "legacy";
+        description = ''
+          Which dialect the generated node config file is written in, named as
+          cardano-config names them. Ignored when nodeConfigFile is set, since
+          that file is used as given.
+
+          On "enveloped" the config is wrapped with cardanoLib.mkEnvelope at the
+          end, so nodeConfig, extraNodeConfig and extraNodeInstanceConfig stay
+          flat and keep the key names they use today. mkEnvelope applies the
+          cardano-config renames and groups each key under the section that owns
+          it. A key it does not recognise is kept, but outside any section,
+          where the node will not resolve it.
+
+          The default stays "legacy" while consumers opt in per host. Published
+          configs and release artifacts are already enveloped.
+        '';
       };
 
       forceHardForks = mkOption {
