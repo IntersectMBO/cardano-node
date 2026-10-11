@@ -18,7 +18,13 @@
   # triggers the /tmp runtime dir + relative-path rewriting. The double quotes
   # are backslash-escaped because these are interpolated into double-quoted
   # Python string literals in the testScript below.
-  configMerge = ''{\"MaxConcurrencyBulkSync\":2}'';
+  #
+  # The node config merge is section qualified because the published config is
+  # in the cardano-config envelope. A merge is a deep merge with no key
+  # relocation, so the flat spelling would add a key outside Configuration that
+  # the node does not resolve, which is the shape the docker readme warns
+  # about. Topology and tracer configs are not enveloped and stay flat.
+  configMerge = ''{\"Configuration\":{\"Network\":{\"MaxConcurrencyBulkSync\":2}}}'';
   topologyMerge = ''{\"useLedgerAfterSlot\":1}'';
   tracerConfigMerge = ''{\"verbosity\":\"Minimum\"}'';
 
@@ -81,12 +87,15 @@ in {
 
     # The merged config's relative "*File" references (ByronGenesisFile,
     # ShelleyGenesisFile, ..., CheckpointsFile) must be rewritten to absolute
-    # paths so they resolve from /tmp. Mirror the entrypoint's predicate -- any
-    # top-level key ending in "File" with a string value -- and assert all are
-    # absolute. Use jq from the container.
+    # paths so they resolve from /tmp. Mirror the entrypoint's predicate, which
+    # walks rather than reading the top level: in the cardano-config envelope
+    # these keys sit under Configuration.<Section>, so a top-level scan finds
+    # none of them. The length guard is what makes that a failure rather than a
+    # vacuous pass, so keep it. Use jq from the container.
     machine.succeed(
         "docker exec n1 jq -e "
-        "'[to_entries[]|select(.key|endswith(\"File\"))|.value|select(type==\"string\")] as $v "
+        "'[..|objects|to_entries[]|select((.key|endswith(\"File\")) "
+        "and (.value|type==\"string\"))|.value] as $v "
         "| ($v|length>0) and ($v|all(startswith(\"/\")))' "
         "${rt}/config-merged.json"
     )
@@ -217,5 +226,62 @@ in {
     # so it only needs to execute under --read-only and as non-root.
     machine.succeed("docker load -i ${submitApiDockerImage}")
     machine.succeed("docker run --rm --read-only --user 1000:0 ${submitApiImageRef} --help >/dev/null")
+
+    # Graceful shutdown on SIGTERM and SIGINT, for both ways in.
+    #
+    # Each mode execs the whole way down to cardano-node, so the node is the
+    # container's pid 1 and takes the signal itself: scripts mode goes
+    # entrypoint -> run-network -> the per-network script -> exec node, custom
+    # mode goes entrypoint -> run-node -> exec node. Drop any one of those
+    # execs and a shell sits at pid 1 forwarding nothing, docker gives up after
+    # the grace period and SIGKILLs, and the exit code is 137. That is what
+    # this asserts against rather than a specific clean code, which differs by
+    # whether the node handles the signal or dies from it.
+    def shutdown_case(name, args, sig):
+        # /logs must be a writable mount: the image bakes
+        # `-t/logs/cardano-node.stats` into its RTS block, and the node aborts
+        # at startup if it cannot open that file under a read-only root.
+        machine.succeed(
+            "docker run -d --name " + name + " --read-only --tmpfs /tmp "
+            "--user 1000:0 -v " + name + "data:/data -v " + name + "ipc:/ipc "
+            "-v " + name + "logs:/logs " + args
+        )
+        # Long enough to be past config resolution and into the node proper,
+        # so the signal lands on a running node rather than on startup.
+        machine.sleep(10)
+        if machine.succeed(
+            "docker inspect -f '{{.State.Running}}' " + name
+        ).strip() != "true":
+            _, logs = machine.execute("docker logs " + name + " 2>&1")
+            raise Exception(
+                name + " exited before the shutdown signal; docker logs:\n" + logs
+            )
+
+        if sig == "TERM":
+            # Sends SIGTERM, waits, then SIGKILLs if it outlives the grace period.
+            machine.succeed("docker stop -t 30 " + name)
+        else:
+            # docker kill does not wait, so poll for the exit ourselves.
+            machine.succeed("docker kill --signal=INT " + name)
+            machine.wait_until_succeeds(
+                "[ \"$(docker inspect -f '{{.State.Running}}' " + name + ")\" = false ]",
+                timeout=40,
+            )
+
+        code = machine.succeed(
+            "docker inspect -f '{{.State.ExitCode}}' " + name
+        ).strip()
+        if code == "137":
+            _, logs = machine.execute("docker logs " + name + " 2>&1")
+            raise Exception(
+                name + ": SIG" + sig + " did not stop the node, docker had to "
+                "SIGKILL it after the grace period; docker logs:\n" + logs
+            )
+        machine.succeed("docker rm -f " + name)
+
+    shutdown_case("sd1", "-e NETWORK=${network} ${imageRef}", "TERM")
+    shutdown_case("sd2", "-e NETWORK=${network} ${imageRef}", "INT")
+    shutdown_case("sd3", "${imageRef} run", "TERM")
+    shutdown_case("sd4", "${imageRef} run", "INT")
   '';
 }
