@@ -33,7 +33,7 @@
 , iputils
 , jq
 , socat
-, utillinux
+, util-linux
 , lib
 , exe
 , script
@@ -60,7 +60,7 @@ let
         iputils           # Useful utilities for Linux networking
         jq                # Lightweight and flexible command-line JSON processor
         socat             # Utility for bidirectional data transfer
-        utillinux         # System utilities for Linux
+        util-linux        # System utilities for Linux
       ];
     };
 
