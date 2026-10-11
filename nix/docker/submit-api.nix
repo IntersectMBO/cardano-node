@@ -29,7 +29,7 @@
 , iproute2
 , iputils
 , socat
-, utillinux
+, util-linux
 , writeScriptBin
 , runtimeShell
 , lib
@@ -56,7 +56,7 @@ let
         iproute2          # Utilities for controlling TCP/IP networking
         iputils           # Useful utilities for Linux networking
         socat             # Utility for bidirectional data transfer
-        utillinux         # System utilities for Linux
+        util-linux        # System utilities for Linux
       ];
     };
 
