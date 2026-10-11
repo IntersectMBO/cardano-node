@@ -346,8 +346,7 @@ credentialsToProtocolFilepaths c =
     , byronKeyFile = strictMaybeToMaybe (Cfg.byronSigningKey c)
     , shelleyKESSource = fmap fromCfgKES (strictMaybeToMaybe (Cfg.shelleyKES c))
     , shelleyVRFFile = strictMaybeToMaybe (Cfg.shelleyVRFKey c)
-    , -- cardano-config does not carry the Leios BLS key; only --shelley-bls-key sets it.
-      shelleyBLSFile = Nothing
+    , shelleyBLSFile = strictMaybeToMaybe (Cfg.shelleyBLSKey c)
     , shelleyCertFile = strictMaybeToMaybe (Cfg.shelleyOperationalCertificate c)
     , shelleyBulkCredsFile = strictMaybeToMaybe (Cfg.bulkCredentialsFile c)
     }

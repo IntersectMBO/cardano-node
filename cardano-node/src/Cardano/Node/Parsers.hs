@@ -16,8 +16,7 @@
 --     design (the setting belongs in the configuration file);
 --   * the three deprecated aliases, @--delegation-certificate@,
 --     @--signing-key@ and @--non-producing-node@, which cardano-config knows
---     only by their current spellings;
---   * the Leios BLS voting key, @--shelley-bls-key@.
+--     only by their current spellings.
 module Cardano.Node.Parsers
   ( nodeCLIParser
   , parseConfigFile
@@ -74,7 +73,6 @@ nodeRunParser = do
   credentials <- Cfg.parseCredentials
   deprecatedByronCertFile <- optional parseByronDelegationCertDeprecated
   deprecatedByronKeyFile <- optional parseByronSigningKeyDeprecated
-  blsKeyFile <- optional parseBlsKeyFilePath
   startAsNonProducingNode <- (\depr new -> Last depr <> Last new)
                          <$> parseStartAsNonProducingNodeDeprecated
                          <*> Cfg.parseStartAsNonProducingNode
@@ -113,7 +111,6 @@ nodeRunParser = do
                    deprecatedByronCertFile
                    deprecatedByronKeyFile
                    (credentialsToProtocolFilepaths credentials)
-                   { shelleyBLSFile = blsKeyFile }
            , pncValidateDB = validate
            , -- An absent @--shutdown-on-*@ means 'NoShutdown' rather than
              -- "unset", which is what the node has always resolved it to.
@@ -188,19 +185,6 @@ parseByronDelegationCertDeprecated =
 parseByronSigningKeyDeprecated :: Parser FilePath
 parseByronSigningKeyDeprecated =
   strOption (long "signing-key" <> Opt.internal)
-
-parseBlsKeyFilePath :: Parser FilePath
-parseBlsKeyFilePath =
-  strOption
-    ( long "shelley-bls-key"
-        <> metavar "FILEPATH"
-        <> help
-             ( "Path to the BLS (Leios) signing key: a single text envelope, "
-            <> "or a JSON array of them to vote with every key that holds a "
-            <> "committee seat (e.g. a rotation pair, or a bundle of pool keys)."
-             )
-        <> completer (bashCompleter "file")
-    )
 
 -- | Deprecated alias of @--start-as-non-producing-node@.
 parseStartAsNonProducingNodeDeprecated :: Parser (Maybe Bool)

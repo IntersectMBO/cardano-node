@@ -35,7 +35,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration,
                    parseNodeConfigurationFP)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..))
+import           Cardano.Node.Types (ConfigYamlFilePath (..), ProtocolFilepaths (..))
 
 import           Data.Monoid (Last (..))
 
@@ -102,7 +102,8 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "cardano-config configuration dialects"
-  [ testGroup "deprecated CLI flag guidance"
+  [ testCase "both configuration dialects preserve the shared BLS credential" testBlsCredential
+  , testGroup "deprecated CLI flag guidance"
       [ testCase "deprecated CLI aliases yield migration guidance" testDeprecatedAliases
       , testCase "removed mempool flags yield removal guidance" testRemovedMempoolFlags
       , testCase "no guidance for accepted / unrelated flags" testNoFalsePositives
@@ -229,13 +230,15 @@ testEnvelopeResolvesToSameConfiguration = do
 -- | Resolve a configuration file with cardano-config (file only, no CLI layer)
 -- and adapt it to the node's own 'NodeConfiguration'.
 resolveWithCardanoConfig :: FilePath -> IO NodeConfiguration
-resolveWithCardanoConfig fp = do
+resolveWithCardanoConfig fp = resolveWithCardanoConfigFlags fp []
+
+resolveWithCardanoConfigFlags :: FilePath -> [String] -> IO NodeConfiguration
+resolveWithCardanoConfigFlags fp flags = do
   (fileCfg, _warns) <- Cfg.parseConfigurationFiles fp
-  -- The same empty command line the POM side is given (see 'resolveWithPom'),
-  -- read by cardano-config's own parser. Both parsers must see the same two
-  -- inputs, or the diff reports the inputs rather than the parsers.
+  -- Both parsers receive the same file and flags, so comparisons reflect
+  -- parser differences rather than different inputs.
   cli <- either (assertFailure . ("cardano-config CLI layer failed: " <>)) pure
-           (cardanoConfigCliLayer fp [])
+           (cardanoConfigCliLayer fp flags)
   (cfgNc, _checkWarns) <-
     either (assertFailure . ("cardano-config resolve failed: " <>) . show) pure
       (Cfg.resolveConfiguration cli fileCfg)
@@ -249,14 +252,27 @@ resolveWithCardanoConfig fp = do
 -- isolates the file-parse and adapter-gap differences rather than CLI-supplied
 -- noise.
 resolveWithPom :: FilePath -> IO NodeConfiguration
-resolveWithPom fp = do
+resolveWithPom fp = resolveWithPomFlags fp []
+
+resolveWithPomFlags :: FilePath -> [String] -> IO NodeConfiguration
+resolveWithPomFlags fp flags = do
   fileYaml <- parseNodeConfigurationFP (Just (ConfigYamlFilePath fp))
   -- The three layers a node assembles, in the node's own order: defaults, then
-  -- the file, then the command line. The command line here is the one a node
-  -- started with nothing but @--config@ has, which is not the same as no layer
-  -- at all (see 'nodeCliLayer').
+  -- the file, then the command line. Even an empty flag list supplies CLI
+  -- defaults, which differs from having no layer (see 'nodeCliLayer').
   let fileLayer = defaultPartialNodeConfiguration <> fileYaml
-      (mCliLayer, cliReport) = nodeCliLayer fp []
+      (mCliLayer, cliReport) = nodeCliLayer fp flags
   assertBool ("the node's CLI layer could not be built: " <> show cliReport) (null cliReport)
   either (assertFailure . ("POM makeNodeConfiguration failed: " <>)) pure
     (makeNodeConfiguration (maybe fileLayer (fileLayer <>) mCliLayer))
+
+testBlsCredential :: Assertion
+testBlsCredential = do
+  legacy <- legacyConfigPath
+  envelope <- envelopeConfigPath
+  let flags = ["--shelley-bls-key", "bls.skey"]
+  fromPom <- resolveWithPomFlags legacy flags
+  fromLegacy <- resolveWithCardanoConfigFlags legacy flags
+  fromEnvelope <- resolveWithCardanoConfigFlags envelope flags
+  mapM_ (\nc -> shelleyBLSFile (ncProtocolFiles nc) @?= Just "bls.skey")
+    [fromPom, fromLegacy, fromEnvelope]
