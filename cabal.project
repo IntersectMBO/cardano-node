@@ -181,8 +181,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-keys
-  tag: 46bad1e58182b19d1e60f85ec3a71d08dd9283f8
-  --sha256: sha256-ymc3EAbdQEL/OuYRfHHiuQP3+3mSPPseiIDBPNIsoDA=
+  tag: f89a91b41ff171dd062a0cae0e93b8b999fedf40
+  --sha256: sha256-UBWBai91SXzC/JQY4FVjXGaf/C0xHcz7+BH13oAT+fY=
   subdir:
     cardano-keys
 
@@ -231,16 +231,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 3156164b1370dd4b84a435c4d6ee0af403eb38a4
-  --sha256: sha256-cwSDYUg6yjunwqNEwAXRWx4C2uveeDvr4yZbnoevbAw=
+  tag: 5cc95f4caf294751318f8637ab2fb60d5de6eb29
+  --sha256: sha256-KldFz2huvtFNtv6TxgSoixvBtO0FbpesP81YRoZJdFU=
 
 -- cardano-api leios-prototype with cardano-api-11.8.0.0 merged
 -- (leios-prototype).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: aa843d6fe5b7c3260dac783ab057be1df7131954
-  --sha256: sha256-f2YogdHLmuk8gfHvJj78IGcAvbJZ/igdTV47VQ4Ms2Y=
+  tag: 69483c3a7db6a22ec2ffd60e1aa1cc211968d116
+  --sha256: sha256-n0JTGGHRbDpQ7rv9JeVFxiaTeiMz8Au/1JXHjbtQwLs=
   subdir:
     cardano-api
     cardano-api-gen
@@ -251,8 +251,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 1f1bee9b4be4cf0d5d9a08c8afef80e08d77b16a
-  --sha256: sha256-6JTFWAjlQnudWT9lE7WDEI9fQNx3OhHKQFG8tt38AQU=
+  tag: 40f4167614dc15168f463396db3ae9f5bc381449
+  --sha256: sha256-9owCh3kPZhe+9zD0h9NYXsNic3JsOqEwzNV17vgsb3k=
   subdir:
     cardano-cli
 
