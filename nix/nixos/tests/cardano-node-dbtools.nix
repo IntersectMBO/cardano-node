@@ -55,12 +55,16 @@
     '';
   };
 
-  # NixosTest script fns supporting a timeout have a default of 900 seconds.
+  # Budget for the whole test, not per step: the driver kills everything and
+  # fails once it is reached. It covers the vm boot as well as create-env,
+  # synthesis, both analyser passes, truncation and the asserted synthesis, so
+  # it has to absorb runner variance across all of them. Not to be confused
+  # with the 900 second default on script fns that take their own timeout,
+  # which is per call and which nothing here sets.
   #
-  # There is no pre-existing history for chain synthesis, and default
-  # cardano-testnet genesis parameters set epochs to be short and fast, so a 45
-  # second global timeout should be more than sufficient.
-  globalTimeout = 45;
+  # Kept well under the one hour framework default so a hang still surfaces
+  # quickly, which is the only reason to override at all.
+  globalTimeout = 300;
 
   testDir = "testnet";
 in {
