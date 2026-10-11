@@ -31,12 +31,7 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
-import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -69,6 +64,8 @@ import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing (ClientMetrics, ConsensusStartupException,
+                   ReplayBlockStats)
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
@@ -114,6 +111,11 @@ import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
 import qualified Network.Socket as Socket
+
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 
 
 -- | Check the configuration in the given file.
@@ -255,6 +257,10 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
         dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DevotedBlockFetch"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
+        leiosKernelNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "LeiosKernel"])
+                        (allNamespaces :: [Namespace TraceLeiosKernel])
+        leiosPeerNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "LeiosPeer"])
+                        (allNamespaces :: [Namespace TraceLeiosPeer])
 
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
@@ -319,6 +325,18 @@ getAllNamespaces =
                              (allNamespaces :: [Namespace
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv (PeerSharing RemoteAddress)))])
+        leiosNotifyNS = map (nsGetTuple . nsReplacePrefix
+                                        ["LeiosNotify", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
+        leiosFetchNS = map (nsGetTuple . nsReplacePrefix
+                                        ["LeiosFetch", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)))])
 
 -- Diffusion
 
@@ -481,6 +499,8 @@ getAllNamespaces =
             <> perasVoteOutboundNS
             <> perasCertDiffusionNS
             <> perasVoteDiffusionNS
+            <> leiosKernelNS
+            <> leiosPeerNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS
@@ -495,6 +515,8 @@ getAllNamespaces =
             <> txSubmission2NS
             <> keepAliveRemoteNS
             <> peerSharingRemoteNS
+            <> leiosNotifyNS
+            <> leiosFetchNS
 -- Diffusion
             <> dtMuxNS
             <> dtMuxBearerNS

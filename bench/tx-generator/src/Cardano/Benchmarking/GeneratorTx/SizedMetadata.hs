@@ -4,11 +4,14 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+
 module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
 import           Cardano.Api
 
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
+import qualified Cardano.Ledger.Core as L
 import           Cardano.TxGenerator.Utils
 
 import           Prelude
@@ -17,6 +20,7 @@ import qualified Data.ByteString as BS
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
+import           Lens.Micro ((.~), (^.))
 
 
 maxMapSize :: Int
@@ -114,21 +118,25 @@ measureBSCosts era = map (metadataSize era . Just . bsMetadata) [0..maxBSSize]
 metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
-dummyTxSizeInEra :: IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createTransactionBody shelleyBasedEra dummyTx of
-  Right b -> BS.length $ serialiseToCBOR b
-  Left err -> error $ "metaDataSize " ++ show err
+dummyTxSizeInEra :: forall era. IsShelleyBasedEra era => TxMetadataInEra era -> Int
+dummyTxSizeInEra metadata =
+  BS.length $ serialiseToCBOR dummyTx
  where
-  dummyTx = defaultTxBodyContent shelleyBasedEra
-    & setTxIns
-      [ ( mkTxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
-        , BuildTxWith $ KeyWitness KeyWitnessForSpending
-        )
-      ]
-    & setTxFee (mkTxFee 0)
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (mkTxValidityUpperBound 0)
-    & setTxMetadata metadata
+  sbe = shelleyBasedEra @era
+  txInputs =
+    [ ( mkTxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
+      , BuildTxWith $ KeyWitness KeyWitnessForSpending
+      )
+    ]
+  txAuxData = toAuxiliaryData sbe metadata TxAuxScriptsNone
+  ledgerTxBody =
+    mkCommonTxBody sbe txInputs [] (mkTxFee 0) TxWithdrawalsNone txAuxData
+      & invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (mkTxValidityUpperBound 0)
+  dummyTx :: Tx era
+  dummyTx = shelleyBasedEraConstraints sbe $
+    ShelleyTx sbe $
+      L.mkBasicTx (ledgerTxBody ^. txBodyL)
+        & L.auxDataTxL .~ maybeToStrictMaybe txAuxData
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m

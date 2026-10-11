@@ -18,7 +18,6 @@ import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
-import           Cardano.Node.Tracing.Tracers.ChainDB (fragmentChainDensity)
 import           Ouroboros.Consensus.BlockchainTime.API
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
@@ -26,6 +25,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (getBlockchainTime, getChainDB))
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB (getStatistics)
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Forker as LedgerDB (ledgerTableSize)
+import           Ouroboros.Consensus.Tracing (fragmentChainDensity)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
@@ -35,6 +35,7 @@ import           Control.Monad.STM (atomically, retry)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
 import           Data.Text as Text
+import           Data.Word (Word64)
 import           GHC.Conc (labelThread, myThreadId)
 
 
@@ -82,10 +83,11 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData =
 
 data LedgerMetrics =
   LedgerMetrics {
-        tsSlotNo       :: SlotNo
-      , tsUtxoSize     :: Int
-      , tsDelegMapSize :: Int
-      , tsChainDensity :: Double
+        tsSlotNo            :: SlotNo
+      , tsUtxoSize          :: Int
+      , tsDelegMapSize      :: Int
+      , tsChainDensity      :: Double
+      , tsCumulativeTxBytes :: Word64
 {- see Note [GovMetrics]
       , tsDRepCount    :: Int
       , tsDRepMapSize  :: Int
@@ -104,10 +106,11 @@ traceLedgerMetrics ::
 traceLedgerMetrics nodeKern slotNo tracer = do
   query <- mapNodeKernelDataIO
               (\nk ->
-                (,,) -- (,,,,)
+                (,,,) -- (,,,,,)
                   <$> ChainDB.getStatistics (getChainDB nk)
                   <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                   <*> nkQueryChain fragmentChainDensity nk
+                  <*> nkQueryLedger (ledgerCumulativeTxBytes . ledgerState) nk
 {- see Note [GovMetrics]
                   <*> nkQueryLedger (ledgerDRepCount . ledgerState) nk
                   <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
@@ -116,7 +119,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
               nodeKern
   case query of
     SNothing -> pure ()
-    SJust (ledgerStatistics, delegMapSize, {- drepCount, drepMapSize, -} chainDensity) ->
+    SJust (ledgerStatistics, delegMapSize, {- drepCount, drepMapSize, -} chainDensity, cumulativeTxBytes) ->
         let msg = LedgerMetrics
                     slotNo
                     (LedgerDB.ledgerTableSize ledgerStatistics)
@@ -126,6 +129,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
                     drepMapSize
 -}
                     (fromRational chainDensity)
+                    cumulativeTxBytes
         in traceWith tracer msg
 
 --------------------------------------------------------------------------------
@@ -139,6 +143,7 @@ instance LogFormatting LedgerMetrics where
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                , "cumulativeTxBytes" .= Number (fromIntegral tsCumulativeTxBytes)
 {- see Note [GovMetrics]
                 , "drepCount" .= Number (fromIntegral tsDRepCount)
                 , "drepMapSize" .= Number (fromIntegral tsDRepMapSize)
@@ -146,16 +151,18 @@ instance LogFormatting LedgerMetrics where
                 ]
   forHuman LedgerMetrics {..} =
     "Ledger metrics "
-      <> " utxoSize "     <> showT tsUtxoSize
-      <> " delegMapSize " <> showT tsDelegMapSize
-      <> " chainDensity " <> showT tsChainDensity
+      <> " utxoSize "            <> showT tsUtxoSize
+      <> " delegMapSize "        <> showT tsDelegMapSize
+      <> " chainDensity "        <> showT tsChainDensity
+      <> " cumulativeTxBytes "   <> showT tsCumulativeTxBytes
 {- see Note [GovMetrics]
       <> " drepCount"     <> showT tsDRepCount
       <> " drepMapSize"   <> showT tsDRepMapSize
 -}
   asMetrics LedgerMetrics {..} =
-    [ IntM "utxoSize"     (fromIntegral tsUtxoSize)
-    , IntM "delegMapSize" (fromIntegral tsDelegMapSize)
+    [ IntM "utxoSize"          (fromIntegral tsUtxoSize)
+    , IntM "delegMapSize"      (fromIntegral tsDelegMapSize)
+    , IntM "cumulativeTxBytes" (fromIntegral tsCumulativeTxBytes)
 {- see Note [GovMetrics]
     , IntM "drepCount"    (fromIntegral tsDRepCount)
     , IntM "drepMapSize"  (fromIntegral tsDRepMapSize)
@@ -168,8 +175,9 @@ instance MetaTrace LedgerMetrics where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["LedgerMetrics"]) =
-      [ ("utxoSize",      "UTxO set size")
-      , ("delegMapSize",  "Delegation map size")
+      [ ("utxoSize",          "UTxO set size")
+      , ("delegMapSize",      "Delegation map size")
+      , ("cumulativeTxBytes", "Cumulative transaction bytes on the selected chain")
 {- see Note [GovMetrics]
       , ("drepCount",     "Number of DReps")
       , ("drepMapSize",   "Number of DRep delegations")

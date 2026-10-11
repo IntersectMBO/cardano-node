@@ -23,7 +23,7 @@
     customConfig.url = "github:input-output-hk/empty-flake";
 
     CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=index-only";
       flake = false;
     };
 
@@ -204,6 +204,7 @@
           default = shell.dev;
           cluster = shell;
           profiled = project.profiled.shell;
+          ghc9141 = project.ghc9141.shell;
         }
         # Shell used by the "Haddock documentation" workflow (github-page.yml)
         // optionalAttrs (hostPlatform.system == "x86_64-linux") {
@@ -359,10 +360,15 @@
           "db-analyser"
           "db-synthesizer"
           "db-truncater"
-          "dmq-node"
+          # "dmq-node" FIXME: not updated within leios-prototype
           "kes-agent"
           "kes-agent-control"
+          # The load generator and its observer travel together: the
+          # leios-prototype release ships both so an SPO can colour their
+          # own load and see whose load their mempool holds.
+          "mempool-monitor"
           "snapshot-converter"
+          "tx-firehose"
           "tx-generator"
         ];
 
@@ -384,7 +390,7 @@
             native =
               packages
               // {
-                shells = devShells;
+                shells = removeAttrs devShells ["ghc9141"];
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
@@ -461,7 +467,7 @@
                     filterAttrs (n: _: elem n releaseBins && !(elem n linuxOnlyBins)) (collectExes project)
                   );
                 };
-                shells = removeAttrs devShells ["profiled"];
+                shells = removeAttrs devShells ["profiled" "ghc9141"];
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;

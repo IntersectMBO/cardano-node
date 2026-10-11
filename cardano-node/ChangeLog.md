@@ -2,6 +2,10 @@
 
 ## Next version
 
+- Added a `--shelley-bls-key FILEPATH` option to `cardano-node run` for supplying a block producer's BLS (Leios) signing key alongside the existing VRF/KES/operational-certificate keys. The key is threaded into the consensus block-producer credentials and used as the Leios voting key. It is optional: producers that do not supply it no longer vote (previously a placeholder key was derived from cold-key material). Generate one with `cardano-cli dijkstra node key-gen-BLS`.
+
+- `LeiosDbConfig` with `Backend: SQLite` no longer takes any paths. Its two partitions follow the node's own `DatabasePath` the way the VolatileDB and the ImmutableDB do: `leios.vol.db` next to `volatile/`, `leios.imm.db` next to `immutable/`, which are separate volumes when `--immutable-database-path` and `--volatile-database-path` are given. Any `Filepath`, `VolatileFilepath` or `ImmutableFilepath` key is ignored, and an existing LeiosDb under the old `leios.db.vol`/`leios.db.imm` names is not picked up: the node starts a fresh one and re-fetches the endorser-block closures.
+
 - `slotsMissed_int` no longer counts the slots that elapse while block forging
   is disabled. While forging is off there is no forging thread, hence no
   leadership check events at all, so `Forge.Stats` kept the last slot it had

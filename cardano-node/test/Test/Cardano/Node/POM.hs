@@ -17,6 +17,7 @@ import           Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedg
 import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Cardano.Node.Configuration.LedgerDB
+import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -185,6 +186,8 @@ testPartialYamlConfig =
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
+    , pncLeiosDbConfig = mempty
+    , pncLeiosMinOfferLead = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -200,7 +203,7 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
     , pncExperimentalProtocolsEnabled = Last $ Just True
-    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
@@ -238,6 +241,8 @@ testPartialCliConfig =
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
+    , pncLeiosDbConfig = mempty
+    , pncLeiosMinOfferLead = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -251,19 +256,22 @@ eExpectedConfig = do
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = OnePathForAllDbs "mainnet/db/"
-    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
     , ncEgressPollInterval = 0
-    , ncMaxConcurrencyBulkSync = Nothing
-    , ncMaxConcurrencyDeadline = Nothing
+    -- The block-fetch concurrency defaults, which the node now states rather
+    -- than leaving to consensus; neither test layer sets them.
+    , ncMaxConcurrencyBulkSync = Just (MaxConcurrencyBulkSync 1)
+    , ncMaxConcurrencyDeadline = Just (MaxConcurrencyDeadline 1)
     , ncTraceForwardSocket = Nothing
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
-    , ncChainSyncIdleTimeout = NoTimeoutOverride
+    -- The diffusion layer's own default, likewise now stated rather than implied.
+    , ncChainSyncIdleTimeout = TimeoutOverride 3373
     , ncMempoolTimeoutSoft = 1.0
     , ncMempoolTimeoutHard = 1.5
     , ncMempoolTimeoutCapacity = 5.0
@@ -296,6 +304,8 @@ eExpectedConfig = do
     , ncRpcConfig
     , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
+    , ncLeiosDbConfig = LeiosDbSQLite
+    , ncLeiosMinOfferLead = Nothing
     }
 
 -- | Test that the legacy flat LedgerDB snapshot config format (options directly

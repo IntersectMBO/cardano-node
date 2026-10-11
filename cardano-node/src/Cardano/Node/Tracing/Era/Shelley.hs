@@ -82,6 +82,8 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text.Encoding
 
+import qualified LeiosDemoTypes as Leios
+
 {- HLINT ignore "Use :" -}
 
 --
@@ -174,7 +176,9 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyRegisteredDELEG credential ->
+    -- ledger renamed this to 'DelegAccountAlreadyRegistered'; the trace kind is
+    -- kept as-is so existing log consumers keep matching.
+    Conway.DelegAccountAlreadyRegistered (AccountAlreadyRegistered credential) ->
       [ "kind" .= String "StakeKeyRegisteredDELEG"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
@@ -643,7 +647,7 @@ instance
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
 instance LogFormatting (ShelleyDelegPredFailure era) where
-  forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
+  forMachine _dtal (DelegAccountAlreadyRegistered (AccountAlreadyRegistered alreadyRegistered)) =
     mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
@@ -1209,10 +1213,8 @@ instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
-             , "rewardAccounts" .= unWithdrawals rs
-            ]
+  -- 'WithdrawalsNotInRewardsCERTS' was removed from the ledger: the withdrawal
+  -- check is now unconditionally part of the LEDGER rule and reported there.
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 
@@ -1626,7 +1628,7 @@ instance
 
 instance
   ( Ledger.Crypto crypto
-  ) => LogFormatting (Praos.PraosValidationErr crypto) where
+  ) => LogFormatting (Praos.PolyPraosValidationErr pext crypto) where
   forMachine _ err' =
     case err' of
       Praos.VRFKeyUnknown unknownKeyHash ->
@@ -1690,6 +1692,8 @@ instance
         mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
                 , "stakePoolKeyHash" .= stakePoolKeyHash
                 ]
+      Praos.LeiosHeaderErr _proof leiosErr ->
+        Leios.leiosHeaderErrToObject leiosErr
 
 instance LogFormatting (Praos.PraosCannotForge crypto) where
   forMachine _ (Praos.PraosCannotForgeKeyNotUsableYet currentKesPeriod startingKesPeriod) =

@@ -111,9 +111,11 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
+  -- Codecs gained two type params for LeiosNotify (bLN) and LeiosFetch (bLF)
+  -- via the Leios chunks; they are unused on the tx-generator initiator path.
   myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-                ByteString ByteString ByteString
+                ByteString ByteString ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
@@ -156,17 +158,16 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
                                              (cTxSubmission2Codec myCodecs)
                                              channel
                                              (txSubmissionClientPeer myTxSubClient)
+            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
+            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
+                                          pure ((), Nothing)
             , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                           runPeer
                                              mempty
                                              (cPeerSharingCodec myCodecs)
                                              channel
                                              (peerSharingClientPeer peerSharingClientNull)
-            -- TODO Peras is not supported here
-            , NtN.perasCertDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras cert diffusion is unsupported"
-            , NtN.perasVoteDiffusionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx _channel ->
-                                          error "tx-generator: Peras vote diffusion is unsupported"
             }
           n2nVer
           n2nData
@@ -184,7 +185,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     runPeerWithLimits
       mempty
       (cKeepAliveCodec myCodecs)
-      (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
+      byteLimitsKeepAlive
       timeLimitsKeepAlive
       channel
       $ keepAliveClientPeer

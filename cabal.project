@@ -13,14 +13,12 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-14T13:38:07Z
-  , cardano-haskell-packages 2026-09-22T20:39:47Z
+  , hackage.haskell.org 2026-09-02T14:05:07Z
+  , cardano-haskell-packages 2026-10-09T14:30:01Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
-  -- grapesy currently depends on crypton-x509-system (>=1.6 && <1.7)
   , any.crypton-x509-system < 1.6.8 || >= 1.7
-
   -- haskell.nix tries to use 0.7.1.5 for some reason
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
@@ -44,16 +42,18 @@ packages:
   bench/locli
   bench/plutus-scripts-bench
   bench/tx-generator
+  bench/tx-firehose
+  bench/mempool-monitor
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-forward
 
--- Shipped as a release binary but not a dependency of any local package, so it
--- has to be added to the install plan explicitly.
-extra-packages: dmq-node >= 0.7.0.0
+-- Needed when cross compiling
+extra-packages: alex, dmq-node
 
-program-options
-  ghc-options: -Werror
+-- TODO: allow warnings in leios-prototype
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 
@@ -65,104 +65,209 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
-package snap-server
-  flags: -openssl
-
 package bitvec
   flags: -simd
-
-package cardano-diffusion
-  flags: +optparse-applicative-fork
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
 
--- There is a suspected bug in `cabal` (https://github.com/haskell/cabal/issues/11663)
--- that can be worked around with the following allow-newer stanzas
 allow-newer:
-  , io-sim:time
-  , io-classes:time
+  -- cardano-keys and cardano-config predate the cardano-ledger master the
+  -- Leios prototype is on (as in ouroboros-consensus main)
+  , cardano-keys:cardano-ledger-core
+  , cardano-keys:cardano-ledger-shelley
+  , cardano-keys:cardano-protocol
+  , cardano-config:cardano-ledger-conway
+  , cardano-config:cardano-ledger-core
+  , cardano-config:cardano-ledger-dijkstra
+  , cardano-config:cardano-ledger-shelley
+  -- plutus-scripts-bench bounds cardano-api ^>=11.5 but we have 11.6
+  , plutus-scripts-bench:cardano-api
+  -- plutus-scripts-bench bounds plutus-* ^>=1.65 but we have 1.68
+  , plutus-scripts-bench:plutus-ledger-api
+  , plutus-scripts-bench:plutus-tx
+  , plutus-scripts-bench:plutus-tx-plugin
 
--- cabal-allow-newer begin
 if impl(ghc >= 9.14)
+  -- some-1.1 adds EqP/OrdP superclasses to GEq/GCompare, which plutus-core
+  -- 1.71.0.0 is not written against:
+  --
+  --   Universe/Core.hs:755:10: error: [GHC-39999]
+  --     Could not deduce 'Data.EqP.EqP (ValueOf uni)'
+  --       arising from the superclasses of an instance declaration
+  --
+  -- some-1.0.6 is what every other compiler resolves to and it already allows
+  -- base < 4.23, so it is usable on 9.14; the solver simply prefers the newest.
+  -- Pin it rather than relaxing dependent-sum's some >= 1.0.4 && < 1.0.7 bound.
+  constraints:
+    , any.some < 1.1
+
+  -- GHC 9.14.1 ships base-4.22, template-haskell-2.24, containers-0.8,
+  -- time-1.15 and ghc-9.14.1. Every entry below is a dependency whose upper
+  -- bound predates one of those and has no release on Hackage/CHaP that admits
+  -- it, so the solver has no plan without the relaxation.
   allow-newer:
-    , async-timer:unliftio-core
-    , attoparsec-iso8601:time
+    -- base < 4.22
     , bytestring-trie:base
-    , canonical-json:containers
     , cborg:base
-    , cborg:containers
-    , cborg-json:aeson
     , cborg-json:base
     , compact:base
-    , crypton-connection:tls
-    , dependent-map:containers
-    , diff-containers:base
-    , dictionary-sharing:containers
-    , dmq-node:containers
-    , dmq-node:time
-    , ekg-json:aeson
-    , ekg-json:text
-    , ekg-prometheus-adapter:containers
-    , ekg-wai:time
-    , errors:transformers-compat
-    , fs-sim:QuickCheck
-    , grapesy:aeson
-    , grapesy:base
-    , grapesy:containers
-    , grapesy:time-manager
-    , grapesy:tls
-    , grpc-spec:aeson
-    , grpc-spec:base
-    , grpc-spec:containers
-    , iohk-monitoring:contra-tracer
-    , lens-family:containers
-    , lens-family-core:containers
-    , locli:ouroboros-network
-    , microstache:aeson
-    , monad-control:transformers-compat
-    , nothunks:containers
-    , nothunks:time
-    , optparse-generic:time
-    , partial-order:containers
-    , pipes-safe:containers
-    , pipes-safe:mtl
-    , pipes-safe:primitive
-    , pipes-safe:transformers
-    , prometheus:containers
+    , ekg-json:base
+    , http-api-data:base
+    , serialise:base
+    , servant-server:base
+    , tdigest:base
+    , with-utf8:base
+    -- template-haskell < 2.24
     , safe-wild-cards:template-haskell
     , serdoc-core:template-haskell
-    , serialise:base
+    -- containers < 0.8
+    , canonical-json:containers
+    , cborg:containers
+    , dependent-map:containers
+    , dictionary-sharing:containers
+    , ekg-prometheus-adapter:containers
+    , lens-family:containers
+    , lens-family-core:containers
+    , prometheus:containers
     , serialise:containers
+    -- time < 1.15
+    , ekg-wai:time
     , serialise:time
-    , servant:QuickCheck
-    , servant:base
-    , servant-server:aeson
-    , servant-server:attoparsec
-    , servant-server:base
-    , servant-server:base-compat
-    , servant-server:base64-bytestring
-    , servant-server:bytestring
-    , servant-server:containers
-    , servant-server:http-api-data
-    , servant-server:http-types
-    , servant-server:network
-    , servant-server:servant
-    , servant-server:text
-    , servant-server:transformers
-    , servant-server:warp
-    , strict-checked-vars:io-classes
-    , strict-stm:base
-    , strict-stm:io-classes
-    , tdigest:base
-    , time-locale-compat:time
-    , tracer-transformers:contra-tracer
+    -- io-classes: io-sim requires ^>=1.11 while cardano-node and
+    -- ouroboros-network cap at ^>=1.8 || ^>=1.9. On 9.14 every older io-sim is
+    -- excluded by base < 4.22, so the solver is forced to io-classes 1.11 and
+    -- all of these bounds have to give way together.
+    , blockio:io-classes
+    , cardano-diffusion:io-classes
+    , cardano-node:io-classes
+    , cardano-node-chairman:io-classes
+    , fs-api:io-classes
+    , fs-sim:io-classes
+    , kes-agent:io-classes
+    , lsm-tree:io-classes
+    , network-mux:io-classes
+    , ouroboros-consensus:io-classes
+    , ouroboros-network:io-classes
+    -- Other
+    , cborg-json:aeson
+    , kes-agent:aeson
     , vary:aeson
-    , with-utf8:base
--- cabal-allow-newer end
+    , errors:transformers-compat
+    , monad-control:transformers-compat
+    , servant-server:http-api-data
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- cardano-base master past PR #695: proofs of possession use the IETF BLS_POP_ DST
+-- and the BLS DSTs take no signing context. Unreleased; CHaP's cardano-crypto-class
+-- 2.6.0.0 still makes proofs under BLS_SIG_.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: c1e1ed8d7ae39c111c73fc5f59ac37ce5933b83c
+  --sha256: sha256-UawlVBgCkU8H6o1k8BHj6pRkZjbHsdVEVIBW0ZFpWkc=
+  subdir:
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-leios
+    cardano-crypto-praos
+
+-- cardano-keys master adapted to the context-free BLS API of the cardano-base above
+-- (branch ch1bo/leios-ietf-pop-dst).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-keys
+  tag: f89a91b41ff171dd062a0cae0e93b8b999fedf40
+  --sha256: sha256-UBWBai91SXzC/JQY4FVjXGaf/C0xHcz7+BH13oAT+fY=
+  subdir:
+    cardano-keys
+
+-- cardano-ledger leios-prototype with the 2026-10-01 release and master 0a72d43f
+-- merged, plus the IPv4 relay byte-order fix.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 505fa72260632fca6df33e18e18719730bf9a460
+  --sha256: sha256-QrL63+HOkJ885tBlCKMzpWNuQONjgYtUb4xhlvNslgI=
+  subdir:
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/small-steps
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    eras/mary/impl
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+
+-- ouroboros-network leios-prototype (+ matchedBlock) with ouroboros-network-1.3.0.0 merged
+-- (leios-prototype).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 96ee6e0e689770b5a3d664c59f2d13b05c5d9c4d
+  --sha256: sha256-Zfs9ynTezee2gULekzZD2BiSJnKsaeUav5REhghYyRw=
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
+
+-- ouroboros-consensus leios-prototype with release-ouroboros-consensus-5.1.0.1 and main
+-- (Praos2) merged, its database on upstream's LeiosDB (leios-prototype).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 5cc95f4caf294751318f8637ab2fb60d5de6eb29
+  --sha256: sha256-KldFz2huvtFNtv6TxgSoixvBtO0FbpesP81YRoZJdFU=
+
+-- cardano-api leios-prototype with cardano-api-11.8.0.0 merged
+-- (leios-prototype).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 69483c3a7db6a22ec2ffd60e1aa1cc211968d116
+  --sha256: sha256-n0JTGGHRbDpQ7rv9JeVFxiaTeiMz8Au/1JXHjbtQwLs=
+  subdir:
+    cardano-api
+    cardano-api-gen
+    cardano-rpc
+
+-- cardano-cli leios-prototype with cardano-cli-11.3.0.0 merged
+-- (leios-prototype).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 40f4167614dc15168f463396db3ae9f5bc381449
+  --sha256: sha256-9owCh3kPZhe+9zD0h9NYXsNic3JsOqEwzNV17vgsb3k=
+  subdir:
+    cardano-cli
+
+-- Points to nfrisby-pr93-lookahead-merge-commit tag
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/typed-protocols
+  tag: 9b4627221ae5d649f2303c6926a8dba3f9934658
+  --sha256: sha256-55skVYIR0WjXMwJEirLgF0HFHUpFLBppuV9gvTWqoOI=
+  subdir:
+    typed-protocols
+
+-- cardano-config master with the shared --shelley-bls-key parser (PR #32).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config
+  tag: 3ea0916679922c0694e4835d2491c3ae9146d037
+  --sha256: sha256-IXItIbCb689cIjE6zFJd9GW7fiKuSGbBA801gwg9avM=

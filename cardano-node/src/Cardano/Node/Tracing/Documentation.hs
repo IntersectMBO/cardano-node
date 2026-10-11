@@ -39,16 +39,10 @@ import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
-import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ChainDB
-import           Cardano.Node.Tracing.Tracers.Consensus
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -81,6 +75,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
@@ -134,6 +129,10 @@ import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
 
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 import           Paths_cardano_node (version)
 
 
@@ -518,6 +517,37 @@ docTracersFirstPhase condConfigFileName = do
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
         (TraceSendRecv (PerasVoteDiffusion blk))))
 
+-- Leios
+
+    leiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [leiosKernelTr]
+    leiosKernelTrDoc <- documentTracer (leiosKernelTr ::
+      Logging.Trace IO TraceLeiosKernel)
+
+    leiosPeerTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosPeer"]
+    configureTracers configReflection trConfig [leiosPeerTr]
+    leiosPeerTrDoc <- documentTracer (leiosPeerTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer remotePeer TraceLeiosPeer))
+
+    leiosNotifyTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosNotify", "Remote"]
+    configureTracers configReflection trConfig [leiosNotifyTr]
+    leiosNotifyTrDoc <- documentTracer (leiosNotifyTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote))))
+
+    leiosFetchTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTr]
+    leiosFetchTrDoc <- documentTracer (leiosFetchTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))))
 
 -- Node to client
 
@@ -841,6 +871,11 @@ docTracersFirstPhase condConfigFileName = do
             <> perasVoteOutboundTrDoc
             <> perasCertDiffusionTrDoc
             <> perasVoteDiffusionTrDoc
+-- Leios
+            <> leiosKernelTrDoc
+            <> leiosPeerTrDoc
+            <> leiosNotifyTrDoc
+            <> leiosFetchTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc

@@ -14,8 +14,10 @@ module Cardano.Node.Protocol.Types
 import qualified Cardano.Api as Api
 
 import           Cardano.Node.Orphans ()
-import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
+import           Cardano.Node.Queries (HasKESMetricsData)
 import           Cardano.Node.TraceConstraints (TraceConstraints)
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Forker
+import           Ouroboros.Consensus.Tracing (HasKESInfo)
 import           Ouroboros.Network.Block (HeaderHash)
 
 import           Control.DeepSeq (NFData)
@@ -48,6 +50,7 @@ data SomeConsensusProtocol where
                                           , TraceConstraints blk
                                           , Api.ToCBOR (HeaderHash blk)
                                           , Api.FromCBOR (HeaderHash blk)
+                                          , Ouroboros.Consensus.Storage.LedgerDB.Forker.ResolveLeiosBlock blk
                                           )
                            => Api.BlockType blk
                            -> Api.ProtocolInfoArgs IO blk

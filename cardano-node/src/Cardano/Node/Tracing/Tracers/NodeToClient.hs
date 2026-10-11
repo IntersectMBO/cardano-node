@@ -19,6 +19,8 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (ObjectDiffusion)
 import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as OD
 import           Ouroboros.Network.Tracing ()
+import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (ObjectDiffusion)
+import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as OD
 
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (Text, pack)
@@ -26,6 +28,9 @@ import qualified Network.TypedProtocol.Codec as Simple
 import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
+
+-- 'LogFormatting' and 'MetaTrace' instances for 'Simple.TraceSendRecv' and
+-- 'Stateful.TraceSendRecv' come from 'ouroboros-network:framework-tracing'.
 
 -- --------------------------------------------------------------------------------
 -- -- TChainSync Tracer

@@ -34,10 +34,6 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Types
-import           Cardano.Node.Tracing.Era.HardFork ()
-import           Cardano.Node.Tracing.Era.Shelley ()
-import           Cardano.Node.Tracing.Formatting ()
-import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
@@ -183,10 +179,15 @@ readLeaderCredentialsSingleton
 readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
+                      shelleyBLSFile = mBlsFile,
                       shelleyKESSource = Just kesSource
                     } = do
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
+
+    -- The BLS (Leios) keys are optional: only block producers participating in
+    -- Leios supply any alongside their VRF/KES/opcert credentials.
+    blsSKeys <- maybe (pure []) readBlsSigningKeys mBlsFile
 
     (credentialsSource, vkey) <- case kesSource of
       KESKeyFilePath kesFile -> do
@@ -201,7 +202,7 @@ readLeaderCredentialsSingleton
         OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
         pure (PraosCredentialsAgent socketFile, vkey)
 
-    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey blsSKeys]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
@@ -251,7 +252,8 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      KesSigningKey kesKey <- parseEnvelope scKes
      let credentialsSource = PraosCredentialsUnsound opCert kesKey
      vrfSKey <- parseEnvelope scVrf
-     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey
+     -- Bulk credentials files do not carry BLS (Leios) keys.
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey []
 
    readBulkFile
      :: Maybe FilePath
@@ -276,20 +278,41 @@ mkPraosLeaderCredentials ::
      PraosCredentialsSource StandardCrypto
   -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
+  -> [SigningKey BlsKey]
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
     credentialsSource
     (StakePoolVerificationKey vkey)
-    (VrfSigningKey vrfKey) =
+    (VrfSigningKey vrfKey)
+    blsKeys =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
           praosCanBeLeaderCredentialsSource = credentialsSource,
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-          praosCanBeLeaderSignKeyVRF = vrfKey
+          praosCanBeLeaderSignKeyVRF = vrfKey,
+          praosCanBeLeaderSignKeyBLS = unBlsSigningKey <$> blsKeys
         },
       shelleyLeaderCredentialsLabel = "Shelley"
     }
+  where
+    unBlsSigningKey (BlsSigningKey k) = k
+
+-- | Read the BLS (Leios) signing keys from a file holding either a single text
+-- envelope or a JSON array of them. A pair of keys keeps a rotated key voting
+-- across the epoch boundary; a larger bundle casts one vote per committee seat
+-- held.
+readBlsSigningKeys ::
+     FilePath
+  -> ExceptT PraosLeaderCredentialsError IO [SigningKey BlsKey]
+readBlsSigningKeys fp = do
+  content <- handleIOExceptT (CredentialsReadError fp) $ BS.readFile fp
+  envelopes <-
+    firstExceptT (EnvelopeParseError fp) . hoistEither $
+      case Aeson.eitherDecodeStrict' content of
+        Right tes -> Right tes
+        Left _ -> (:[]) <$> Aeson.eitherDecodeStrict' content
+  traverse (\te -> parseEnvelope (te, fp)) envelopes
 
 parseEnvelope ::
      HasTextEnvelope a

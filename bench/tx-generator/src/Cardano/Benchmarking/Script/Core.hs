@@ -41,6 +41,7 @@ import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Tools (estimateMinFeeTx)
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -172,7 +173,7 @@ queryEra = do
   AnyCardanoEra era <- mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  caseByronOrShelleyBasedEra
+  inEonForEra
     (liftTxGenError $ TxGenError "queryEra Byron not supported")
     (return . AnyShelleyBasedEra)
     era
@@ -368,10 +369,12 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             Right tx -> do
               let
                 txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+                txFeeEstimate = case tx of
+                  ShelleyTx sbe ledgerTx -> shelleyBasedEraConstraints sbe $
+                    case toLedgerPParams sbe protocolParameters of
+                      Left{}              -> Nothing
+                      Right ledgerPParams -> Just $
+                        estimateMinFeeTx ledgerPParams ledgerTx (inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
               traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
               -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee

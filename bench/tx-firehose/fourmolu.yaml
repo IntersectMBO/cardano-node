@@ -1,0 +1,7 @@
+indentation: 2
+column-limit: 100
+import-export-style: leading
+haddock-style: single-line
+single-constraint-parens: never
+single-deriving-parens: never
+import-grouping: single
