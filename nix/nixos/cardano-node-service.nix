@@ -49,36 +49,41 @@ let
     then "/etc/cardano-node/topology-${toString i}.json"
     else selectTopology i;
 
+  baseConfig =
+    recursiveUpdate
+      (cfg.nodeConfig
+        // (mapAttrs' (era: epoch:
+          nameValuePair "Test${era}HardForkAtEpoch" epoch
+        ) cfg.forceHardForks)
+        // {
+          MaxConcurrencyBulkSync = 2;
+        } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
+          TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+        } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
+          TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+        } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
+          TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+        } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
+          TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+        }
+      ) cfg.extraNodeConfig;
+
+  baseInstanceConfig =
+    i:
+    recursiveUpdate
+    baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
+      LedgerDB = {
+        Backend = "V2LSM";
+        LSMDatabasePath = cfg.lsmDatabasePath i;
+      };
+    });
+
+  mkInstanceConfig = i:
+    recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
+
   mkScript = cfg:
-    let baseConfig =
-          recursiveUpdate
-            (cfg.nodeConfig
-              // (mapAttrs' (era: epoch:
-                nameValuePair "Test${era}HardForkAtEpoch" epoch
-              ) cfg.forceHardForks)
-              // {
-                MaxConcurrencyBulkSync = 2;
-              } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
-                TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-              } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
-                TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-              } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
-                TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-              } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
-                TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              }
-            ) cfg.extraNodeConfig;
-        baseInstanceConfig =
-          i:
-          recursiveUpdate
-          baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
-            LedgerDB = {
-              Backend = "V2LSM";
-              LSMDatabasePath = cfg.lsmDatabasePath i;
-            };
-          });
-    in i: let
-    instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
+    i: let
+    instanceConfig = mkInstanceConfig i;
     publishedConfig =
       if cfg.configFormat == "enveloped"
       then cfg.cardanoNodePackages.cardanoLib.mkEnvelope instanceConfig
@@ -1045,6 +1050,35 @@ in {
       };
     }
     {
+      # Only keys cardano-config resolves survive enveloping in a section the
+      # node reads. A stale name still applies, mkEnvelope renames it, and a
+      # removed key is dropped on purpose, so neither is a fault. Anything else
+      # is kept outside every section and ignored, which is. Warnings rather
+      # than assertions for now: a key may be legitimately absent from the
+      # cardano-config schema, and blocking a deploy on that is worse than
+      # reporting it.
+      warnings = let
+        inherit (cfg.cardanoNodePackages.cardanoLib)
+          removedKeys renamedKeys unrecognisedKeys;
+        flagged = unique (concatMap (i: unrecognisedKeys removedKeys (mkInstanceConfig i))
+          (genList trivial.id cfg.instances));
+        stale = filter (k: renamedKeys ? ${k}) flagged;
+        unknown = filter (k: !(renamedKeys ? ${k})) flagged;
+      in optionals (cfg.configFormat == "enveloped") (
+        optional (stale != []) ''
+          services.cardano-node: these config keys have been renamed by cardano-config:
+          ${concatMapStringsSep "\n" (k: "  ${k} -> ${renamedKeys.${k}}") stale}
+          They still apply, mkEnvelope renames them, but the new names are what
+          the schema and the published configs use.
+        ''
+        ++ optional (unknown != []) ''
+          services.cardano-node: cardano-config does not resolve these config keys:
+          ${concatMapStringsSep "\n" (k: "  ${k}") unknown}
+          Enveloping keeps them outside every section, where the node ignores
+          them. Remove them or check the name against the cardano-config schema.
+        ''
+      );
+
       assertions = [
         {
           assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i)) (genList trivial.id cfg.instances);
