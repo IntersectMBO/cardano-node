@@ -24,7 +24,6 @@ import           Cardano.Api (textShow)
 import           Cardano.Logging
 import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
@@ -253,11 +252,10 @@ instance MetaTrace NodeState where
 
 
 traceNodeStateChainDB
-  :: SomeConsensusProtocol
-  -> Trace IO NodeState
+  :: Trace IO NodeState
   -> ChainDB.TraceEvent blk
   -> IO ()
-traceNodeStateChainDB _scp tr ev =
+traceNodeStateChainDB tr ev =
   case ev of
     ChainDB.TraceOpenEvent ev' ->
       case ev' of

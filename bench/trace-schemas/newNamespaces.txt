@@ -7,9 +7,8 @@ BlockFetch.Client.CompletedFetchBatch
 BlockFetch.Client.RejectedFetchBatch
 BlockFetch.Client.SendFetchRequest
 BlockFetch.Client.StartedFetchBatch
-BlockFetch.Decision.Accept
-BlockFetch.Decision.Decline
-BlockFetch.Decision.EmptyPeersFetch
+BlockFetch.Decision.PeerStarvedUs
+BlockFetch.Decision.PeersFetch
 BlockFetch.Remote.Receive.BatchDone
 BlockFetch.Remote.Receive.Block
 BlockFetch.Remote.Receive.ClientDone

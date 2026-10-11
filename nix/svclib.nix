@@ -51,6 +51,14 @@ let
         ''
 
         )
+
+        ## Extra argv, appended at run time rather than baked in at eval time --
+        ## e.g. the workbench's --dump-show/--dump-cbor generator overrides.
+        ## Absent for every service unless something explicitly writes the file.
+        if test -f extra-args.env
+        then CMD+=( $(cat extra-args.env) )
+        fi
+
         echo -e "Starting service ${svcName}:\n"
 
         for x in "''${CMD[@]}"

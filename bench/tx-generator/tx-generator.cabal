@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.16
+version:                2.18
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -30,7 +30,7 @@ common with-library
   -- It makes sure, we only depend on that package if it is buildable.
   -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
   if flag(withplutuslib) && !(impl(ghc <9.6) || impl(ghc >=9.7))
-    build-depends:      plutus-scripts-bench ^>= 1.0.4
+    build-depends:      plutus-scripts-bench ^>= 1.0.5
     cpp-options:        -DWITH_LIBRARY
 
 common maybe-unix
@@ -49,12 +49,17 @@ library
                         -Wno-prepositive-qualified-module
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
-                        -Wredundant-constraints
                         -fno-warn-safe
                         -fno-warn-unsafe
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
 
   exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
@@ -70,7 +75,9 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.Ogmios
                         Cardano.Benchmarking.Script.Selftest
+                        Cardano.Benchmarking.Script.Submission
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
                         Cardano.Benchmarking.Tracer
@@ -109,32 +116,41 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 11.6
+                      , cardano-api ^>= 11.8
                       , cardano-binary
-                      , cardano-cli ^>= 11.2
+                      , cardano-cli ^>= 11.3
                       , cardano-crypto-class
+                      , cardano-crypto-wrapper
                       , cardano-data
-                      , cardano-diffusion ^>= 1.0
+                      , cardano-diffusion ^>= 1.3
                       , cardano-git-rev ^>= 0.2.2
+                      , cardano-ledger-alonzo
                       , cardano-ledger-api
+                      , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
+                      , constraints-extras
                       , directory
                       , dlist
                       , extra
                       , filepath
+                      , formatting
+                      , generic-monoid
+                      , ghc-prim
                       , io-classes:{io-classes, strict-stm}
                       , microlens
                       , mtl
                       , network
                       , network-mux
+                      , network-uri
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 3.0.1
-                      , ouroboros-network:{api, framework, tracing, ouroboros-network, protocols} >= 1.1
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} >= 4.0
+                      , ouroboros-network:{api, framework, ouroboros-network, protocols, tracing} >= 1.2
                       , plutus-ledger-api
                       , plutus-tx
                       , random
@@ -150,6 +166,8 @@ library
                       , trace-forward
                       , transformers
                       , transformers-except
+                      , unordered-containers
+                      , websockets
                       , yaml
                       -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
                       , either
@@ -186,12 +204,12 @@ executable calibrate-script
                       , aeson
                       , aeson-pretty
                       , bytestring
-                      , cardano-api
                       , containers
                       , directory
                       , extra
                       , filepath
                       , optparse-applicative
+                      , cardano-api
                       , text
                       , transformers
                       , transformers-except

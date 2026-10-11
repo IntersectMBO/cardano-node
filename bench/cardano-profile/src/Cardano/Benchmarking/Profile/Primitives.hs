@@ -41,7 +41,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview
+  , v8Preview, v9Preview, v11Preview, v12Preview
+  , leios6912k
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
@@ -52,6 +53,8 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Others
   , blocksize64k
+  , blocksize768k
+  , blocksize6912k
   , voting
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
@@ -70,15 +73,15 @@ module Cardano.Benchmarking.Profile.Primitives (
   , chaindb
 
   -- Node
-  -- LMDB or LSMT True or False.
-  , lmdb, lsmt
+  -- LSMT True or False.
+  , lsmt
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
-  , rtsGcNonMoving, rtsGcAllocSize, rtsGcParallel, rtsGcLoadBalance
-  , rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
+  , rtsGcNonMoving, rtsGcAllocSize
+  , rtsThreads, rtsHeapLimit, rtsEventlogged
   , heapLimit
 
   -- Generator params.
@@ -91,7 +94,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , workloadAppend
 
   -- Tracer's params.
-  , tracerRtview, tracerWithresources, tracerTimeseries
+  , tracerWithresources, tracerTimeseries
 
   -- Cluster params.
   , clusterMinimunStorage, ssdDirectory, clusterKeepRunningOn
@@ -148,13 +151,14 @@ empty = Types.Profile {
     , Types.n_dense_pools = 0
     , Types.n_pool_hosts = 0
   }
-  , Types.era = Types.Conway
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 0
     , Types.pparamsOverlays = []
+    , Types.byron = mempty
     , Types.shelley = mempty
     , Types.alonzo = mempty
     , Types.conway = Nothing
+    , Types.dijkstra = Nothing
     , Types.slot_duration = 0
     , Types.epoch_length = 0
     , Types.active_slots_coeff = 0
@@ -174,8 +178,7 @@ empty = Types.Profile {
   }
   , Types.chaindb = Nothing
   , Types.node = Types.Node {
-      Types.utxo_lmdb = False
-    , Types.utxo_lsmt = False
+      Types.utxo_lsmt = False
     , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim (Just True)   -- EnableP2P = true enforced; Node 10.6 won't support non-p2p topologies.
     , Types.trace_forwarding = False
@@ -200,8 +203,7 @@ empty = Types.Profile {
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
-      Types.rtview = False
-    , Types.ekg = False
+      Types.ekg = False
     , Types.withresources = False
     , Types.timeseries = False
   }
@@ -241,8 +243,7 @@ empty = Types.Profile {
     , Types.dataset_induced_startup_delay_conservative = 0
   }
   , Types.cli_args = Types.CliArgs {
-      Types.createStakedArgs = []
-    , Types.createTestnetDataArgs = []
+      Types.createTestnetDataArgs = []
     , Types.pools = []
   }
   , Types.preset = mempty
@@ -420,6 +421,18 @@ v8Preview = helper_addOverlayOrDie "v8-preview"
 v9Preview :: HasCallStack => Types.Profile -> Types.Profile
 v9Preview = helper_addOverlayOrDie "v9-preview"
 
+v11Preview :: HasCallStack => Types.Profile -> Types.Profile
+v11Preview = helper_addOverlayOrDie "v11-preview"
+
+v12Preview :: HasCallStack => Types.Profile -> Types.Profile
+v12Preview = helper_addOverlayOrDie "v12-preview"
+
+-- Leios: a voting committee and endorser-block capacity, sized for a 6912k
+-- ranking block. Needs a Dijkstra genesis to land in, so it goes with
+-- 'v12Preview'.
+leios6912k :: HasCallStack => Types.Profile -> Types.Profile
+leios6912k = helper_addOverlayOrDie "leios-6912k"
+
 -- Budget:
 
 -- Steps:
@@ -441,6 +454,12 @@ budgetBlockMemoryDouble = helper_addOverlayOrDie "budget/block/memory/double"
 -- used to manually reduce block size for e.g. Conway; has to be applied *AFTER* any v?-preview overlay.
 blocksize64k :: HasCallStack => Types.Profile -> Types.Profile
 blocksize64k = helper_addOverlayOrDie "blocksize64k"
+
+blocksize768k :: HasCallStack => Types.Profile -> Types.Profile
+blocksize768k = helper_addOverlayOrDie "blocksize768k"
+
+blocksize6912k :: HasCallStack => Types.Profile -> Types.Profile
+blocksize6912k = helper_addOverlayOrDie "blocksize6912k"
 
 voting :: HasCallStack => Types.Profile -> Types.Profile
 voting = helper_addOverlayOrDie "voting"
@@ -591,9 +610,6 @@ chaindb (mainnetServer, mainnetExplorer) (ledgerServer, ledgerExplorer) p =
 node :: (Types.Node -> Types.Node) -> Types.Profile -> Types.Profile
 node f p = p {Types.node = f (Types.node p)}
 
-lmdb :: Types.Profile -> Types.Profile
-lmdb = node (\n -> n {Types.utxo_lmdb = True})
-
 lsmt :: Types.Profile -> Types.Profile
 lsmt = node (\n -> n {Types.utxo_lsmt = True})
 
@@ -656,14 +672,6 @@ rtsAppend str = node (\n -> n {Types.rts_flags_override = Types.rts_flags_overri
 rtsGcNonMoving :: Types.Profile -> Types.Profile
 rtsGcNonMoving = rtsAppend "-xn"
 
--- parallel GC for the old generation only
-rtsGcParallel :: Types.Profile -> Types.Profile
-rtsGcParallel = rtsAppend "-qg1"
-
--- load balancing, applies only to parallel GC
-rtsGcLoadBalance :: Types.Profile -> Types.Profile
-rtsGcLoadBalance = rtsAppend "-qb1"
-
 rtsGcAllocSize :: Integer -> Types.Profile -> Types.Profile
 rtsGcAllocSize size = rtsAppend $ "-A" ++ show size ++ "m"
 
@@ -675,10 +683,6 @@ rtsHeapLimit n = rtsAppend $ "-M" ++ show n ++ "m"
 
 rtsEventlogged :: Types.Profile -> Types.Profile
 rtsEventlogged = rtsAppend "-l"
-
--- turns on heap profiling via workbench profile, as this does not require a -profiled build
-rtsHeapProf :: Types.Profile -> Types.Profile
-rtsHeapProf = rtsAppend "-hT"
 
 heapLimit :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 heapLimit l = node
@@ -782,9 +786,6 @@ workloadAppend w p = p {Types.workloads = Types.workloads p ++ [w]}
 
 tracer :: (Types.Tracer -> Types.Tracer) -> Types.Profile -> Types.Profile
 tracer f p = p {Types.tracer = f (Types.tracer p)}
-
-tracerRtview :: Types.Profile -> Types.Profile
-tracerRtview = tracer (\t -> t {Types.rtview = True})
 
 tracerWithresources :: Types.Profile -> Types.Profile
 tracerWithresources = tracer (\t -> t {Types.withresources = True})
@@ -895,15 +896,19 @@ analysisFiltersAppend str = analysis
     else a {Types.filters = Types.filters a ++ [str]}
   )
 
+-- for 88k blocks: from 2.6k to 8.8k
 analysisSizeSmall :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeSmall = analysisFiltersAppend "size-small"
 
+-- for 88k blocks: from 7k to 9.8k
 analysisSizeModerate :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate = analysisFiltersAppend "size-moderate"
 
+-- for 88k blocks: from 6.7k to 9.2k
 analysisSizeModerate2 :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate2 = analysisFiltersAppend "size-moderate-2"
 
+-- for 88k blocks: larger than 79.2k
 analysisSizeFull :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeFull = analysisFiltersAppend "size-full"
 

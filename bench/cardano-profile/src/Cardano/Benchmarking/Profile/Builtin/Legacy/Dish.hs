@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Legacy.Dish (
-  profilesNoEraDish
+  profilesDish
 ) where
 
 --------------------------------------------------------------------------------
@@ -27,13 +27,13 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
           }
         }
 -}
-profilesNoEraDish :: [Types.Profile]
-profilesNoEraDish =
+profilesDish :: [Types.Profile]
+profilesDish =
   let dish =
         -- Using `P.newTracing` like all "forge-stress" profiles.
           P.empty & FS.base
         . V.hosts 3
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . P.delegators 0 . P.dreps 0
         . FS.durationM
         . P.traceForwardingOn

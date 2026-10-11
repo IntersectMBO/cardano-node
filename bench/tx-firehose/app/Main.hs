@@ -246,10 +246,8 @@ runInEra ::
   (forall era. Api.ShelleyBasedEraConstraints era => ShelleyBasedEra era -> IO ()) ->
   IO ()
 runInEra (AnyCardanoEra ce) k =
-  Api.caseByronOrShelleyBasedEra
-    (die "tx-firehose: Byron era is not supported")
-    k
-    ce
+  Api.forEraInEon ce (die "tx-firehose: Byron era is not supported") $ \sbe ->
+    Api.shelleyBasedEraConstraints sbe (k sbe)
 
 validateOptions :: Options -> IO ()
 validateOptions opts = do

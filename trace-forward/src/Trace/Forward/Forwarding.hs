@@ -24,8 +24,8 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
                    miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake (HandshakeArguments (..))
-import           Ouroboros.Network.Protocol.Handshake.Codec (mkVersionedCodecCBORTerm,
-                   codecHandshake, noTimeLimitsHandshake, timeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
+                   mkVersionedCodecCBORTerm, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
@@ -47,7 +47,7 @@ import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Void (Void, absurd)
-import           Data.Word (Word16)
+import           Data.Word (Word16, Word64)
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 import           System.IO (hPutStrLn, stderr)
@@ -134,7 +134,7 @@ initForwardingDelayed iomgr config forwarding = liftIO $ do
       InitForwardingWith{initHowToConnect = RemoteSocket host port} -> EKGF.RemoteSocket host port
   queueSize         = tofQueueSize         config
   verbosity         = tofVerbosity         config
-  maxReconnectDelay = tofMaxReconnectDelay config
+  maxReconnectDelay = fromIntegral (tofMaxReconnectDelay config)
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
@@ -184,7 +184,7 @@ launchForwarders
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
   -> DataPointStore
-  -> Word
+  -> Word64
   -> IO ()
 launchForwarders iomgr forwarding
                  ekgConfig tfConfig dpfConfig
@@ -210,7 +210,7 @@ launchForwarders iomgr forwarding
              dpStore)
           (fromMaybe (const $ pure ()) initOnForwardInterruption)
           1
-          maxReconnectDelay
+          (fromIntegral maxReconnectDelay)
 
 launchForwardersViaLocalSocket
   :: IOManager

@@ -6,14 +6,21 @@
 module Cardano.Node.Testnet.Paths
   ( -- * Node paths
     defaultNodeName
+  , defaultNodesDataDir
   , defaultNodeDataDir
+  , defaultNamedNodeDataDir
+  , defaultNodeTopologyFile
   , defaultConfigFile
+  , defaultManifestFile
   , defaultPortFile
   , defaultNodeEnvFile
     -- * Socket paths
   , defaultSocketDir
   , defaultSocketName
   , defaultSocketPath
+    -- * Log paths
+  , defaultLogsDir
+  , defaultNodePidFile
     -- * UTxO key paths
   , defaultUtxoKeyDir
   , defaultUtxoSKeyPath
@@ -68,13 +75,30 @@ import           System.FilePath ((</>))
 defaultConfigFile :: FilePath
 defaultConfigFile = "configuration.yaml"
 
+-- | The manifest file name, always written into the output directory root:
+-- @"manifest.json"@
+defaultManifestFile :: FilePath
+defaultManifestFile = "manifest.json"
+
 -- | Directory name component for a node, e.g. @"node1"@, @"node2"@
 defaultNodeName :: Int -> String
 defaultNodeName n = "node" <> show n
 
 -- | Relative path to a node's data directory
 defaultNodeDataDir :: Int -> FilePath
-defaultNodeDataDir n = "node-data" </> defaultNodeName n
+defaultNodeDataDir = defaultNamedNodeDataDir . defaultNodeName
+
+-- | Top-level directory holding the per-node data directories: @"node-data"@
+defaultNodesDataDir :: FilePath
+defaultNodesDataDir = "node-data"
+
+-- | Relative path to a named node's data directory, e.g. @"node-data/node1"@
+defaultNamedNodeDataDir :: String -> FilePath
+defaultNamedNodeDataDir name = defaultNodesDataDir </> name
+
+-- | Relative path to a named node's topology file, e.g. @"node-data/node1/topology.json"@
+defaultNodeTopologyFile :: String -> FilePath
+defaultNodeTopologyFile name = defaultNamedNodeDataDir name </> "topology.json"
 
 -- | Relative path to the file containing a node's assigned port number
 defaultPortFile :: Int -> FilePath
@@ -99,6 +123,18 @@ defaultSocketName = "sock"
 -- | Relative path to a node's UNIX domain socket
 defaultSocketPath :: Int -> FilePath
 defaultSocketPath n = defaultSocketDir </> defaultNodeName n </> defaultSocketName
+
+-- ---------------------------------------------------------------------
+-- Log paths
+-- ---------------------------------------------------------------------
+
+-- | Top-level directory for node logs and pid files: @"logs"@
+defaultLogsDir :: FilePath
+defaultLogsDir = "logs"
+
+-- | Relative path to a named node's pid file, e.g. @"logs/node1/node.pid"@
+defaultNodePidFile :: String -> FilePath
+defaultNodePidFile name = defaultLogsDir </> name </> "node.pid"
 
 -- ---------------------------------------------------------------------
 -- UTxO key paths

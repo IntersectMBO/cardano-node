@@ -17,7 +17,6 @@ module Cardano.Node.Tracing.Tracers.Startup
 
 import           Cardano.Api (NetworkMagic (..), SlotNo (..))
 import qualified Cardano.Api as Api
-import           Cardano.Network.OrphanInstances ()
 
 import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Git.Rev (gitRev)
@@ -25,11 +24,12 @@ import           Cardano.Ledger.Shelley.API as SL
 import           Cardano.Logging
 import           Cardano.Network.NodeToClient (LocalAddress (..))
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
+import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.ByronHFC (byronLedgerConfig)
@@ -41,7 +41,6 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLedgerConfig (..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
@@ -61,13 +60,14 @@ import           Paths_cardano_node (version)
 
 
 getStartupInfo
-  :: NodeConfiguration
-  -> SomeConsensusProtocol
+  :: ConfigSupportsNode blk
+  => NodeConfiguration
+  -> Api.BlockType blk
+  -> Consensus.TopLevelConfig blk
   -> FilePath
   -> IO [StartupTrace blk]
-getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
+getStartupInfo nc blockType cfg fp = do
   nodeStartTime <- getCurrentTime
-  cfg <- pInfoConfig . fst <$> Api.protocolInfo @IO pForInfo
   let basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
@@ -77,7 +77,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg
               }
       protocolDependentItems =
-        case whichP of
+        case blockType of
           Api.ByronBlockType ->
             let DegenLedgerConfig cfgByron = Consensus.configLedger cfg
             in [getGenesisValuesByron cfg cfgByron]
@@ -288,9 +288,26 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (RpcConfigUpdateError err) =
       mconcat [ "kind" .= String "RpcConfigUpdateError"
                , "error" .= String ("Error while updating RPC configuration: " <> err) ]
+  forMachine _dtal (RpcUnsupportedBlockType blockType) =
+      mconcat [ "kind" .= String "RpcUnsupportedBlockType"
+               , "blockType" .= String blockType ]
   forMachine _dtal RpcForceDisabled =
       mconcat [ "kind" .= String "RpcForceDisabled"
                , "error" .= String (ppStartupInfoTrace RpcForceDisabled)]
+  forMachine _dtal RpcEnabledOnBlockProducer =
+      mconcat [ "kind" .= String "RpcEnabledOnBlockProducer"
+               , "message" .= String (ppStartupInfoTrace RpcEnabledOnBlockProducer)]
+  forMachine _dtal (RpcListeningOnPublicAddress endpoint) =
+      mconcat [ "kind" .= String "RpcListeningOnPublicAddress"
+               , "endpoint" .= String (Api.docToText (Api.pretty endpoint)) ]
+  forMachine _dtal t@(RpcTlsKeyLogEnabled path) =
+      mconcat [ "kind" .= String "RpcTlsKeyLogEnabled"
+               , "message" .= String (ppStartupInfoTrace t)
+               , "path" .= String path ]
+  forMachine _dtal t@(RpcTlsPrivateKeyPermissive path) =
+      mconcat [ "kind" .= String "RpcTlsPrivateKeyPermissive"
+               , "message" .= String (ppStartupInfoTrace t)
+               , "path" .= String path ]
   forMachine _dtal (MovedTopLevelOption opt) =
       mconcat [ "kind" .= String "MovedTopLevelOption"
               , "option" .= opt
@@ -360,8 +377,18 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["RpcConfigUpdate"]
   namespaceFor RpcConfigUpdateError {} =
     Namespace [] ["RpcConfigUpdateError"]
+  namespaceFor RpcUnsupportedBlockType {} =
+    Namespace [] ["RpcUnsupportedBlockType"]
   namespaceFor RpcForceDisabled =
     Namespace [] ["RpcForceDisabled"]
+  namespaceFor RpcEnabledOnBlockProducer =
+    Namespace [] ["RpcEnabledOnBlockProducer"]
+  namespaceFor RpcListeningOnPublicAddress {} =
+    Namespace [] ["RpcListeningOnPublicAddress"]
+  namespaceFor RpcTlsKeyLogEnabled {} =
+    Namespace [] ["RpcTlsKeyLogEnabled"]
+  namespaceFor RpcTlsPrivateKeyPermissive {} =
+    Namespace [] ["RpcTlsPrivateKeyPermissive"]
   namespaceFor MovedTopLevelOption {} =
     Namespace [] ["MovedTopLevelOption"]
 
@@ -376,7 +403,12 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor (Namespace _ ["RpcConfigUpdate"]) _ = Just Notice
   severityFor (Namespace _ ["RpcConfigUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["RpcUnsupportedBlockType"]) _ = Just Warning
   severityFor (Namespace _ ["RpcForceDisabled"]) _ = Just Error
+  severityFor (Namespace _ ["RpcEnabledOnBlockProducer"]) _ = Just Warning
+  severityFor (Namespace _ ["RpcListeningOnPublicAddress"]) _ = Just Warning
+  severityFor (Namespace _ ["RpcTlsKeyLogEnabled"]) _ = Just Warning
+  severityFor (Namespace _ ["RpcTlsPrivateKeyPermissive"]) _ = Just Warning
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
@@ -407,8 +439,18 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["RpcConfigUpdateError"]) = Just
     ""
+  documentFor (Namespace [] ["RpcUnsupportedBlockType"]) = Just
+    ""
   documentFor (Namespace [] ["RpcForceDisabled"]) = Just
     ""
+  documentFor (Namespace [] ["RpcEnabledOnBlockProducer"]) = Just
+    "The gRPC server is enabled on a block-producing node; the RPC endpoint is unauthenticated and increases the node's attack surface; prefer running it on a relay or a separate non-producing node."
+  documentFor (Namespace [] ["RpcListeningOnPublicAddress"]) = Just
+    "The gRPC server is listening on a non-loopback address; the endpoint is unauthenticated, so anyone who can reach it can query the node and submit transactions; front it with a reverse proxy on untrusted networks."
+  documentFor (Namespace [] ["RpcTlsKeyLogEnabled"]) = Just
+    "SSLKEYLOGFILE is set, so the node will write TLS session key-log material for the RPC TLS listener; unset it unless deliberately debugging TLS."
+  documentFor (Namespace [] ["RpcTlsPrivateKeyPermissive"]) = Just
+    "The RPC TLS private key file is readable by group or others; restrict it to the owner."
   documentFor (Namespace [] ["NetworkConfigUpdate"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdateUnsupported"]) = Just
@@ -477,13 +519,21 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["SocketConfigError"]
     , Namespace [] ["DBValidation"]
     , Namespace [] ["BlockForgingUpdate"]
+    , Namespace [] ["BlockForgingUpdateError"]
     , Namespace [] ["BlockForgingBlockTypeMismatch"]
     , Namespace [] ["RpcConfigUpdate"]
     , Namespace [] ["RpcConfigUpdateError"]
+    , Namespace [] ["RpcUnsupportedBlockType"]
     , Namespace [] ["RpcForceDisabled"]
+    , Namespace [] ["RpcEnabledOnBlockProducer"]
+    , Namespace [] ["RpcListeningOnPublicAddress"]
+    , Namespace [] ["RpcTlsKeyLogEnabled"]
+    , Namespace [] ["RpcTlsPrivateKeyPermissive"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
+    , Namespace [] ["NetworkConfigUpdateInfo"]
+    , Namespace [] ["NetworkConfigUpdateWarning"]
     , Namespace [] ["NetworkConfig"]
     , Namespace [] ["NonP2PWarning"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
@@ -499,13 +549,6 @@ instance MetaTrace  (StartupTrace blk) where
 
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
 nodeToClientVersionToInt = \case
-  NodeToClientV_16 -> 16
-  NodeToClientV_17 -> 17
-  NodeToClientV_18 -> 18
-  NodeToClientV_19 -> 19
-  NodeToClientV_20 -> 20
-  NodeToClientV_21 -> 21
-  NodeToClientV_22 -> 22
   NodeToClientV_23 -> 23
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
@@ -606,7 +649,44 @@ ppStartupInfoTrace (LedgerPeerSnapshotLoaded slotNo) =
 
 ppStartupInfoTrace (RpcConfigUpdate config) = "Performing RPC configuration update: " <> config
 ppStartupInfoTrace (RpcConfigUpdateError err) = "Error while updating RPC configuration: " <> err
+ppStartupInfoTrace (RpcUnsupportedBlockType blockType) = "RPC node kernel access is not supported for block type: " <> blockType
 ppStartupInfoTrace RpcForceDisabled = "RPC endpoint has crashed and because of that it got disabled. Enable gRPC endpoint and send SIGHUP to the node to reenable."
+ppStartupInfoTrace RpcEnabledOnBlockProducer =
+     "the gRPC server is enabled on a block-producing node; the RPC endpoint is "
+  <> "unauthenticated and increases the node's attack surface; prefer running it "
+  <> "on a relay or a separate non-producing node."
+
+ppStartupInfoTrace (RpcListeningOnPublicAddress endpoint) =
+  case endpoint of
+    RpcEndpointHttp{} ->
+        "the gRPC server listens in cleartext on a non-loopback address "
+      <> renderedEndpoint
+      <> "; the endpoint is unauthenticated - anyone who can reach it can "
+      <> "query the node and submit transactions; front it with a reverse "
+      <> "proxy on untrusted networks."
+    RpcEndpointHttps{} ->
+        "the gRPC server listens on a non-loopback address "
+      <> renderedEndpoint
+      <> "; TLS encrypts the connection but the endpoint is unauthenticated "
+      <> "- anyone who can reach it can query the node and submit "
+      <> "transactions; front it with a reverse proxy on untrusted networks."
+    -- Unreachable in practice: 'warnIfRpcListensPublicly' never traces this
+    -- for a unix socket. Kept total rather than partial.
+    RpcEndpointUnixSocket{} ->
+        "the gRPC server endpoint " <> renderedEndpoint
+      <> " was reported as listening on a non-loopback address, which should "
+      <> "not happen for a unix socket."
+  where
+    renderedEndpoint = Api.docToText (Api.pretty endpoint)
+
+ppStartupInfoTrace (RpcTlsKeyLogEnabled path) =
+     "the node will write TLS session key-log material to " <> path
+  <> " because SSLKEYLOGFILE is set; unset it unless you are deliberately "
+  <> "debugging TLS."
+
+ppStartupInfoTrace (RpcTlsPrivateKeyPermissive path) =
+     "the TLS private key " <> path
+  <> " is readable by group or others; restrict it to the owner."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 
@@ -643,7 +723,7 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
 
 ppStartupInfoTrace (MovedTopLevelOption opt) =
   "Option `" <> showT opt
-  <> "` was moved to the `LedgerDB` section. Parsing it at the top level "
+  <> "` was moved to the `LedgerDB.Snapshots` section. Parsing it at the top level "
   <> " will be removed in a future version."
 
 nonP2PWarningMessage :: Text

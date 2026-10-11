@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -31,8 +32,7 @@ import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
-import qualified Ouroboros.Consensus.Cardano.Block as Block
-                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
+import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
@@ -181,13 +181,14 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
-  fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId (Block.GenTxIdAllegra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId (Block.GenTxIdMary    (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId _ = error "TODO: fix incomplete match"
+  fromGenTxId (Block.GenTxIdShelley  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdAllegra  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdMary     (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdAlonzo   (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdBabbage  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdConway   (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdDijkstra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId _ = error "fromGenTxId: no match on (GenTxId CardanoBlock)"
 
   txIdFromTx :: Tx era -> TxId
   txIdFromTx (ShelleyTx sbe tx) =

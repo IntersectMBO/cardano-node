@@ -33,17 +33,11 @@ let
   };
 
   assertNewTopology = i:
-    let
-      checkEval = tryEval (
-        assert
-          if cfg.bootstrapPeers == [] && all (e: e.trustable != true) ((newTopology i).localRoots)
-          then false
-          else true;
-      newTopology i);
-    in
-      if checkEval.success
-      then checkEval.value
-      else abort "When bootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
+    let topo = newTopology i; in
+    assert assertMsg
+    (cfg.bootstrapPeers == [] -> any (e: e.trustable == true) topo.localRoots)
+    "When bootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
+    topo;
 
   selectTopology = i:
     if cfg.topology != null
@@ -115,6 +109,7 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+        "${concatMapStringsSep " " (k: "--shelley-bls-key ${k}") cfg.blsKeys}"
         "${optionalString (cfg.shelleyKesAgentSocket != null)
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
@@ -205,9 +200,11 @@ in {
 
           Note: the default `profilingArgs` always include the lightweight
           `--machine-readable -t...cardano-node.stats` RTS summary (written at
-          exit, useful in any build). The cost-centre/heap profiling flags and
-          the `-po` output stem are only added when this is not "none" or
-          `eventlog` is enabled.
+          exit, useful in any build). The cost-centre/heap profiling flags are
+          only added when this is not "none". The `-po` output stem is added
+          whenever `profilingOutputDir` is set, so a profiling flag passed by
+          hand through `rtsArgs` is redirected too. Enabling `eventlog` adds
+          `-l` with its own `-ol` path, since `-po` does not cover the eventlog.
         '';
       };
 
@@ -286,8 +283,14 @@ in {
 
       # Byron signing/delegation
 
+      # Key and certificate options are `str` rather than `either str path` so a
+      # nix path literal cannot type check here.  Interpolating one copies the
+      # file into /nix/store, which for a key is world readable and travels in any
+      # closure pushed elsewhere, and for a rotating credential pins it at eval
+      # time so a KES rotation needs a redeploy rather than a file swap.  Give a
+      # path as a string, absolute or relative to the node working directory.
       signingKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The signing key.
@@ -295,7 +298,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The delegation certificate.
@@ -305,14 +308,14 @@ in {
       # Shelley kes/vrf keys and operation cert
 
       kesKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The KES or key evolving signature key.
         '';
       };
       vrfKey = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The VRF or verifable random function key.
@@ -320,10 +323,21 @@ in {
       };
 
       operationalCertificate = mkOption {
-        type = nullOr (either str path);
+        type = nullOr str;
         default = null;
         description = ''
           The operational certificate.
+        '';
+      };
+
+      blsKeys = mkOption {
+        type = listOf str;
+        default = [];
+        description = ''
+          Leios BLS signing key files. Optional and repeatable; used alongside
+          the KES and VRF keys on a producer that participates in Leios. During
+          a BLS key rotation both the active and the incoming key may be
+          supplied and node uses whichever is active per the on-chain schedule.
         '';
       };
 
@@ -801,8 +815,17 @@ in {
              # ensure it lands on a writable mount under a read-only-root OCI
              # image.
              [ "--machine-readable" "-t${prefix}cardano-node.stats" ]
-          ++ optionals (cfg.profiling != "none" || cfg.eventlog) [ "-po${prefix}cardano-node" ]
-          ++ optional (cfg.eventlog) "-l"
+             # Set the output stem whenever an output dir is declared, not just
+             # when this module adds a profiling flag: `-po` costs nothing when
+             # nothing writes those files, and this way a profiling flag passed
+             # by hand through rtsArgs still lands on a writable OCI image mount.
+          ++ optionals (cfg.profilingOutputDir != null) [ "-po${prefix}cardano-node" ]
+             # `-po` sets the stem for .prof, .hp and .ticky only; the eventlog
+             # needs its own `-ol`, and takes a full filename rather than a stem.
+             # Without it the eventlog is created in the process cwd, which is /
+             # for the OCI images, and the RTS aborts at startup under a
+             # read-only root rather than degrading.
+          ++ optionals cfg.eventlog [ "-l" "-ol${prefix}cardano-node.eventlog" ]
           ++ (
                     if cfg.profiling == "time"           then ["-p"]
                else if cfg.profiling == "time-detail"    then ["-P"]
@@ -982,7 +1005,7 @@ in {
         }
         {
           assertion = !cfg.systemdSocketActivation;
-          message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
+          message = "Systemd socket activation cannot be used due to a systemd socket re-use issue.";
         }
         {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));

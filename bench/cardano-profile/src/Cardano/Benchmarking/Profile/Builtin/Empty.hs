@@ -13,7 +13,7 @@ module Cardano.Benchmarking.Profile.Builtin.Empty (
 , traceBenchDuration, traceFullDuration
 , defaultDuration
 , epochTransitionDuration
-, profilesNoEraEmpty
+, profilesEmpty
 ) where
 
 --------------------------------------------------------------------------------
@@ -48,7 +48,10 @@ baseNoDataset =
 
 -- TODO: Move to `base`?
 genesis :: Types.Profile -> Types.Profile
-genesis = V.genesisVariant300
+genesis = V.genesisVariantVoltaire64k
+
+genesisV12 :: Types.Profile -> Types.Profile
+genesisV12 = P.v12Preview . P.v11Preview . V.genesisVariantVoltaire64k
 
 --------------------------------------------------------------------------------
 
@@ -105,8 +108,8 @@ epochTransitionDuration =
 
 --------------------------------------------------------------------------------
 
-profilesNoEraEmpty :: [Types.Profile]
-profilesNoEraEmpty = map baseNoDataset
+profilesEmpty :: [Types.Profile]
+profilesEmpty = map baseNoDataset
   $
   ------------------------------------------------------------------------------
   -- fast: FixedLoaded and "--shutdown-on-block-synced 1" with 1 or 2 nodes.
@@ -127,15 +130,15 @@ profilesNoEraEmpty = map baseNoDataset
   ------------------------------------------------------------------------------
   -- ci-test: FixedLoaded and "--shutdown-on-block-synced 3" with 2 nodes.
   ------------------------------------------------------------------------------
-  let ciTest =
-          P.empty & V.datasetEmpty . genesis . ciTestDuration
+  let ciTest whichGenesis =
+          P.empty & V.datasetEmpty . whichGenesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
   in [
   -- Local
-    ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
-  , ciTest & P.name "ci-test-rtview"   . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
-  , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
-  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
+    ciTest genesis    & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
+  , ciTest genesis    & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff
+  , ciTest genesis    & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn   . P.analysisSizeSmall
+  , ciTest genesisV12 & P.name "ci-test-v12"      . V.valueLocal . P.traceForwardingOn
   ]
   ++
   ------------------------------------------------------------------------------
@@ -163,11 +166,9 @@ profilesNoEraEmpty = map baseNoDataset
   in [
   -- "--shutdown-on-block-synced 15"
     bench & P.name "trace-bench"            . V.valueLocal . P.traceForwardingOn
-  , bench & P.name "trace-bench-rtview"     . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   , bench & P.name "trace-bench-notracer"   . V.valueLocal . P.traceForwardingOff
   -- "--shutdown-on-slot-synced 1200"
   , full  & P.name "trace-full"             . V.valueLocal . P.traceForwardingOn
-  , full  & P.name "trace-full-rtview"      . V.valueLocal . P.traceForwardingOn   . P.tracerRtview
   ]
   ++
   ------------------------------------------------------------------------------
@@ -180,8 +181,8 @@ profilesNoEraEmpty = map baseNoDataset
         -- TODO: The only one without 0 delegators.
         --       Fix and remove `baseNoDataset` (Same `base` for all).
         . P.utxo 0 . P.delegators 6 . P.dreps 0
-      value  = noCliStop & V.genesisVariant300
-      -- TODO: "fast-plutus" and "ci-test-plutus" are using `genesisVariant300`.
+      value  = noCliStop & V.genesisVariantVoltaire64k
+      -- TODO: "fast-plutus" and "ci-test-plutus" use the value `genesis` variant, not `genesisVariantPreVoltaire`.
       plutus = noCliStop & V.genesisVariantPreVoltaire
       -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
       loop    = P.txFeeOverwrite 1380000 . V.plutusLoop

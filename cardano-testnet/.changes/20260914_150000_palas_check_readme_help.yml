@@ -1,0 +1,5 @@
+pr: 6692
+kind:
+  - test
+description: |
+  Added the `golden_HelpReadme` test to the `cardano-testnet-golden` suite: the command help shown in `cardano-testnet/README.md` (the code blocks annotated with `checked-help` comments) is now checked against the output of the real `cardano-testnet` binary, so the README can no longer silently go out of date. When the help changes, the blocks can be refreshed automatically by running the test with `RECREATE_GOLDEN_FILES=1`.

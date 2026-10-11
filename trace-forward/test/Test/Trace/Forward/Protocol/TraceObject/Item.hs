@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,7 +10,9 @@ module Test.Trace.Forward.Protocol.TraceObject.Item
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import           Codec.Serialise (Serialise (..))
+#if ! MIN_VERSION_QuickCheck(2,18,0)
 import           Data.List.NonEmpty (NonEmpty, fromList)
+#endif
 import           Data.Text (Text)
 import           GHC.Generics
 
@@ -57,5 +60,7 @@ instance Arbitrary TraceItem where
     <*> oneof [pure "nixos", pure "Darwin", pure "testHost"]
     <*> oneof [pure "1", pure "10", pure "14"]
 
+#if ! MIN_VERSION_QuickCheck(2,18,0)
 instance Arbitrary (NonEmpty TraceItem) where
   arbitrary = fromList <$> listOf1 arbitrary
+#endif

@@ -55,7 +55,7 @@ backend_nomadcloud() {
       # the correct one.
       # (For this the clients.json / NOMAD_CLIENTS_FILE file is needed)
       if \
-            echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"               \
+            echo "${WB_SHELL_PROFILE_NAME}" | grep --quiet "\-nomadperf"          \
          &&                                                                       \
             jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json \
          &&                                                                       \
@@ -874,14 +874,84 @@ deploy-genesis-nomadcloud() {
   # Create genesis tar file
   local genesis_file_name="${nomad_job_name}.tar.zst"
   msg "$(blue Creating) $(yellow "\"${genesis_file_name}\"") ..."
-  # TODO: These files are link to file that don't exist!
+  # TODO: This file is a symlink to a file that does not exist!
   rm "${dir}"/genesis/profile.json
-  rm "${dir}"/genesis/stake-delegator-keys
-  find -L "${dir}"/genesis -printf "%P\n"         \
-    | tar --create --zstd                         \
-      --dereference --hard-dereference            \
-      --file="${dir}"/"${genesis_file_name}"      \
-      --owner=65534 --group=65534 --mode="u=rwx"  \
+  # The remote nodes only need a small subset of what `create-testnet-data`
+  # generates in ${dir}/genesis. See nix/workbench/genesis/zero/README.md
+  # ("Used by the workbench") for the inventory and the per-file rationale.
+  local is_voting
+  is_voting=$(jq --raw-output '.workloads | any( .name == "voting")' "${dir}"/profile.json)
+  # Performance: prevent `find` from descending into directories whose contents
+  # will never reach the tar. Otherwise it readdirs every entry under genesis/
+  # just to test it against the include filter, and the per-delegator and
+  # per-drep subdirs alone can hold tens of thousands of entries each. On
+  # profiles of that size the readdir cost dominates the whole tar step.
+  #
+  # Always-pruned subtrees:
+  # - cache-entry/ is the whole-cache symlink left by the ripper backend.
+  #   Its useful sub-paths are already reachable directly under genesis/ via the
+  #   per-key symlinks, so descending it would also bloat the tar with
+  #   duplicates.
+  # - byron-gen-command/, delegate-keys/, genesis-keys/ only hold files the
+  #   remote nodes never read.
+  local prune_args=(
+        -path "*/genesis/cache-entry"
+    -o  -path "*/genesis/byron-gen-command"
+    -o  -path "*/genesis/delegate-keys"
+    -o  -path "*/genesis/genesis-keys"
+  )
+  # Performance (continued): stake-delegators/ and drep-keys/ are the two
+  # largest subtrees under genesis/ on most profiles. Voting profiles ship
+  # selected files from both, so for those we have to walk them. For every other
+  # profile, pruning them is by far the biggest single win.
+  if test "${is_voting}" != "true"
+  then
+    prune_args+=(
+      -o  -path "*/genesis/stake-delegators"
+      -o  -path "*/genesis/drep-keys"
+    )
+  fi
+  # Include patterns are evaluated against whatever survives the prune above.
+  # `-name` matches just the basename and is enough for files whose basename is
+  # unique in the tree (the genesis JSON files, the guardrails script).
+  # `-path "*/genesis/..."` is used everywhere else: `kes.skey`, `utxo.skey`
+  # etc. appear under more than one directory and the containing dir is what
+  # tells them apart.
+  local include_args=(
+    # Five genesis JSON files referenced by the node config via
+    # Byron/Shelley/Alonzo/Conway/DijkstraGenesisFile.
+        -name "genesis.byron.json"
+    -o  -name "genesis.shelley.json"
+    -o  -name "genesis.alonzo.json"
+    -o  -name "genesis.conway.json"
+    -o  -name "genesis.dijkstra.json"
+    # Per-pool runtime keys read by service/nodes.nix.
+    -o  -path "*/genesis/pools-keys/pool*/opcert.cert"
+    -o  -path "*/genesis/pools-keys/pool*/kes.skey"
+    -o  -path "*/genesis/pools-keys/pool*/vrf.skey"
+    # All utxo-keys: ship every utxoN unconditionally so additional consumers of
+    # utxo-keys/* do not silently break.
+    -o  -path "*/genesis/utxo-keys/utxo*/utxo.skey"
+    -o  -path "*/genesis/utxo-keys/utxo*/utxo.vkey"
+  )
+  if test "${is_voting}" == "true"
+  then
+    # Extras read only by workload/voting.nix.
+    include_args+=(
+      -o  -name "guardrails-script.plutus"
+      -o  -path "*/genesis/stake-delegators/delegator*/staking.vkey"
+      -o  -path "*/genesis/drep-keys/drep*/drep.skey"
+      -o  -path "*/genesis/drep-keys/drep*/drep.vkey"
+    )
+  fi
+  find -L "${dir}"/genesis                              \
+      \( "${prune_args[@]}" \) -prune                   \
+    -o                                                  \
+      \( "${include_args[@]}" \) -printf "%P\n"         \
+    | tar --create --zstd                               \
+      --dereference --hard-dereference                  \
+      --file="${dir}"/"${genesis_file_name}"            \
+      --owner=65534 --group=65534 --mode="u=rwx"        \
       --directory="${dir}"/genesis --files-from=-
 
   # Upload genesis tar file

@@ -11,27 +11,50 @@ module Parsers.Run
   , pref
   , opts
   ) where
-import           Cardano.CLI.Environment
+import           Cardano.Api (docToText, pretty)
 
-import           Control.Monad (void)
+import           Cardano.CLI.Environment
+import           Cardano.Prelude (unlessM)
+
+import           Control.Monad (forM_, void)
 import           Data.Maybe (fromMaybe)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help.Pretty as PP
+import qualified Prettyprinter.Internal as PPI
 import           System.Directory (doesDirectoryExist)
 
 import           Testnet.Filepath (unTmpAbsPath)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types (TestnetNode (..))
 
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           RIO (display, forever, logInfo, runSimpleApp, threadDelay)
+import           RIO (display, displayShow, forever, fromString, logInfo, runSimpleApp, threadDelay)
 import           UnliftIO.Resource (runResourceT)
-import           Cardano.Prelude (unlessM)
 
 pref :: ParserPrefs
-pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
+pref =
+  Opt.prefs $
+    mconcat
+      [ showHelpOnEmpty
+      , showHelpOnError
+      , helpEmbedBriefDesc compactBriefDesc
+      ]
+
+-- | Undo the 'PP.align' that optparse-applicative-fork >= 0.19 wraps around
+-- the usage's brief description, restoring the pre-0.19 layout: overflow
+-- hangs at a two-space indent instead of aligning with the command name.
+compactBriefDesc :: PP.Doc -> PP.Doc
+compactBriefDesc d
+  | PPI.Column f <- d
+  , PPI.Nesting g <- f 0 =
+      -- 'align' is @column (\k -> nesting (\i -> nest (k - i) doc))@, so
+      -- evaluating both closures at 0 recovers the unaligned doc.
+      g 0
+  | otherwise = d
 
 opts :: EnvCli -> ParserInfo CardanoTestnetCommands
 opts envCli = Opt.info (commands envCli <**> helper) idm
@@ -83,8 +106,10 @@ runCardanoOptions = \case
       logInfo $ "Creating environment: " <> display (tempAbsPath conf)
       createTestnetEnv noEnvCreationOptions conf
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-      void $ cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
+      runtime <- cardanoTestnet (creationNodes noEnvCreationOptions) noEnvRuntimeOptions conf
       logInfo "Testnet started"
+      logPrometheusPort runtime
+      logGrpcEndpoints runtime
       waitForShutdown
   StartFromEnv StartFromEnvOptions{fromEnvOptions, fromEnvRuntimeOptions} -> do
     -- Run cardano-testnet in the sandbox provided by the user
@@ -94,11 +119,22 @@ runCardanoOptions = \case
     nodes <- readNodesWithOptionsFromEnv (unTmpAbsPath (tempAbsPath conf))
     runSimpleApp . runResourceT $ do
       logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
-      void $ cardanoTestnet nodes fromEnvRuntimeOptions
+      runtime <- cardanoTestnet nodes fromEnvRuntimeOptions
                conf{updateTimestamps = envUpdateTimestamps fromEnvOptions}
       logInfo "Testnet started"
+      logPrometheusPort runtime
+      logGrpcEndpoints runtime
       waitForShutdown
   where
     waitForShutdown = do
       logInfo "Waiting for shutdown (Ctrl+C)"
       forever (threadDelay 100_000)
+
+    logPrometheusPort runtime =
+      forM_ (prometheusPort runtime) $ \port ->
+        logInfo $ "Prometheus is running at http://127.0.0.1:" <> displayShow port
+
+    logGrpcEndpoints runtime =
+      forM_ (testnetNodes runtime) $ \TestnetNode{nodeName, nodeRpcEndpoint} ->
+        forM_ nodeRpcEndpoint $ \endpoint ->
+          logInfo $ "gRPC endpoint of " <> fromString nodeName <> ": " <> display (docToText (pretty endpoint))

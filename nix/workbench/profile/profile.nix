@@ -51,7 +51,7 @@ let
   # Helper to use around Nix to build the workbench.
   ##############################################################################
 
-  profileBundle = { backend }:
+  profileBundle = { backend, eraName }:
     let
       profile = __fromJSON (__readFile profileJsonPath);
       nodeSpecs = __fromJSON (__readFile nodeSpecsJsonPath);
@@ -60,7 +60,7 @@ let
           ../service/nodes.nix
           { inherit pkgs;
             inherit workbenchNix;
-            inherit backend profile nodeSpecs;
+            inherit backend profile eraName nodeSpecs;
             inherit (backend) profiling;
             inherit profileJsonPath topologyJsonPath;
             ## This ports the (very minimal) config of the deprecated iohk-nix
@@ -84,7 +84,7 @@ let
           ../service/generator.nix
           { inherit pkgs;
             inherit (workbenchNix) haskellProject;
-            inherit backend profile nodeSpecs;
+            inherit backend profile eraName nodeSpecs;
             inherit node-services;
           }
         )
@@ -127,6 +127,7 @@ let
         )
       ;
     in {
+      inherit eraName;
       profile = {
         JSON = profileJsonPath;
         value = profile;
@@ -152,7 +153,8 @@ let
   ##############################################################################
 
   materialise-profile = { profileBundle }:
-    pkgs.runCommand "workbench-profile-data-${profileName}"
+    # Output (node-services + generator-service) depends on the era.
+    pkgs.runCommand "workbench-profile-data-${profileName}-${profileBundle.eraName}"
       { buildInputs = [];
         inherit profileJsonPath;
         inherit topologyJsonPath topologyDotPath;

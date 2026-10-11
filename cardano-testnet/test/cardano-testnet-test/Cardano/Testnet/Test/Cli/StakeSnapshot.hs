@@ -18,6 +18,7 @@ import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KM
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified System.Info as SYS
 
 import           Testnet.Process.Run (execCliStdoutToJson, mkExecConfig)
@@ -43,7 +44,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
     } <- createAndRunTestnet def def conf
 
   let nSpoNodes = length $ spoNodes runtime
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 

@@ -1,0 +1,5 @@
+{
+    "cborHex": "5820387ff0466f290170995b2e1329da1b5dcc2180871c8bed7b98254e4643433269",
+    "description": "",
+    "type": "BlsSigningKey_bls12-381-BLS-Signature-Minimal-Signature-Size"
+}

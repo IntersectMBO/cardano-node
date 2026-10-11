@@ -11,7 +11,6 @@ module Main (module Main) where
 
 import           Cardano.Api hiding (ShelleyGenesis)
 import qualified Cardano.Api.Ledger as Api
-import           Cardano.Api (fromPlutusData, sgNetworkMagic)
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
@@ -22,7 +21,7 @@ import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 import           Cardano.TxGenerator.Calibrate.Utils
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.PlutusContext
-import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..))
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus
@@ -101,23 +100,25 @@ main
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ checkFund nixService genesis sigKey
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
-        case plutusType <$> plutus of
-          Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath'
-          Just{}                    -> checkPlutusLoop protoParamPath' plutus
+        case plutus of
           Nothing                   -> putStrLn "--> no Plutus configuration found - skipping"
+          Just (PlutusOn {plutusType = pt})
+            | pt == BenchCustomCall
+                                    -> checkPlutusBuiltin protoParamPath'
+          Just{}                    -> checkPlutusLoop protoParamPath' plutus
         exitSuccess
 
 -- The type annotations within patterns or expressions that would be
 -- the alternatives would make lines exceed 80 columns, so these
 -- helper functions move them out-of-line, with an extra helper to
 -- avoid repeating the failure message.
-showFundCore :: IsShelleyBasedEra era => Maybe (AddressInEra era, Api.Coin) -> String
-showFundCore = maybe "no fund found for given key in genesis" show
+showFundCore :: IsShelleyBasedEra era => Either TxGenError (Maybe (AddressInEra era, Api.Coin)) -> String
+showFundCore = either (("error: " ++) . show) (maybe "no fund found for given key in genesis" show)
 
-showBabbage :: Maybe (AddressInEra BabbageEra, Api.Coin) -> String
+showBabbage :: Either TxGenError (Maybe (AddressInEra BabbageEra, Api.Coin)) -> String
 showBabbage = ("Babbage: " ++) . showFundCore
 
-showConway :: Maybe (AddressInEra ConwayEra, Api.Coin) -> String
+showConway :: Either TxGenError (Maybe (AddressInEra ConwayEra, Api.Coin)) -> String
 showConway = ("Conway: " ++) . showFundCore
 
 checkFund ::
@@ -137,7 +138,7 @@ checkFundCore ::
   IsShelleyBasedEra era
   => ShelleyGenesis
   -> SigningKey PaymentKey
-  -> Maybe (AddressInEra era, Api.Coin)
+  -> Either TxGenError (Maybe (AddressInEra era, Api.Coin))
 checkFundCore sg = genesisInitialFundForKey networkId sg
   where
     networkId = fromNetworkMagic $ NetworkMagic $ sgNetworkMagic sg

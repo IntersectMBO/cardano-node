@@ -56,7 +56,6 @@ rootDirs =
   , "../ouroboros-consensus/ouroboros-consensus-cardano/src"
   , "../hermod-tracing/trace-dispatcher/src"
   , "trace-forward/src"
-  , "trace-resources/src"
   ]
 
 type ConstructorName = String
@@ -1460,9 +1459,6 @@ updateSchemaForNamespaceWithWarning emitWarning config msgOutDir typeOutDir nsMa
 fallbackCtorForNamespace :: [String] -> Maybe ConstructorName
 fallbackCtorForNamespace parts
   | ["Net", "Handshake"] `isListPrefixOf` parts = Just diffusionHandshakeCtor
-  | ["BlockFetch", "Decision"] `isListPrefixOf` parts
-  , lastMay parts == Just "EmptyPeersFetch" =
-      Just listEmptyCtor
   | ["Net", "ConnectionManager"] `isListPrefixOf` parts
   , lastMay parts == Just "UnexpectedlyFalseAssertion" =
       Just connectionManagerUnexpectedlyFalseAssertionCtor

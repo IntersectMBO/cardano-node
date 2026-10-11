@@ -10,10 +10,13 @@ module Cardano.Node.Tracing.Consistency
   ( getAllNamespaces
   , checkNodeTraceConfiguration
   , checkNodeTraceConfiguration'
+  , checkNodeTraceConfigurationWith
+  , DocTracer
   ) where
 
 
 import           Cardano.Logging
+import           Cardano.Logging.DocuGenerator (DocTracer, dtWarnings)
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.NodeToNode (RemoteAddress)
@@ -28,11 +31,7 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
-import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
-import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -56,13 +55,20 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion,
+                   TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
+import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
+                   TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Tracing (ClientMetrics, ConsensusStartupException,
+                   ReplayBlockStats)
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
@@ -86,27 +92,30 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                    UnversionedProtocolData (..))
+import           Ouroboros.Network.Protocol.KeepAlive.Type (KeepAlive)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharing)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic,
+                   TxSubmissionCounters)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
-
-import qualified LeiosDemoOnlyTestFetch as LF
-import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
-                   TraceLeiosKernel, TraceLeiosPeer)
-import           Network.TypedProtocol.Codec (AnyMessage)
 
 import qualified Codec.CBOR.Term as CBOR
 import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
 import qualified Network.Socket as Socket
+
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote, TraceLeiosKernel,
+                   TraceLeiosPeer)
 
 
 -- | Check the configuration in the given file.
@@ -116,11 +125,21 @@ checkNodeTraceConfiguration ::
      FilePath
   -> IO NSWarnings
 checkNodeTraceConfiguration configFileName = do
+  (dt,_) <- docTracersFirstPhase Nothing
+  checkNodeTraceConfigurationWith dt configFileName
+
+-- | Check the configuration in the given file against an already computed
+-- 'DocTracer' (from 'docTracersFirstPhase'), so that callers checking
+-- several configurations can share a single documentation pass.
+checkNodeTraceConfigurationWith ::
+     DocTracer
+  -> FilePath
+  -> IO NSWarnings
+checkNodeTraceConfigurationWith dt configFileName = do
   w1 <- checkTraceConfiguration
-          configFileName
+          (FromFile configFileName)
           defaultCardanoConfig
           getAllNamespaces
-  (dt,_) <- docTracersFirstPhase Nothing
   pure $ w1 <> dtWarnings dt
 
 -- | Check the configuration in the given file.
@@ -133,7 +152,6 @@ checkNodeTraceConfiguration' trConfig =
   checkTraceConfiguration'
     trConfig
     getAllNamespaces
-
 
 -- | Returns a list of all namespaces from all tracers
 getAllNamespaces :: [([T.Text],[T.Text])]
@@ -168,13 +186,15 @@ getAllNamespaces =
         chainSyncServerBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerBlock"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
         blockFetchDecisionNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Decision"])
-                        (allNamespaces :: [Namespace [BlockFetch.TraceLabelPeer
+                        (allNamespaces :: [Namespace (TraceDecisionEvent
                                                       remotePeer
-                                                      (FetchDecision [Point (Header blk)])]])
+                                                      (Header blk))])
         blockFetchClientNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                       remotePeer
                                                       (BlockFetch.TraceFetchClientState (Header blk)))])
+        blockFetchClientMetricsNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
+                        (allNamespaces :: [Namespace ClientMetrics])
         blockFetchServerNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
@@ -191,6 +211,31 @@ getAllNamespaces =
                   (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)))])
         consensusSanityCheckNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "SanityCheck"])
                         (allNamespaces :: [Namespace SanityCheckIssue])
+        kesAgentNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "KESAgent"])
+                        (allNamespaces :: [Namespace KESAgentClientTrace])
+        txLogicNS = map (nsGetTuple . nsReplacePrefix ["txLogic", "Remote"])
+                        (allNamespaces :: [Namespace
+                          (TraceTxLogic remotePeer (GenTxId blk) (GenTx blk))])
+        txCountersNS = map (nsGetTuple . nsReplacePrefix ["txCounters", "Remote"])
+                        (allNamespaces :: [Namespace TxSubmissionCounters])
+        perasCertInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inbound"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
+                          remotePeer (TracePerasCertDiffusionInbound blk))])
+        perasCertOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Outbound"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
+                          remotePeer (TracePerasCertDiffusionOutbound blk))])
+        perasVoteInboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Inbound"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
+                          remotePeer (TracePerasVoteDiffusionInbound blk))])
+        perasVoteOutboundNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Outbound"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
+                          remotePeer (TracePerasVoteDiffusionOutbound blk))])
+        perasCertDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Remote"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
+                          (TraceSendRecv (PerasCertDiffusion blk)))])
+        perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
+                          (TraceSendRecv (PerasVoteDiffusion blk)))])
         localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
                                             ["TxSubmission", "LocalServer"])
                         (allNamespaces :: [Namespace
@@ -272,14 +317,26 @@ getAllNamespaces =
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
                                       (TxSubmission2 (GenTxId blk) (GenTx blk))))])
+        keepAliveRemoteNS = map (nsGetTuple . nsReplacePrefix ["KeepAlive", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv KeepAlive))])
+        peerSharingRemoteNS = map (nsGetTuple . nsReplacePrefix ["PeerSharing", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv (PeerSharing RemoteAddress)))])
         leiosNotifyNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosNotify", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote))])
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
         leiosFetchNS = map (nsGetTuple . nsReplacePrefix
                                         ["LeiosFetch", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))])
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)))])
 
 -- Diffusion
 
@@ -418,6 +475,7 @@ getAllNamespaces =
             <> blockFetchDecisionNS
             <> consensusSanityCheckNS
             <> blockFetchClientNS
+            <> blockFetchClientMetricsNS
             <> blockFetchServerNS
             <> forgeKESInfoNS
             <> txInboundNS
@@ -431,6 +489,16 @@ getAllNamespaces =
             <> gsmNS
             <> csjNS
             <> dbfNS
+            <> kesAgentNS
+            <> txLogicNS
+            <> txCountersNS
+-- Peras
+            <> perasCertInboundNS
+            <> perasCertOutboundNS
+            <> perasVoteInboundNS
+            <> perasVoteOutboundNS
+            <> perasCertDiffusionNS
+            <> perasVoteDiffusionNS
             <> leiosKernelNS
             <> leiosPeerNS
 -- NodeToClient
@@ -445,6 +513,8 @@ getAllNamespaces =
             <> blockFetchNS
             <> blockFetchSerialisedNS
             <> txSubmission2NS
+            <> keepAliveRemoteNS
+            <> peerSharingRemoteNS
             <> leiosNotifyNS
             <> leiosFetchNS
 -- Diffusion

@@ -24,6 +24,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Char as C
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
@@ -94,7 +95,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
     }
     <- createAndRunTestnet creationOptions def conf
 
-  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
+  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . NEL.filter isTestnetNodeSpo $ testnetNodes runtime
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node

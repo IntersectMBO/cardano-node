@@ -2,16 +2,102 @@
 
 ## Next version
 
-* Added a `--shelley-bls-key FILEPATH` option to `cardano-node run` for supplying a block producer's BLS (Leios) signing key alongside the existing VRF/KES/operational-certificate keys. The key is threaded into the consensus block-producer credentials and used as the Leios voting key. It is optional: producers that do not supply it no longer vote (previously a placeholder key was derived from cold-key material). Generate one with `cardano-cli dijkstra node key-gen-BLS`.
+- Added a `--shelley-bls-key FILEPATH` option to `cardano-node run` for supplying a block producer's BLS (Leios) signing key alongside the existing VRF/KES/operational-certificate keys. The key is threaded into the consensus block-producer credentials and used as the Leios voting key. It is optional: producers that do not supply it no longer vote (previously a placeholder key was derived from cold-key material). Generate one with `cardano-cli dijkstra node key-gen-BLS`.
 
-* `LeiosDbConfig` with `Backend: SQLite` no longer takes any paths. Its two partitions follow the node's own `DatabasePath` the way the VolatileDB and the ImmutableDB do: `leios.vol.db` next to `volatile/`, `leios.imm.db` next to `immutable/`, which are separate volumes when `--immutable-database-path` and `--volatile-database-path` are given. Any `Filepath`, `VolatileFilepath` or `ImmutableFilepath` key is ignored, and an existing LeiosDb under the old `leios.db.vol`/`leios.db.imm` names is not picked up: the node starts a fresh one and re-fetches the endorser-block closures.
+- `LeiosDbConfig` with `Backend: SQLite` no longer takes any paths. Its two partitions follow the node's own `DatabasePath` the way the VolatileDB and the ImmutableDB do: `leios.vol.db` next to `volatile/`, `leios.imm.db` next to `immutable/`, which are separate volumes when `--immutable-database-path` and `--volatile-database-path` are given. Any `Filepath`, `VolatileFilepath` or `ImmutableFilepath` key is ignored, and an existing LeiosDb under the old `leios.db.vol`/`leios.db.imm` names is not picked up: the node starts a fresh one and re-fetches the endorser-block closures.
 
+- `slotsMissed_int` no longer counts the slots that elapse while block forging
+  is disabled. While forging is off there is no forging thread, hence no
+  leadership check events at all, so `Forge.Stats` kept the last slot it had
+  seen and booked the whole standby interval as missed on the first check after
+  forging was re-enabled. The first completed check after resuming now starts a
+  new run of slots, exactly as the first check after start-up does. Genuine
+  gaps, where a producing node did not complete a leadership check, are still
+  counted. Only an off-to-on transition counts as a resume: every `SIGHUP`
+  re-reads the credentials, so one sent to reload the topology or the RPC config
+  alone must not discard a gap that accumulated before the signal. Such a reload
+  does still restart the forging threads, and for KES-agent credentials that
+  costs the re-handshake window during which the hot key is poisoned; those
+  slots are counted, because forging was enabled and no check completed.
+  ([#6698](https://github.com/IntersectMBO/cardano-node/issues/6698))
+
+- Fix `BlockFetch.Decision` trace namespace drift: documentation and the
+  configuration consistency check now use the runtime `TraceDecisionEvent`
+  type, so the documented message namespaces are
+  `BlockFetch.Decision.PeersFetch` and `BlockFetch.Decision.PeerStarvedUs`
+  instead of the stale `BlockFetch.Decision.{Accept,Decline,EmptyPeersFetch}`,
+  and both can now be configured. `BlockFetch.Client.ClientMetrics` is now
+  accepted by the consistency check. Removed the obsolete
+  `[TraceLabelPeer peer (FetchDecision [Point header])]` tracer instances,
+  including the never-emitted `connectedPeers` metric documentation. Added a
+  regression test comparing the documented namespaces against the consistency
+  check's namespace inventory.
+  ([#6667](https://github.com/IntersectMBO/cardano-node/issues/6667))
+
+- Bump `ouroboros-consensus` to 4.2.0.1, `cardano-api` to 11.6, `cardano-cli` to
+  11.2 and `cardano-rpc` to 11.2.
+
+- Call `protocolInfo` only once at startup, avoiding needless recomputation of
+  the initial ledger state.
+
+## 11.1.0 -- August 2026
+
+- **Behaviour change:** snapshot options set directly under `LedgerDB` alongside a
+  `LedgerDB.Snapshots` block are now a configuration error instead of being silently
+  ignored.
+
+  Only one of the two locations is ever read. Previously, a config such as
+
+  ```json
+  "LedgerDB": { "SnapshotInterval": 43200, "Snapshots": { "SlotOffset": 0 } }
+  ```
+
+  parsed cleanly and quietly used the default interval, discarding the value the
+  operator wrote. This affected `SnapshotInterval`, `NumOfDiskSnapshots`, `SlotOffset`,
+  `RateLimit`, `MinDelay` and `MaxDelay`.
+
+  Such a config will now fail to start with an error naming the offending keys; move
+  them into the `LedgerDB.Snapshots` block. Setting them directly under `LedgerDB`
+  remains supported when there is no `Snapshots` block.
+
+- **Behaviour change:** the legacy tracing system was removed, along with the
+  `iohk-monitoring-framework` dependency and the legacy tracing configuration.
+  New tracing is now the only tracing system.
+
+- **Behaviour change:** the NixOS service options `useNewTopology`,
+  `lmdbDatabasePath` and `withUtxoHdLmdb` were removed. P2P is the only
+  networking mode, so `useNewTopology` no longer had an effect, and the LMDB
+  UTxO-HD backend was dropped. Configurations still setting any of these will
+  fail to evaluate.
+
+- NixOS service: added `blsKeys` for optional Leios BLS key support, and
+  `profilingOutputDir` to place GHC RTS profiling output on a writable path.
+  RTS stats stay enabled by default, while the heavier profiling and eventlog
+  outputs are now gated, for both the node and tracer services.
+
+- NixOS submit-api service: added a `metricsPort` option, passed through to the
+  OCI image. The service definition was updated for the new tracing
+  configuration and now uses a group-accessible node socket.
+
+- The node, tracer and submit-api OCI images now support a read-only root
+  filesystem and non-root execution. See `nix/docker/README.md` for the full
+  details.
+
+- OCI entrypoint fixes: `cli` mode is dispatched ahead of the `NETWORK` modes,
+  and the tracer image no longer aborts under `set -e` when
+  `CARDANO_MIN_LOG_SEVERITY` is unset.
+
+## 10.7.1 -- April 2026
 
 * Added txsSyncDurationTotal counter for tracking the total time spent syncing the mempool.
+
+## 10.6.2 -- February 2026
 
 * Added EKG metrics for soft and hard timeouts and included defensive mempool
 
 * Improved `cardano-node --help` output by making it the same as the one shown when calling `cardano-node` without arguments.
+
+## 10.5.0 -- June 2025
 
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
   (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
@@ -21,6 +107,13 @@
 - Lower the log severity from Error to Info for TracePromoteWarmBigLedgerPeerAborted and ResponderStartFailure
 
 - Change to exit with 0 rather than 1 when a SIGTERM is caught.
+
+## 10.4.1 -- April 2025
+
+- KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
+  `AddSample` messages in the legacy tracing system.
+
+## 10.3.1 -- April 2025
 
 - Add a new configuration field for fork-policy.
 
@@ -46,9 +139,6 @@
     ]
   }
   ```
-
-- KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
-  `AddSample` messages in the legacy tracing system.
 
 ## 10.2 -- January 2025
 

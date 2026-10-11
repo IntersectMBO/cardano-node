@@ -5,6 +5,7 @@
   baseNodeConfig,
   backend,
   profile,
+  eraName, # Workbench's long-form ledger era name (`conway`, `babbage`, ...).
   profiling,
   nodeSpecs,
   # Derivations used to generate the topology projections
@@ -23,6 +24,8 @@ with pkgs.lib; let
 
   eras = [
     ## This defines the order of eras -- which is important.
+    ## Keys are the long-form ledger era names (matching ERA in the Makefile
+    ## and the `eraName` runner parameter).
     "byron"
     "shelley"
     "allegra"
@@ -30,28 +33,67 @@ with pkgs.lib; let
     "alonzo"
     "babbage"
     "conway"
+    "dijkstra"
   ];
 
   configHardforksIntoEra = era: let
-    go = acc: curEra: rest: let
-      ret = acc // eraSetupHardforks.${curEra};
-    in
-      if curEra == era
-      then ret
-      else go ret (__head rest) (__tail rest);
-    eraSetupHardforks = {
-      byron = {};
-      shelley = {TestShelleyHardForkAtEpoch = 0;};
-      allegra = {TestAllegraHardForkAtEpoch = 0;};
-      mary = {TestMaryHardForkAtEpoch = 0;};
-      alonzo = {TestAlonzoHardForkAtEpoch = 0;};
-      babbage = {TestBabbageHardForkAtEpoch = 0;};
-      conway = {TestConwayHardForkAtEpoch = 0;};
+    ## Per-era step: `acc -> acc`. Each step either throws (when a
+    ## profile-level prerequisite for the era is missing) or returns the
+    ## accumulator with the era's HF flag merged in.
+    ##
+    ## We MUST NOT activate an era if its genesis parameters are not present
+    ## because, as the node always needs valid config file for that genesis in
+    ## its config, genesis.sh will create one, a stub/all zeros genesis file.
+    ## If that era is not activated with its respective TestXXXHardForkAtEpoch
+    ## the dummy config file is not a problem, otherwise the chain would run
+    ## with, for example, zero Plutus V3 cost models or broken governance.
+    eraSetup = {
+      byron = acc:
+        if (profile.genesis.byron or null) == null
+        then throw "configHardforksIntoEra: eraName reaches 'byron' but profile.genesis.byron is null"
+        else acc;
+      shelley = acc:
+        if (profile.genesis.shelley or null) == null
+        then throw "configHardforksIntoEra: eraName reaches 'shelley' but profile.genesis.shelley is null"
+        else acc // {TestShelleyHardForkAtEpoch = 0;};
+      allegra = acc: acc // {TestAllegraHardForkAtEpoch = 0;};
+      mary = acc: acc // {TestMaryHardForkAtEpoch = 0;};
+      alonzo = acc:
+        if (profile.genesis.alonzo or null) == null
+        then throw "configHardforksIntoEra: eraName reaches 'alonzo' but profile.genesis.alonzo is null"
+        else acc // {TestAlonzoHardForkAtEpoch = 0;};
+      babbage = acc: acc // {TestBabbageHardForkAtEpoch = 0;};
+      conway = acc:
+      # A null or empty profile.genesis.conway will use an inert ("zero") genesis.
+        acc // {TestConwayHardForkAtEpoch = 0;};
+      dijkstra = acc:
+      # A null or empty profile.genesis.dijkstra will use an inert ("zero") genesis.
+        acc // {TestDijkstraHardForkAtEpoch = 0;};
     };
+
+    ## Walk `eras` in order, applying each step until we've consumed the
+    ## target era. `done` short-circuits all subsequent steps.
+    folded =
+      foldl' (
+        {
+          acc,
+          done,
+        }: curEra:
+          if done
+          then {inherit acc done;}
+          else {
+            acc = eraSetup.${curEra} acc;
+            done = curEra == era;
+          }
+      ) {
+        acc = {};
+        done = false;
+      }
+      eras;
   in
-    if __hasAttr era eraSetupHardforks
-    then go {} (__head eras) (__tail eras)
-    else throw "configHardforksIntoEra:  unknown era '${era}'";
+    if folded.done
+    then folded.acc
+    else throw "configHardforksIntoEra: unknown era '${era}'";
 
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
@@ -99,65 +141,99 @@ with pkgs.lib; let
         }
         (recursiveUpdate
           (recursiveUpdate
-            (
-              recursiveUpdate
-              (removeAttrs
-                baseNodeConfig
-                [
-                  ## Let the genesis hashes be auto-computed by the node:
-                  "ByronGenesisHash"
-                  "ShelleyGenesisHash"
-                  "AlonzoGenesisHash"
-                  "ConwayGenesisHash"
-                  "DijkstraGenesisHash"
-                ]
-                // {
-                  ExperimentalHardForksEnabled = true;
-                  ExperimentalProtocolsEnabled = true;
-                  TurnOnLogMetrics = true;
-                  ChainSyncIdleTimeout = 0;
-                  PeerSharing = false;
+            (removeAttrs
+              baseNodeConfig
+              [
+                ## Let the genesis hashes be auto-computed by the node:
+                "ByronGenesisHash"
+                "ShelleyGenesisHash"
+                "AlonzoGenesisHash"
+                "ConwayGenesisHash"
+                "DijkstraGenesisHash"
+              ]
+              // {
+                ExperimentalHardForksEnabled = true;
+                ExperimentalProtocolsEnabled = true;
+                ChainSyncIdleTimeout = 0;
+                PeerSharing = false;
 
-                  ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
-                  ## NB. the following inequality must hold: known >= established >= active >= 0
-                  SyncTargetNumberOfActivePeers = max 15 valency; # set to same value as TargetNumberOfActivePeers
-                  SyncTargetNumberOfEstablishedPeers = max 40 valency;
-                  TargetNumberOfActivePeers = max 15 valency;
-                  TargetNumberOfEstablishedPeers = max 40 valency;
+                ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
+                ## NB. the following inequality must hold: known >= established >= active >= 0
+                SyncTargetNumberOfActivePeers = max 15 valency; # set to same value as TargetNumberOfActivePeers
+                SyncTargetNumberOfEstablishedPeers = max 40 valency;
+                TargetNumberOfActivePeers = max 15 valency;
+                TargetNumberOfEstablishedPeers = max 40 valency;
 
-                  ByronGenesisFile = "../genesis/byron/genesis.json";
-                  ShelleyGenesisFile = "../genesis/genesis-shelley.json";
-                  AlonzoGenesisFile = "../genesis/genesis.alonzo.json";
-                  ConwayGenesisFile = "../genesis/genesis.conway.json";
-                  DijkstraGenesisFile = "../genesis/genesis.dijkstra.json";
-                }
-                // optionalAttrs (profile.node.utxo_lsmt && isProducer)
-                {
-                  LedgerDB = {
+                ByronGenesisFile = "../genesis/genesis.byron.json";
+                ShelleyGenesisFile = "../genesis/genesis.shelley.json";
+                AlonzoGenesisFile = "../genesis/genesis.alonzo.json";
+                ## ConwayGenesisFile / DijkstraGenesisFile are always declared
+                ## here even when the profile leaves .genesis.conway or
+                ## .genesis.dijkstra null: cardano-node's config parser
+                ## requires both keys unconditionally.
+                ## The referenced files are left for stub placeholders to be
+                ## generated by the genesis backend.
+                ## If the node never activates that era the stub is inert.
+                ConwayGenesisFile = "../genesis/genesis.conway.json";
+                DijkstraGenesisFile = "../genesis/genesis.dijkstra.json";
+
+                ## The Snapshots section applies regardless of backend choice
+                ## The Backend key, when absent, defaults to "V2InMemory".
+                LedgerDB =
+                  {
+                    Snapshots = {
+                      ## Number of slots between two ledger snapshots:
+                      ## SnapshotInterval counts slots on the fixed schedule
+                      ## SlotOffset + n * SnapshotInterval, the node snapshots
+                      ## the last immutable ledger state before each point.
+                      ##
+                      ## Before node 11.1.X the workbench requested a snapshot
+                      ## every 4230 seconds of wall clock time via the top level
+                      ## SnapshotInterval option. The option now counts slots,
+                      ## so the 4230 second cadence is converted using the
+                      ## profile slot duration. Adding 0.5 before flooring
+                      ## rounds to the nearest slot, avoiding float division
+                      ## artifacts when slot_duration is fractional.
+                      SnapshotInterval =
+                        builtins.floor
+                          (4230 / profile.genesis.slot_duration + 0.5)
+                      ;
+                      ## First point of the schedule: later points follow every
+                      ## SnapshotInterval slots after it.
+                      ##
+                      ## A point fires only once a block earlier than it is
+                      ## immutable, and a missed point is never retried: for the
+                      ## first point to fire, the offset must exceed the slot
+                      ## where the cluster actually starts forging, plus margin
+                      ## for the first block to appear.
+                      ##
+                      ## Deliberately set at 1000 based on pre 11.1.0 "value"
+                      ## runs.
+                      ## Never leave it unset, the default is Mithril's 388800,
+                      ## unreachable on most clusters.
+                      SlotOffset = 1000;
+                      ## Disable the minimum wall clock period between two
+                      ## written snapshots, the policy replaced by this section
+                      ## had no such check.
+                      RateLimit = 0;
+                      # Disable the randomised delay for kicking off snapshots:
+                      # For benchmarks, exact timing needs to be reproducible,
+                      # and identical for all nodes.
+                      MinDelay = 0;
+                      MaxDelay = 0;
+                    };
+                  }
+                  // optionalAttrs (profile.node.utxo_lsmt && isProducer) {
                     Backend = "V2LSM";
                     LSMDatabasePath = liveTablesPath i;
                   };
-                })
-              {
-                ## This LedgerDB attrset is defined regardless of backend choice.
-                ## It assumes the Backend default to be "V2InMemory"; it must not overwrite any of the above, more specfic choices.
-                LedgerDB = {
-                  Snapshots = {
-                    SnapshotInterval = 4230;
-                    # Disable the randomised delay for kicking off snapshots:
-                    # For benchmarks, exact timing needs to be reproducible, and identical for all nodes.
-                    MinDelay = 0;
-                    MaxDelay = 0;
-                  };
-                };
-              }
-            )
+              })
             (
               if __hasAttr "preset" profile && profile.preset != null
               ## It's either an undisturbed preset,
               ## or a hardforked setup.
               then readJSONMay (../profile/presets + "/${profile.preset}/config.json")
-              else configHardforksIntoEra profile.era
+              else configHardforksIntoEra eraName
             ))
           profile.node.verbatim);
 
@@ -179,21 +255,24 @@ with pkgs.lib; let
     // optionalAttrs (profiling.eventlog or false) {
       # Add the `-l` RTS param with profiling.
       eventlog = true;
-      # Decide where the executable comes from:
-      #########################################
     }
+    # Decide where the executable comes from:
+    #########################################
     // optionalAttrs (!backend.useCabalRun) {
       package = workbenchNix.haskellProject.exes.cardano-node;
     }
     // optionalAttrs backend.useCabalRun {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
-      #########################################
     }
+    #########################################
     // optionalAttrs isProducer {
-      operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
-      kesKey = "../genesis/node-keys/node-kes${toString i}.skey";
-      vrfKey = "../genesis/node-keys/node-vrf${toString i}.skey";
+      # Key paths match create-testnet-data output layout directly.
+      # create-testnet-data uses 1-indexed pool dirs (pool1, pool2, ...).
+      # Dense/bulk pools and BFT nodes are not supported by create-testnet-data.
+      operationalCertificate = "../genesis/pools-keys/pool${toString (i + 1)}/opcert.cert";
+      kesKey = "../genesis/pools-keys/pool${toString (i + 1)}/kes.skey";
+      vrfKey = "../genesis/pools-keys/pool${toString (i + 1)}/vrf.skey";
     }
     // optionalAttrs profile.node.tracer {
       tracerSocketPathConnect = mkDefault "../tracer/tracer.socket";

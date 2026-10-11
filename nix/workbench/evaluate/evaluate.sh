@@ -22,7 +22,7 @@ usage_evaluate() {
 
 		   Example:
 
-		   wb evaluate evaluate genesis.create-staked-args
+		   wb evaluate evaluate genesis.create-testnet-data
 	EOF
 }
 

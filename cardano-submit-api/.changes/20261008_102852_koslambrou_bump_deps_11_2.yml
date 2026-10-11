@@ -1,0 +1,6 @@
+pr: 6677
+kind:
+  - maintenance
+description: |
+  Bumped `cardano-api` to 11.8, `cardano-cli` to 11.3 and `cardano-crypto-class` to 2.6
+  for the 11.2 release.

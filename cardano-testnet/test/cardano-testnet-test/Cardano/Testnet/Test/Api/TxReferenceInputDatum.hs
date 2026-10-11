@@ -26,6 +26,7 @@ import           Prelude
 import           Control.Monad
 import           Data.Default.Class
 import           Data.List (isInfixOf)
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Set (Set)
@@ -67,7 +68,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
   tr@TestnetRuntime
     { configurationFile
-    , testnetNodes = node0 : _
+    , testnetNodes = node0 :| _
     , wallets = wallet0@(PaymentKeyInfo _ addrTxt0) : wallet1 : _
     } <-
     createAndRunTestnet creationOptions def conf

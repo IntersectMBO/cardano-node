@@ -1,0 +1,5 @@
+pr: 6668
+kind:
+  - test
+description: |
+  Updated the UTxO RPC `FetchBlock` test for the latest v1beta spec, where the block reference request field and the block response field became repeated.

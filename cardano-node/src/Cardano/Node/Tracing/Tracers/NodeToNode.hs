@@ -13,19 +13,11 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Cardano.Node.Queries (ConvertTxId)
-import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
-import qualified LeiosDemoOnlyTestFetch as LF
-import qualified LeiosDemoOnlyTestNotify as LN
-import           LeiosDemoTypes (LeiosEb, LeiosPoint, LeiosTx, LeiosVote,
-                   messageLeiosFetchToObject, messageLeiosNotifyToObject)
-import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, Header, StandardHash,
-                   getHeader)
+import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
-import           Ouroboros.Consensus.Storage.LedgerDB.Forker (ResolveLeiosBlock,
-                   headerLeiosAnnouncement)
+import           Ouroboros.Consensus.Tracing (ConvertTxId, renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -461,7 +453,7 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 instance MetaTrace (TraceKeepAliveClient remotePeer) where
   namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
 
-  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
+  severityFor (Namespace _ ["KeepAliveClient"]) _ = Just Info
   severityFor _ _ = Nothing
 
   documentFor (Namespace _ ["KeepAliveClient"]) = Just
@@ -469,68 +461,3 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
-
---------------------------------------------------------------------------------
--- LeiosNotify / LeiosFetch tracers
---
--- Delegate to the compact 'messageLeiosNotifyToObject' / 'messageLeiosFetchToObject'
--- helpers exported from 'LeiosDemoTypes' so MsgLeiosBlock(Txs) lines emit just
--- the metadata (kind / ebHash / ebSlot / sizes / counts) and not the full tx
--- CBOR payload that the derived 'Show' would dump.
---------------------------------------------------------------------------------
-
-instance ( Show (Header blk)
-         , ResolveLeiosBlock blk
-         ) => LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)) where
-  forHuman = showT
-
-  forMachine _dtal (AnyMessageAndAgency _stok msg) =
-    messageLeiosNotifyToObject headerLeiosAnnouncement msg
-
-instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
-  forHuman = showT
-
-  forMachine _dtal (AnyMessageAndAgency _stok msg) =
-    messageLeiosFetchToObject msg
-
-instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint (Header blk) LeiosVote)) where
-  namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
-    LN.MsgLeiosNotificationRequestNext{} -> Namespace [] ["RequestNext"]
-    LN.MsgLeiosBlockAnnouncement{}       -> Namespace [] ["BlockAnnouncement"]
-    LN.MsgLeiosBlockOffer{}              -> Namespace [] ["BlockOffer"]
-    LN.MsgLeiosBlockTxsOffer{}           -> Namespace [] ["BlockTxsOffer"]
-    LN.MsgLeiosVotes{}                   -> Namespace [] ["Votes"]
-    LN.MsgDone                           -> Namespace [] ["Done"]
-
-  severityFor _ _ = Just Debug
-
-  documentFor _ = Nothing
-
-  allNamespaces =
-    [ Namespace [] ["RequestNext"]
-    , Namespace [] ["BlockAnnouncement"]
-    , Namespace [] ["BlockOffer"]
-    , Namespace [] ["BlockTxsOffer"]
-    , Namespace [] ["Votes"]
-    , Namespace [] ["Done"]
-    ]
-
-instance MetaTrace (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
-  namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
-    LF.MsgLeiosBlockRequest{}    -> Namespace [] ["BlockRequest"]
-    LF.MsgLeiosBlock{}           -> Namespace [] ["Block"]
-    LF.MsgLeiosBlockTxsRequest{} -> Namespace [] ["BlockTxsRequest"]
-    LF.MsgLeiosBlockTxs{}        -> Namespace [] ["BlockTxs"]
-    LF.MsgDone                   -> Namespace [] ["Done"]
-
-  severityFor _ _ = Just Debug
-
-  documentFor _ = Nothing
-
-  allNamespaces =
-    [ Namespace [] ["BlockRequest"]
-    , Namespace [] ["Block"]
-    , Namespace [] ["BlockTxsRequest"]
-    , Namespace [] ["BlockTxs"]
-    , Namespace [] ["Done"]
-    ]

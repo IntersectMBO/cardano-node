@@ -27,6 +27,7 @@ import           Data.Aeson.Types (Value (..), object)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import           Data.Default.Class (Default (def))
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeLatin1)
 import qualified Data.Vector as Vector
@@ -76,7 +77,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
     } <-
     createAndRunTestnet creationOptions def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
@@ -232,7 +233,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included-p
     } <-
     createAndRunTestnet creationOptions def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
@@ -344,7 +345,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
     } <-
     createAndRunTestnet creationOptions def conf
 
-  poolNode1 <- H.headM testnetNodes
+  let poolNode1 = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)

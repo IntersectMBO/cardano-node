@@ -2,10 +2,11 @@
 ## The binaries/scripts to use when calling the workbench.
 , haskellProject
 , workbench # The derivation.
-## Profile dependent parameters.
+## Nix attrset parameters.
 , profile
 , backend
 ## This run parameters.
+, eraName
 , batchName
 , workbenchStartArgs
 ##
@@ -21,7 +22,7 @@ let
   backendName = backend.name;
   inherit (backend) stateDir basePort useCabalRun profiling;
 
-  profileBundle  = profile.profileBundle { inherit backend; };
+  profileBundle  = profile.profileBundle { inherit eraName backend; };
 
   profileDataDir = profile.materialise-profile { inherit profileBundle; };
   backendDataDir = backend.materialise-profile { inherit profileBundle; };
@@ -41,13 +42,14 @@ let
     ''
     export WB_CHAP_PATH=${chap}
     export WB_NIX_PLAN=${nixPlanJson}
-    export WB_SHELL_PROFILE=${profileName}
+    export WB_SHELL_PROFILE_NAME=${profileName}
     export WB_SHELL_PROFILE_DATA=${profileDataDir}
-    export WB_BACKEND=${backendName}
+    export WB_SHELL_ERA_NAME=${eraName}
+    export WB_BACKEND_NAME=${backendName}
     export WB_BACKEND_DATA=${backendDataDir}
-    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
+    export WB_GENESIS_RIPPER=''${WB_GENESIS_RIPPER:-0}
     export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
     if test -z "$(git status --porcelain --untracked-files=no)"
     then export WB_GITREV="$(git rev-parse HEAD)"
@@ -82,6 +84,7 @@ let
 
     wb start \
       --batch-name   ${batchName} \
+      --era-name     ${eraName} \
       --profile-data ${profileDataDir} \
       --backend-data ${backendDataDir} \
       --cache-dir    ${cacheDir} \
@@ -138,7 +141,6 @@ let
   workbench-profile-run =
     let
       profileJson = profileBundle.profile.JSON;
-      nodeSpecsJson = profileBundle.node-specs.JSON;
       # Genesis files creation.
       genesisFiles = pkgs.runCommand "workbench-run-genesis-${profileName}"
         { requiredSystemFeatures = [ "benchmark" ];
@@ -147,15 +149,9 @@ let
         ''
         mkdir $out
 
-        cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
-        cache_key=$(      wb genesis profile-cache-key       ${profileJson})
-
-        wb genesis actually-genesis \
-          "${profileJson}"          \
-          "${nodeSpecsJson}"        \
-          "$out"                    \
-          "$cache_key_input"        \
-          "$cache_key"
+        wb genesis create-cache \
+          "${profileJson}"      \
+          "$out"
         ''
       ;
       # Run the profile.
@@ -180,13 +176,21 @@ let
 
         ${workbench-envars}
 
+        # cardano-node rejects vrf.skey if any "other" perm bit is set, but Nix
+        # forces every store file to 0444. Copy out and chmod go= so the run
+        # dir's symlinks resolve to 0600.
+        genesis_cache_entry=$out/cache/genesis-cache-entry
+        cp -rL ${genesisFiles} "$genesis_cache_entry"
+        chmod -R u+rwX,go= "$genesis_cache_entry"
+
         cmd=(
           wb
           start
           --profile-data        ${profileDataDir}
           --backend-data        ${backendDataDir}
-          --genesis-cache-entry ${genesisFiles}
+          --genesis-cache-entry "$genesis_cache_entry"
           --batch-name          smoke-test
+          --era-name            ${eraName}
           --base-port           ${toString basePort}
           --node-source         ${haskellProject.args.src}
           --node-rev            ${cardano-node-rev}
@@ -195,16 +199,26 @@ let
         )
         echo "''${cmd[*]}" > $out/wb-start.sh
 
+        ## stdenv runs builders with `set -e -o pipefail`, so a failing `wb
+        ## start` would abort the script right here -- before the diagnostics
+        ## below ever run, leaving CI with no node logs at all. Disable both
+        ## for the pipeline and read the status of `wb start` itself out of
+        ## PIPESTATUS rather than `$?`, which only reports `tee`'s status.
+        set +e +o pipefail
         time "''${cmd[@]}" 2>&1 |
           tee $out/wb-start.log
-        status=$?
+        status=''${PIPESTATUS[0]}
+        set -e -o pipefail
         if test $status != 0
         then echo "wb start failed"
              cd run/current
              echo "==========  txgen  stdout:"; cat generator/stdout || true
              echo "==========  txgen  stderr:"; cat generator/stderr || true
-             echo "==========  node-0 stdout:"; cat node-0/stdout || true
-             echo "==========  node-0 stderr:"; cat node-0/stderr || true
+             for node in ${__concatStringsSep " "
+                            (__attrNames profileBundle.node-specs.value)}
+             do echo "==========  $node stdout:"; cat "$node"/stdout || true
+                echo "==========  $node stderr:"; cat "$node"/stderr || true
+             done
              wb call fail "wb start failed"
         fi
 

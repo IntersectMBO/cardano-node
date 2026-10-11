@@ -246,9 +246,16 @@ case "${op}" in
     * ) usage_manifest;; esac
 }
 
+manifest_is_git_checkout() {
+    local dir=$1
+    # Note: 'test -d "$dir"/.git' would be wrong here, as .git is a file
+    # (not a directory) in git worktree and submodule checkouts.
+    git -C "$dir" rev-parse --git-dir >/dev/null 2>&1
+}
+
 manifest_git_head_commit() {
     local dir=$1
-    if test -d "$dir"/.git
+    if manifest_is_git_checkout "$dir"
     then git -C "$dir" rev-parse HEAD
     else echo      -n "0000000000000000000000000000000000000000"
     fi
@@ -256,7 +263,7 @@ manifest_git_head_commit() {
 
 manifest_git_checkout_state_desc() {
     local dir=$1
-    if test -d "$dir"/.git
+    if manifest_is_git_checkout "$dir"
     then if git -C "$dir" diff --quiet --exit-code
          then echo -n "clean"
          else echo -n "modified"
@@ -267,7 +274,7 @@ manifest_git_checkout_state_desc() {
 
 manifest_local_repo_branch() {
     local dir=$1 rev=${2:-HEAD}
-    if test -d "$dir"/.git
+    if manifest_is_git_checkout "$dir"
     then git -C "$dir" describe --all "$rev" |
             sed 's_^\(.*/\|\)\([^/]*\)$_\2_'
     else echo      -n "unknown-branch"

@@ -13,6 +13,7 @@ import qualified Cardano.Testnet as H
 
 import           Control.Monad (when)
 import           Data.Functor ((<&>))
+import           Data.List.NonEmpty (NonEmpty)
 import           GHC.Stack
 import qualified System.Environment as IO
 import           System.Exit (ExitCode (..))
@@ -30,7 +31,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
 
-chairmanOver :: HasCallStack => Int -> Int -> H.Conf -> [TestnetNode] -> Integration ()
+chairmanOver :: HasCallStack => Int -> Int -> H.Conf -> NonEmpty TestnetNode -> Integration ()
 chairmanOver timeoutSeconds requiredProgress H.Conf {H.tempAbsPath} allNodes = do
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
   let tempAbsPath' = H.unTmpAbsPath tempAbsPath
@@ -51,7 +52,7 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {H.tempAbsPath} allNodes = d
           , "--config", tempAbsPath' </> "configuration.yaml"
           , "--require-progress", show @Int requiredProgress
           ]
-        <> (sprockets >>= (\sprocket -> ["--socket-path", sprocket]))
+        <> foldMap (\sprocket -> ["--socket-path", sprocket]) sprockets
         ) <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe

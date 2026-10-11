@@ -1,0 +1,5 @@
+pr: 6685
+kind:
+  - feature
+description: |
+  The `cardano-testnet cardano` command gained `--enable-grpc-http` to enable the node gRPC endpoint over HTTP without TLS (h2c), with each node listening by default on 127.0.0.1 on a random free port; the listen address can be customised with `--grpc-listen-address`, and fixed ports can be assigned with `--grpc-listen-port-base` (testnet node *i* then listens on the base port plus *i*-1); the existing `--enable-grpc` option continues to serve gRPC over a unix socket; when gRPC is enabled, each node's gRPC endpoint is printed in the startup summary.

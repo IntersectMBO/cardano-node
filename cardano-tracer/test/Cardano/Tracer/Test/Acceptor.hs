@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -12,20 +11,12 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Logging (standardTracer)
 import qualified Cardano.Logging.Types as Net
-#if RTVIEW
-import           Cardano.Tracer.Handlers.RTView.Run
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 import           Control.Concurrent.Extra (newLock)
-#if RTVIEW
-import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
-#else
 import           Control.Concurrent.STM.TVar (readTVarIO)
-#endif
 import           Control.Monad (forM_, forever)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
@@ -48,24 +39,11 @@ launchAcceptorsSimple mode localSock dpName = do
   connectedNodes <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
-#if RTVIEW
-  savedTO <- initSavedTraceObjects
-#endif
   currentLogLock <- newLock
   currentDPLock <- newLock
 
   std <- standardTracer
   tr <- mkTracerTracer std $ SeverityF $ Just Warning
-
-#if RTVIEW
-  eventsQueues <- initEventsQueues tr Nothing connectedNodesNames dpRequestors currentDPLock
-
-  chainHistory <- initBlockchainHistory
-  resourcesHistory <- initResourcesHistory
-  txHistory <- initTransactionsHistory
-
-  rtViewPageOpened <- newTVarIO False
-#endif
 
   registry <- newRegistry
 
@@ -87,20 +65,9 @@ launchAcceptorsSimple mode localSock dpName = do
         , teTimeseriesHandle      = Nothing
         }
 
-      tracerEnvRTView :: TracerEnvRTView
-      tracerEnvRTView = TracerEnvRTView
-#if RTVIEW
-        { teSavedTO           = savedTO
-        , teBlockchainHistory = chainHistory
-        , teResourcesHistory  = resourcesHistory
-        , teTxHistory         = txHistory
-        , teEventsQueues      = eventsQueues
-        , teRTViewPageOpened  = rtViewPageOpened
-        }
-#endif
-            -- NOTE: no reforwarding in this acceptor.
+      -- NOTE: no reforwarding in this acceptor.
   sequenceConcurrently_
-    [ runAcceptors tracerEnv tracerEnvRTView
+    [ runAcceptors tracerEnv
     , runDataPointsPrinter dpName dpRequestors
     ]
  where
@@ -113,7 +80,6 @@ launchAcceptorsSimple mode localSock dpName = do
     , ekgRequestFreq   = Just 1.0
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
-    , hasRTView        = Nothing
     , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]

@@ -16,6 +16,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (ObjectDiffusion)
+import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as OD
 import           Ouroboros.Network.Tracing ()
 import           Ouroboros.Network.Protocol.ObjectDiffusion.Type (ObjectDiffusion)
 import qualified Ouroboros.Network.Protocol.ObjectDiffusion.Type as OD

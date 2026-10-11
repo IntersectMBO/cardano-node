@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 
@@ -37,7 +38,7 @@ tests :: TestTree
 tests = testGroup "Trace.Forward.Protocol.TraceObject"
   [ testProperty "codec"          prop_codec_TraceObjectForward
   , testProperty "codec 2-splits" prop_codec_splits2_TraceObjectForward
-  , testProperty "codec 3-splits" (withMaxSuccess 33 prop_codec_splits3_TraceObjectForward)
+  , testProperty "codec 3-splits" (withNumTests 33 prop_codec_splits3_TraceObjectForward)
   , testProperty "direct"         prop_direct_TraceObjectForward
   , testProperty "connect"        prop_connect_TraceObjectForward
   , testProperty "channel ST"     prop_channel_ST_TraceObjectForward
@@ -142,3 +143,8 @@ prop_channel_IO_TraceObjectForward
   -> Property
 prop_channel_IO_TraceObjectForward f (NonNegative n) =
   ioProperty (prop_channel f n)
+
+#if ! MIN_VERSION_QuickCheck(2,18,0)
+withNumTests :: Testable prop => Int -> prop -> Property
+withNumTests = withMaxSuccess
+#endif

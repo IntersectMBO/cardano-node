@@ -14,6 +14,8 @@ module Cardano.Testnet (
   TestnetRuntimeOptions(..),
   TestnetEnvOptions(..),
   RpcSupport(..),
+  RpcHttpOptions(..),
+  TraceSupport(..),
   TestnetNodesWithOptions(..),
   NodeWithOptions(..),
   cardanoDefaultTestnetNodesWithOptions,
@@ -49,14 +51,30 @@ module Cardano.Testnet (
   relayNodes,
 
   TestnetNode(..),
+  NodeRpcEndpoint(..),
   isTestnetNodeSpo,
   nodeSocketPath,
   nodeRpcSocketPath,
+  nodeGrpcServer,
+
+  -- * Manifest (read-only interface; only 'cardanoTestnet' writes the file)
+  Manifest(..),
+  ManifestNetwork(..),
+  ManifestPaths(..),
+  ManifestGenesisFiles(..),
+  ManifestNode(..),
+  ManifestNodeRole(..),
+  ManifestGrpc(..),
+  ManifestWallet(..),
+  defaultManifestFile,
   ) where
+
+import           Cardano.Node.Testnet.Paths (defaultManifestFile)
 
 import           Testnet.Components.Query
 import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
+import           Testnet.Manifest
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Util
 import           Testnet.Start.Cardano

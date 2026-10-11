@@ -113,8 +113,8 @@ generation workload -- using the `workbench` environment:
       Nix or downloaded from Hydra CI cache directly.
     - `-prof` and `-profnix` suffixes -- same as both before, but all
       binaries will be built such that GHC profiling is enabled.
-    - ...there are other modes as per
-      [lib.mk](https://github.com/intersectmbo/cardano-node/tree/master/lib.mk#L34-L44)
+    - ...there are other modes (`-auto`, `-autostay`, `-autonix`, `-nomadexec`, ...); see
+      [nix/workbench/lib.mk](https://github.com/intersectmbo/cardano-node/blob/master/nix/workbench/lib.mk)
 
 3.  Enter the workbench shell for the chosen profile & mode:
     `make <PROFILE-NAME>` or `make <PROFILE-NAME>-<SUFFIX>` (when there
@@ -212,7 +212,6 @@ Without further ado (**NOTE**: *the order of steps is important!*):
       ``` console
       packages:
           ...
-          trace-resources
           trace-forward
           ../ouroboros-consensus/ouroboros-consensus-protocol
           ../ouroboros-consensus/ouroboros-consensus-cardano

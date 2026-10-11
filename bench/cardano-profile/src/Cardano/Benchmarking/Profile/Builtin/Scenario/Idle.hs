@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Scenario.Idle (
-  profilesNoEraIdle
+  profilesIdle
 ) where
 
 --------------------------------------------------------------------------------
@@ -23,13 +23,13 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraIdle :: [Types.Profile]
-profilesNoEraIdle =
+profilesIdle :: [Types.Profile]
+profilesIdle =
   let idle =
           P.empty & B.base
         . P.idle
         . P.uniCircle . V.hosts 6 . P.loopback
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
         . P.delegators 6

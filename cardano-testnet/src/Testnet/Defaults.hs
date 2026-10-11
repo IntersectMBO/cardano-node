@@ -16,6 +16,7 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultDijkstraGenesis
   , defaultCommitteeKeyPair
   , defaultCommitteeName
   , defaultCommitteeKeysDir
@@ -56,6 +57,7 @@ module Testnet.Defaults
   , defaultShelleyGenesis
   , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
+  , traceOptionsForwarding
   , defaultMainnetTopology
   , defaultUtxoKeys
   , plutusV2Script
@@ -81,6 +83,8 @@ import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import           Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
@@ -88,6 +92,7 @@ import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Node.Testnet.Paths
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -110,11 +115,11 @@ import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
-import           Data.Word (Word64)
+import           Data.Word (Word32, Word64)
 import           Lens.Micro
 import           Numeric.Natural
+
 import           Test.Cardano.Ledger.Core.Rational
-import           Cardano.Node.Testnet.Paths
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -193,11 +198,47 @@ defaultConwayGenesis = do
       , cgExtraConfig = SNothing
       }
 
+-- | The Dijkstra genesis from cardano-api, with the PlutusV4 cost model cut down to the
+-- number of parameters that the genesis decoder accepts. cardano-api builds the cost model
+-- from the full parameter list of the current Plutus version, but the ledger requires a
+-- genesis file to carry exactly 'Ledger.costModelInitParamCount' parameters.
+defaultDijkstraGenesis :: DijkstraGenesis
+defaultDijkstraGenesis =
+  DijkstraGenesis
+    { dgUpgradePParams = upgradePParams{udppPlutusV4CostModel = plutusV4CostModel}
+    }
+  where
+    upgradePParams = dgUpgradePParams Api.dijkstraGenesisDefaults
+    plutusV4CostModel =
+      case Ledger.mkCostModel Ledger.PlutusV4 plutusV4Params of
+        Left err -> error $ "defaultDijkstraGenesis: invalid PlutusV4 cost model: " <> show err
+        Right costModel -> costModel
+    plutusV4Params =
+      take (Ledger.costModelInitParamCount Ledger.PlutusV4)
+        . Ledger.getCostModelParams
+        $ udppPlutusV4CostModel upgradePParams
+
 -- | The only era supported by cardano-testnet for the moment.
 -- It's important to keep the era parameterization everywhere, for ease of development
 -- when new eras roll out.
 defaultEra :: ShelleyBasedEra Api.ConwayEra
 defaultEra = ShelleyBasedEraConway
+
+-- | A @TraceOptions@ that enables the @Forwarder@ backend; allowing nodes to
+-- forward their traces and metrics to cardano-tracer.
+traceOptionsForwarding :: Aeson.Value
+traceOptionsForwarding =
+  Aeson.object
+    [ "" .= Aeson.object
+      [ "backends" .= Aeson.Array
+        [ "Forwarder"
+        , "EKGBackend"
+        , "Stdout MachineFormat"
+        ]
+      , "detail" .= toJSON @String "DNormal"
+      , "severity" .= toJSON @String "Notice"
+      ]
+    ]
 
 -- | Configuration value that allows you to hardfork to any Cardano era
 -- at epoch 0.
@@ -280,30 +321,6 @@ defaultYamlHardforkViaConfig sbe =
                 )
 
   traceOptions = Aeson.Object mempty
-  -- Uncomment this to enable prometheus endpoint on a cardano-testnet.
-  -- N.B. Every testnet node will start trying to listen on PrometheusSimple endpoint
-  -- meaning you can only run a one-node testnet, otherwise there will be a port collision.
-  -- This is because all testnet nodes share config with each other.
-  -- For a proper solution, use cardano-tracer to consume all the logs and just expose a single
-  -- stream of traces from all testnet nodes.
-  -- See also:
-  -- * https://developers.cardano.org/docs/get-started/infrastructure/node/new-tracing-system/cardano-tracer/
-  -- * ./cardano-tracer/docs/cardano-tracer.md
-  --
-  -- traceOptions = do
-  --   Aeson.object
-  --     [ "" .= Aeson.object
-  --       [ "backends" .= Aeson.Array
-  --         [ "EKGBackend"
-  --         , "PrometheusSimple suffix 0.0.0.0 12798"
-  --         -- , "Stdout MachineFormat"
-  --         , "Stdout HumanFormatColoured"
-  --         ]
-  --       , "detail" .= ("DNormal" :: Aeson.Value)
-  --       -- , "severity" .= ("Notice" :: Aeson.Value)
-  --       , "severity" .= ("Debug" :: Aeson.Value)
-  --       ]
-  --     ]
 
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
@@ -420,7 +437,7 @@ eraToProtocolVersion =
     AnyShelleyBasedEra ShelleyBasedEraDijkstra -> mkProtVer (12, 0)
 
 -- TODO: Expose from cardano-api
-mkProtVer :: (Natural, Natural) -> ProtVer
+mkProtVer :: (Natural, Word32) -> ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   case (`ProtVer` fromIntegral minorProtVer) <$> Ledger.mkVersion majorProtVer of
     Just pVer -> pVer

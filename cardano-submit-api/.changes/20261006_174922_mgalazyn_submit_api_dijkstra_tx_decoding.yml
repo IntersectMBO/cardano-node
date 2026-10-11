@@ -1,0 +1,6 @@
+pr: 6725
+kind:
+  - bugfix
+description: |
+  Fixed `cardano-submit-api` rejecting Dijkstra era transactions with a `TxCmdTxReadError` decoding error.
+  Transactions from every Shelley-based era, including Dijkstra, are now decoded and submitted to the node.

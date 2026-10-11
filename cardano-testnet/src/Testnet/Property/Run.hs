@@ -12,6 +12,7 @@ module Testnet.Property.Run
   , disabled
   ) where
 
+import           Cardano.Api (docToText, pretty)
 import           Cardano.Api.IO (unFile)
 
 import           Prelude
@@ -22,6 +23,8 @@ import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Data.Bool (bool)
 import           Data.String (IsString (..))
+import qualified Data.Text as T
+import qualified Data.Text.IO as Text
 import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.Directory
@@ -34,7 +37,6 @@ import           Text.Printf (printf)
 import           Testnet.Process.RunIO
 import           Testnet.Property.Util (integration, integrationWorkspace)
 import           Testnet.Start.Types (Conf, mkConf)
-
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), spoNodes)
 
 import           Hedgehog (Property)
@@ -93,6 +95,9 @@ runTestnet env tn = do
           ANSI.setSGR [SetColor Foreground Vivid Yellow]
           IO.putStrLn "\nFailed to find any SPO node in the testnet\n"
           ANSI.setSGR [SetColor Foreground Vivid Green]
+      forM_ (testnetNodes runtime) $ \TestnetNode{nodeName, nodeRpcEndpoint} ->
+        forM_ nodeRpcEndpoint $ \endpoint ->
+          Text.hPutStrLn IO.stdout . docToText $ pretty ("gRPC endpoint of " :: String) <> pretty (T.pack nodeName) <> pretty (": " :: String) <> pretty endpoint
       IO.putStrLn "Type CTRL-C to exit."
 
       ANSI.setSGR [Reset]

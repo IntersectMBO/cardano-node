@@ -16,6 +16,7 @@ module Cardano.Testnet.Test.Cli.Query (
 
 import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..), unboundRational)
 import qualified Cardano.Api.Ledger as L
 
@@ -37,6 +38,7 @@ import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import           Data.String (IsString (fromString))
@@ -81,10 +83,10 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let sbe = ShelleyBasedEraConway
+  let era = Exp.ConwayEra
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       eraName = eraToString era
       fastTestnetOptions = def
         { creationEra = asbe
@@ -107,7 +109,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath node
@@ -119,7 +121,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
-  checkDRepsNumber epochStateView sbe 3
+  checkDRepsNumber epochStateView era 3
 
   -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)

@@ -20,6 +20,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Default.Class
 import           Data.List (isInfixOf)
+import qualified Data.List.NonEmpty as NEL
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -90,7 +91,7 @@ hprop_leios_stake_pool_registration = integrationRetryWorkspace 2 "leios-stake-p
     }
     <- createAndRunTestnet creationOptions runtimeOptions conf
 
-  node <- H.headM testnetNodes
+  let node = NEL.head testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 

@@ -5,7 +5,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync (
-  profilesNoEraChainsync
+  profilesChainsync
 ) where
 
 --------------------------------------------------------------------------------
@@ -20,15 +20,15 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
-profilesNoEraChainsync :: [Types.Profile]
-profilesNoEraChainsync =
+profilesChainsync :: [Types.Profile]
+profilesChainsync =
   let chainsync =
           P.empty & B.base
         . P.chainsync
         -- TODO: Explorer node is needed ? Or a new property is needed ?
         . P.uniCircle . P.withExplorerNode . P.loopback
         . P.hostsChainsync 1 . P.withChaindbServer
-        . V.genesisVariant300
+        . V.genesisVariantVoltaire64k
         . V.timescaleMainnet
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".

@@ -39,6 +39,7 @@ import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission
 import           Ouroboros.Network.Tracing ()
+import           Network.Mux.Tracing ()
 
 import           Control.Exception (SomeException (..))
 import           Control.Monad (forM, guard)
@@ -51,7 +52,6 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
-import           Network.Mux.Tracing ()
 import qualified Network.TypedProtocol.Codec as TypedProtocol
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
@@ -96,22 +96,22 @@ initTxGenTracers mbForwarding = mdo
   confState       <- emptyConfigReflection
 
   let
-    mkTracer :: (LogFormatting a, MetaTrace a)
+    mkConfiguredTracer :: (LogFormatting a, MetaTrace a)
                   => Text
                   -> Maybe (Trace IO FormattedMessage)
                   -> Maybe (Trace IO FormattedMessage)
                   -> IO (Trace IO a)
-    mkTracer namespace mbStdoutTracer' mbForwardingTracer'
+    mkConfiguredTracer namespace mbStdoutTracer' mbForwardingTracer'
       | isPrefixSilent namespace = pure mempty
       | otherwise = do
         tracer <-  generatorTracer namespace mbStdoutTracer' mbForwardingTracer'
         configureTracers confState initialTraceConfig [tracer]
         pure tracer
 
-  benchTracer     <- mkTracer TracerNameBench     mbStdoutTracer mbForwardingTracer
-  n2nSubmitTracer <- mkTracer TracerNameSubmitN2N mbStdoutTracer mbForwardingTracer
-  connectTracer   <- mkTracer TracerNameConnect   mbStdoutTracer mbForwardingTracer
-  submitTracer    <- mkTracer TracerNameSubmit    mbStdoutTracer mbForwardingTracer
+  benchTracer     <- mkConfiguredTracer TracerNameBench     mbStdoutTracer mbForwardingTracer
+  n2nSubmitTracer <- mkConfiguredTracer TracerNameSubmitN2N mbStdoutTracer mbForwardingTracer
+  connectTracer   <- mkConfiguredTracer TracerNameConnect   mbStdoutTracer mbForwardingTracer
+  submitTracer    <- mkConfiguredTracer TracerNameSubmit    mbStdoutTracer mbForwardingTracer
 
   let
     tracers = BenchTracers
@@ -182,7 +182,7 @@ configSilent :: ConfigOption
 configSilent = ConfSeverity (SeverityF Nothing)
 
 initialTraceConfig :: TraceConfig
-initialTraceConfig = emptyTraceConfig 
+initialTraceConfig = emptyTraceConfig
     { tcOptions = Map.fromList
           [ ([], [configSilent])
           , setMaxDetail TracerNameBench

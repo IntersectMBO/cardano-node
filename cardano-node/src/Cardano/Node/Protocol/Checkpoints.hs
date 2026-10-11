@@ -11,10 +11,8 @@ module Cardano.Node.Protocol.Checkpoints
 import           Cardano.Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Node.Types
 import           Ouroboros.Consensus.Block
-import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Config (CheckpointsMap (..), emptyCheckpointsMap)
 
 import           Control.Exception (IOException)
@@ -105,10 +103,9 @@ instance Aeson.FromJSON WrapCheckpointsMap where
         -> Aeson.Parser (HeaderHash (CardanoBlock StandardCrypto))
       parseCardanoHash = Aeson.withText "CheckpointHash" $ \t ->
           case B16.decode $ Text.encodeUtf8 t of
-            Right h -> do
-              when (BS.length h /= fromIntegral (hashSize p)) $
-                fail $ "Invalid hash size for " <> Text.unpack t
-              pure $ fromRawHash p h
+            Right h ->
+              maybe (fail $ "Invalid hash size for " <> Text.unpack t) pure $
+                fromRawHash p h
             Left e  ->
               fail $ "Invalid base16 for " <> Text.unpack t <> ": " <> e
         where

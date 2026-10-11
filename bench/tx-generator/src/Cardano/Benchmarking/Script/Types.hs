@@ -25,6 +25,7 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
+        , EndpointUri(..)
         , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
                 Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
@@ -32,8 +33,9 @@ module Cardano.Benchmarking.Script.Types (
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
         , ScriptBudget(AutoScript, StaticScriptBudget)
         , ScriptSpec(..)
-        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode)
+        , SubmissionEndpoint(..)
+        , SubmissionEndpointProtocol(..)
+        , SubmitMode(..)
         , TargetNodes
         , TxList(..)
 ) where
@@ -42,9 +44,9 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
-import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
+import           Cardano.TxGenerator.Setup.NixService (EndpointUri (..), NodeDescription,
+                   SubmissionEndpoint (..), SubmissionEndpointProtocol (..))
 import           Cardano.TxGenerator.Types
 
 import           Prelude
@@ -184,7 +186,11 @@ data SubmitMode where
   Benchmark   :: !TargetNodes -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
-  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
+  -- | Submit through an external service, with the 'SubmissionEndpoint'
+  -- carrying both the backend protocol to speak and the endpoint it
+  -- addresses.
+  SubmitToEndpoint :: !SubmissionEndpoint -> SubmitMode
+  WriteCBORList :: !FilePath -> SubmitMode
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

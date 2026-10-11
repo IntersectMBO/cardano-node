@@ -14,6 +14,10 @@ to the issue.
   - integration tests
   See [Running tests](https://github.com/input-output-hk/cardano-node-wiki/wiki/Running-tests) for more details
 - [ ] Any changes are noted in the `CHANGELOG.md` for affected package
+  - `cardano-node-chairman`, `cardano-submit-api` and `cardano-testnet` instead need a
+    changelog fragment in `<package>/.changes/`, because their `CHANGELOG.md` is generated
+    from fragments at release time.  Copy `_TEMPLATE.yml` from that directory, or run
+    `nix run github:input-output-hk/cardano-dev#herald -- new`
 - [ ] The version bounds in `.cabal` files are updated
 - [ ] CI passes. See note on CI.  The following CI checks are required:
   - [ ] Code is linted with `hlint`.  See `.github/workflows/check-hlint.yml` to get the `hlint` version

@@ -163,7 +163,6 @@ data TracerConfig = TracerConfig
   , ekgRequestFreq   :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
   , hasEKG           :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
   , hasPrometheus    :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
-  , hasRTView        :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
   , hasTimeseries    :: !(Maybe Endpoint)
   , tlsCertificate   :: !(Maybe Certificate)
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
@@ -207,7 +206,6 @@ wellFormed TracerConfig
   , hasEKG
   , hasPrometheus
   , logging
-  , hasRTView
   } =
   if null problems
     then Right ()
@@ -222,11 +220,10 @@ wellFormed TracerConfig
     , check "duplicate ports in config" $ hasDuplicates ports
     , check "no host(s) in hasEKG"     . nullEndpoint =<< hasEKG
     , check "no host in hasPrometheus" . nullEndpoint =<< hasPrometheus
-    , check "no host in hasRTView"     . nullEndpoint =<< hasRTView
     ]
 
   ports :: [Port]
-  ports = epPort <$> catMaybes [hasEKG, hasPrometheus, hasRTView]
+  ports = epPort <$> catMaybes [hasEKG, hasPrometheus]
 
   check :: String -> Bool -> Maybe String
   check msg True  = Just msg
