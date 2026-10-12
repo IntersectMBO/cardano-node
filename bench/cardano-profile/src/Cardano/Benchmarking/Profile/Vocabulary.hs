@@ -10,7 +10,10 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleCompressed, timescaleSmall, timescaleModel
 , timescaleMainnet, timescaleDevops
 
-, genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
+, genesisVariantLeios
+, genesisVariantLatest
+, genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
+
 , fundsDefault, fundsDouble, fundsVoting, fundsQuadruple
 
 , hosts
@@ -92,6 +95,10 @@ timescaleDevops =
 
 -- Definition vocabulary: genesis variants.
 -------------------------------------------
+
+-- Last epoch in data/genesis/epoch-timeline.json and v12Preview.
+genesisVariantLeios :: Types.Profile -> Types.Profile
+genesisVariantLeios = genesisVariantLatest . P.v12Preview
 
 -- See: data/genesis/epoch-timeline.json
 -- should always reference the latest entry in data/genesis/epoch-timeline.json
