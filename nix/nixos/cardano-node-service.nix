@@ -89,10 +89,14 @@ let
     i:
     recursiveUpdate
     baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
-      LedgerDB = {
-        Backend = "V2LSM";
-        LSMDatabasePath = cfg.lsmDatabasePath i;
-      };
+      LedgerDB =
+        {
+          Backend = "V2LSM";
+          LSMDatabasePath = cfg.lsmDatabasePath i;
+        }
+        // optionalAttrs (cfg.lsmExportPath i != null) {
+          LSMExportPath = cfg.lsmExportPath i;
+        };
     });
 
   mkInstanceConfig = i:
@@ -481,6 +485,26 @@ in {
         description = ''
           A node UTxO-HD on-disk LSM-trees path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
+      };
+
+      lsmExportPath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
+        description = ''
+          A node UTxO-HD on-disk LSM-trees standalone snapshot export path, for
+          each instance.  The LSM backend keeps the UTxO set on disk and
+          snapshots normally without this, so a node restarts without replaying;
+          what it cannot do is export a standalone copy on every snapshot, which
+          is what Mithril signing consumes.
+
+          cardano-config warns when the resolved snapshot policy equals the
+          Mithril one while the backend is LSM with no export path.  It compares
+          the values, not the `Mithril` name, so a policy derived from the
+          security parameter can match without naming it.
+
+          Only emitted when set, and only with `withUtxoHdLsmt`.
         '';
       };
 
