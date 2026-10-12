@@ -132,6 +132,18 @@ allow-newer:
   , cardano-keys:cardano-ledger-core
   , cardano-keys:cardano-ledger-shelley
 
+  -- TEMPORARY: cardano-api PR #1292's own bound is plutus-ledger-api
+  -- ^>=1.65||^>=1.68, and since the 2026-10-09 CHaP index-state bump the
+  -- solver's preferred window for that is the newer one (1.68.0.0, as
+  -- 1.69.0.0+ are excluded by the caret bound), which pulls plutus-tx and
+  -- plutus-tx-plugin up to 1.68.0.0 too. bench/plutus-scripts-bench (this
+  -- repo's own package) still pins all three of these to ^>=1.65 only; let
+  -- it accept the 1.68.x line rather than forcing the whole plan back down
+  -- to the older window.
+  , plutus-scripts-bench:plutus-ledger-api
+  , plutus-scripts-bench:plutus-tx
+  , plutus-scripts-bench:plutus-tx-plugin
+
 -- TEMPORARY: ouroboros-consensus's main branch (below) doesn't keep its own
 -- version field in sync with real numbered releases -- those are cut from
 -- separate release branches -- so main's version field is a permanently
