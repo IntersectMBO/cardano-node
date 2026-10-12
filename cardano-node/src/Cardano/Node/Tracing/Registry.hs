@@ -20,7 +20,6 @@ module Cardano.Node.Tracing.Registry
   , Listing (..)
   , standard
   , withoutMetrics
-  , undocumented
   , runtimeOnly
   , newTrace
   , newTraceWith
@@ -68,12 +67,11 @@ data Listing = Listing
   , checked     :: Bool  -- ^ part of the configuration consistency check
   }
 
--- | 'undocumented' is for traces whose 'MetaTrace' instance would make the
--- documentation warn; 'runtimeOnly' for traces the check cannot take either.
-standard, withoutMetrics, undocumented, runtimeOnly :: Listing
+-- | 'runtimeOnly' is for traces that neither the documentation nor the check
+-- can take.
+standard, withoutMetrics, runtimeOnly :: Listing
 standard = Listing { withMetrics = True, documented = True, checked = True }
 withoutMetrics = standard { withMetrics = False }
-undocumented = standard { documented = False }
 runtimeOnly = standard { documented = False, checked = False }
 
 data Entry a = Entry

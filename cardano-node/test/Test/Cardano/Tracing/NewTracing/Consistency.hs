@@ -85,16 +85,11 @@ projectBase = H.evalIO . IO.canonicalizePath =<< H.getProjectBase
 knownUnchecked :: [Text]
 knownUnchecked = []
 
--- | Namespaces (or namespace prefixes) that are checked but not documented:
--- tracers declared @undocumented@ in "Cardano.Node.Tracing.Tracers" because
--- their 'MetaTrace' instances in ouroboros-network lack severities. Remove
--- entries as the instances get fixed; the property fails on stale entries.
+-- | Namespaces (or namespace prefixes) that are checked but not documented.
+-- Every declared tracer is both, unless it is declared otherwise in
+-- "Cardano.Node.Tracing.Tracers"; the property fails on stale entries.
 knownUndocumented :: [Text]
-knownUndocumented =
-  [ "Net.DNS"
-  , "Net.Mux.Local.Bearer"
-  , "Net.Mux.Remote.Bearer"
-  ]
+knownUndocumented = []
 
 -- | Compare the namespace inventory of the configuration consistency check
 -- against the namespaces of the documented tracers. Metrics are not part of
@@ -112,7 +107,7 @@ namespaceInventoryDiff run =
                    | (outer, inner) <- drNamespaces run ]
 
 -- | Both inventories now come from the one declaration of the tracers, so
--- they differ exactly by the tracers declared as undocumented or unchecked
+-- they differ exactly by the tracers declared as not documented or not checked
 -- there; this property keeps those exceptions explicit and checks that
 -- hermod's documentation of a tracer lists the same namespaces as its
 -- 'allNamespaces'.
@@ -123,7 +118,7 @@ prop_namespaceInventory run =
     H.annotate "Namespaces documented but unknown to the consistency check:"
     withoutKnown knownUnchecked documentedNotChecked H.=== []
     H.annotate "Namespaces in the consistency check but never documented \
-               \(a tracer declared undocumented in Cardano.Node.Tracing.Tracers?):"
+               \(a tracer declared not documented in Cardano.Node.Tracing.Tracers?):"
     withoutKnown knownUndocumented checkedNotDocumented H.=== []
     H.annotate "Stale allowlist entries no longer matching any discrepancy \
                \(delete them from this test):"

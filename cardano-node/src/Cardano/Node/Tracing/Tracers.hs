@@ -178,10 +178,8 @@ buildNodeTracers registry = do
 
     !(diffusionTr :: Cardano.Diffusion.CardanoTracers IO) <- mkDiffusionTracers registry
 
-    -- TraceChurnMode's MetaTrace instance (cardano-diffusion, Churn.hs) has an
-    -- empty inner namespace and no severity for the documentation, so the
-    -- documentation and the consistency check would warn about it.
-    !churnModeTr <- newTraceWith runtimeOnly registry ["Net", "PeerSelection", "ChurnMode"]
+    -- The inner name ChurnMode completes the namespace Net.PeerSelection.ChurnMode.
+    !churnModeTr <- newTrace registry ["Net", "PeerSelection"]
 
     !rpcTr <- newTrace registry ["RPC"]
 
@@ -449,9 +447,7 @@ mkDiffusionTracers registry = do
 
     !dtChannelTracer <- newTrace registry ["Net", "Mux", "Remote", "Channel"]
 
-    -- Mux.BearerTrace's TraceEmitDeltaQ has no severity (network-mux,
-    -- Network/Mux/Tracing.hs), so the documentation would warn.
-    !dtBearerTracer <- newTraceWith undocumented registry ["Net", "Mux", "Remote", "Bearer"]
+    !dtBearerTracer <- newTrace registry ["Net", "Mux", "Remote", "Bearer"]
 
     !dtHandshakeTracer <- newTrace registry ["Net", "Handshake", "Remote"]
 
@@ -459,7 +455,7 @@ mkDiffusionTracers registry = do
 
     !dtLocalChannelTracer <- newTrace registry ["Net", "Mux", "Local", "Channel"]
 
-    !dtLocalBearerTracer <- newTraceWith undocumented registry ["Net", "Mux", "Local", "Bearer"]
+    !dtLocalBearerTracer <- newTrace registry ["Net", "Mux", "Local", "Bearer"]
 
     !dtLocalHandshakeTracer <- newTrace registry ["Net", "Handshake", "Local"]
 
@@ -496,9 +492,7 @@ mkDiffusionTracers registry = do
 
     !dtLedgerPeersTr   <- newTrace registry ["Net", "Peers", "Ledger"]
 
-    -- DNSTrace's MetaTrace instance (ouroboros-network, DNSActions.hs) has no
-    -- severity for the documentation, so the documentation would warn.
-    !dtDnsTr  <- newTraceWith undocumented registry ["Net", "DNS"]
+    !dtDnsTr  <- newTrace registry ["Net", "DNS"]
 
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer = mkTracer $
