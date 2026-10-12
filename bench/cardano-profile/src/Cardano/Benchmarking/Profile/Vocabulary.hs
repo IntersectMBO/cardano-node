@@ -96,7 +96,7 @@ timescaleDevops =
 -- See: data/genesis/epoch-timeline.json
 -- should always reference the latest entry in data/genesis/epoch-timeline.json
 genesisVariantLatest :: Types.Profile -> Types.Profile
-genesisVariantLatest = P.pparamsEpoch 537
+genesisVariantLatest = P.pparamsEpoch 638
 
 -- references the latest Babbage epoch in data/genesis/epoch-timeline.json
 genesisVariantBabbageLatest :: Types.Profile -> Types.Profile
@@ -108,7 +108,7 @@ genesisVariantPreVoltaire = genesisVariantBabbageLatest . P.v8Preview
 
 -- First Conway epoch in data/genesis/epoch-timeline.json; implicitly includes v8Preview and v9Prievew already
 genesisVariantVoltaire :: Types.Profile -> Types.Profile
-genesisVariantVoltaire = genesisVariantLatest
+genesisVariantVoltaire = P.pparamsEpoch 537
 
 -- `genesisVariantVoltaire` with a reduced 64k block size (the "blocksize64k" overlay).
 genesisVariantVoltaire64k :: Types.Profile -> Types.Profile
@@ -329,3 +329,4 @@ plutusTypeExpMod =
     , KeyMap.fromList [("int", Aeson.Number 2305843009213693951.0)]
     ]
   . P.txFee 1275000
+
