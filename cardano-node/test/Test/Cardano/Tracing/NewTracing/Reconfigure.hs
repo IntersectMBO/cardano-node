@@ -249,15 +249,24 @@ prop_unchangedConfigIsNotReapplied = H.withTests 1 $ H.withShrinks 0 $ H.propert
             reconfigureTracing reconf
             (,) <$> (reverse <$> readIORef reported) <*> readIORef ref
 
-          startupInfo  = "{\"TraceOptions\":{\"Startup\":{\"severity\":\"Info\"}}}"
+          startupInfo  = "{\"TraceOptions\":{\"\":{\"severity\":\"Notice\"},\
+                         \\"Startup\":{\"severity\":\"Info\",\"detail\":\"DNormal\"}}}"
+          -- the same options written differently: namespaces and fields in
+          -- another order, the root by its alias, other whitespace
+          startupInfo' = "{ \"TraceOptions\": {\n\
+                         \  \"Startup\": { \"detail\": \"DNormal\", \"severity\": \"Info\" },\n\
+                         \  \"_root_\": { \"severity\": \"Notice\" }\n\
+                         \} }"
           startupDebug = "{\"TraceOptions\":{\"Startup\":{\"severity\":\"Debug\"}}}"
 
-      first  <- reloadWith startupInfo
-      same   <- reloadWith startupInfo
-      change <- reloadWith startupDebug
-      pure (first, same, change)
+      first    <- reloadWith startupInfo
+      same     <- reloadWith startupInfo
+      permuted <- reloadWith startupInfo'
+      change   <- reloadWith startupDebug
+      pure (first, same, permuted, change)
 
-    let ((firstSeen, firstOut), (sameSeen, sameOut), (changeSeen, changeOut)) = results
+    let ( (firstSeen, firstOut), (sameSeen, sameOut), (permutedSeen, permutedOut)
+          , (changeSeen, changeOut) ) = results
     H.annotateShow results
     -- the first reload changes the options, so it applies them
     firstSeen === ["update", "updated"]
@@ -265,6 +274,9 @@ prop_unchangedConfigIsNotReapplied = H.withTests 1 $ H.withShrinks 0 $ H.propert
     -- the same file again is recognised as unchanged and nothing is applied
     sameSeen === ["update", "unchanged"]
     sameOut === []
+    -- and so are the same options in another order or spelling
+    permutedSeen === ["update", "unchanged"]
+    permutedOut === []
     -- a real change after that is applied again
     changeSeen === ["update", "updated"]
     H.assert (not (null changeOut))
