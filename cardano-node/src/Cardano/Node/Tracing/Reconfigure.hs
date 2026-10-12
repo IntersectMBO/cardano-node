@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Re-reading the trace options of the node's configuration file and applying
 -- them to the traces the node is already running, so that an operator can
@@ -23,8 +22,7 @@ import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Tracing.Registry (ApplyTraceConfig (..))
 
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
-import           Control.Exception (try)
-import qualified Control.Exception as Exception
+import           Control.Exception.Safe (SomeException, displayException, tryAny)
 import           Data.Text (Text, pack)
 
 import           Hermod.Tracing (TraceConfig (..))
@@ -83,7 +81,10 @@ mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = d
       -- running traces untouched. The running configuration is the default,
       -- so everything but the trace options is taken from it: comparing the
       -- options compares all that a reload can change.
-      read' <- try @Exception.SomeException $
+      --
+      -- tryAny, here and below, lets asynchronous exceptions through: a
+      -- shutdown must not be reported as a configuration error and swallowed.
+      read' <- tryAny $
                  readConfigurationWithDefault (FromFile configFile) (lastGood running)
       case read' of
         Left err -> do
@@ -98,7 +99,7 @@ mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = d
               traceWith startupTr TraceConfigUnchanged
               pure running
           | otherwise -> do
-              applied <- try @Exception.SomeException (applyTraceConfig newConfig)
+              applied <- tryAny (applyTraceConfig newConfig)
               case applied of
                 Right _warnings -> do
                   -- Subject to the configuration just applied, so a reload
@@ -113,9 +114,9 @@ mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = d
     -- startup tracer itself discarding everything, which would swallow the
     -- report. Every pass begins by resetting each trace, so a restore cannot
     -- be refused for any configuration that applied cleanly before.
-    rollback :: TraceConfig -> Exception.SomeException -> IO Running
+    rollback :: TraceConfig -> SomeException -> IO Running
     rollback previous err = do
-      restored <- try @Exception.SomeException (restoreTraceConfig previous)
+      restored <- tryAny (restoreTraceConfig previous)
       case restored of
         Right () -> do
           report $ "could not be applied, the previous one is back in force: "
@@ -133,5 +134,5 @@ mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = d
       traceWith startupTr . TraceConfigUpdateError $
         "the trace configuration " <> what
 
-    displayed :: Exception.SomeException -> Text
-    displayed = pack . Exception.displayException
+    displayed :: SomeException -> Text
+    displayed = pack . displayException
