@@ -148,7 +148,7 @@ prop_malformedConfigIsNoOp = H.withTests 1 $ H.withShrinks 0 $ H.property $ do
       -- start from a configuration under which the probe message is visible
       before <- probe apply tracers ref (startupVisible defaultCardanoConfig)
       reconf <- mkTracingReconfigure @Blk (reportSink reported) cfgFile
-                  (startupVisible defaultCardanoConfig) apply
+                  defaultCardanoConfig (startupVisible defaultCardanoConfig) apply
 
       let attempt :: IO () -> IO ([Text], [Text])
           attempt prepare = do
@@ -185,7 +185,8 @@ prop_concurrentReconfigureIsSerialised = H.withTests 1 $ H.withShrinks 0 $ H.pro
       seen <- newIORef []
 
       (ref, tracers, apply) <- nodeRegistry
-      reconf <- mkTracingReconfigure @Blk (reportSink seen) cfgFile defaultCardanoConfig apply
+      reconf <- mkTracingReconfigure @Blk (reportSink seen) cfgFile
+                  defaultCardanoConfig defaultCardanoConfig apply
 
       -- both threads blocked on the same gate, so the passes really do overlap
       gate  <- newEmptyMVar
@@ -205,7 +206,8 @@ prop_concurrentReconfigureIsSerialised = H.withTests 1 $ H.withShrinks 0 $ H.pro
 
       -- the same reload once, on its own registry, for comparison
       (ref', tracers', apply') <- nodeRegistry
-      reconf' <- mkTracingReconfigure @Blk (reportSink seen) cfgFile defaultCardanoConfig apply'
+      reconf' <- mkTracingReconfigure @Blk (reportSink seen) cfgFile
+                   defaultCardanoConfig defaultCardanoConfig apply'
       reconfigureTracing reconf'
       writeIORef ref' []
       traceWith (startupTracer tracers') StartupDBValidation
@@ -236,7 +238,7 @@ prop_unchangedConfigIsNotReapplied = H.withTests 1 $ H.withShrinks 0 $ H.propert
       reported <- newIORef []
       _ <- applyTraceConfig apply defaultCardanoConfig
       reconf <- mkTracingReconfigure @Blk (reportSink reported) cfgFile
-                  defaultCardanoConfig apply
+                  defaultCardanoConfig defaultCardanoConfig apply
 
       -- what one reload reports, and what reached the backend meanwhile
       let reloadWith :: Text -> IO ([Text], [Text])
@@ -267,6 +269,40 @@ prop_unchangedConfigIsNotReapplied = H.withTests 1 $ H.withShrinks 0 $ H.propert
     changeSeen === ["update", "updated"]
     H.assert (not (null changeOut))
 
+-- | Removing the last override and reloading goes back to the defaults: an
+-- empty set of trace options must not keep the options in force.
+prop_emptyOptionsRevertToDefaults :: Property
+prop_emptyOptionsRevertToDefaults = H.withTests 1 $ H.withShrinks 0 $ H.property $ do
+    results <- liftIO $ withConfigFile $ \cfgFile -> do
+      (ref, tracers, apply) <- nodeRegistry
+      reported <- newIORef []
+      _ <- applyTraceConfig apply defaultCardanoConfig
+      reconf <- mkTracingReconfigure @Blk (reportSink reported) cfgFile
+                  defaultCardanoConfig defaultCardanoConfig apply
+
+      -- what one reload reports, and whether the probe message is visible after it
+      let reloadWith :: Text -> IO ([Text], [Text])
+          reloadWith contents = do
+            T.writeFile cfgFile contents
+            writeIORef reported []
+            reconfigureTracing reconf
+            writeIORef ref []
+            traceWith (startupTracer tracers) StartupDBValidation
+            (,) <$> (reverse <$> readIORef reported) <*> readIORef ref
+
+      overridden <- reloadWith "{\"TraceOptions\":{\"Startup\":{\"severity\":\"Info\"}}}"
+      emptied    <- reloadWith "{\"TraceOptions\":{}}"
+      pure (overridden, emptied)
+
+    let ((overriddenSeen, overriddenOut), (emptiedSeen, emptiedOut)) = results
+    H.annotateShow results
+    -- the override raises Startup to Info, so the probe is visible
+    overriddenSeen === ["update", "updated"]
+    H.assert (any ("StartupDBValidation" `T.isInfixOf`) overriddenOut)
+    -- without it the defaults apply again, and the root's Notice hides the probe
+    emptiedSeen === ["update", "updated"]
+    emptiedOut === []
+
 tests :: MonadIO m => m Bool
 tests = H.checkSequential $ H.Group "Tracing reconfiguration"
   [ ( "reconfiguration changes what the backend sees, reversibly"
@@ -277,4 +313,6 @@ tests = H.checkSequential $ H.Group "Tracing reconfiguration"
     , prop_concurrentReconfigureIsSerialised )
   , ( "unchanged trace options are not applied again"
     , prop_unchangedConfigIsNotReapplied )
+  , ( "empty trace options revert to the defaults"
+    , prop_emptyOptionsRevertToDefaults )
   ]

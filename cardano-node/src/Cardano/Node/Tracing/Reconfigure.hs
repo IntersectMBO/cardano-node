@@ -64,10 +64,12 @@ mkTracingReconfigure
   -> FilePath
      -- ^ the node's configuration file, re-read on every reload
   -> TraceConfig
+     -- ^ the defaults the file is read against, as at start-up
+  -> TraceConfig
      -- ^ the configuration applied at start-up: the first "last good"
   -> ApplyTraceConfig
   -> IO TracingReconfigure
-mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = do
+mkTracingReconfigure startupTr configFile defaults initialConfig ApplyTraceConfig{..} = do
     stateVar :: MVar Running <- newMVar (InForce initialConfig)
     pure $ TracingReconfigure $ modifyMVar_ stateVar reload
   where
@@ -78,27 +80,29 @@ mkTracingReconfigure startupTr configFile initialConfig ApplyTraceConfig{..} = d
       traceWith startupTr TraceConfigUpdate
 
       -- Read before applying: a malformed or missing file must leave the
-      -- running traces untouched. The running configuration is the default,
-      -- so everything but the trace options is taken from it: comparing the
-      -- options compares all that a reload can change.
+      -- running traces untouched. The file is read against the start-up
+      -- defaults, not the running configuration: an empty TraceOptions then
+      -- means the defaults again, rather than keeping the last overrides.
+      -- Only the trace options are taken from it, the rest stays as it runs,
+      -- so comparing the options compares all that a reload can change.
       --
       -- tryAny, here and below, lets asynchronous exceptions through: a
       -- shutdown must not be reported as a configuration error and swallowed.
-      read' <- tryAny $
-                 readConfigurationWithDefault (FromFile configFile) (lastGood running)
+      read' <- tryAny $ readConfigurationWithDefault (FromFile configFile) defaults
       case read' of
         Left err -> do
           report $ "could not be read: " <> displayed err
           pure running
-        Right newConfig
+        Right fileConfig
           | InForce current <- running
-          , tcOptions newConfig == tcOptions current -> do
+          , tcOptions fileConfig == tcOptions current -> do
               -- Applying resets every trace, which drops what is traced
               -- meanwhile, and reports the reflection and the effective
               -- configuration again: not worth it for no change.
               traceWith startupTr TraceConfigUnchanged
               pure running
           | otherwise -> do
+              let newConfig = (lastGood running) { tcOptions = tcOptions fileConfig }
               applied <- tryAny (applyTraceConfig newConfig)
               case applied of
                 Right _warnings -> do

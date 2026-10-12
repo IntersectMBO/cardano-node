@@ -84,6 +84,7 @@ initTraceDispatcher nc blockType cfg networkMagic nodeKernel noBlockForging = do
   reconfTracing <- mkTracingReconfigure
                      (startupTracer tracers)
                      configFile
+                     defaultCardanoConfig
                      trConfig
                      applyCfg
 
