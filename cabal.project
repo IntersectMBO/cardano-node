@@ -181,13 +181,13 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/hermod-tracing.git
-  tag: 669277989719e9da50e7dad3945355fbd69ac7a8
+  tag: 7195daf91cba229ffcc06b14d035bfae709ef45a
   subdir:
     hermod-tracing-api
     hermod-tracing-core
     hermod-tracing-prometheus
     hermod-trace-resources
-  --sha256: sha256-Na/GlZVp+HtxKz4ClKRO6DxD0o/Zb3tspmUV2IpVZMI=
+  --sha256: sha256-Tfqsp6QwMdzgXQFcabPDeZp1z5zsZ6TtJZDHLwiftE8=
 
 source-repository-package
   type: git
