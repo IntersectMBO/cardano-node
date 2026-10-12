@@ -27,9 +27,10 @@
   already running, so severities, detail levels, backend routing (`Stdout`/`Forwarder`/`EKG`) and
   the frequency limiters can be changed without restarting the node. The reload is bracketed by
   `Startup.TraceConfigUpdate` and `Startup.TraceConfigUpdated` (both `Notice`), with
-  `Startup.TraceConfigUpdateError` (`Error`) on failure. A configuration that cannot be read or
-  cannot be applied is a complete no-op — the previously applied one stays in force — and
-  concurrent reloads are serialised.
+  `Startup.TraceConfigUpdateError` (`Error`) on failure. Trace options equal to the ones in force
+  are not applied again; the reload then ends with `Startup.TraceConfigUnchanged` (`Notice`)
+  instead. A configuration that cannot be read or cannot be applied is a complete no-op — the
+  previously applied one stays in force — and concurrent reloads are serialised.
 
   The end marker is itself subject to the configuration just applied, so a reload that silences
   `Startup` shows the start line and not the end line. The authoritative record of what is in

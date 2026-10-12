@@ -69,6 +69,7 @@ reportSink :: IORef [Text] -> Tracer IO (StartupTrace Blk)
 reportSink ref = mkTracer $ \case
     TraceConfigUpdate        -> push "update"
     TraceConfigUpdated       -> push "updated"
+    TraceConfigUnchanged     -> push "unchanged"
     TraceConfigUpdateError e -> push ("error: " <> e)
     _                        -> pure ()
   where
@@ -224,6 +225,48 @@ prop_concurrentReconfigureIsSerialised = H.withTests 1 $ H.withShrinks 0 $ H.pro
     "not reset before reconfiguration" `T.isInfixOf` t
       || "Inconsistent trace configuration" `T.isInfixOf` t
 
+-- | A reload whose trace options equal the ones in force must not apply them
+-- again: applying resets every trace and reports the reflection and the
+-- effective configuration, so the backend would see it. A later change must
+-- still be applied.
+prop_unchangedConfigIsNotReapplied :: Property
+prop_unchangedConfigIsNotReapplied = H.withTests 1 $ H.withShrinks 0 $ H.property $ do
+    results <- liftIO $ withConfigFile $ \cfgFile -> do
+      (ref, _tracers, apply) <- nodeRegistry
+      reported <- newIORef []
+      _ <- applyTraceConfig apply defaultCardanoConfig
+      reconf <- mkTracingReconfigure @Blk (reportSink reported) cfgFile
+                  defaultCardanoConfig apply
+
+      -- what one reload reports, and what reached the backend meanwhile
+      let reloadWith :: Text -> IO ([Text], [Text])
+          reloadWith contents = do
+            T.writeFile cfgFile contents
+            writeIORef ref []
+            writeIORef reported []
+            reconfigureTracing reconf
+            (,) <$> (reverse <$> readIORef reported) <*> readIORef ref
+
+          startupInfo  = "{\"TraceOptions\":{\"Startup\":{\"severity\":\"Info\"}}}"
+          startupDebug = "{\"TraceOptions\":{\"Startup\":{\"severity\":\"Debug\"}}}"
+
+      first  <- reloadWith startupInfo
+      same   <- reloadWith startupInfo
+      change <- reloadWith startupDebug
+      pure (first, same, change)
+
+    let ((firstSeen, firstOut), (sameSeen, sameOut), (changeSeen, changeOut)) = results
+    H.annotateShow results
+    -- the first reload changes the options, so it applies them
+    firstSeen === ["update", "updated"]
+    H.assert (not (null firstOut))
+    -- the same file again is recognised as unchanged and nothing is applied
+    sameSeen === ["update", "unchanged"]
+    sameOut === []
+    -- a real change after that is applied again
+    changeSeen === ["update", "updated"]
+    H.assert (not (null changeOut))
+
 tests :: MonadIO m => m Bool
 tests = H.checkSequential $ H.Group "Tracing reconfiguration"
   [ ( "reconfiguration changes what the backend sees, reversibly"
@@ -232,4 +275,6 @@ tests = H.checkSequential $ H.Group "Tracing reconfiguration"
     , prop_malformedConfigIsNoOp )
   , ( "concurrent reconfigurations are serialised"
     , prop_concurrentReconfigureIsSerialised )
+  , ( "unchanged trace options are not applied again"
+    , prop_unchangedConfigIsNotReapplied )
   ]

@@ -152,6 +152,9 @@ data StartupTrace blk =
   | TraceConfigUpdate
   -- | Log that the trace options have been re-read and applied.
   | TraceConfigUpdated
+  -- | Log that the trace options have been re-read and are the ones in force,
+  -- so they were not applied again.
+  | TraceConfigUnchanged
   -- | Log that the trace options could not be re-read or applied; the
   -- previous configuration stays in force.
   | TraceConfigUpdateError Text

@@ -704,6 +704,7 @@ Startup.RpcUnsupportedBlockType
 Startup.ShelleyBased
 Startup.SocketConfigError
 Startup.Time
+Startup.TraceConfigUnchanged
 Startup.TraceConfigUpdate
 Startup.TraceConfigUpdateError
 Startup.TraceConfigUpdated

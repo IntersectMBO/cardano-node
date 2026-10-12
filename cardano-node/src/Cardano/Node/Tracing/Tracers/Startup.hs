@@ -295,10 +295,13 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "error" .= String (ppStartupInfoTrace RpcForceDisabled)]
   forMachine _dtal TraceConfigUpdate =
       mconcat [ "kind" .= String "TraceConfigUpdate"
-               , "message" .= String "Re-reading the trace options and applying them to the running traces" ]
+               , "message" .= String "Re-reading the trace options, to apply them to the running traces if they changed" ]
   forMachine _dtal TraceConfigUpdated =
       mconcat [ "kind" .= String "TraceConfigUpdated"
                , "message" .= String "The trace options have been re-read and applied" ]
+  forMachine _dtal TraceConfigUnchanged =
+      mconcat [ "kind" .= String "TraceConfigUnchanged"
+               , "message" .= String (ppStartupInfoTrace TraceConfigUnchanged) ]
   forMachine _dtal (TraceConfigUpdateError err) =
       mconcat [ "kind" .= String "TraceConfigUpdateError"
                , "error" .= String err ]
@@ -379,6 +382,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["TraceConfigUpdate"]
   namespaceFor TraceConfigUpdated =
     Namespace [] ["TraceConfigUpdated"]
+  namespaceFor TraceConfigUnchanged =
+    Namespace [] ["TraceConfigUnchanged"]
   namespaceFor TraceConfigUpdateError {} =
     Namespace [] ["TraceConfigUpdateError"]
   namespaceFor MovedTopLevelOption {} =
@@ -399,6 +404,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["RpcForceDisabled"]) _ = Just Error
   severityFor (Namespace _ ["TraceConfigUpdate"]) _ = Just Notice
   severityFor (Namespace _ ["TraceConfigUpdated"]) _ = Just Notice
+  severityFor (Namespace _ ["TraceConfigUnchanged"]) _ = Just Notice
   severityFor (Namespace _ ["TraceConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
@@ -436,13 +442,16 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["TraceConfigUpdate"]) = Just
     "The trace options are about to be re-read from the node's configuration \
-    \file and applied to the running traces. Emitted under the configuration \
-    \still in force."
+    \file and, if they differ from the ones in force, applied to the running \
+    \traces. Emitted under the configuration still in force."
   documentFor (Namespace [] ["TraceConfigUpdated"]) = Just
     "The trace options have been re-read and applied. Emitted under the new \
     \configuration, so it is suppressed if the reload silences this \
     \namespace; `Reflection.TracerInfoConfig` always records what is in \
     \effect."
+  documentFor (Namespace [] ["TraceConfigUnchanged"]) = Just
+    "The trace options have been re-read and are the ones already in force, \
+    \so the running traces were left as they are."
   documentFor (Namespace [] ["TraceConfigUpdateError"]) = Just
     "The trace options could not be re-read or could not be applied. The \
     \configuration that was in force stays in force."
@@ -522,6 +531,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["RpcForceDisabled"]
     , Namespace [] ["TraceConfigUpdate"]
     , Namespace [] ["TraceConfigUpdated"]
+    , Namespace [] ["TraceConfigUnchanged"]
     , Namespace [] ["TraceConfigUpdateError"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
@@ -652,8 +662,9 @@ ppStartupInfoTrace (RpcConfigUpdate config) = "Performing RPC configuration upda
 ppStartupInfoTrace (RpcConfigUpdateError err) = "Error while updating RPC configuration: " <> err
 ppStartupInfoTrace (RpcUnsupportedBlockType blockType) = "RPC node kernel access is not supported for block type: " <> blockType
 ppStartupInfoTrace RpcForceDisabled = "RPC endpoint has crashed and because of that it got disabled. Enable gRPC endpoint and send SIGHUP to the node to reenable."
-ppStartupInfoTrace TraceConfigUpdate = "Re-reading the trace options and applying them to the running traces"
+ppStartupInfoTrace TraceConfigUpdate = "Re-reading the trace options, to apply them to the running traces if they changed"
 ppStartupInfoTrace TraceConfigUpdated = "The trace options have been re-read and applied"
+ppStartupInfoTrace TraceConfigUnchanged = "The trace options are unchanged, nothing was applied"
 ppStartupInfoTrace (TraceConfigUpdateError err) = "The trace options were not applied, the previous configuration stays in force: " <> err
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
