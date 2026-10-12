@@ -2,10 +2,10 @@
 
 ## NEXT
 
-* Use `hermod-tracing` instead of `trace-dispatcher` and `contra-tracer`: `TraceObject`,
-  `DataPoint` and the forwarding options come from `hermod-tracing-core`, and the tracers in
-  the forwarder and acceptor configurations are hermod traces (`Hermod.Tracing.API.Tracer`),
-  as `ouroboros-network` and `ekg-forward` take them. Breaking change.
+* Use `hermod-tracing` instead of `trace-dispatcher`: `TraceObject`, `DataPoint` and the
+  forwarding options come from `hermod-tracing-core`. The forwarder and acceptor
+  configurations continue to expose `contra-tracer`'s `Tracer` because those network-layer
+  tracers cross the `ouroboros-network` boundary. Breaking change.
 * Add `Trace.Forward.Types.NodeInfo` and `Trace.Forward.Types.NodeStartupInfo`, the
   `NodeInfo` / `NodeStartupInfo` DataPoints that cardano-node forwards and cardano-tracer reads.
   They were defined in `trace-dispatcher`; the encoding is unchanged.
