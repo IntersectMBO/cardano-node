@@ -75,6 +75,16 @@ let
         }
       ) cfg.extraNodeConfig;
 
+  # The flat spelling is deliberate on both dialects. POM reads `Backend` as a
+  # string with the LSM paths as flat siblings, so the nested `Backend.LSM` form
+  # fails to parse on a legacy config; and mkEnvelope folds this one into the
+  # nested form anyway, which it has to do regardless for a caller that supplies
+  # the same keys through extraNodeConfig.
+  #
+  # So writing the nested form here is gated on no consumer still setting
+  # `configFormat = "legacy"`, and at that point it is a single flip rather than
+  # a branch on the dialect. Branching earlier buys nothing and makes the shape
+  # a caller deep-merges against depend on the dialect.
   baseInstanceConfig =
     i:
     recursiveUpdate
