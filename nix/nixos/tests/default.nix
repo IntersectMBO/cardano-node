@@ -31,6 +31,13 @@ in {
   # Tests a mainnet edge node with submit-api using nixos service config.
   cardanoNodeEdge = callTest ./cardano-node-edge.nix {};
 
+  # Tests that a host-assembled enveloped config is canonical: the service's
+  # own LedgerDB keys and an envelope-shaped extraNodeConfig both survive
+  # enveloping, and cardano-config has nothing to migrate or ignore. Nothing
+  # else checks a config as a host writes it; the iohk-nix lint and drift jobs
+  # only see environments.
+  cardanoNodeEnveloped = callTest ./cardano-node-enveloped.nix {};
+
   # Tests the OCI images (node, tracer, submit-api), mostly under a read-only
   # root, a non-root UID in group 0 and a private /tmp. One subtest per
   # concern: startup and the runtime dir, merged-config path rewriting, the
