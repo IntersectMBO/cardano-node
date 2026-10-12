@@ -49,8 +49,6 @@ library
                       , cardano-ledger-alonzo
                       , cardano-ledger-binary
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
-                      , cardano-ledger-core
                       , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
@@ -60,13 +58,10 @@ library
                       , cardano-diffusion:ping ^>= 1.1.1
                       , cardano-prelude
                       , cardano-rpc
+                      , containers
                       , contra-tracer
-                      , hermod-tracing-api:public
-                      , containers
                       , data-default-class
-                      , containers
                       , hermod-tracing-api:public
-                      , data-default-class
                       , Diff
                       , directory
                       , exceptions
