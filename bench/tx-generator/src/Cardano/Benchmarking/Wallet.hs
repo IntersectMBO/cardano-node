@@ -21,6 +21,8 @@ import           Cardano.TxGenerator.UTxO
 import           Prelude
 
 import           Control.Concurrent.MVar
+import           Data.IORef (modifyIORef', newIORef, readIORef)
+import qualified Data.Map.Strict as Map
 
 import           Streaming
 
@@ -103,10 +105,10 @@ walletPreview ref munch = do
 -- only ever used once, in
 -- 'Cardano.Benchmarking.Script.Core.evalGenerator' for the
 -- 'Cardano.Benchmarking.Script.Types.Split' case.
-mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
-mangleWithChange mkChange mkPayment outs = case outs of
-  PayExact l -> mangle (repeat mkPayment) l
-  PayWithChange change payments -> mangle (mkChange : repeat mkPayment) (change : payments)
+mangleWithChange :: Monad m => CreateAndStore m era -> [CreateAndStore m era] -> CreateAndStoreList m era PayWithChange
+mangleWithChange mkChange mkPayments outs = case outs of
+  PayExact l -> mangle mkPayments l
+  PayWithChange change payments -> mangle (mkChange : mkPayments) (change : payments)
 
 -- | The second argument to 'mangle' is hidden in the
 -- 'CreateAndStoreList' type. This is basically
@@ -122,6 +124,8 @@ mangleWithChange mkChange mkPayment outs = case outs of
 -- The only caller not passing a constant list built with 'repeat'
 -- as the first @fkts@ argument is 'mangleWithChange' above. This
 -- is likely worth refactoring for the sake of maintainability.
+-- NOTE: @russoul: I've got to say: this function is cryptic... Shall we invest in a straightforward design?
+-- NOTE: This note extends to other functions such as `cyclicOutputs` too.
 mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ L.Coin ]
 mangle fkts values
   = (outs, \txId -> mapM_ (\f -> f txId) fs)
@@ -130,3 +134,20 @@ mangle fkts values
     worker (toUTxO, value, idx)
       = let (o, f ) = toUTxO value
          in  (o, f idx)
+
+-- | 'cyclingOutputs' creates outputs that lock consecutive groups of
+-- @groupSize@ outputs at one variant each, cycling through the variants'
+-- 'ToUTxO's, and stores them with @store@. It returns the output creators for
+-- one transaction at a time: each transaction continues where the outputs
+-- stored so far left off, so the cycle runs on across transactions.
+cyclingOutputs :: Int -> [ToUTxO era] -> FundToStore IO -> IO (IO [CreateAndStore IO era])
+cyclingOutputs groupSize variants store = do
+  stored <- newIORef (0 :: Int)
+  let
+    table = Map.fromList $ zip [0 ..] variants
+    count = Map.size table
+    countAndStore fund = modifyIORef' stored (+ 1) >> store fund
+    creator j = createAndStore (table Map.! ((j `div` max 1 groupSize) `mod` count)) countAndStore
+  return $ do
+    next <- readIORef stored
+    return $ map creator [next ..]

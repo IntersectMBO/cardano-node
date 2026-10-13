@@ -17,11 +17,13 @@ module Cardano.TxGenerator.Fund
     , getFundKey
     , getFundCoin
     , getFundWitness
+    , getFundReferenceInput
     )
     where
 
 import           Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Experimental.Tx as Exp (getAnyWitnessReferenceInput)
 
 import qualified Cardano.Ledger.Coin as L
 
@@ -93,3 +95,7 @@ only exists in the same era as the fund.
 However, that is too constrained: this approach rules out era transitions for transactions, which is 1) a valid case
 and 2) a potential use case for benchmarking.
 -}
+
+-- | The output whose reference script spending the fund uses, if any.
+getFundReferenceInput :: Fund -> Maybe TxIn
+getFundReferenceInput (Fund (InAnyCardanoEra _ a)) = Exp.getAnyWitnessReferenceInput (_fundWitness a)
