@@ -149,3 +149,13 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- TEMPORARY: cardano-cli branch add-spec-dijkstra (shows --spec-dijkstra in the help).
+-- Remove once it is released.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 57fa88bef595039652638342bc60ce47223a5624
+  --sha256: sha256-h4DvoMkgLKe7W87pFbgSOlMNajyPnBjegZG6TgGb4iE=
+  subdir:
+    cardano-cli
