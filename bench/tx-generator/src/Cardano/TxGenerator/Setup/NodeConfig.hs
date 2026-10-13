@@ -17,7 +17,7 @@ import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile, KESSource (..),
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
-                   ProtocolFilepaths (..))
+                   ProtocolFilepaths (..), unGenesisFile)
 import           Cardano.TxGenerator.Types
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 
@@ -25,25 +25,35 @@ import           Control.Applicative (Const (Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
+import           System.FilePath (takeDirectory)
 
 
--- | extract genesis from a Cardano protocol
+-- | extract the Shelley genesis from a Cardano protocol
 -- NB. this helper is *only* for protocols created with this module
--- as this guarantees proper error handling when trying to create a non-Cardano protocol.
-getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
-getGenesis (SomeConsensusProtocol CardanoBlockType proto)
+-- as this guarantees proper error handling when trying to create a non-Cardano
+-- protocol.
+getShelleyGenesis :: SomeConsensusProtocol -> ShelleyGenesis
+getShelleyGenesis (SomeConsensusProtocol CardanoBlockType proto)
     = getConst $ Ledger.tcShelleyGenesisL Const transCfg
   where
     ProtocolInfoArgsCardano _ Consensus.CardanoProtocolParams
       { Consensus.cardanoLedgerTransitionConfig = transCfg
       } = proto
 
--- | extract the path to genesis file from a NodeConfiguration for Cardano protocol
-getGenesisPath :: NodeConfiguration -> Maybe GenesisFile
-getGenesisPath nodeConfig =
+-- | extract the path to the Shelley genesis file from a NodeConfiguration for
+-- Cardano protocol.
+getShelleyGenesisPath :: NodeConfiguration -> Maybe GenesisFile
+getShelleyGenesisPath nodeConfig =
   case ncProtocolConfig nodeConfig of
     NodeProtocolConfigurationCardano _ shelleyConfig _ _ _ _ _ ->
       Just $ npcShelleyGenesisFile shelleyConfig
+
+-- | extract the directory containing the Shelley genesis file: the root
+-- extraConfig FILE injections resolve their "file" segments against (see
+-- 'Cardano.Node.Protocol.Cardano.mkSomeConsensusProtocolCardano', which mounts
+-- its HasFS at this same directory).
+getShelleyGenesisDir :: NodeConfiguration -> Maybe FilePath
+getShelleyGenesisDir = fmap (takeDirectory . unGenesisFile) . getShelleyGenesisPath
 
 mkConsensusProtocol :: NodeConfiguration -> IO (Either TxGenError SomeConsensusProtocol)
 mkConsensusProtocol nodeConfig =
