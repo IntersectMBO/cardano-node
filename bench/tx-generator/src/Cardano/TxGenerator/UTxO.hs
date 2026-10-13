@@ -12,11 +12,13 @@ import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Api.Ledger as L
 
-import qualified Cardano.Ledger.Api as L (datumTxOutL)
+import qualified Cardano.Ledger.Api as L (datumTxOutL, setMinCoinTxOut)
 import qualified Cardano.Ledger.Plutus.Data as L (hashData)
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
+import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Cardano.TxGenerator.Utils (keyAddress)
 
+import           Data.Maybe.Strict (StrictMaybe (SJust))
 import           Lens.Micro ((&), (.~))
 
 type ToUTxO era = L.Coin -> (Exp.TxOut (ShelleyLedgerEra era), TxIx -> TxId -> Fund)
@@ -39,6 +41,21 @@ mkTxOutToAddress :: forall era. Exp.EraCommonConstraints era
   -> Exp.TxOut (ShelleyLedgerEra era)
 mkTxOutToAddress addr value
   = Exp.TxOut $ L.mkBasicTxOut (toShelleyAddr addr) (L.inject value)
+
+-- | An output carrying @script@ as a reference script, holding the minimum
+-- value the ledger requires of it.
+mkReferenceScriptTxOut :: forall era. Exp.EraCommonConstraints era
+  => L.PParams (ShelleyLedgerEra era)
+  -> AddressInEra era
+  -> ScriptInAnyLang
+  -> Either TxGenError (Exp.TxOut (ShelleyLedgerEra era))
+mkReferenceScriptTxOut pparams addr script
+  = case toScriptInEra (shelleyBasedEra @era) script of
+      Nothing -> Left $ TxGenError $
+        "mkReferenceScriptTxOut: script language not supported in era " ++ show (cardanoEra @era)
+      Just scriptInEra -> Right $ Exp.TxOut $ L.setMinCoinTxOut pparams $
+        L.mkBasicTxOut (toShelleyAddr addr) mempty
+          & L.referenceScriptTxOutL .~ SJust (toShelleyScript scriptInEra)
 
 mkUTxOVariant :: forall era. Exp.EraCommonConstraints era
   => NetworkId

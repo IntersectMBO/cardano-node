@@ -63,9 +63,13 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvWallets
         , getEnvSummary
         , setEnvSummary
+        , ScriptSet (..)
+        , getEnvScriptSet
+        , getEnvScriptSets
+        , setEnvScriptSet
 ) where
 
-import           Cardano.Api (File (..), SocketPath)
+import           Cardano.Api (File (..), ScriptInAnyLang, SocketPath, TxIn)
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -82,6 +86,7 @@ import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Prelude
 
+import           Control.Concurrent.MVar (MVar)
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
 import           Control.Monad.IO.Class
@@ -110,7 +115,18 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envKeys :: Map String (SigningKey PaymentKey)
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
+               , envScriptSets :: Map String ScriptSet
                }
+
+-- | The variants of a script, built by
+-- 'Cardano.Benchmarking.Script.Types.DefineScriptSet', and the reference
+-- outputs 'Cardano.Benchmarking.Script.Types.PublishScripts' has created for
+-- them, by variant. Outputs are recorded when their transaction is built, like
+-- the funds in a wallet.
+data ScriptSet = ScriptSet
+  { scriptSetVariants   :: ![ScriptInAnyLang]
+  , scriptSetReferences :: !(MVar (Map Int TxIn))
+  }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
 -- all of the `Map.Map` structures being `Map.empty`.
@@ -124,6 +140,7 @@ emptyEnv = Env { protoParams = Nothing
                , envSocketPath = Nothing
                , envWallets = Map.empty
                , envSummary = Nothing
+               , envScriptSets = Map.empty
                }
 
 newEnvConsts :: IOManager -> Maybe Nix.NixServiceOptions -> STM Tracer.EnvConsts
@@ -227,6 +244,10 @@ setEnvThreads abc = do
 setEnvWallets :: String -> WalletRef -> ActionM ()
 setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (envWallets e) })
 
+-- | Write accessor for `envScriptSets`.
+setEnvScriptSet :: String -> ScriptSet -> ActionM ()
+setEnvScriptSet key val = modifyEnv (\e -> e { envScriptSets = Map.insert key val (envScriptSets e) })
+
 -- | Write accessor for `envSummary`.
 setEnvSummary :: PlutusBudgetSummary -> ActionM ()
 setEnvSummary val = modifyEnv (\e -> e { envSummary = Just val })
@@ -304,6 +325,14 @@ getEnvThreads = do
 -- | Read accessor for `envWallets`.
 getEnvWallets :: String -> ActionM WalletRef
 getEnvWallets = getEnvMap envWallets
+
+-- | Read accessor for `envScriptSets`.
+getEnvScriptSet :: String -> ActionM ScriptSet
+getEnvScriptSet = getEnvMap envScriptSets
+
+-- | All script sets, by name.
+getEnvScriptSets :: ActionM (Map String ScriptSet)
+getEnvScriptSets = lift (RWS.gets envScriptSets)
 
 -- | Read accessor for `envSummary`.
 getEnvSummary :: ActionM (Maybe PlutusBudgetSummary)

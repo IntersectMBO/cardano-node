@@ -80,24 +80,25 @@ shutDownLogging = do
 --   maxBound: infinite txn stream
 --   n:        finite stream of n txns
 countScriptTxns :: Script -> Int
-countScriptTxns = sum . map actionTxCount
+countScriptTxns = guardedSum . map actionTxCount
   where
     actionTxCount = \case
       Submit _ _ _ gen -> genTxCount gen
       _                -> 0
     genTxCount = \case
-      SecureGenesis{} -> 1
-      Split{}         -> 1
-      SplitN{}        -> 1
-      NtoM{}          -> 1
-      NestedNtoM{}    -> 1
-      Cycle g         -> if genTxCount g < 0 then (-1) else maxBound
-      Take i g        -> min i (genTxCount g)
-      Sequence gs     -> guardedSum $ map genTxCount gs
-      RoundRobin gs   -> guardedSum $ map genTxCount gs
-      OneOf{}         -> (-1)   -- is non-deterministic
-      where
-        guardedSum is
-          | any (< 0) is        = -1
-          | maxBound `elem` is  = maxBound
-          | otherwise           = sum is
+      SecureGenesis{}  -> 1
+      Split{}          -> 1
+      SplitN{}         -> 1
+      NtoM{}           -> 1
+      NestedNtoM{}     -> 1
+      -- as many as it takes to publish the variants, known once they are built
+      PublishScripts{} -> (-1)
+      Cycle g          -> if genTxCount g < 0 then (-1) else maxBound
+      Take i g         -> min i (genTxCount g)
+      Sequence gs      -> guardedSum $ map genTxCount gs
+      RoundRobin gs    -> guardedSum $ map genTxCount gs
+      OneOf{}          -> (-1)   -- is non-deterministic
+    guardedSum is
+      | any (< 0) is        = -1
+      | maxBound `elem` is  = maxBound
+      | otherwise           = sum is
