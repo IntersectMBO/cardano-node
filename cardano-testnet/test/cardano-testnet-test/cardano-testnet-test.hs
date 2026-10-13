@@ -20,6 +20,7 @@ import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+import qualified Cardano.Testnet.Test.DijkstraGenesis
 import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.EnableTracer
 import qualified Cardano.Testnet.Test.FoldEpochState
@@ -150,6 +151,7 @@ tests = do
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
+          , ignoreOnWindows "Can start from a custom Dijkstra genesis" Cardano.Testnet.Test.DijkstraGenesis.hprop_dijkstra_genesis
           , ignoreOnWindows "Writes a machine-readable manifest on startup" Cardano.Testnet.Test.Manifest.hprop_manifest
           , ignoreOnWindows "Stale manifest is removed by createTestnetEnv" Cardano.Testnet.Test.Manifest.hprop_manifest_stale
           , H.testPropertyNamed "Manifest Windows pipe path" (fromString "hprop_manifest_windows_pipe_path")
