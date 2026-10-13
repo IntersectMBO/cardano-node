@@ -109,7 +109,7 @@ epochTransitionDuration =
 --------------------------------------------------------------------------------
 
 profilesEmpty :: [Types.Profile]
-profilesEmpty = map baseNoDataset
+profilesEmpty = (++ profilesIdle) $ map baseNoDataset
   $
   ------------------------------------------------------------------------------
   -- fast: FixedLoaded and "--shutdown-on-block-synced 1" with 1 or 2 nodes.
@@ -211,4 +211,17 @@ profilesEmpty = map baseNoDataset
         . P.uniCircle . V.hosts 2 . P.loopback
   in [
     ep & P.name "epoch-transition" . V.valueLocal . P.traceForwardingOn
+  ]
+
+-- | As "ci-test", but no generator starts and the nodes run until stopped: a
+-- cluster to run a generator script of one's own against.
+profilesIdle :: [Types.Profile]
+profilesIdle =
+  let ciIdle whichGenesis =
+          P.empty & P.idle . baseNoDataset . V.datasetEmpty . whichGenesis
+        . V.timescaleCompressed . P.shutdownOnOff . P.generatorEpochs 2
+        . P.uniCircle . V.hosts 2 . P.loopback
+  in [
+    ciIdle genesis    & P.name "ci-test-idle"     . V.valueLocal . P.traceForwardingOn
+  , ciIdle genesisV12 & P.name "ci-test-v12-idle" . V.valueLocal . P.traceForwardingOn
   ]
