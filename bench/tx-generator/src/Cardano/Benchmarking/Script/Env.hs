@@ -45,6 +45,8 @@ module Cardano.Benchmarking.Script.Env (
         , setBenchTracers
         , getEnvGenesis
         , setEnvGenesis
+        , getEnvShelleyGenesisDir
+        , setEnvShelleyGenesisDir
         , getEnvKeys
         , setEnvKeys
         , getEnvNetworkId
@@ -101,6 +103,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
                , envGenesis :: Maybe ShelleyGenesis
+               , envShelleyGenesisDir :: Maybe FilePath
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
@@ -114,6 +117,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
 emptyEnv :: Env
 emptyEnv = Env { protoParams = Nothing
                , envGenesis = Nothing
+               , envShelleyGenesisDir = Nothing
                , envKeys = Map.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
@@ -192,6 +196,11 @@ setBenchTracers val = do
 setEnvGenesis :: ShelleyGenesis -> ActionM ()
 setEnvGenesis val = modifyEnv (\e -> e { envGenesis = Just val })
 
+-- | Write accessor for `envShelleyGenesisDir`: the directory containing the
+-- Shelley genesis file, which extraConfig file injections resolve against.
+setEnvShelleyGenesisDir :: FilePath -> ActionM ()
+setEnvShelleyGenesisDir val = modifyEnv (\e -> e { envShelleyGenesisDir = Just val })
+
 -- | Write accessor for `envKeys`.
 setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
 setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys e) })
@@ -265,6 +274,10 @@ getBenchTracers = do
 -- | Read accessor for `envGenesis`.
 getEnvGenesis :: ActionM ShelleyGenesis
 getEnvGenesis = getEnvVal envGenesis "Genesis"
+
+-- | Read accessor for `envShelleyGenesisDir`.
+getEnvShelleyGenesisDir :: ActionM FilePath
+getEnvShelleyGenesisDir = getEnvVal envShelleyGenesisDir "ShelleyGenesisDir"
 
 -- | Read accessor for `envKeys`.
 getEnvKeys :: String -> ActionM (SigningKey PaymentKey)

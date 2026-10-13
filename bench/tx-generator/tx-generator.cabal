@@ -140,6 +140,7 @@ library
                       , extra
                       , filepath
                       , formatting
+                      , fs-api
                       , generic-monoid
                       , ghc-prim
                       , io-classes:{io-classes, strict-stm}
