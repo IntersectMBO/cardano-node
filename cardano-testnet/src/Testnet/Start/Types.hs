@@ -54,6 +54,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import           Cardano.Rpc.Server.Config (defaultRpcListenAddress)
 
 import           Prelude
@@ -203,6 +204,8 @@ data TestnetCreationOptions = TestnetCreationOptions
   , creationNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , creationGenesisOptions :: GenesisOptions
   , creationOnChainParams :: TestnetOnChainParams
+  , creationDijkstraGenesis :: UserProvidedData DijkstraGenesis
+    -- ^ The Dijkstra genesis to start from. If not given, 'Testnet.Defaults.defaultDijkstraGenesis' is used.
   } deriving (Eq, Show)
 
 instance Default TestnetCreationOptions where
@@ -213,6 +216,7 @@ instance Default TestnetCreationOptions where
     , creationNumDReps = 3
     , creationGenesisOptions = def
     , creationOnChainParams = def
+    , creationDijkstraGenesis = def
     }
 
 -- | Options for running testnet nodes (after the environment is created).

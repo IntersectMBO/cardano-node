@@ -1,0 +1,6 @@
+description: |
+  A testnet can now start from a custom Dijkstra genesis, set with the new `creationDijkstraGenesis` field of `TestnetCreationOptions`.
+kind:
+- compatible
+pr: 6737
+project: cardano-testnet

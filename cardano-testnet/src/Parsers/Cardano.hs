@@ -72,6 +72,7 @@ pCreationOptions = TestnetCreationOptions
   <*> pNumDReps
   <*> pGenesisOptions
   <*> pOnChainParams
+  <*> pure NoUserProvidedData
 
 pRuntimeOptions :: Parser TestnetRuntimeOptions
 pRuntimeOptions = TestnetRuntimeOptions

@@ -183,7 +183,9 @@ createSPOGenesisAndFiles
         }
   alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
-      dijkstraGenesis' = Defaults.defaultDijkstraGenesis
+      dijkstraGenesis' = case creationDijkstraGenesis of
+        UserProvidedData userDijkstraGenesis -> userDijkstraGenesis
+        NoUserProvidedData -> Defaults.defaultDijkstraGenesis
 
   (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
      <- resolveOnChainParams onChainParams
@@ -231,7 +233,7 @@ createSPOGenesisAndFiles
     inputGenesisConwayFp  = genesisInputFilepath ConwayEra
     inputGenesisDijkstraFp  = genesisInputFilepath DijkstraEra
     nPoolNodes = creationNumPools creationOptions
-    TestnetCreationOptions{creationEra, creationMaxSupply, creationNumDReps} = creationOptions
+    TestnetCreationOptions{creationEra, creationMaxSupply, creationNumDReps, creationDijkstraGenesis} = creationOptions
     genesisInputFilepath :: Pretty (eon era) => eon era -> FilePath
     genesisInputFilepath e = tempAbsPath </> ("genesis-input." <> eraToString e <> ".json")
     createTestnetDataFlag :: Pretty (eon era) => eon era -> [String]
