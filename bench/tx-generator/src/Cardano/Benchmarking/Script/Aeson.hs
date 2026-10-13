@@ -13,6 +13,7 @@ import           Cardano.Api
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
+import           Cardano.TxGenerator.ScriptVariants (ScriptSizeSpec)
 import           Cardano.TxGenerator.Types
 
 import           Prelude
@@ -114,6 +115,30 @@ instance ToJSON ScriptSpec where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
 instance FromJSON ScriptSpec where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON ScriptSource where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptSource where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON ScriptSetPayment where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptSetPayment where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON ScriptSizeSpec where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptSizeSpec where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON ScriptSetSpec where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptSetSpec where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON Action where

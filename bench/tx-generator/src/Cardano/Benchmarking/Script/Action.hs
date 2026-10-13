@@ -51,6 +51,7 @@ action a = case a of
   CancelBenchmark -> cancelBenchmark
   WaitForEra era -> waitForEra era
   LogMsg txt -> traceDebug $ Text.unpack txt
+  DefineScriptSet name spec -> defineScriptSet name spec
   Reserved options -> reserved options
 
 -- | 'liftToAction' first lifts from IO, then converts an 'Either'

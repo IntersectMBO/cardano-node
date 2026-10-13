@@ -81,3 +81,27 @@ mkTxInModeCardano = TxInMode shelleyBasedEra
 -- Partial. Useful in tests.
 mkTxIn :: HasCallStack => Text -> TxIn
 mkTxIn = either error id . P.runParser parseTxIn
+
+-- | 'plutusSpendingWitness' is the witness for spending an output locked by a
+-- Plutus script: with the script included in the transaction, or, given the
+-- output that carries it as a reference script, by reference.
+plutusSpendingWitness :: forall era. Exp.EraCommonConstraints era
+  => ScriptInAnyLang
+  -> Maybe TxIn
+  -> HashableScriptData
+  -> HashableScriptData
+  -> ExecutionUnits
+  -> Either TxGenError (Exp.AnyWitness (ShelleyLedgerEra era))
+plutusSpendingWitness (ScriptInAnyLang lang (PlutusScript version script)) reference datum redeemer executionUnits =
+  case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
+    Nothing -> Left $ TxGenError $ "plutusSpendingWitness: " ++ show version ++ " not supported in era " ++ show (cardanoEra @era)
+    Just scriptLang -> toAnyTxInWitness $ ScriptWitness ScriptWitnessForSpending $
+      PlutusScriptWitness
+        scriptLang
+        version
+        (maybe (PScript script) PReferenceScript reference)
+        (ScriptDatumForTxIn $ Just datum)
+        redeemer
+        executionUnits
+plutusSpendingWitness _ _ _ _ _ =
+  Left $ TxGenError "plutusSpendingWitness: only Plutus scripts are supported"

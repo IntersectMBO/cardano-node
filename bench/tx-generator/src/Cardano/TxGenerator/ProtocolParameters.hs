@@ -48,6 +48,10 @@ import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Compactible as L
+import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCostPerByteL)
+import           Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppRefScriptCostMultiplierL,
+                   ppRefScriptCostStrideL)
+import           Cardano.Ledger.BaseTypes.NonZero (nonZero, unNonZero)
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 
 import           Data.Aeson ((.!=), (.:), (.:?), (.=))
@@ -81,6 +85,9 @@ convertToLedgerProtocolParameters sbe pp =
 --
 -- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 
+-- NOTE: @russoul: Shall we get rid of this in favor of PParams — the original ledger api?
+-- NOTE: Our custom structure can silently drift apart and we incur a maintainance cost that
+-- NOTE: seeminly doesn't bring anything to the table.
 data ProtocolParameters
   = ProtocolParameters
   { protocolParamProtocolVersion :: (Natural, Word32)
@@ -195,6 +202,21 @@ data ProtocolParameters
   -- ^ Cost in ada per byte of UTxO storage.
   --
   -- /Introduced in Babbage/
+  , protocolParamMinFeeRefScriptCostPerByte :: Maybe Rational
+  -- ^ The price per byte of the reference scripts a transaction uses, in the
+  -- first tier of the reference script fee.
+  --
+  -- /Introduced in Conway/
+  , protocolParamRefScriptCostStride :: Maybe Word32
+  -- ^ The size in bytes of each tier of the reference script fee; fixed at
+  -- 25600 in Conway.
+  --
+  -- /Introduced in Dijkstra/
+  , protocolParamRefScriptCostMultiplier :: Maybe Rational
+  -- ^ The factor by which the price per byte grows from one tier to the next;
+  -- fixed at 1.2 in Conway.
+  --
+  -- /Introduced in Dijkstra/
   }
   deriving (Eq, Generic, Show)
 
@@ -228,6 +250,9 @@ instance Aeson.FromJSON ProtocolParameters where
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
         <*> o .:? "utxoCostPerByte"
+        <*> o .:? "minFeeRefScriptCostPerByte"
+        <*> o .:? "refScriptCostStride"
+        <*> o .:? "refScriptCostMultiplier"
 
 -- To avoid defining `CostModel` and `CostModels` again here.
 unCostModels :: Map.Map Plutus.Language [Int64]
@@ -279,6 +304,11 @@ instance Aeson.ToJSON ProtocolParameters where
       , "maxCollateralInputs" .= protocolParamMaxCollateralInputs
       , -- Babbage era:
         "utxoCostPerByte" .= protocolParamUTxOCostPerByte
+      , -- Conway era:
+        "minFeeRefScriptCostPerByte" .= (toRationalJSON <$> protocolParamMinFeeRefScriptCostPerByte)
+      , -- Dijkstra era:
+        "refScriptCostStride" .= protocolParamRefScriptCostStride
+      , "refScriptCostMultiplier" .= (toRationalJSON <$> protocolParamRefScriptCostMultiplier)
       ]
 
 -- Yes, uses CBOR and Aeson to make it work without redefining `CostModels`.
@@ -350,7 +380,7 @@ toLedgerPParams ShelleyBasedEraMary = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo = toAlonzoPParams
 toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
 toLedgerPParams ShelleyBasedEraConway = toConwayPParams
-toLedgerPParams ShelleyBasedEraDijkstra = toConwayPParams
+toLedgerPParams ShelleyBasedEraDijkstra = toDijkstraPParams
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toShelleyCommonPParams
@@ -499,12 +529,33 @@ toBabbagePParams
             & ppCoinsPerUTxOByteL .~ CoinPerByte (L.compactCoinOrError utxoCostPerByte)
     pure ppBabbage
 
--- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
+-- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters".
+-- Of the parameters introduced in Conway, carries only the reference script fee;
+-- the others take their defaults.
 toConwayPParams
-  :: BabbageEraPParams ledgerera
+  :: ConwayEraPParams ledgerera
   => ProtocolParameters
   -> Either ProtocolParametersConversionError (PParams ledgerera)
-toConwayPParams = toBabbagePParams
+toConwayPParams pp@ProtocolParameters{protocolParamMinFeeRefScriptCostPerByte} = do
+  ppBabbage <- toBabbagePParams pp
+  refScriptCostPerByte <-
+    mapM (boundRationalEither "MinFeeRefScriptCostPerByte") protocolParamMinFeeRefScriptCostPerByte
+  pure $ maybe id (ppMinFeeRefScriptCostPerByteL .~) refScriptCostPerByte ppBabbage
+
+-- Of the parameters introduced in Dijkstra, carries only the reference script
+-- fee tiers; the others take their defaults.
+toDijkstraPParams
+  :: DijkstraEraPParams ledgerera
+  => ProtocolParameters
+  -> Either ProtocolParametersConversionError (PParams ledgerera)
+toDijkstraPParams pp@ProtocolParameters{protocolParamRefScriptCostStride, protocolParamRefScriptCostMultiplier} = do
+  ppConway <- toConwayPParams pp
+  stride <- mapM (\s -> maybeToRight (PpceOutOfBounds "RefScriptCostStride" (fromIntegral s)) $ nonZero s)
+              protocolParamRefScriptCostStride
+  multiplier <- mapM (boundRationalEither "RefScriptCostMultiplier") protocolParamRefScriptCostMultiplier
+  pure $ ppConway
+    & maybe id (ppRefScriptCostStrideL .~) stride
+    & maybe id (ppRefScriptCostMultiplierL .~) multiplier
 
 -- Conversion functions: protocol parameters from ledger types.
 --------------------------------------------------------------------------------
@@ -519,7 +570,7 @@ fromLedgerPParams ShelleyBasedEraMary = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAlonzo = fromExactlyAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
-fromLedgerPParams ShelleyBasedEraDijkstra = fromConwayPParams
+fromLedgerPParams ShelleyBasedEraDijkstra = fromDijkstraPParams
 
 fromShelleyCommonPParams
   :: EraPParams ledgerera
@@ -550,6 +601,9 @@ fromShelleyCommonPParams pp =
     , protocolParamCollateralPercent = Nothing -- Only from Alonzo onwards
     , protocolParamMaxCollateralInputs = Nothing -- Only from Alonzo onwards
     , protocolParamUTxOCostPerByte = Nothing -- Only from Babbage onwards
+    , protocolParamMinFeeRefScriptCostPerByte = Nothing -- Only from Conway onwards
+    , protocolParamRefScriptCostStride = Nothing -- Only from Dijkstra onwards
+    , protocolParamRefScriptCostMultiplier = Nothing -- Only from Dijkstra onwards
     , protocolParamDecentralization = Nothing -- Obsolete from Babbage onwards
     , protocolParamExtraPraosEntropy = Nothing -- Obsolete from Alonzo onwards
     , protocolParamMinUTxOValue = Nothing -- Obsolete from Alonzo onwards
@@ -605,10 +659,23 @@ fromBabbagePParams pp =
     }
 
 fromConwayPParams
-  :: BabbageEraPParams ledgerera
+  :: ConwayEraPParams ledgerera
   => PParams ledgerera
   -> ProtocolParameters
-fromConwayPParams = fromBabbagePParams
+fromConwayPParams pp =
+  (fromBabbagePParams pp)
+    { protocolParamMinFeeRefScriptCostPerByte = Just . Ledger.unboundRational $ pp ^. ppMinFeeRefScriptCostPerByteL
+    }
+
+fromDijkstraPParams
+  :: DijkstraEraPParams ledgerera
+  => PParams ledgerera
+  -> ProtocolParameters
+fromDijkstraPParams pp =
+  (fromConwayPParams pp)
+    { protocolParamRefScriptCostStride = Just . unNonZero $ pp ^. ppRefScriptCostStrideL
+    , protocolParamRefScriptCostMultiplier = Just . Ledger.unboundRational $ pp ^. ppRefScriptCostMultiplierL
+    }
 
 --------------------------------------------------------------------------------
 -- From module Cardano.Api.Internal.Json
