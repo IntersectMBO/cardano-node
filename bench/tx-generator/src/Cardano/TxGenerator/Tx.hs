@@ -21,8 +21,9 @@ import           Cardano.TxGenerator.UTxO (ToUTxOList)
 import           Data.Bifunctor (first, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
-import           Data.List.Extra (chunksOf)
+import           Data.List.Extra (chunksOf, nubOrd)
 import           Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import           Lens.Micro ((.~))
 
 
@@ -279,8 +280,12 @@ signedTopLevelTx ledgerParameters (collateral, collFunds) fee metadata inFunds o
  where
   era = Exp.useEra @era
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
+  -- A fund whose script is supplied by reference needs that output among the
+  -- transaction's reference inputs.
+  referenceInputs = nubOrd $ mapMaybe getFundReferenceInput inFunds
   txBodyContent = extendBody $ Exp.defaultTxBodyContent
     & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @era f)) inFunds)
+    & Exp.setTxInsReference (Exp.TxInsReference referenceInputs Set.empty)
     & Exp.setTxInsCollateral collateral
     & Exp.setTxOuts outputs
     & Exp.setTxFee fee
@@ -290,14 +295,16 @@ signedTopLevelTx ledgerParameters (collateral, collFunds) fee metadata inFunds o
 
 -- | 'estimateTxFee' estimates the minimum fee of a transaction, counting
 -- @keyWitnesses@ key witnesses instead of the ones it already carries, so that
--- a signed transaction preview is estimated like its unsigned counterpart.
+-- a signed transaction preview is estimated like its unsigned counterpart, and
+-- @refScriptsSize@ bytes of the reference scripts it uses.
 estimateTxFee :: Exp.EraCommonConstraints era
   => L.PParams (ShelleyLedgerEra era)
   -> Tx era
   -> Word
+  -> Int
   -> L.Coin
 estimateTxFee ledgerParameters (ShelleyTx _ ledgerTx) keyWitnesses =
-  Exp.evaluateTransactionFee ledgerParameters unsignedTx keyWitnesses 0 0
+  Exp.evaluateTransactionFee ledgerParameters unsignedTx keyWitnesses 0
  where
   unsignedTx = Exp.UnsignedTx $ ledgerTx & L.witsTxL . L.addrTxWitsL .~ mempty
 
