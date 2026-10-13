@@ -491,7 +491,7 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
   putStrLn $ "--> approximating txn size and fee for: " ++ messageId summary
   evaluate $ summary
     { projectedTxSize = Just $ txSizeInBytes dummyTx
-    , projectedTxFee  = Just $ estimateTxFee ledgerPParams dummyTx 2  -- 1 (script witness) + 1 (collateral) = 2
+    , projectedTxFee  = Just $ estimateTxFee ledgerPParams dummyTx 2 0  -- 1 (script witness) + 1 (collateral) = 2; no reference scripts
     }
 
   `catch` \(SomeException e) -> do
