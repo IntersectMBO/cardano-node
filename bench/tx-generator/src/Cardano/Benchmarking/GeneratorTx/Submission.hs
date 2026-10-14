@@ -141,6 +141,9 @@ txStreamSource streamRef tpsThrottle = Active worker
       l <- unFold $ pred n
       return $ tx:l
 
+  -- The submission threads, one per target node, share the stream: each
+  -- transaction is built inside 'modifyMVar', one at a time, which the
+  -- unsynchronised 'Destination's of Cardano.Benchmarking.Wallet rely on.
   nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (Tx era))
   nextOnMVar v = modifyMVar v $ \case
     StreamEmpty -> return (StreamEmpty, StreamEmpty)
