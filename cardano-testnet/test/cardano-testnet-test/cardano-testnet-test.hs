@@ -20,7 +20,11 @@ import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+import qualified Cardano.Testnet.Test.Dijkstra.Governance as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.NestedTransaction
+import qualified Cardano.Testnet.Test.Dijkstra.Scripts as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.Staking as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.TopLevelGuards as Dijkstra
 import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.EnableTracer
 import qualified Cardano.Testnet.Test.FoldEpochState
@@ -151,6 +155,13 @@ tests = do
           , ignoreOnMacAndWindows "Enable Tracer" Cardano.Testnet.Test.EnableTracer.hprop_enable_tracer
           , ignoreOnWindows "Hard fork to Dijkstra" Cardano.Testnet.Test.Node.DijkstraEra.hprop_hardfork_to_dijkstra
           , ignoreOnWindows "Nested transaction swap" Cardano.Testnet.Test.Dijkstra.NestedTransaction.hprop_nested_transaction_swap
+          , ignoreOnWindows "Dijkstra sub-transaction guards" Dijkstra.hprop_sub_transaction_guards
+          , ignoreOnWindows "Dijkstra sub-transaction Plutus V4" Dijkstra.hprop_sub_transaction_plutus_v4
+          , ignoreOnWindows "Dijkstra sub-transaction staking" Dijkstra.hprop_sub_transaction_staking
+          , ignoreOnWindows "Dijkstra sub-transaction governance" Dijkstra.hprop_sub_transaction_governance
+          , ignoreOnWindows "Dijkstra top-level key guards" Dijkstra.hprop_top_level_key_guards
+          , ignoreOnWindows "Dijkstra top-level native guards" Dijkstra.hprop_top_level_native_guards
+          , ignoreOnWindows "Dijkstra top-level Plutus V4 guards" Dijkstra.hprop_top_level_plutus_v4_guards
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
