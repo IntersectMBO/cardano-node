@@ -18,17 +18,14 @@ import           Cardano.Api (AsType (AsPaymentKey), CardanoEra (DijkstraEra), D
 import           Cardano.Api.Experimental qualified as Exp
 import           Cardano.Api.Experimental.Tx qualified as Exp
 import           Cardano.Api.Ledger qualified as L
-import           Cardano.Benchmarking.Wallet (createAndStore, mangle)
 import           Cardano.Ledger.Api qualified as LA
 import           Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (subTransactionsTxBodyL))
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..), getFundCoin, getFundTxIn)
-import           Cardano.TxGenerator.Tx (genNestedTx, genTx, sourceToStoreNestedTransaction)
-import           Cardano.TxGenerator.Types (TxGenError)
+import           Cardano.TxGenerator.Tx (genNestedTx, genTx, nestedTx)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, keyAddress, mkTxIn)
-import           Cardano.TxGenerator.UTxO (mkTxOutToAddress, mkUTxOVariant)
+import           Cardano.TxGenerator.UTxO (keyOutput, mkTxOutToAddress, outputFunds, outputTxOut)
 
 import           Data.Foldable (toList)
-import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.Map.Strict qualified as Map
 import           Data.Set qualified as Set
 import           Data.Text qualified as Text
@@ -69,28 +66,20 @@ nestedTxTests = testGroup "nested transactions (Dijkstra)"
       Set.size (Set.fromList subTxIds) @?= 3
       LA.evalBalanceTxBody pparams (const Nothing) (const False) utxo (ledgerTx ^. LA.bodyTxL) @?= mempty
 
-  , testCase "the outputs of a sub-transaction are stored under its own id" $ do
+  , testCase "the outputs of a sub-transaction are created under its own id" $ do
       key <- generateSigningKey AsPaymentKey
-      stored <- newIORef []
-      let funds = mkFunds key 0 (2 + 2 * 2)
-          toStore = mangle $ repeat $ createAndStore (mkUTxOVariant @DijkstraEra network key)
-                                                     (\fund -> modifyIORef stored (fund :))
-      result <- sourceToStoreNestedTransaction
-                  (genNestedTx pparams ([], []) fee mempty)
-                  (pure $ Right funds)
-                  2 2
-                  (inputsToOutputsWithFee fee 2)
-                  (inputsToOutputsWithFee 0 3)
-                  toStore
-      tx <- either (assertFailure . show) pure (result :: Either TxGenError (Tx DijkstraEra))
-      storedTxIns <- map getFundTxIn <$> readIORef stored
-      let ledgerTx = ledgerTxOf tx
+      let outputs fee' n funds = map (keyOutput @DijkstraEra network key) $ inputsToOutputsWithFee fee' n $ map getFundCoin funds
+          topFunds = mkFunds key 0 2
+          subTxFunds = [ mkFunds key (10 * i) 2 | i <- [1, 2] ]
+      (tx, created) <- either (assertFailure . show) pure $
+        nestedTx outputTxOut (genNestedTx pparams ([], []) fee mempty)
+          (topFunds, outputs fee 2 topFunds) [ (funds, outputs 0 3 funds) | funds <- subTxFunds ]
+      let createdTxIns = map getFundTxIn $ concatMap (uncurry outputFunds) created
+          ledgerTx = ledgerTxOf tx
           topId = fromShelleyTxId $ LA.txIdTx ledgerTx
           subIds = map (fromShelleyTxId . LA.txIdTx) $ toList $ ledgerTx ^. LA.bodyTxL . subTransactionsTxBodyL
-          expected = txIns topId 2 ++ concatMap (`txIns` 3) subIds
       length subIds @?= 2
-      Set.fromList storedTxIns @?= Set.fromList expected
-      length storedTxIns @?= length expected
+      createdTxIns @?= txIns topId 2 ++ concatMap (`txIns` 3) subIds
   ]
  where
   fst3 :: (a, b, c) -> a
