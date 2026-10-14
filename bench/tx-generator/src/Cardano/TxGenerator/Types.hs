@@ -22,8 +22,9 @@ import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 
-import           Data.Aeson ((.:), (.=))
+import           Data.Aeson ((.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson (Parser)
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
@@ -135,9 +136,46 @@ data TxGenPlutusParams
       , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
       , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)
       , plutusExecSteps   :: !(Maybe Natural)   -- ^ Max. steps for ExecutionUnits (overriding corresponding protocol parameter)
+      , plutusVariants    :: !(Maybe PlutusVariants) -- ^ Variants of the script for the benchmarking transactions to spend, instead of the script itself
       }
   | PlutusOff                                   -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
+
+-- | Variants of a Plutus script, with distinct hashes, for the benchmarking
+-- transactions to spend in turn (see "Cardano.TxGenerator.ScriptVariants"):
+-- 'variantsCount' of them, each 'variantsSize' bytes, or as small as they can
+-- be. With 'variantsByReference', a setup phase publishes them as reference
+-- scripts, and the benchmarking transactions refer to them rather than carry
+-- them in their witnesses.
+data PlutusVariants = PlutusVariants
+  { variantsCount       :: !Int
+  , variantsSize        :: !(Maybe Int)
+  , variantsByReference :: !Bool
+  }
+  deriving (Show, Eq)
+
+-- | The JSON form is shared by the Nix service definition in
+-- nix/nixos/tx-generator-service.nix and the profiles: @source@ is
+-- @"reference"@ or @"witness"@.
+instance FromJSON PlutusVariants where
+  parseJSON = Aeson.withObject "PlutusVariants" $ \o ->
+    PlutusVariants
+      <$> o .: "count"
+      <*> o .:? "size"
+      <*> (o .: "source" >>= source)
+   where
+    source :: Text -> Aeson.Parser Bool
+    source = \case
+      "reference" -> pure True
+      "witness"   -> pure False
+      other       -> fail $ "PlutusVariants: source is \"reference\" or \"witness\", not " ++ show other
+
+instance ToJSON PlutusVariants where
+  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference} = Aeson.object
+    [ "count"  .= variantsCount
+    , "size"   .= variantsSize
+    , "source" .= (if variantsByReference then "reference" else "witness" :: Text)
+    ]
 
 -- | Documents how the `plutusScript` parameter above was eventually resolved
 data TxGenPlutusResolvedTo

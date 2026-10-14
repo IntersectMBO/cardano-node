@@ -25,7 +25,7 @@ let
           ## going to be deployed.
           redeemer = cfg.plutusRedeemerFile or null;
           datum    = cfg.plutusDatumFile or null;
-          inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
+          inherit (cfg.plutus) limitExecutionMem limitExecutionSteps variants;
         };
       targetNodes =
         if endpointConfigured
@@ -98,6 +98,7 @@ in pkgs.commonLib.defServiceModule
           limitExecutionSteps = mayOpt int   "Limit for saturation tuning: steps;  null means per-Tx limit from ProtocolParameters.";
           datum               = mayOpt attrs "Plutus script datum.";
           redeemer            = mayOpt attrs "Plutus script redeemer.";
+          variants            = mayOpt attrs "Variants of the script with distinct hashes, for the benchmark to spend in turn: { count, size, source }, where size is in bytes (null for as small as can be) and source is \"reference\" or \"witness\"; null for the script itself.";
         };
 
         # Overrides the usage of Nix Store paths by default.
