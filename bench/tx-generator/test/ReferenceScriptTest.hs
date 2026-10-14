@@ -35,7 +35,8 @@ import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile, 
 import           Cardano.Benchmarking.Script.Types (Action (..), Generator (..), PayMode (..),
                    ScriptBudget (..), ScriptSetPayment (..), ScriptSetSpec (..), ScriptSource (..),
                    SubmitMode (..))
-import           Cardano.Benchmarking.Wallet (cyclingOutputs, mangle)
+import           Cardano.Benchmarking.Wallet (buildAndStore, initWallet, newCyclingDestination, payTo,
+                   walletPreview)
 import           Cardano.Ledger.Api qualified as LA
 import           Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import           Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
@@ -48,23 +49,23 @@ import           Cardano.Ledger.State (EraUTxO (ScriptsNeeded, getMinFeeTxUtxo))
 import           Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..), getFundTxIn)
+import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..), getFundCoin, getFundTxIn)
 import           Cardano.TxGenerator.PlutusContext (readScriptData, scriptDataModifyNumber)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..),
                    convertToLedgerProtocolParameters, fromLedgerPParams)
 import           Cardano.TxGenerator.ScriptVariants
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript, readPlutusScript)
-import           Cardano.TxGenerator.Tx (estimateTxFee, genTx, sourceToStoreTransactionNew)
-import           Cardano.TxGenerator.Types (TxGenError, TxGenPlutusType (..), TxGenTxParams (..))
+import           Cardano.TxGenerator.Tx (estimateTxFee, genTx)
+import           Cardano.TxGenerator.Types (TxGenPlutusType (..), TxGenTxParams (..))
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, keyAddress, mkTxIn,
                    plutusSpendingWitness)
-import           Cardano.TxGenerator.UTxO (mkReferenceScriptTxOut, mkTxOutToAddress,
-                   mkUTxOScript, mkUTxOVariant)
+import           Cardano.TxGenerator.UTxO (Output (..), keyOutput, mkReferenceScriptTxOut,
+                   mkTxOutToAddress, outputFund, scriptOutput)
 
 import           Control.Monad (forM, forM_)
+import           Control.Monad.Except (runExceptT)
 import           Data.Foldable (toList)
 import           Data.Kind (Type)
-import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.Map.Strict qualified as Map
 import           Data.Set qualified as Set
 import           Data.Text qualified as Text
@@ -81,19 +82,21 @@ referenceScriptTests = testGroup "reference scripts"
   [ testCase "consecutive groups of outputs are locked at one variant each, cycling across transactions" $ do
       key <- generateSigningKey AsPaymentKey
       variants <- loopV3Variants 3
-      stored <- newIORef []
-      let toUTxOs = [ mkUTxOScript @ConwayEra network (variant, ScriptDataNumber 0) Exp.AnyKeyWitnessPlaceholder
-                    | variant <- variants ]
-      outputs <- cyclingOutputs 2 toUTxOs (\fund -> modifyIORef stored (fund :))
+      wallet <- initWallet
+      destination <- newCyclingDestination wallet 2
+        [ scriptOutput @ConwayEra network (variant, ScriptDataNumber 0) Exp.AnyKeyWitnessPlaceholder
+        | variant <- variants ]
       txOutputHashes <- fmap concat $ forM [0 .. 2 :: Int] $ \i -> do
-        toStore <- mangle <$> outputs
-        result <- sourceToStoreTransactionNew (genTx emptyConwayPParams ([], []) fee mempty)
-                    (pure $ Right $ keyFunds key (10 * i) 1) (inputsToOutputsWithFee fee 4) toStore
-        tx <- either (assertFailure . show) pure (result :: Either TxGenError (Tx ConwayEra))
+        let inFunds = keyFunds key (10 * i) 1
+        -- Planning outputs again, as a preview does, pays nothing yet.
+        _ <- payTo destination $ inputsToOutputsWithFee fee 4 $ map getFundCoin inFunds
+        txOutputs <- payTo destination $ inputsToOutputsWithFee fee 4 $ map getFundCoin inFunds
+        tx <- runExceptT (buildAndStore (genTx emptyConwayPParams ([], []) fee mempty) inFunds txOutputs)
+                >>= either (assertFailure . show) pure
         return $ map outputScriptHash $ toList $ ledgerTxOf tx ^. LA.bodyTxL . LA.outputsTxBodyL
       let variantIndex = Map.fromList $ zip (map (Just . toShelleyScriptHash . scriptHashOf) variants) [0 :: Int ..]
       map (`Map.lookup` variantIndex) txOutputHashes @?= map Just [0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2]
-      readIORef stored >>= (@?= 12) . length
+      walletPreview wallet 100 >>= (@?= 12) . length
 
   , testCase "script set actions survive a JSON round trip" $
       testJSONRoundTrip scriptSetActions @?= Nothing
@@ -206,10 +209,12 @@ spending pparamsFile adjust byReference = do
   refOut <- either (assertFailure . show) pure $ mkReferenceScriptTxOut pparams (keyAddress @era network key) variant
   witness <- either (assertFailure . show) pure $
     plutusSpendingWitness @era variant (if byReference then Just refTxIn else Nothing) datum redeemer units
-  let (lockedOut, mkLockedFund) = mkUTxOScript @era network (variant, getScriptData datum) witness 20_000_000
-      lockedFund = mkLockedFund (TxIx 0) lockTxId
-      (collateralOut, mkCollateralFund) = mkUTxOVariant @era network key 10_000_000
-      collateralFund = mkCollateralFund (TxIx 0) collateralTxId
+  let locked = scriptOutput @era network (variant, getScriptData datum) witness 20_000_000
+      lockedOut = outputTxOut locked
+      lockedFund = outputFund lockTxId (TxIx 0) locked
+      collateral = keyOutput @era network key 10_000_000
+      collateralOut = outputTxOut collateral
+      collateralFund = outputFund collateralTxId (TxIx 0) collateral
       utxo = L.UTxO $ Map.fromList
         [ (toShelleyTxIn refTxIn, unTxOut refOut)
         , (toShelleyTxIn $ getFundTxIn lockedFund, unTxOut lockedOut)
