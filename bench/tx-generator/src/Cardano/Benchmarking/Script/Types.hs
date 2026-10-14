@@ -31,7 +31,7 @@ module Cardano.Benchmarking.Script.Types (
         , PayMode(PayToAddr, PayToScript, PayToScriptSet)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, StaticScriptBudget)
+        , ScriptBudget(AutoScript, MeasuredScript, StaticScriptBudget)
         , ScriptSetPayment(..)
         , ScriptSetSpec(..)
         , ScriptSource(..)
@@ -264,6 +264,10 @@ deriving instance Generic ScriptSetSpec
 data ScriptBudget where
   StaticScriptBudget :: !FilePath -> !FilePath -> !ExecutionUnits -> !Bool -> ScriptBudget
   AutoScript :: !FilePath -> !Int -> ScriptBudget
+  -- | 'MeasuredScript' spends with the redeemer in the file as it is, at the
+  -- execution units of one run of the script, for transactions spending the
+  -- given number of inputs locked by it.
+  MeasuredScript :: !FilePath -> !Int -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
 

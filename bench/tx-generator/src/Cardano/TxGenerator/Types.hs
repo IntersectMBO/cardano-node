@@ -126,6 +126,7 @@ data TxGenPlutusType
   | LimitTxPerBlock_4                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 4 Txs into block budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
   | CustomScript
+  | FixedLoop                                   -- ^ Generate Txs for a Plutus loop script, with the loop count the redeemer gives, at the execution units of one run
   deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
 
 data TxGenPlutusParams
@@ -151,6 +152,11 @@ data PlutusVariants = PlutusVariants
   { variantsCount       :: !Int
   , variantsSize        :: !(Maybe Int)
   , variantsByReference :: !Bool
+  , variantsGroup       :: !(Maybe Int)
+    -- ^ The number of consecutive benchmarking inputs locked at one variant;
+    -- without it, as many as a transaction spends, for every transaction to
+    -- spend one variant. With 1, each input of a transaction has a variant
+    -- of its own.
   }
   deriving (Show, Eq)
 
@@ -163,6 +169,7 @@ instance FromJSON PlutusVariants where
       <$> o .: "count"
       <*> o .:? "size"
       <*> (o .: "source" >>= source)
+      <*> o .:? "group"
    where
     source :: Text -> Aeson.Parser Bool
     source = \case
@@ -171,10 +178,11 @@ instance FromJSON PlutusVariants where
       other       -> fail $ "PlutusVariants: source is \"reference\" or \"witness\", not " ++ show other
 
 instance ToJSON PlutusVariants where
-  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference} = Aeson.object
+  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference, variantsGroup} = Aeson.object
     [ "count"  .= variantsCount
     , "size"   .= variantsSize
     , "source" .= (if variantsByReference then "reference" else "witness" :: Text)
+    , "group"  .= variantsGroup
     ]
 
 -- | Documents how the `plutusScript` parameter above was eventually resolved
