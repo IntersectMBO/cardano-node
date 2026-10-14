@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -187,11 +188,14 @@ splittingPhase srcWallet scriptSet = do
   plutusPayMode dst = do
     ~(Just plutus@PlutusOn{..}) <- askNixOption _nix_plutus
     inputs <- askNixOption _nix_inputs_per_tx
-    budget <- if hasLoopCalibration plutusType
-      then case plutusRedeemer of
+    budget <- if
+      | hasLoopCalibration plutusType -> case plutusRedeemer of
         Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a redeemer."
         Just redeemer -> pure $ AutoScript redeemer inputs
-      else case hasStaticBudget plutus of
+      | plutusType == FixedLoop -> case plutusRedeemer of
+        Nothing -> throwCompileError $ SomeCompilerError "Plutus fixed loop requires a redeemer."
+        Just redeemer -> pure $ MeasuredScript redeemer inputs
+      | otherwise -> case hasStaticBudget plutus of
         Nothing ->  throwCompileError $ SomeCompilerError "Plutus custom script requires a static budget."
         Just executionUnits -> do
           debugMode <- askNixOption _nix_debugMode
@@ -201,13 +205,13 @@ splittingPhase srcWallet scriptSet = do
                     executionUnits
                     debugMode
     return $ case (scriptSet, plutusVariants) of
-      (Just name, Just PlutusVariants{variantsByReference}) ->
+      (Just name, Just PlutusVariants{variantsByReference, variantsGroup}) ->
         PayToScriptSet ScriptSetPayment
           { scriptSetName       = name
           , scriptSetBudget     = budget
           , scriptSetPlutusType = plutusType
           , scriptSetSource     = if variantsByReference then ScriptByReference else ScriptInWitness
-          , scriptSetGroupSize  = inputs
+          , scriptSetGroupSize  = fromMaybe inputs variantsGroup
           } dst
       _ -> PayToScript (ScriptSpec plutusScript budget plutusType) dst
 
@@ -332,15 +336,18 @@ checkSubTxOptions = askNixOption _nix_sub_txs >>= \case
     when (subTxCount < 1 || subTxInputs < 1 || subTxOutputs < 1) $
       failWith "count, inputs and outputs must all be at least 1"
 
--- | Variants of the Plutus script need at least one variant, of a positive size.
+-- | Variants of the Plutus script need at least one variant, of a positive
+-- size, and groups of at least one input.
 checkPlutusVariants :: Compiler ()
 checkPlutusVariants = askNixOption _nix_plutus >>= \case
-  Just PlutusOn{plutusVariants = Just variants@PlutusVariants{variantsCount, variantsSize}} -> do
+  Just PlutusOn{plutusVariants = Just variants@PlutusVariants{variantsCount, variantsSize, variantsGroup}} -> do
     let failWith = throwCompileError . SomeCompilerError . (("plutus variants " ++ show variants ++ ": ") ++)
     when (variantsCount < 1) $
       failWith "there must be at least one variant"
     when (maybe False (< 1) variantsSize) $
       failWith "the size must be positive"
+    when (maybe False (< 1) variantsGroup) $
+      failWith "the group must be at least 1"
   _ -> pure ()
 
 emit :: Action -> Compiler ()

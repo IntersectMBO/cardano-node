@@ -55,7 +55,7 @@ import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..)
                    convertToLedgerProtocolParameters, fromLedgerPParams)
 import           Cardano.TxGenerator.ScriptVariants
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript, readPlutusScript)
-import           Cardano.TxGenerator.Tx (estimateTxFee, genTx)
+import           Cardano.TxGenerator.Tx (estimateTxFee, genTx, txKeyWitnesses)
 import           Cardano.TxGenerator.Types (TxGenPlutusType (..), TxGenTxParams (..))
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, keyAddress, mkTxIn,
                    plutusSpendingWitness)
@@ -135,6 +135,9 @@ scriptSetActions =
   , Submit (AnyCardanoEra ConwayEra) LocalSocket txParams $ SplitN "funds"
       (PayToScriptSet (ScriptSetPayment "loops" (AutoScript "LoopV3.redeemer.json" 1) LimitTxPerBlock_8 ScriptInWitness 1) "script_funds")
       30
+  , Submit (AnyCardanoEra ConwayEra) LocalSocket txParams $ SplitN "funds"
+      (PayToScriptSet (ScriptSetPayment "loops" (MeasuredScript "LoopV3.redeemer.json" 4) FixedLoop ScriptByReference 1) "script_funds")
+      30
   ]
  where
   txParams = TxGenTxParams { txParamFee = 3_000_000, txParamAddTxSize = 100, txParamTTL = 1_000_000 }
@@ -150,7 +153,7 @@ outputScriptHash out = case out ^. LA.addrTxOutL of
 spendingTests :: forall era. Exp.EraCommonConstraints era
   => String -> FilePath -> (ProtocolParameters -> ProtocolParameters) -> TestTree
 spendingTests eraName pparamsFile adjust = testGroup eraName
-  [ testCase "by reference: a reference input, no script in the witnesses, and the ledger charges for it" $ do
+  [ testCase "by reference: a reference input, no script in the witnesses, and the ledger charges for it, as estimated" $ do
       Spending{..} <- spending @era pparamsFile adjust True
       let ledgerTx = ledgerTxOf spendingTx
           referenceInputs = ledgerTx ^. LA.bodyTxL . LA.referenceInputsTxBodyL
@@ -159,14 +162,14 @@ spendingTests eraName pparamsFile adjust = testGroup eraName
       referenceInputs @?= Set.singleton (toShelleyTxIn spendingReference)
       Map.size witnessScripts @?= 0
       redeemerCount ledgerTx @?= 1
+      txKeyWitnesses spendingTx @?= 1   -- the collateral's
       assertBool ("the ledger does not charge for the reference script: " ++ show ledgerMinFee) $
         ledgerMinFee > estimateTxFee spendingPParams spendingTx 1 0
-      assertBool ("the estimate is below the ledger's minimum fee: " ++ show ledgerMinFee) $
-        estimateTxFee spendingPParams spendingTx 1 spendingScriptSize >= ledgerMinFee
+      estimateTxFee spendingPParams spendingTx (txKeyWitnesses spendingTx) spendingScriptSize @?= ledgerMinFee
       scriptsSucceed spendingPParams ledgerTx spendingUTxO spendingUnits
       balanced spendingPParams ledgerTx spendingUTxO
 
-  , testCase "in the witnesses: no reference input, and the script in the witnesses" $ do
+  , testCase "in the witnesses: no reference input, the script in the witnesses, and the fee as estimated" $ do
       Spending{..} <- spending @era pparamsFile adjust False
       let ledgerTx = ledgerTxOf spendingTx
           referenceInputs = ledgerTx ^. LA.bodyTxL . LA.referenceInputsTxBodyL
@@ -175,8 +178,8 @@ spendingTests eraName pparamsFile adjust = testGroup eraName
       referenceInputs @?= Set.empty
       Map.keys witnessScripts @?= [toShelleyScriptHash spendingScriptHash]
       redeemerCount ledgerTx @?= 1
-      assertBool ("the estimate is below the ledger's minimum fee: " ++ show ledgerMinFee) $
-        estimateTxFee spendingPParams spendingTx 1 0 >= ledgerMinFee
+      txKeyWitnesses spendingTx @?= 1   -- the collateral's
+      estimateTxFee spendingPParams spendingTx (txKeyWitnesses spendingTx) 0 @?= ledgerMinFee
       scriptsSucceed spendingPParams ledgerTx spendingUTxO spendingUnits
       balanced spendingPParams ledgerTx spendingUTxO
   ]
