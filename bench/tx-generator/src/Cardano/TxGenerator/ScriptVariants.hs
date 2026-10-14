@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores #-}
 
 {-|
@@ -22,6 +24,7 @@ and costs the same few extra execution steps.
 -}
 module Cardano.TxGenerator.ScriptVariants
   ( ScriptSizeSpec (..)
+  , VariantIx (..)
   , plutusScriptSize
   , scriptVariant
   , scriptVariants
@@ -54,6 +57,9 @@ data ScriptSizeSpec
     -- does not allow the exact size.
   deriving (Show, Eq, Generic)
 
+-- | The number of a variant of a script, from 0.
+newtype VariantIx = VariantIx Int deriving newtype (Enum, Eq, Ord, Show)
+
 type Program = UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
 type Term    = UPLC.Term UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
 
@@ -70,15 +76,15 @@ scriptVariants size count script = do
   let base = uncheckedDeserialiseUPLC bytes
   shape <- paddingShape size base
   checkIdentifierRange count
-  pure [ rebuild $ serialiseUPLC $ variantProgram base shape i | i <- [0 .. count - 1] ]
+  pure [ rebuild $ serialiseUPLC $ variantProgram base shape i | i <- take count [VariantIx 0 ..] ]
 
 -- | The variant @i@ of a Plutus script, as 'scriptVariants' builds it.
-scriptVariant :: ScriptSizeSpec -> ScriptInAnyLang -> Int -> Either TxGenError ScriptInAnyLang
-scriptVariant size script i = do
+scriptVariant :: ScriptSizeSpec -> ScriptInAnyLang -> VariantIx -> Either TxGenError ScriptInAnyLang
+scriptVariant size script i@(VariantIx n) = do
   (bytes, rebuild) <- plutusScriptBytes script
   let base = uncheckedDeserialiseUPLC bytes
   shape <- paddingShape size base
-  checkIdentifierRange (i + 1)
+  checkIdentifierRange (n + 1)
   pure $ rebuild $ serialiseUPLC $ variantProgram base shape i
 
 plutusScriptBytes :: ScriptInAnyLang -> Either TxGenError (ShortByteString, ShortByteString -> ScriptInAnyLang)
@@ -103,8 +109,8 @@ checkIdentifierRange count
 -- program, and the length of a filler bytestring for the last few bytes.
 data PaddingShape = PaddingShape !Int !Int
 
-variantProgram :: Program -> PaddingShape -> Int -> Program
-variantProgram (UPLC.Program () version body) (PaddingShape chunks fillerLength) i =
+variantProgram :: Program -> PaddingShape -> VariantIx -> Program
+variantProgram (UPLC.Program () version body) (PaddingShape chunks fillerLength) (VariantIx i) =
   UPLC.Program () version $
     UPLC.Apply () (UPLC.LamAbs () binder body) (UPLC.Delay () padding)
  where
@@ -120,7 +126,7 @@ paddingShape (ScriptSizeFixed target) base
   | target <= sizeOf (PaddingShape 0 0) = Right (PaddingShape 0 0)
   | otherwise = Right (PaddingShape chunks (fillerFor chunks))
  where
-  sizeOf shape = SBS.length $ serialiseUPLC $ variantProgram base shape 0
+  sizeOf shape = SBS.length $ serialiseUPLC $ variantProgram base shape (VariantIx 0)
   minimal = sizeOf (PaddingShape 0 0)
   perChunk :: Double
   perChunk = fromIntegral (sizeOf (PaddingShape 64 0) - minimal) / 64

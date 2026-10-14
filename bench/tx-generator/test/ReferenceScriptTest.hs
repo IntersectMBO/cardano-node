@@ -94,8 +94,8 @@ referenceScriptTests = testGroup "reference scripts"
         tx <- runExceptT (buildAndStore (genTx emptyConwayPParams ([], []) fee mempty) inFunds txOutputs)
                 >>= either (assertFailure . show) pure
         return $ map outputScriptHash $ toList $ ledgerTxOf tx ^. LA.bodyTxL . LA.outputsTxBodyL
-      let variantIndex = Map.fromList $ zip (map (Just . toShelleyScriptHash . scriptHashOf) variants) [0 :: Int ..]
-      map (`Map.lookup` variantIndex) txOutputHashes @?= map Just [0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2]
+      let variantIndex = Map.fromList $ zip (map (Just . toShelleyScriptHash . scriptHashOf) variants) [VariantIx 0 ..]
+      map (`Map.lookup` variantIndex) txOutputHashes @?= map (Just . VariantIx) [0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2]
       walletPreview wallet 100 >>= (@?= 12) . length
 
   , testCase "script set actions survive a JSON round trip" $
