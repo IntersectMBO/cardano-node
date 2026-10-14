@@ -163,7 +163,9 @@ executable cardano-tracer
                       , ScopedTypeVariables
 
   build-depends:        cardano-tracer
+                      , code-page
                       , optparse-applicative
+                      , with-utf8
 
   ghc-options:          -threaded
                         -rtsopts

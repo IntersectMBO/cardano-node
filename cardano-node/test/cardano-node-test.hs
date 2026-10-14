@@ -5,7 +5,9 @@
 #endif
 
 import           Hedgehog.Main (defaultMain)
-import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+import           Main.Utf8 (withUtf8)
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
+import           System.IO.CodePage (withCP65001)
 
 import qualified Test.Cardano.Config.Mainnet
 #ifdef UNIX
@@ -20,11 +22,10 @@ import qualified Test.Cardano.Tracing.NewTracing.Consistency
 import qualified Cardano.Crypto.Init as Crypto
 
 main :: IO ()
-main = do
+main = withCP65001 $ withUtf8 $ do
   Crypto.cryptoInit
 
   hSetBuffering stdout LineBuffering
-  hSetEncoding stdout utf8
   runTests
   where
     runTests = defaultMain $

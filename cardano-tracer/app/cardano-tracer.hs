@@ -2,12 +2,14 @@ import           Cardano.Tracer.CLI (TracerParams, parseTracerParams)
 import           Cardano.Tracer.Run (runCardanoTracer)
 
 import           Data.Version (showVersion)
+import           Main.Utf8 (withUtf8)
 import           Options.Applicative
+import           System.IO.CodePage (withCP65001)
 
 import           Paths_cardano_tracer (version)
 
 main :: IO ()
-main =
+main = withCP65001 $ withUtf8 $
   runCardanoTracer =<< customExecParser (prefs showHelpOnEmpty) tracerInfo
 
 tracerInfo :: ParserInfo TracerParams
