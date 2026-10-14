@@ -50,7 +50,7 @@ import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters
-import           Cardano.TxGenerator.ScriptVariants (plutusScriptSize, scriptVariants)
+import           Cardano.TxGenerator.ScriptVariants (VariantIx (..), plutusScriptSize, scriptVariants)
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx
@@ -478,7 +478,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         maxTxSize = fromIntegral $ ledgerParameters ^. Ledger.ppMaxTxSizeL
       traceDebug $ "PublishScripts " ++ setName ++ ": reference scripts at "
         ++ Text.unpack (serialiseAddress refAddress) ++ ", change to " ++ addressChange
-      refOutputs <- forM (zip [0 ..] scriptSetVariants) $ \(k, variant) ->
+      refOutputs <- forM (zip [VariantIx 0 ..] scriptSetVariants) $ \(k, variant) ->
         case mkReferenceScriptTxOut ledgerParameters refAddress variant of
           Left err  -> liftTxGenError err
           Right out -> return (k, out, fromMaybe 0 (plutusScriptSize variant))
@@ -556,7 +556,7 @@ interpretPayMode payMode = do
       (scriptData, scriptRedeemer, executionUnits, _scriptFee) <-
         resolvePlutusBudget ("script set " ++ scriptSetName) base scriptSetBudget scriptSetPlutusType
       references <- liftIO $ readMVar scriptSetReferences
-      variants <- forM (zip [0 ..] scriptSetVariants) $ \(k, variant) -> do
+      variants <- forM (zip [VariantIx 0 ..] scriptSetVariants) $ \(k, variant) -> do
         source <- case scriptSetSource of
           ScriptInWitness -> return Nothing
           ScriptByReference -> case Map.lookup k references of
@@ -603,13 +603,13 @@ referenceScriptsSize referenced = do
     references <- liftIO $ readMVar scriptSetReferences
     return $ Map.fromList
       [ (txIn, size)
-      | (k, txIn) <- Map.toList references
+      | (VariantIx k, txIn) <- Map.toList references
       , Just size <- [plutusScriptSize =<< listToMaybe (drop k scriptSetVariants)] ]
   return $ sum $ mapMaybe (`Map.lookup` sizes) referenced
 
 -- | Packs reference script outputs into transactions, in order, each up to
 -- @budget@ bytes of scripts, and at least one per transaction.
-packScripts :: Int -> [(Int, out, Int)] -> [[(Int, out, Int)]]
+packScripts :: Int -> [(VariantIx, out, Int)] -> [[(VariantIx, out, Int)]]
 packScripts budget = go
  where
   go [] = []

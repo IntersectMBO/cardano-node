@@ -61,7 +61,7 @@ scriptVariantsTests = testGroup "script variants"
       , testCase "a single variant is the same as in the list of variants" $ do
           base <- loadScript name
           variants <- expectRight $ scriptVariants (ScriptSizeFixed 4_096) 10 base
-          variant7 <- expectRight $ scriptVariant (ScriptSizeFixed 4_096) base 7
+          variant7 <- expectRight $ scriptVariant (ScriptSizeFixed 4_096) base (VariantIx 7)
           scriptHashOf variant7 @?= scriptHashOf (variants !! 7)
 
       , testCase "variants are well scoped" $ do
