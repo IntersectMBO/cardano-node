@@ -582,7 +582,7 @@ docker run \
   -v node-ipc:/ipc \
   -e NETWORK=mainnet \
   -e CARDANO_TRACER_SOCKET_PATH_ACCEPT="/ipc/node-tracer.socket" \
-  -e CARDANO_CONFIG_JSON_MERGE='{"TraceOptionNodeName":"node1"}' \
+  -e CARDANO_CONFIG_JSON_MERGE='{"Configuration":{"HermodTracing":{"TraceOptionNodeName":"node1"}}}' \
   ghcr.io/intersectmbo/cardano-node:dev
 
 docker run \
