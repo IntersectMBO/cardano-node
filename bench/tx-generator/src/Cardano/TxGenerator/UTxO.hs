@@ -1,8 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-|
+Module      : Cardano.TxGenerator.UTxO
+Description : The outputs transactions create, and the funds they become.
+
+An 'Output' is decided before the transaction that creates it is built, and
+becomes a 'Fund' once the transaction's id is known: output @i@ of transaction
+@txId@ is spent as @TxIn txId (TxIx i)@.
+-}
 module  Cardano.TxGenerator.UTxO
         (module Cardano.TxGenerator.UTxO)
         where
@@ -19,20 +28,72 @@ import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Cardano.TxGenerator.Utils (keyAddress)
 
 import           Data.Maybe.Strict (StrictMaybe (SJust))
-import           Lens.Micro ((&), (.~))
+import           Lens.Micro ((&), (.~), (^.))
 
-type ToUTxO era = L.Coin -> (Exp.TxOut (ShelleyLedgerEra era), TxIx -> TxId -> Fund)
-type ToUTxOList era split = split -> ([Exp.TxOut (ShelleyLedgerEra era)], TxId -> [Fund])
+-- | An output for a transaction to create, together with how the fund it
+-- becomes is spent.
+data Output era = Output
+  { outputTxOut   :: !(Exp.TxOut (ShelleyLedgerEra era))
+  , outputSpender :: !(Spender era)
+  }
 
+-- | How a fund is spent: what a 'Fund' holds besides its 'TxIn' and value.
+data Spender era = Spender
+  { spenderWitness :: !(Exp.AnyWitness (ShelleyLedgerEra era))
+  , spenderKey     :: !(Maybe (SigningKey PaymentKey))
+  }
 
-makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ L.Coin ]
-makeToUTxOList fkts values
-  = (outs, \txId -> map (\f -> f txId) fs)
-  where
-    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
-    worker (toUTxO, value, idx)
-      = let (o, f ) = toUTxO value
-         in  (o, f idx)
+-- | The fund that an output becomes as output @txIx@ of transaction @txId@.
+outputFund :: forall era. Exp.EraCommonConstraints era => TxId -> TxIx -> Output era -> Fund
+outputFund txId txIx (Output (Exp.TxOut txOut) Spender{..})
+  = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
+      _fundTxIn = TxIn txId txIx
+    , _fundWitness = spenderWitness
+    , _fundVal = txOut ^. L.coinTxOutL
+    , _fundSigningKey = spenderKey
+    }
+
+-- | The funds that the outputs of transaction @txId@ become, given in the
+-- order the transaction creates them.
+outputFunds :: Exp.EraCommonConstraints era => TxId -> [Output era] -> [Fund]
+outputFunds txId = zipWith (outputFund txId) [TxIx 0 ..]
+
+-- | An output paying @value@ to the key's address, spent with the key.
+keyOutput :: forall era. Exp.EraCommonConstraints era
+  => NetworkId
+  -> SigningKey PaymentKey
+  -> L.Coin
+  -> Output era
+keyOutput networkId key value = Output
+  { outputTxOut = mkTxOutToAddress (keyAddress @era networkId key) value
+  , outputSpender = Spender Exp.AnyKeyWitnessPlaceholder (Just key)
+  }
+
+-- | An output paying @value@ to the address of a Plutus script, with the hash
+-- of @datum@, spent with @witness@.
+scriptOutput :: forall era. Exp.EraCommonConstraints era
+  => NetworkId
+  -> (ScriptInAnyLang, ScriptData)
+  -> Exp.AnyWitness (ShelleyLedgerEra era)
+  -> L.Coin
+  -> Output era
+scriptOutput networkId (script, datum) witness value = Output
+  { outputTxOut = case mkTxOutToAddress plutusScriptAddr value of
+      Exp.TxOut out -> Exp.TxOut $ out & L.datumTxOutL .~ L.DatumHash datumHash
+  , outputSpender = Spender witness Nothing
+  }
+ where
+  plutusScriptAddr = case script of
+    ScriptInAnyLang lang script' ->
+      case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
+        Nothing -> error "scriptOutput: scriptLanguageSupportedInEra==Nothing"
+        Just{} -> makeShelleyAddressInEra
+                       (shelleyBasedEra @era)
+                       networkId
+                       (PaymentCredentialByScript $ hashScript script')
+                       NoStakeAddress
+
+  datumHash = L.hashData $ toAlonzoData @(ShelleyLedgerEra era) $ unsafeHashableScriptData datum
 
 -- | An output paying @value@ to the key's address, without datum or reference script.
 mkTxOutToAddress :: forall era. Exp.EraCommonConstraints era
@@ -56,56 +117,3 @@ mkReferenceScriptTxOut pparams addr script
       Just scriptInEra -> Right $ Exp.TxOut $ L.setMinCoinTxOut pparams $
         L.mkBasicTxOut (toShelleyAddr addr) mempty
           & L.referenceScriptTxOutL .~ SJust (toShelleyScript scriptInEra)
-
-mkUTxOVariant :: forall era. Exp.EraCommonConstraints era
-  => NetworkId
-  -> SigningKey PaymentKey
-  -> ToUTxO era
-mkUTxOVariant networkId key value
-  = ( mkTxOutToAddress (keyAddress @era networkId key) value
-    , mkNewFund value
-    )
- where
-  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = Exp.AnyKeyWitnessPlaceholder
-    , _fundVal = val
-    , _fundSigningKey = Just key
-    }
-
--- to be merged with mkUTxOVariant
-mkUTxOScript :: forall era.
-     Exp.EraCommonConstraints era
-  => NetworkId
-  -> (ScriptInAnyLang, ScriptData)
-  -> Exp.AnyWitness (ShelleyLedgerEra era)
-  -> ToUTxO era
-mkUTxOScript networkId (script, txOutDatum) witness value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  plutusScriptAddr = case script of
-    ScriptInAnyLang lang script' ->
-      case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
-        Nothing -> error "mkUtxOScript: scriptLanguageSupportedInEra==Nothing"
-        Just{} -> makeShelleyAddressInEra
-                       (shelleyBasedEra @era)
-                       networkId
-                       (PaymentCredentialByScript $ hashScript script')
-                       NoStakeAddress
-
-  datumHash = L.hashData $ toAlonzoData @(ShelleyLedgerEra era) $ unsafeHashableScriptData txOutDatum
-
-  mkTxOut :: L.Coin -> Exp.TxOut (ShelleyLedgerEra era)
-  mkTxOut v = case mkTxOutToAddress plutusScriptAddr v of
-    Exp.TxOut out -> Exp.TxOut $ out & L.datumTxOutL .~ L.DatumHash datumHash
-
-  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = witness
-    , _fundVal = val
-    , _fundSigningKey = Nothing
-    }

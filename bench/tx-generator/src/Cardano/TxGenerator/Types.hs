@@ -51,8 +51,6 @@ type NestedTxGenerator era
   -> Either TxGenError (Tx era, TxId, [TxId])
 
 type FundSource m       = m (Either TxGenError [Fund])
-type FundToStore m      = Fund -> m ()
-type FundToStoreList m  = [Fund] -> m ()
 
 -- | The sub-transactions a nested transaction carries (Dijkstra onwards):
 -- 'subTxCount' of them, each spending 'subTxInputs' funds into 'subTxOutputs'
