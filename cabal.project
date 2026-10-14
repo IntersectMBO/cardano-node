@@ -14,9 +14,14 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-10-09T14:30:01Z
+  , cardano-haskell-packages 2026-10-13T17:54:54Z
 
 constraints:
+  -- The CHaP index bump to 2026-10-13 was for trace-dispatcher 2.13.2, which
+  -- does not depend on cardano-base.  0.1.7.0 only came along with the cut, and
+  -- adds quickcheck-classes and its three transitive deps to the plan.  Hold it
+  -- until a bump is wanted for its own sake.
+  , any.cardano-base == 0.1.6.0
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8 || >= 1.7
   -- haskell.nix tries to use 0.7.1.5 for some reason
