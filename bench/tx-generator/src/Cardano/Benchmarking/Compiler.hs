@@ -12,6 +12,7 @@ import           Cardano.Api
 
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.Ledger.Coin as L
+import           Cardano.TxGenerator.ScriptVariants (ScriptSizeSpec (..))
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
@@ -67,6 +68,7 @@ testCompiler o c = case runExcept $ runRWST c o 0 of
 compileToScript :: Compiler ()
 compileToScript = do
   checkSubTxOptions
+  checkPlutusVariants
   initConstants
   nc <- askNixOption getNodeConfigFile >>= maybe
         (throwCompileError $ SomeCompilerError "nodeConfigFile not set in Nix options")
@@ -76,7 +78,8 @@ compileToScript = do
   logSubmissionEndpoint
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
-  splitWallet <- splittingPhase genesisWallet
+  scriptSet <- addScriptSet genesisWallet
+  splitWallet <- splittingPhase genesisWallet scriptSet
   void $ benchmarkingPhase splitWallet collateralWallet
 
 initConstants :: Compiler ()
@@ -88,6 +91,7 @@ initConstants = do
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
   emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
   emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
+  emit $ DefineSigningKey keyNameReferenceScripts keyReferenceScripts
 
 importGenesisFunds :: Compiler String
 importGenesisFunds = do
@@ -121,8 +125,34 @@ addCollaterals src = do
       logMsg "Create collaterals. Done."
       return $ Just collateralWallet
 
-splittingPhase :: SrcWallet -> Compiler DstWallet
-splittingPhase srcWallet = do
+-- | With variants of the Plutus script, 'addScriptSet' defines them as a
+-- script set, for the last splitting step to lock the benchmarking inputs at,
+-- and to be spent by reference, publishes them with funds from @src@. Returns
+-- the name of the script set.
+addScriptSet :: SrcWallet -> Compiler (Maybe String)
+addScriptSet src = askNixOption _nix_plutus >>= \case
+  Just PlutusOn{plutusScript, plutusVariants = Just PlutusVariants{..}} -> do
+    logMsg "Define script variants."
+    name <- newIdentifier "script_set"
+    emit $ DefineScriptSet name ScriptSetSpec
+      { scriptSetBase  = plutusScript
+      , scriptSetCount = variantsCount
+      , scriptSetSize  = maybe ScriptSizeMinimal ScriptSizeFixed variantsSize
+      }
+    when variantsByReference $ do
+      logMsg "Publish reference scripts."
+      era <- askNixOption _nix_era
+      txParams <- askNixOption txGenTxParams
+      setupMode <- getSetupSubmitMode
+      emit $ Submit era setupMode txParams $
+        PublishScripts src name keyNameReferenceScripts (PayToAddr keyNameTxGenFunds src)
+      delay
+      logMsg "Publish reference scripts. Done."
+    return $ Just name
+  _ -> return Nothing
+
+splittingPhase :: SrcWallet -> Maybe String -> Compiler DstWallet
+splittingPhase srcWallet scriptSet = do
   tx_count <- askNixOption _nix_tx_count
   inputs_per_tx <- askNixOption _nix_inputs_per_tx
   subTxFunds <- askNixOption _nix_sub_txs <&> maybe 0 (\SubTxShape{subTxCount, subTxInputs} -> subTxCount * subTxInputs)
@@ -150,27 +180,36 @@ splittingPhase srcWallet = do
     delay
     logMsg "Splitting step: Done"
 
+  -- The benchmarking inputs are locked at the script, or with variants of
+  -- it, at the variants in turn: as many consecutive inputs at one variant as
+  -- a benchmarking transaction spends.
   plutusPayMode :: DstWallet -> Compiler PayMode
   plutusPayMode dst = do
     ~(Just plutus@PlutusOn{..}) <- askNixOption _nix_plutus
-    scriptSpec_ <- if hasLoopCalibration plutusType
+    inputs <- askNixOption _nix_inputs_per_tx
+    budget <- if hasLoopCalibration plutusType
       then case plutusRedeemer of
         Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a redeemer."
-        Just redeemer -> do
-          autoScript <- AutoScript redeemer <$> askNixOption _nix_inputs_per_tx
-          pure $ ScriptSpec plutusScript autoScript
+        Just redeemer -> pure $ AutoScript redeemer inputs
       else case hasStaticBudget plutus of
         Nothing ->  throwCompileError $ SomeCompilerError "Plutus custom script requires a static budget."
         Just executionUnits -> do
           debugMode <- askNixOption _nix_debugMode
-          let
-            budget = StaticScriptBudget
-                     (fromMaybe "" plutusDatum)
-                     (fromMaybe "" plutusRedeemer)
-                      executionUnits
-                      debugMode
-          pure $ ScriptSpec plutusScript budget
-    return $ PayToScript (scriptSpec_ plutusType) dst
+          pure $ StaticScriptBudget
+                   (fromMaybe "" plutusDatum)
+                   (fromMaybe "" plutusRedeemer)
+                    executionUnits
+                    debugMode
+    return $ case (scriptSet, plutusVariants) of
+      (Just name, Just PlutusVariants{variantsByReference}) ->
+        PayToScriptSet ScriptSetPayment
+          { scriptSetName       = name
+          , scriptSetBudget     = budget
+          , scriptSetPlutusType = plutusType
+          , scriptSetSource     = if variantsByReference then ScriptByReference else ScriptInWitness
+          , scriptSetGroupSize  = inputs
+          } dst
+      _ -> PayToScript (ScriptSpec plutusScript budget plutusType) dst
 
 -- Generate src and dst wallet names for a splitSequence.
 -- testCompiler (error "opts") $ splitSequenceWalletNames (WalletName "w1") (WalletName "w2") (unfoldSplitSequence 1 1000 10000)
@@ -292,6 +331,17 @@ checkSubTxOptions = askNixOption _nix_sub_txs >>= \case
       failWith "sub-transactions are not supported together with Plutus yet"
     when (subTxCount < 1 || subTxInputs < 1 || subTxOutputs < 1) $
       failWith "count, inputs and outputs must all be at least 1"
+
+-- | Variants of the Plutus script need at least one variant, of a positive size.
+checkPlutusVariants :: Compiler ()
+checkPlutusVariants = askNixOption _nix_plutus >>= \case
+  Just PlutusOn{plutusVariants = Just variants@PlutusVariants{variantsCount, variantsSize}} -> do
+    let failWith = throwCompileError . SomeCompilerError . (("plutus variants " ++ show variants ++ ": ") ++)
+    when (variantsCount < 1) $
+      failWith "there must be at least one variant"
+    when (maybe False (< 1) variantsSize) $
+      failWith "the size must be positive"
+  _ -> pure ()
 
 emit :: Action -> Compiler ()
 emit = tell . DL.singleton
@@ -417,6 +467,16 @@ Query the progress of the benchmarking phase:
 
 keyBenchmarkDone :: SigningKey PaymentKey
 keyBenchmarkDone = parseKey "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
+
+keyNameReferenceScripts :: String
+keyNameReferenceScripts = "ReferenceScripts"
+
+{-|
+The outputs that carry reference scripts, which nothing spends, use:
+addr_test1vqs7925jx8jpuju9s6ng59l46rdcwq2pq95k9p5awc8f48gygya0w
+-}
+keyReferenceScripts :: SigningKey PaymentKey
+keyReferenceScripts = parseKey "5820e9f553ac77b3fcc85c8d1c755ce98ebbb6b5cf343e5f993074bdeced35b238dc"
 
 keyNameCollaterals :: String
 keyNameCollaterals = "Collaterals"
