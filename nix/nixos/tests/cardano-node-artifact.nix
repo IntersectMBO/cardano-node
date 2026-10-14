@@ -104,6 +104,10 @@ in {
     machine = {config, ...}: {
       nixpkgs.pkgs = pkgs;
 
+      # Without a nameserver the dns resolver is built from an empty list and
+      # throws BadConfiguration, which killed the node on the aarch64 builder.
+      networking.nameservers = ["127.0.0.1"];
+
       # The default disk size of 1024 MB is insufficient for the binary artifact
       # and tar gzip expansion.
       virtualisation.diskSize = 2048;
