@@ -23,7 +23,7 @@ import           Data.Function ((&))
 import           Data.List.Extra (nubOrd)
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import           Lens.Micro ((.~))
+import           Lens.Micro ((.~), (^.))
 
 
 -- | 'genTx' builds and signs a transaction with the experimental API
@@ -134,6 +134,11 @@ estimateTxFee ledgerParameters (ShelleyTx _ ledgerTx) keyWitnesses =
   Exp.evaluateTransactionFee ledgerParameters unsignedTx keyWitnesses 0
  where
   unsignedTx = Exp.UnsignedTx $ ledgerTx & L.witsTxL . L.addrTxWitsL .~ mempty
+
+-- | The number of key witnesses a signed transaction carries: one for each
+-- key among the funds it spends and its collateral, a key used twice once.
+txKeyWitnesses :: Exp.EraCommonConstraints era => Tx era -> Word
+txKeyWitnesses (ShelleyTx _ ledgerTx) = fromIntegral $ Set.size $ ledgerTx ^. L.witsTxL . L.addrTxWitsL
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
      Tx era
