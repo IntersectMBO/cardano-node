@@ -211,6 +211,7 @@ instance FromJSON TxGenPlutusParams where
       <*> o .:? "redeemer"
       <*> o .:? "limitExecutionMem"
       <*> o .:? "limitExecutionSteps"
+      <*> o .:? "variants"
 
 instance ToJSON TxGenPlutusParams where
   toJSON PlutusOn{ plutusType
@@ -218,13 +219,15 @@ instance ToJSON TxGenPlutusParams where
                  , plutusDatum
                  , plutusRedeemer
                  , plutusExecMemory
-                 , plutusExecSteps} = object
+                 , plutusExecSteps
+                 , plutusVariants} = object
     [ "type" .= plutusType
     , "script" .= plutusScript
     , "datum" .= plutusDatum
     , "redeemer" .= plutusRedeemer
     , "limitExecutionMem" .= plutusExecMemory
     , "limitExecutionSteps" .= plutusExecSteps
+    , "variants" .= plutusVariants
     ]
   toJSON PlutusOff = Aeson.Null
 

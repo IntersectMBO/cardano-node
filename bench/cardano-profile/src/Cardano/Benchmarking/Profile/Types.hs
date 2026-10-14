@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
 --------------------------------------------------------------------------------
@@ -22,7 +23,7 @@ module Cardano.Benchmarking.Profile.Types (
 , NodeVerbatim (..)
 
 , Generator (..), SubTxs (..)
-, Plutus (..), Redeemer (..)
+, Plutus (..), Redeemer (..), Variants (..), ScriptSource (..)
 
 , Workload (..)
 , Entrypoints (..)
@@ -482,6 +483,7 @@ data Plutus = Plutus
   { plutusType :: Maybe String -- TODO: Rename in workbench/bash to "plutus_type"
   , plutusScript :: Maybe String
   , redeemer :: Maybe Redeemer
+  , variants :: Maybe Variants
   }
   deriving (Eq, Show, Generic)
 
@@ -494,6 +496,8 @@ instance Aeson.ToJSON Plutus where
       ++
       -- TODO: Needed to replicate the old "jq" JSON output.
       ["redeemer" Aeson..= redeemer p | isJust (redeemer p)]
+      ++
+      ["variants" Aeson..= variants p | isJust (variants p)]
 
 instance Aeson.FromJSON Plutus where
   parseJSON =
@@ -502,6 +506,50 @@ instance Aeson.FromJSON Plutus where
         <$> o Aeson..:? "type"
         <*> o Aeson..:? "script"
         <*> o Aeson..:? "redeemer"
+        <*> o Aeson..:? "variants"
+
+-- | Variants of the Plutus script, with distinct hashes, for the benchmark
+-- to spend in turn: how many, the size of each in bytes (without one, as
+-- small as they can be), and where the transactions spending them find the
+-- script. The JSON keys are those the tx-generator expects.
+data Variants = Variants
+  { variants_count  :: Integer
+  , variants_size   :: Maybe Integer
+  , variants_source :: ScriptSource
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON Variants where
+  toJSON v =
+    Aeson.object $
+      [ "count"  Aeson..= variants_count v
+      , "source" Aeson..= variants_source v
+      ]
+      ++
+      ["size" Aeson..= variants_size v | isJust (variants_size v)]
+
+instance Aeson.FromJSON Variants where
+  parseJSON =
+    Aeson.withObject "Variants" $ \o ->
+      Variants
+        <$> o Aeson..:  "count"
+        <*> o Aeson..:? "size"
+        <*> o Aeson..:  "source"
+
+-- | Where the transactions spending outputs locked by a script find it: in
+-- their witnesses, or in a reference input.
+data ScriptSource = ScriptInWitness | ScriptByReference
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON ScriptSource where
+  toJSON ScriptInWitness   = Aeson.String "witness"
+  toJSON ScriptByReference = Aeson.String "reference"
+
+instance Aeson.FromJSON ScriptSource where
+  parseJSON = Aeson.withText "ScriptSource" $ \case
+    "witness"   -> pure ScriptInWitness
+    "reference" -> pure ScriptByReference
+    other       -> fail $ "ScriptSource: \"witness\" or \"reference\", not " ++ show other
 
 data Redeemer =
     RedeemerInt

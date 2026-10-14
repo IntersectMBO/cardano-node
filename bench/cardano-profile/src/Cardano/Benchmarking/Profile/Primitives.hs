@@ -93,6 +93,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
+  , plutusVariants
   , generatorEpochs
 
   -- Workload params.
@@ -205,7 +206,7 @@ empty = Types.Profile {
     , Types.outputs_per_tx = 0
     , Types.tx_fee = 0
     , Types.init_cooldown = 0
-    , Types.plutus = Types.Plutus Nothing Nothing Nothing
+    , Types.plutus = Types.Plutus Nothing Nothing Nothing Nothing
     , Types.epochs = 0
     , Types.tx_count = Nothing
     , Types.add_tx_size = 0
@@ -821,6 +822,17 @@ redeemerFields objs = plutus
   (\p -> p {Types.redeemer = Just (
     Types.RedeemerFields 0 objs
   )})
+
+-- | The benchmark spends @count@ variants of its Plutus script in turn, each
+-- of @size@ bytes (or as small as can be), finding the script in each
+-- transaction's witnesses or by reference.
+plutusVariants :: HasCallStack => Types.ScriptSource -> Integer -> Maybe Integer -> Types.Profile -> Types.Profile
+plutusVariants source count size = plutus
+  (\p ->
+    if isJust (Types.variants p)
+    then error "plutusVariants: `variants` already set."
+    else p {Types.variants = Just $ Types.Variants count size source}
+  )
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 generatorEpochs i = generator
