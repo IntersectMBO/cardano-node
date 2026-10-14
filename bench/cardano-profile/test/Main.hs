@@ -364,6 +364,7 @@ ciTestBage = Types.Profile {
         Types.plutusType = Nothing
       , Types.plutusScript = Nothing
       , Types.redeemer = Nothing
+      , Types.variants = Nothing
       }
     , Types.epochs = 2
     , Types.tx_count = Just 9000
