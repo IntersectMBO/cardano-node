@@ -82,6 +82,7 @@ import           Cardano.Logging
 import           Cardano.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
+import           Cardano.TxGenerator.ScriptVariants (VariantIx)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
@@ -126,7 +127,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
 -- the funds in a wallet.
 data ScriptSet = ScriptSet
   { scriptSetVariants   :: ![ScriptInAnyLang]
-  , scriptSetReferences :: !(MVar (Map Int TxIn))
+  , scriptSetReferences :: !(MVar (Map VariantIx TxIn))
   }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
