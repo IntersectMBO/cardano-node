@@ -13,10 +13,10 @@ import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.ProtocolParameters (convertToLedgerProtocolParameters)
 import           Cardano.TxGenerator.Setup.SigningKey
-import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
+import           Cardano.TxGenerator.Tx (genTx)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, mkTxIn)
-import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
+import           Cardano.TxGenerator.UTxO (keyOutput, outputFunds, outputTxOut)
 
 import           Control.Monad (foldM)
 import           Control.Monad.Trans.State.Strict
@@ -94,12 +94,12 @@ generateTx ::
      TxEnvironment ConwayEra
   -> Generator (Either TxGenError (Tx ConwayEra))
 generateTx TxEnvironment{..}
-  = sourceToStoreTransaction
-        generator
-        consumeInputFunds
-        computeOutputValues
-        (makeToUTxOList $ repeat computeUTxO)
-        addNewOutputFunds
+  = do
+      inputs <- consumeInputFunds
+      let outputs = map computeUTxO $ computeOutputValues $ map getFundCoin inputs
+      case generator inputs (map outputTxOut outputs) of
+        Right (tx, txId) -> addNewOutputFunds (outputFunds txId outputs) >> pure (Right tx)
+        Left err         -> pure (Left err)
   where
     fee = txEnvFee
 
@@ -115,11 +115,11 @@ generateTx TxEnvironment{..}
         collateralFunds = ([], [])
 
 -- Create a transaction that uses all the available funds.
-    consumeInputFunds :: Generator (Either TxGenError [Fund])
+    consumeInputFunds :: Generator [Fund]
     consumeInputFunds = do
       funds <- toList <$> get
       put emptyFundQueue
-      return $ Right funds
+      return funds
 
     addNewOutputFunds :: [Fund] -> Generator ()
     addNewOutputFunds = put . List.foldl' insertFund emptyFundQueue
@@ -128,7 +128,7 @@ generateTx TxEnvironment{..}
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO = keyOutput txEnvNetworkId signingKey
 
 
 generateTxM ::
@@ -147,8 +147,8 @@ generateTxPure ::
   -> Either TxGenError (Tx ConwayEra, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
-      (tx, txId) <- generator inputs outputs
-      let outQueue = List.foldl' insertFund emptyFundQueue (toFunds txId)
+      (tx, txId) <- generator inputs (map outputTxOut outputs)
+      let outQueue = List.foldl' insertFund emptyFundQueue (outputFunds txId outputs)
       pure (tx, outQueue)
   where
     inputs = toList inQueue
@@ -165,11 +165,10 @@ generateTxPure TxEnvironment{..} inQueue
         collateralFunds :: ([TxIn], [Fund])
         collateralFunds = ([], [])
 
-    outValues = computeOutputValues $ map getFundCoin inputs
-    (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
+    outputs = map computeUTxO $ computeOutputValues $ map getFundCoin inputs
 
     computeOutputValues :: [L.Coin] -> [L.Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO = keyOutput txEnvNetworkId signingKey
