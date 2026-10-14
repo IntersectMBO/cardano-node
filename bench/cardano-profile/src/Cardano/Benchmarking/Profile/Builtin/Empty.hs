@@ -133,6 +133,10 @@ profilesEmpty = (++ profilesIdle) $ map baseNoDataset
   let ciTest whichGenesis =
           P.empty & V.datasetEmpty . whichGenesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
+      -- LoopV3, locking the benchmarking inputs at 20 variants of the script of
+      -- 4 KiB each in turn, with a fee that covers either source.
+      loopV3Variants source =
+          P.plutusVariants source 20 (Just 4096) . P.txFeeOverwrite 2000000 . V.plutusLoopV3
   in [
   -- Local
     ciTest genesis    & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn
@@ -146,6 +150,11 @@ profilesEmpty = (++ profilesIdle) $ map baseNoDataset
   -- the mempool topped up. This relies on the nodes taking a new peer's transactions
   -- after 1 s (nodes.nix): with the default 60 s, about 3 of those blocks were empty.
   , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueLocal . P.subTxs 4 2 2 . P.txCount 300 . P.traceForwardingOn
+  -- Plutus workloads whose transactions spend outputs locked at script variants:
+  -- finding the scripts by reference to outputs a setup phase publishes them in,
+  -- or in their witnesses, for comparison.
+  , ciTest genesisV12 & P.name "ci-test-v12-plutus-ref"    . loopV3Variants Types.ScriptByReference . P.traceForwardingOn . P.analysisSizeSmall
+  , ciTest genesisV12 & P.name "ci-test-v12-plutus-inline" . loopV3Variants Types.ScriptInWitness   . P.traceForwardingOn . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------

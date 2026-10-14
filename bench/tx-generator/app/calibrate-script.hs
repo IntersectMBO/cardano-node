@@ -117,7 +117,7 @@ main = do
       scriptNames <- knownScriptNames
       let
         s = if cName `elem` scriptNames then Left cName else Right cName
-        p = PlutusOn LimitSaturationLoop s Nothing Nothing Nothing Nothing
+        p = PlutusOn LimitSaturationLoop s Nothing Nothing Nothing Nothing Nothing
         b = fromMaybe (exhaustsBudget cStrategy) cBudgetHint
       runPlutus cStrategy b cParams p (fromMaybe [] cScale)
 
