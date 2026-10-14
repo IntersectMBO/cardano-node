@@ -510,12 +510,15 @@ instance Aeson.FromJSON Plutus where
 
 -- | Variants of the Plutus script, with distinct hashes, for the benchmark
 -- to spend in turn: how many, the size of each in bytes (without one, as
--- small as they can be), and where the transactions spending them find the
--- script. The JSON keys are those the tx-generator expects.
+-- small as they can be), where the transactions spending them find the
+-- script, and how many consecutive inputs are locked at one variant (without
+-- it, as many as a transaction spends). The JSON keys are those the
+-- tx-generator expects.
 data Variants = Variants
   { variants_count  :: Integer
   , variants_size   :: Maybe Integer
   , variants_source :: ScriptSource
+  , variants_group  :: Maybe Integer
   }
   deriving (Eq, Show, Generic)
 
@@ -527,6 +530,8 @@ instance Aeson.ToJSON Variants where
       ]
       ++
       ["size" Aeson..= variants_size v | isJust (variants_size v)]
+      ++
+      ["group" Aeson..= variants_group v | isJust (variants_group v)]
 
 instance Aeson.FromJSON Variants where
   parseJSON =
@@ -535,6 +540,7 @@ instance Aeson.FromJSON Variants where
         <$> o Aeson..:  "count"
         <*> o Aeson..:? "size"
         <*> o Aeson..:  "source"
+        <*> o Aeson..:? "group"
 
 -- | Where the transactions spending outputs locked by a script find it: in
 -- their witnesses, or in a reference input.

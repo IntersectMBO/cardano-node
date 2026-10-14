@@ -390,13 +390,12 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             txSize = txSizeInBytes tx
             txFeeEstimate = Just $
-                estimateTxFee ledgerParameters tx (fromIntegral $ inputs + 1) refScriptsSize   -- 1 key witness per tx input + 1 collateral
+                estimateTxFee ledgerParameters tx (txKeyWitnesses tx) refScriptsSize
           traceDebug $ "Projected Tx size in bytes: " ++ show txSize
           traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
             ++ (if refScriptsSize > 0 then ", with " ++ show refScriptsSize ++ " bytes of reference scripts" else "")
-          -- A transaction that references scripts pays for their size: a fee below the
-          -- estimate would get every transaction rejected.
-          when (refScriptsSize > 0 && txFeeEstimate > Just fee) $ liftTxGenError $ TxGenError $
+          -- A fee below the estimate would get every transaction rejected.
+          when (txFeeEstimate > Just fee) $ liftTxGenError $ TxGenError $
             "NtoM: a transaction needs a fee of at least " ++ show txFeeEstimate
               ++ ", above the configured " ++ show fee
           -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
@@ -450,7 +449,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                 let
                   txSize = txSizeInBytes tx
                   maxTxSize = fromIntegral $ ledgerParameters ^. Ledger.ppMaxTxSizeL
-                  txFeeEstimate = estimateTxFee ledgerParameters tx (fromIntegral $ inputs + 1) 0   -- 1 key witness per top-level input + 1 collateral
+                  txFeeEstimate = estimateTxFee ledgerParameters tx (txKeyWitnesses tx) 0
                 traceDebug $ "Projected Tx size in bytes: " ++ show txSize
                 traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
                 when (txSize > maxTxSize) $ liftTxGenError $ TxGenError $
@@ -633,7 +632,7 @@ publishScriptsTx :: forall era. Exp.EraCommonConstraints era
 publishScriptsTx ledgerParameters feeGuess inFunds refOutputs changeDestination = do
   (draft, _, _) <- build feeGuess
   -- The final change differs from the draft's by a few bytes at most.
-  build $ estimateTxFee ledgerParameters draft (fromIntegral $ length inFunds) 0 <> L.Coin 1_000
+  build $ estimateTxFee ledgerParameters draft (txKeyWitnesses draft) 0 <> L.Coin 1_000
  where
   deposits = mconcat [ out ^. Ledger.coinTxOutL | Exp.TxOut out <- refOutputs ]
   available = mconcat $ map getFundCoin inFunds
@@ -689,6 +688,19 @@ resolvePlutusBudget scriptLabel script scriptBudget plutusType = do
             , " Stated value : ", show units
             , " PreExecution result : ", show unitsPreRun
             ]
+      return (sData, redeemer, units)
+
+    MeasuredScript redeemerFile txInputs -> do
+      redeemer <- liftIOSafe $ readScriptData redeemerFile
+      let
+        -- As for 'AutoScript': the loop scripts do not use the datum.
+        sData = unsafeHashableScriptData $ ScriptDataNumber 0
+        within budget used = executionSteps used <= executionSteps budget && executionMemory used <= executionMemory budget
+      units <- preExecuteScriptAction protocolParameters script (getScriptData sData) (getScriptData redeemer)
+      let txUnits = ExecutionUnits (executionSteps units * fromIntegral txInputs) (executionMemory units * fromIntegral txInputs)
+      unless (within perTxBudget txUnits) $ liftTxGenError $ TxGenError $ concat
+        [ "MeasuredScript: ", show txInputs, " runs of ", scriptLabel, " take ", show txUnits
+        , ", above the budget per transaction ", show perTxBudget ]
       return (sData, redeemer, units)
 
     AutoScript redeemerFile txInputs -> do

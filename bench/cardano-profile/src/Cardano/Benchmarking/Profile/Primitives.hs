@@ -93,7 +93,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
-  , plutusVariants
+  , plutusVariants, plutusVariantGroup
   , generatorEpochs
 
   -- Workload params.
@@ -831,7 +831,18 @@ plutusVariants source count size = plutus
   (\p ->
     if isJust (Types.variants p)
     then error "plutusVariants: `variants` already set."
-    else p {Types.variants = Just $ Types.Variants count size source}
+    else p {Types.variants = Just $ Types.Variants count size source Nothing}
+  )
+
+-- | Locks @n@ consecutive benchmarking inputs at one variant of the Plutus
+-- script, instead of as many as a transaction spends; with 1, each input of a
+-- transaction has a variant of its own.
+plutusVariantGroup :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+plutusVariantGroup n = plutus
+  (\p -> case Types.variants p of
+    Nothing -> error "plutusVariantGroup: `variants` expected to be already set, but it isn't."
+    Just v@Types.Variants{Types.variants_group = Nothing} -> p {Types.variants = Just v {Types.variants_group = Just n}}
+    Just _ -> error "plutusVariantGroup: the variants' `group` already set."
   )
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
