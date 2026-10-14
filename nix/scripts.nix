@@ -14,6 +14,7 @@ let
             hostAddr = mkDefault "0.0.0.0";
             environment = mkDefault envConfig.name;
             nodeConfig = cfg.environments.${cfg.environment}.nodeConfig;
+            configFormat = cfg.environments.${cfg.environment}.configFormat;
             stateDir = mkDefault "state-node-${cfg.environment}";
             runtimeDir = mkDefault null;
           } // optionalAttrs (envConfig ? topology) {
