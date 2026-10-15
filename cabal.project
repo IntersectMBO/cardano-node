@@ -149,3 +149,22 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Temporary, until the next cardano-api and cardano-cli releases: their master
+-- branches.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: aa8f2ec1adaf74cc9d44c49bfc4fc6547b857a05
+  --sha256: sha256-sVY5ygb44/0uu1idqxDq5IuJv6Q2HH9AO/SCU9B4Ao8=
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: aa9915b25feb652d278d6ffa9268de29498c9049
+  --sha256: sha256-cvduNLO2Fh1eZMZZkzaBHWvQNSQF60GmLFpiRLHOYrM=
+  subdir:
+    cardano-cli
