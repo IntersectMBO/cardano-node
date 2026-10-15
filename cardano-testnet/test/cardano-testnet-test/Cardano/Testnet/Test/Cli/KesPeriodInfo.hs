@@ -23,7 +23,6 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as Aeson
 import           Data.Default.Class
 import           Data.Function
 import qualified Data.IP as IP
@@ -42,7 +41,6 @@ import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
-import           Testnet.Start.Cardano (liftToIntegration)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -259,8 +257,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- liftToIntegration $ Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
-  H.lbsWriteFile (unFile configurationFile) jsonBS
+  writeConfiguration (unFile configurationFile) sbe
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
     startNode tempAbsPath "test-spo" testnetDefaultIpv4Address newNodePortNumber testnetMagic Nothing

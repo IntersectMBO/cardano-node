@@ -26,7 +26,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..))
+import           Testnet.Start.Types (GenesisOptions (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -43,11 +43,7 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   -- Generate the sandbox
   conf <- mkConf tmpDir
 
-  liftToIntegration $ createTestnetEnv
-    creationOptions
-    -- Do not add hashes to the main config file, so that genesis files
-    -- can be modified without having to recompute hashes every time.
-    conf{genesisHashesPolicy = WithoutHashes}
+  liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Wait for 20% more than `startTimeOffsetSeconds`, to ensure that
   -- the time bounds in the sandbox' config files are no longer valid
