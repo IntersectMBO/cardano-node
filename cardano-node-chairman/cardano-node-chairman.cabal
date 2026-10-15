@@ -42,6 +42,7 @@ executable cardano-node-chairman
                         -rtsopts
                         "-with-rtsopts=-T"
   build-depends:        cardano-api
+                      , cardano-config ^>= 2.2
                       , cardano-crypto-class
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-core
