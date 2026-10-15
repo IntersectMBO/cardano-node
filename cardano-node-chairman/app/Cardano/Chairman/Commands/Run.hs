@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,9 +13,14 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import           Cardano.Chairman (chairmanTest)
+import           Cardano.Configuration (defaultCliArgs)
 import           Cardano.Ledger.BaseTypes (unNonZero)
+import           Cardano.Node.Configuration.CardanoConfigResolve (ConfigurationDialect (..),
+                   ResolvedNodeConfiguration (..), buildFromCardanoConfigWith,
+                   classifyConfigurationFile)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
                    parseNodeConfigurationFP)
+import qualified Cardano.Node.Configuration.POM as POM
 import           Cardano.Node.Protocol
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
@@ -97,13 +103,7 @@ run RunOpts
     , caConfigYaml
     } = do
 
-  configYamlPc <- liftIO . parseNodeConfigurationFP $ Just caConfigYaml
-
-  ptclConfig <- case getProtocolConfiguration configYamlPc of
-                  Nothing ->
-                    error $ "Node protocol configuration was not specified "<>
-                            "in Config yaml filepath: " <> unConfigPath caConfigYaml
-                  Just ptclConfig -> return ptclConfig
+  ptclConfig <- readProtocolConfiguration caConfigYaml
 
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol ptclConfig Nothing
 
@@ -139,6 +139,26 @@ run RunOpts
     case ncProtocolConfig of
       NodeProtocolConfigurationCardano{} ->
         CardanoModeParams $ EpochSlots $ unNonZero k
+
+-- | The protocol configuration in a node configuration file, read the way the
+-- node reads it: by @cardano-config@ for a file in its format, by the node's own
+-- parser otherwise. The chairman's command line is not the node's, so the
+-- settings all come from the file.
+readProtocolConfiguration :: ConfigYamlFilePath -> IO NodeProtocolConfiguration
+readProtocolConfiguration caConfigYaml =
+  classifyConfigurationFile configFile >>= \case
+    LegacyDialect -> do
+      configYamlPc <- parseNodeConfigurationFP $ Just caConfigYaml
+      case getProtocolConfiguration configYamlPc of
+        Nothing ->
+          error $ "Node protocol configuration was not specified "<>
+                  "in Config yaml filepath: " <> configFile
+        Just ptclConfig -> return ptclConfig
+    CardanoConfigDialect ->
+      POM.ncProtocolConfig . rncConfiguration
+        <$> buildFromCardanoConfigWith configFile (defaultCliArgs configFile)
+ where
+  configFile = unConfigPath caConfigYaml
 
   getProtocolConfiguration
     :: PartialNodeConfiguration

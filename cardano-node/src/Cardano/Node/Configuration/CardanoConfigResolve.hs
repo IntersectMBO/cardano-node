@@ -31,6 +31,7 @@ module Cardano.Node.Configuration.CardanoConfigResolve
     ResolvedNodeConfiguration (..)
   , CrossCheck (..)
   , buildNodeConfiguration
+  , buildFromCardanoConfigWith
   , NodeConfigurationError (..)
 
     -- * Dialects
@@ -43,13 +44,12 @@ module Cardano.Node.Configuration.CardanoConfigResolve
   , cardanoConfigCliLayer
   ) where
 
-import           Cardano.Logging.Types (TraceConfig)
 import qualified Cardano.Configuration as Cfg
 import qualified Cardano.Configuration.CliArgs as CliArgs
-import           Cardano.Node.Configuration.CardanoConfigAdapter
-                   (cardanoConfigToNodeConfiguration)
-import           Cardano.Node.Configuration.CardanoConfigCompare
-                   (compareConfigurations, deprecatedFlagWarnings)
+import           Cardano.Logging.Types (TraceConfig)
+import           Cardano.Node.Configuration.CardanoConfigAdapter (cardanoConfigToNodeConfiguration)
+import           Cardano.Node.Configuration.CardanoConfigCompare (compareConfigurations,
+                   deprecatedFlagWarnings)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
                    makeNodeConfiguration, parseNodeConfigurationFP)
@@ -167,10 +167,16 @@ buildFromLegacy crossCheck partialConf configFp = do
 -- the node's 'NodeConfiguration'. Unlike the cross-check on the legacy path,
 -- every failure here is fatal: there is no second parser to fall back to.
 buildFromCardanoConfig :: FilePath -> IO ResolvedNodeConfiguration
-buildFromCardanoConfig configFp = do
-  cliArgs <-
-    cardanoConfigCliArgs configFp
-      >>= either (Exception.throwIO . NodeConfigurationError) pure
+buildFromCardanoConfig configFp =
+  cardanoConfigCliArgs configFp
+    >>= either (Exception.throwIO . NodeConfigurationError) (buildFromCardanoConfigWith configFp)
+
+-- | 'buildFromCardanoConfig' with a given command-line layer instead of this
+-- process's own command line: for a caller that is not the node, whose command
+-- line is not the node's. With @'Cfg.defaultCliArgs' configFp@ every setting
+-- comes from the file.
+buildFromCardanoConfigWith :: FilePath -> Cfg.CliArgs -> IO ResolvedNodeConfiguration
+buildFromCardanoConfigWith configFp cliArgs = do
   (fileCfg, fileWarnings) <- Cfg.parseConfigurationFiles configFp
   (cfgNc, checkWarnings) <-
     either (Exception.throwIO . NodeConfigurationError . displayException) pure $
