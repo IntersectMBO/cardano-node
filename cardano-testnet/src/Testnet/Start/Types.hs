@@ -43,7 +43,6 @@ module Testnet.Start.Types
 
   , NodeLoggingFormat(..)
   , Conf(..)
-  , GenesisHashesPolicy (..)
   , NodeConfiguration
   , NodeConfigurationYaml
   , mkConf
@@ -336,12 +335,8 @@ data NodeConfiguration
 
 type NodeConfigurationYaml = File NodeConfiguration InOut
 
-data GenesisHashesPolicy = WithHashes | WithoutHashes
-  deriving (Eq, Show)
-
 data Conf = Conf
-  { genesisHashesPolicy :: GenesisHashesPolicy
-  , tempAbsPath :: TmpAbsolutePath
+  { tempAbsPath :: TmpAbsolutePath
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
@@ -352,18 +347,16 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
   H.note_ tempAbsPath'
   pure $ mkConfig tempAbsPath'
 
--- | Create a 'Conf' from a temporary absolute path, with Genesis Hashes enabled
--- and updating time stamps disabled.
+-- | Create a 'Conf' from a temporary absolute path, with updating time stamps
+-- disabled.
 mkConfig :: FilePath -> Conf
 mkConfig tempAbsPath' =
   Conf
-    { genesisHashesPolicy = WithHashes
-    , tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
+    { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     , updateTimestamps = DontUpdateTimestamps
     }
 
--- | Create a 'Conf' from an absolute path, with Genesis Hashes enabled
--- and updating time stamps disabled.
+-- | Create a 'Conf' from an absolute path, with updating time stamps disabled.
 mkConfigAbs :: FilePath -> IO Conf
 mkConfigAbs userOutputDir = do
   absUserOutputDir <-  makeAbsolute userOutputDir

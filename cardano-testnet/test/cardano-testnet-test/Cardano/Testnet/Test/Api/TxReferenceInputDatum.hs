@@ -56,8 +56,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- This test tests that such datums are made available to the script.
 hprop_tx_refin_datum :: Property
 hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  conf <- mkConf tempAbsBasePath'
 
   let era = Exp.ConwayEra
       sbe = convert era
@@ -73,7 +72,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
     } <-
     createAndRunTestnet creationOptions def conf
 
-  systemStart <- H.noteShowM $ getStartTime tempAbsPath' tr
+  systemStart <- H.noteShowM $ getStartTime tr
   epochStateView <- getEpochStateView configurationFile (nodeSocketPath node0)
   connectionInfo <- nodeConnectionInfo tr 0
   pparams <- getProtocolParams epochStateView ceo
