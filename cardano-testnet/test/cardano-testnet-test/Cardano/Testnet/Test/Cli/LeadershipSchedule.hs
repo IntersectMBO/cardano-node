@@ -24,7 +24,6 @@ import           Prelude
 import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as J
 import           Data.Default.Class
 import qualified Data.IP as IP
@@ -48,7 +47,6 @@ import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
-import           Testnet.Start.Cardano
 import           Testnet.Types
 
 import           Hedgehog (Property, (===))
@@ -263,9 +261,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       , "--operational-certificate-issue-counter-file", testSpoOperationalCertFp
       , "--out-file", testSpoOperationalCertFp
       ]
-  jsonBS <- liftToIntegration $
-    Aeson.encodePretty . Aeson.Object <$> createConfigJson tempAbsPath sbe
-  H.lbsWriteFile (unFile configurationFile) jsonBS
+  writeConfiguration (unFile configurationFile) sbe
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
     startNode (TmpAbsolutePath work) "test-spo" testnetDefaultIpv4Address newNodePort testnetMagic Nothing

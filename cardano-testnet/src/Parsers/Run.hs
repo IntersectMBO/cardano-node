@@ -88,11 +88,7 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvOutputDir=outputDir
   } = do
       conf <- mkConfigAbs outputDir
-      void $ createTestnetEnv
-        creationOptions
-        -- Do not add hashes to the main config file, so that genesis files
-        -- can be modified without having to recompute hashes every time.
-        conf{genesisHashesPolicy = WithoutHashes}
+      void $ createTestnetEnv creationOptions conf
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions = \case
