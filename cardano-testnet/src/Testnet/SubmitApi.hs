@@ -9,12 +9,12 @@ module Testnet.SubmitApi
   , withSubmitApi
   ) where
 
-import           Cardano.Api
-
 import           Cardano.Testnet
 
 import           Prelude
 
+import           Data.Aeson ((.=))
+import qualified Data.Aeson as Aeson
 import qualified System.IO as IO
 import qualified System.Process as IO
 
@@ -26,11 +26,11 @@ import           Hedgehog.Extras.Stock (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
 data SubmitApiConf = SubmitApiConf
   { tempAbsPath   :: FilePath
-  , configPath    :: File NodeConfig In
   , epochSlots    :: Int
   , sprocket      :: Sprocket
   , testnetMagic  :: Int
@@ -41,7 +41,6 @@ withSubmitApi :: SubmitApiConf -> [String] -> (String -> Integration ()) -> Inte
 withSubmitApi
     SubmitApiConf
       { tempAbsPath
-      , configPath
       , epochSlots
       , sprocket
       , testnetMagic
@@ -58,8 +57,13 @@ withSubmitApi
 
   [submitApiPort] <- H.evalIO $ maybe (IO.allocateRandomPorts 1) (pure . (:[])) maybePort
 
+  -- The submit API's configuration is a tracing configuration, not a node
+  -- configuration. An empty @TraceOptions@ leaves the submit API's defaults.
+  configFile <- H.noteTempFile tempAbsPath "submit-api-config.json"
+  H.lbsWriteFile configFile . Aeson.encode $ Aeson.object ["TraceOptions" .= Aeson.object []]
+
   cp <- procSubmitApi $
-    [ "--config", unFile configPath
+    [ "--config", configFile
     , "--cardano-mode"
     , "--epoch-slots", show epochSlots
     , "--socket-path", IO.sprocketArgumentName sprocket

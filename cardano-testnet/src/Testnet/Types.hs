@@ -53,10 +53,6 @@ import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 
 import qualified Cardano.Chain.Genesis as G
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Node.Configuration.POM
-import qualified Cardano.Node.Protocol.Byron as Byron
-import           Cardano.Node.Types
 import qualified Cardano.Rpc.Client as Rpc
 import           Cardano.Rpc.Server.Config (nodeSocketPathToRpcSocketPath)
 
@@ -71,14 +67,12 @@ import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
-import qualified Data.Yaml as Yaml
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import           Lens.Micro (ix, (^?))
 import           Network.Socket (HostAddress, PortNumber, hostAddressToTuple, tupleToHostAddress)
-import           System.FilePath
 import qualified System.Process as IO
 
 import           Testnet.Start.Types
@@ -268,24 +262,12 @@ getStartTime
   :: H.MonadTest m
   => MonadIO m
   => HasCallStack
-  => FilePath
-  -> TestnetRuntime
+  => TestnetRuntime
   -> m SystemStart
-getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
-  byronGenesisFile <-
-    decodeNodeConfiguration configurationFile >>= \case
-      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ _ ->
-        pure $ unGenesisFile npcByronGenesisFile
-  let byronGenesisFilePath = tempRootPath </> byronGenesisFile
-  SystemStart . G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
-  where
-    decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
-    decodeNodeConfiguration (File file) = do
-      partialNodeCfg <- modifyError show $ ExceptT $ Yaml.decodeFileEither file
-      fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
-    decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
-    decodeGenesisFile fp = withExceptT (docToString . prettyError) $
-      Byron.readGenesis (GenesisFile fp) Nothing RequiresNoMagic
+getStartTime TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
+  nodeConfig <- modifyError show $ readNodeConfig configurationFile
+  byronGenesis <- modifyError (docToString . prettyError) $ readByronGenesisConfig nodeConfig
+  pure . SystemStart . G.gdStartTime $ G.configGenesisData byronGenesis
 
 readNodeLoggingFormat :: String -> Either String NodeLoggingFormat
 readNodeLoggingFormat = \case

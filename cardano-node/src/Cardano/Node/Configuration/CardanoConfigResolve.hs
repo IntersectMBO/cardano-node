@@ -31,11 +31,13 @@ module Cardano.Node.Configuration.CardanoConfigResolve
     ResolvedNodeConfiguration (..)
   , CrossCheck (..)
   , buildNodeConfiguration
+  , buildFromCardanoConfigWith
   , NodeConfigurationError (..)
 
     -- * Dialects
   , ConfigurationDialect (..)
   , classifyConfigurationFile
+  , tracingConfigSource
 
     -- * Command-line layers
   , nodeCliPartialConfiguration
@@ -43,13 +45,13 @@ module Cardano.Node.Configuration.CardanoConfigResolve
   , cardanoConfigCliLayer
   ) where
 
-import           Cardano.Logging.Types (TraceConfig)
+import           Cardano.Logging.ConfigurationParser (ConfigSource (..))
 import qualified Cardano.Configuration as Cfg
 import qualified Cardano.Configuration.CliArgs as CliArgs
-import           Cardano.Node.Configuration.CardanoConfigAdapter
-                   (cardanoConfigToNodeConfiguration)
-import           Cardano.Node.Configuration.CardanoConfigCompare
-                   (compareConfigurations, deprecatedFlagWarnings)
+import           Cardano.Logging.Types (TraceConfig)
+import           Cardano.Node.Configuration.CardanoConfigAdapter (cardanoConfigToNodeConfiguration)
+import           Cardano.Node.Configuration.CardanoConfigCompare (compareConfigurations,
+                   deprecatedFlagWarnings)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
                    makeNodeConfiguration, parseNodeConfigurationFP)
@@ -144,6 +146,22 @@ classifyConfigurationFile fp =
     Right (Object o) | KeyMap.member "Configuration" o -> pure CardanoConfigDialect
     _ -> pure LegacyDialect
 
+-- | How to hand a node configuration file's tracing settings to
+-- trace-dispatcher, for a tool with a file and no node to resolve it.
+--
+-- Reading a file, the library expects the tracing settings at its root. An
+-- envelope puts them at @Configuration.HermodTracing@, so hand over that object
+-- instead, which is what 'FromJSONObject' is for. Anything else goes as the
+-- file, as before.
+tracingConfigSource :: FilePath -> IO ConfigSource
+tracingConfigSource fp =
+  Yaml.decodeFileEither fp >>= \case
+    Right (Object top)
+      | Just (Object cfg) <- KeyMap.lookup "Configuration" top
+      , Just (Object tracing) <- KeyMap.lookup "HermodTracing" cfg ->
+          pure (FromJSONObject tracing)
+    _ -> pure (FromFile fp)
+
 -- | Resolve a legacy configuration with the node's own POM parser — the result
 -- the node runs on — and cross-check it against @cardano-config@'s.
 buildFromLegacy ::
@@ -167,10 +185,16 @@ buildFromLegacy crossCheck partialConf configFp = do
 -- the node's 'NodeConfiguration'. Unlike the cross-check on the legacy path,
 -- every failure here is fatal: there is no second parser to fall back to.
 buildFromCardanoConfig :: FilePath -> IO ResolvedNodeConfiguration
-buildFromCardanoConfig configFp = do
-  cliArgs <-
-    cardanoConfigCliArgs configFp
-      >>= either (Exception.throwIO . NodeConfigurationError) pure
+buildFromCardanoConfig configFp =
+  cardanoConfigCliArgs configFp
+    >>= either (Exception.throwIO . NodeConfigurationError) (buildFromCardanoConfigWith configFp)
+
+-- | 'buildFromCardanoConfig' with a given command-line layer instead of this
+-- process's own command line: for a caller that is not the node, whose command
+-- line is not the node's. With @'Cfg.defaultCliArgs' configFp@ every setting
+-- comes from the file.
+buildFromCardanoConfigWith :: FilePath -> Cfg.CliArgs -> IO ResolvedNodeConfiguration
+buildFromCardanoConfigWith configFp cliArgs = do
   (fileCfg, fileWarnings) <- Cfg.parseConfigurationFiles configFp
   (cfgNc, checkWarnings) <-
     either (Exception.throwIO . NodeConfigurationError . displayException) pure $

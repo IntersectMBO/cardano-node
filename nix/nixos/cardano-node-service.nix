@@ -49,38 +49,68 @@ let
     then "/etc/cardano-node/topology-${toString i}.json"
     else selectTopology i;
 
+  # POM reads these only as TargetNumberOf*, cardano-config only as
+  # DeadlineTargetNumberOf*, so the name depends on the dialect. mkEnvelope
+  # would rename the legacy spelling, but emitting the one the dialect uses
+  # keeps the published config canonical and keeps a key the operator cannot
+  # restate out of the rename warning below.
+  deadlinePrefix = optionalString (cfg.configFormat == "enveloped") "Deadline";
+
+  baseConfig =
+    recursiveUpdate
+      (cfg.nodeConfig
+        // (mapAttrs' (era: epoch:
+          nameValuePair "Test${era}HardForkAtEpoch" epoch
+        ) cfg.forceHardForks)
+        // {
+          MaxConcurrencyBulkSync = 2;
+        } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
+          "${deadlinePrefix}TargetNumberOfRootPeers" = cfg.targetNumberOfRootPeers;
+        } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
+          "${deadlinePrefix}TargetNumberOfKnownPeers" = cfg.targetNumberOfKnownPeers;
+        } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
+          "${deadlinePrefix}TargetNumberOfEstablishedPeers" = cfg.targetNumberOfEstablishedPeers;
+        } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
+          "${deadlinePrefix}TargetNumberOfActivePeers" = cfg.targetNumberOfActivePeers;
+        }
+      ) cfg.extraNodeConfig;
+
+  # The flat spelling is deliberate on both dialects. POM reads `Backend` as a
+  # string with the LSM paths as flat siblings, so the nested `Backend.LSM` form
+  # fails to parse on a legacy config; and mkEnvelope folds this one into the
+  # nested form anyway, which it has to do regardless for a caller that supplies
+  # the same keys through extraNodeConfig.
+  #
+  # So writing the nested form here is gated on no consumer still setting
+  # `configFormat = "legacy"`, and at that point it is a single flip rather than
+  # a branch on the dialect. Branching earlier buys nothing and makes the shape
+  # a caller deep-merges against depend on the dialect.
+  baseInstanceConfig =
+    i:
+    recursiveUpdate
+    baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
+      LedgerDB =
+        {
+          Backend = "V2LSM";
+          LSMDatabasePath = cfg.lsmDatabasePath i;
+        }
+        // optionalAttrs (cfg.lsmExportPath i != null) {
+          LSMExportPath = cfg.lsmExportPath i;
+        };
+    });
+
+  mkInstanceConfig = i:
+    recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
+
   mkScript = cfg:
-    let baseConfig =
-          recursiveUpdate
-            (cfg.nodeConfig
-              // (mapAttrs' (era: epoch:
-                nameValuePair "Test${era}HardForkAtEpoch" epoch
-              ) cfg.forceHardForks)
-              // {
-                MaxConcurrencyBulkSync = 2;
-              } // optionalAttrs (cfg.targetNumberOfRootPeers != null) {
-                TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-              } // optionalAttrs (cfg.targetNumberOfKnownPeers != null) {
-                TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-              } // optionalAttrs (cfg.targetNumberOfEstablishedPeers != null) {
-                TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-              } // optionalAttrs (cfg.targetNumberOfActivePeers != null) {
-                TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              }
-            ) cfg.extraNodeConfig;
-        baseInstanceConfig =
-          i:
-          recursiveUpdate
-          baseConfig (optionalAttrs (cfg.withUtxoHdLsmt i) {
-            LedgerDB = {
-              Backend = "V2LSM";
-              LSMDatabasePath = cfg.lsmDatabasePath i;
-            };
-          });
-    in i: let
-    instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
+    i: let
+    instanceConfig = mkInstanceConfig i;
+    publishedConfig =
+      if cfg.configFormat == "enveloped"
+      then cfg.cardanoNodePackages.cardanoLib.mkEnvelope instanceConfig
+      else instanceConfig;
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
-      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
+      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON publishedConfig);
     consensusParams = {
       RealPBFT = [
         "${optionalString (cfg.signingKey != null)
@@ -109,18 +139,37 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
-        "${concatMapStringsSep " " (k: "--shelley-bls-key ${k}") cfg.blsKeys}"
+        "${optionalString (cfg.blsKey != null)
+          "--shelley-bls-key ${cfg.blsKey}"}"
         "${optionalString (cfg.shelleyKesAgentSocket != null)
           "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
     };
+
     instanceDbPath = cfg.databasePath i;
-    cmd = filter (x: x != "") [
+    instanceImmutableDbPath = cfg.immutableDatabasePath i;
+    instanceVolatileDbPath = cfg.volatileDatabasePath i;
+
+    # The node accepts either --database-path or both of the split paths, never
+    # a mix: parseNodeDatabasePaths is `parseDbPath <|> parseMultipleDbPaths`,
+    # so emitting --database-path alongside them would win and the split paths
+    # would be silently ignored.
+    splitDbPaths = instanceImmutableDbPath != null && instanceVolatileDbPath != null;
+
+    dbPathArgs =
+      if splitDbPaths
+      then [
+        "--immutable-database-path ${instanceImmutableDbPath}"
+        "--volatile-database-path ${instanceVolatileDbPath}"
+      ]
+      else [ "--database-path ${instanceDbPath}" ];
+
+    cmd = filter (x: x != "") ([
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
-      "--database-path ${instanceDbPath}"
+    ] ++ dbPathArgs ++ [
       "--topology ${topology i}"
-    ] ++ optionals (!cfg.systemdSocketActivation) ([
+    ]) ++ optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${if (cfg.shareIpv4port || cfg.shareIpv6port) then toString cfg.port else toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
@@ -330,14 +379,14 @@ in {
         '';
       };
 
-      blsKeys = mkOption {
-        type = listOf str;
-        default = [];
+      blsKey = mkOption {
+        type = nullOr str;
+        default = null;
         description = ''
-          Leios BLS signing key files. Optional and repeatable; used alongside
-          the KES and VRF keys on a producer that participates in Leios. During
-          a BLS key rotation both the active and the incoming key may be
-          supplied and node uses whichever is active per the on-chain schedule.
+          The Leios BLS signing key file, used alongside the KES and VRF keys
+          on a producer that participates in Leios. The file is either a single
+          text envelope or a JSON array of them, so a rotation pair or a bundle
+          of pool keys goes in the one file; the option is not repeatable.
         '';
       };
 
@@ -407,6 +456,28 @@ in {
         description = ''The node database path, for each instance.'';
       };
 
+      immutableDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          The node immutable database path, for each instance.
+          Set this together with `volatileDatabasePath` to place the two partitions on
+          separate volumes, in which case `databasePath` is not passed to the node.
+        '';
+      };
+
+      volatileDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else _ : x;
+        description = ''
+          The node volatile database path, for each instance.
+          Set this together with `immutableDatabasePath` to place the two partitions on
+          separate volumes, in which case `databasePath` is not passed to the node.
+        '';
+      };
+
       lsmDatabasePath = mkOption {
         type = funcToOr nullOrStr;
         default = null;
@@ -414,6 +485,26 @@ in {
         description = ''
           A node UTxO-HD on-disk LSM-trees path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
+      };
+
+      lsmExportPath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
+        description = ''
+          A node UTxO-HD on-disk LSM-trees standalone snapshot export path, for
+          each instance.  The LSM backend keeps the UTxO set on disk and
+          snapshots normally without this, so a node restarts without replaying;
+          what it cannot do is export a standalone copy on every snapshot, which
+          is what Mithril signing consumes.
+
+          cardano-config warns when the resolved snapshot policy equals the
+          Mithril one while the backend is LSM with no export path.  It compares
+          the values, not the `Mithril` name, so a policy derived from the
+          security parameter can match without naming it.
+
+          Only emitted when set, and only with `withUtxoHdLsmt`.
         '';
       };
 
@@ -751,6 +842,29 @@ in {
         description = ''The actual configuration file.'';
       };
 
+      configFormat = mkOption {
+        type = enum [
+          "legacy"
+          "enveloped"
+        ];
+        default = "legacy";
+        description = ''
+          Which dialect the generated node config file is written in, named as
+          cardano-config names them. Ignored when nodeConfigFile is set, since
+          that file is used as given.
+
+          On "enveloped" the config is wrapped with cardanoLib.mkEnvelope at the
+          end, so nodeConfig, extraNodeConfig and extraNodeInstanceConfig stay
+          flat and keep the key names they use today. mkEnvelope applies the
+          cardano-config renames and groups each key under the section that owns
+          it. A key it does not recognise is kept, but outside any section,
+          where the node will not resolve it.
+
+          The default stays "legacy" while consumers opt in per host. Published
+          configs and release artifacts are already enveloped.
+        '';
+      };
+
       forceHardForks = mkOption {
         type = attrsOf int;
         default = {};
@@ -977,6 +1091,35 @@ in {
       };
     }
     {
+      # Only keys cardano-config resolves survive enveloping in a section the
+      # node reads. A stale name still applies, mkEnvelope renames it, and a
+      # removed key is dropped on purpose, so neither is a fault. Anything else
+      # is kept outside every section and ignored, which is. Warnings rather
+      # than assertions for now: a key may be legitimately absent from the
+      # cardano-config schema, and blocking a deploy on that is worse than
+      # reporting it.
+      warnings = let
+        inherit (cfg.cardanoNodePackages.cardanoLib)
+          removedKeys renamedKeys unrecognisedKeys;
+        flagged = unique (concatMap (i: unrecognisedKeys removedKeys (mkInstanceConfig i))
+          (genList trivial.id cfg.instances));
+        stale = filter (k: renamedKeys ? ${k}) flagged;
+        unknown = filter (k: !(renamedKeys ? ${k})) flagged;
+      in optionals (cfg.configFormat == "enveloped") (
+        optional (stale != []) ''
+          services.cardano-node: these config keys have been renamed by cardano-config:
+          ${concatMapStringsSep "\n" (k: "  ${k} -> ${renamedKeys.${k}}") stale}
+          They still apply, mkEnvelope renames them, but the new names are what
+          the schema and the published configs use.
+        ''
+        ++ optional (unknown != []) ''
+          services.cardano-node: cardano-config does not resolve these config keys:
+          ${concatMapStringsSep "\n" (k: "  ${k}") unknown}
+          Enveloping keeps them outside every section, where the node ignores
+          them. Remove them or check the name against the cardano-config schema.
+        ''
+      );
+
       assertions = [
         {
           assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i)) (genList trivial.id cfg.instances);
@@ -1010,6 +1153,12 @@ in {
         {
           assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
           message   = "When configuring multiple LSM enabled nodes on one instance, lsmDatabasePath must be unique.";
+        }
+        {
+          # The node takes either --database-path or both split paths, so half a
+          # pair would silently fall back to databasePath.
+          assertion = (cfg.immutableDatabasePath i == null) == (cfg.volatileDatabasePath i == null);
+          message   = "immutableDatabasePath and volatileDatabasePath must be set together, or neither set.";
         }
         {
           assertion = count (o: o != null) (with cfg; [

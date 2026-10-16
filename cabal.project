@@ -14,9 +14,14 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-10-09T14:30:01Z
+  , cardano-haskell-packages 2026-10-15T17:22:01Z
 
 constraints:
+  -- The CHaP index bump to 2026-10-13 was for trace-dispatcher 2.13.2, which
+  -- does not depend on cardano-base.  0.1.7.0 only came along with the cut, and
+  -- adds quickcheck-classes and its three transitive deps to the plan.  Hold it
+  -- until a bump is wanted for its own sake.
+  , any.cardano-base == 0.1.6.0
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8 || >= 1.7
   -- haskell.nix tries to use 0.7.1.5 for some reason
@@ -149,3 +154,29 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Temporary, until the next cardano-config, cardano-api and cardano-cli
+-- releases: the changes that read and write node configurations through
+-- cardano-config.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config
+  tag: 07f99bace5da2f353fbd79fa324236001de62d8f
+  --sha256: sha256-z6hz9zXJeFTALHx5ZaaNKMesZZS2fGMdXinxjm750zU=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: d967ab7c901d4733b29e80eb754682c056570b8c
+  --sha256: sha256-kRBsnJTDRE99bTw0MxElMF2tzg3H79Xb6U5qppp0qzA=
+  subdir:
+    cardano-api
+    cardano-rpc
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: ea227cbdfdd2161804af9262e4c5ccbb9a1a41cf
+  --sha256: sha256-1qUlyOw6T+lJPgs/5YYjv5at7zakkkpl6mV0QWnuOhI=
+  subdir:
+    cardano-cli

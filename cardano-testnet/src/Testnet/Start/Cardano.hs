@@ -40,6 +40,9 @@ import           Cardano.Api
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
+import           Cardano.Configuration.Edit (configurationDocumentFromValue,
+                   configurationDocumentValue, readConfigurationDocument,
+                   writeConfigurationDocument)
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.TopologyP2P ()
@@ -47,7 +50,7 @@ import           Cardano.Node.Testnet.Paths (defaultConfigFile, defaultNodeEnvFi
                    defaultNodeTopologyFile, defaultNodesDataDir, defaultPortFile,
                    defaultUtxoAddrPath)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty, readMaybe)
-import           Cardano.Tracer.Configuration (LogFormat(..))
+import           Cardano.Tracer.Configuration (LogFormat (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude hiding (lines)
@@ -59,8 +62,8 @@ import           Control.Monad.Catch
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.Monad.Trans.Resource (MonadResource, getInternalState)
 import           Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Encode.Pretty as A
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class ()
 import           Data.Either
@@ -80,10 +83,11 @@ import qualified Data.Yaml as Yaml
 import           GHC.Exts (fromList)
 import           GHC.Stack
 import qualified System.Directory as IO
-import           System.FilePath ((</>), dropExtension)
+import           System.FilePath (dropExtension, (</>))
 import qualified System.Process as Process
 
-import           Testnet.CardanoTracer (CardanoTracerConf(..), CardanoTracerRuntime(..), startCardanoTracer)
+import           Testnet.CardanoTracer (CardanoTracerConf (..), CardanoTracerRuntime (..),
+                   startCardanoTracer)
 import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallWatchdog, stderrTracer)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
@@ -100,8 +104,8 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Stock (sprocketSystemName)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (sprocketArgumentName)
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (sprocketArgumentName)
 import           Hedgehog.Internal.Property (failException)
 
 import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString, timeout)
@@ -130,8 +134,7 @@ createTestnetEnv
     , creationNodes=TestnetNodesWithOptions{optSpoNodes, optRelayNodes}
     }
   Conf
-    { genesisHashesPolicy
-    , tempAbsPath=TmpAbsolutePath tmpAbsPath
+    { tempAbsPath=TmpAbsolutePath tmpAbsPath
     } = do
 
   -- Fresh-run rule: delete any manifest a previous run left in this directory,
@@ -147,13 +150,8 @@ createTestnetEnv
     creationOptions
     (TmpAbsolutePath tmpAbsPath)
 
-  let configurationFile = tmpAbsPath </> defaultConfigFile
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config <- case genesisHashesPolicy of
-    WithHashes -> createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-    WithoutHashes -> pure $ createConfigJsonNoHash sbe
-
-  liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
+  -- The node configuration, with the hashes of the genesis files just created
+  writeConfiguration (tmpAbsPath </> defaultConfigFile) sbe
 
   let allNodes = NEL.toList optSpoNodes ++ optRelayNodes
       numberedNodes = zip [1..] allNodes
@@ -294,10 +292,9 @@ cardanoTestnet
   -- should connect to. The tracer's lifetime is tied to the surrounding
   -- 'MonadResource' scope, and it is additionally interrupted on SIGINT
   -- alongside the nodes (see 'interruptNodesOnSigINT' below).
-  (nodeConfigFile', mTracer) <- case cardanoEnableTracer of
-    TraceDisabled -> pure (nodeConfigFile, Nothing)
+  mTracer <- case cardanoEnableTracer of
+    TraceDisabled -> pure Nothing
     TraceEnabled -> do
-      cfgFile' <- liftIOAnnotated $ enableTraceForwarding nodeConfigFile
       tracerRuntime <- startCardanoTracer $ CardanoTracerConf
         { tempAbsPath = tmpAbsPath
         , testnetMagic = testnetMagic
@@ -306,7 +303,7 @@ cardanoTestnet
       Ping.waitForSprocket 120 0.2 (tracerSprocket tracerRuntime) >>= \case
         Left err -> throwString $ "Sprocket of cardano-tracer did not come up after 120s: " <> show err
         Right _ -> pure ()
-      pure (cfgFile', Just tracerRuntime)
+      pure $ Just tracerRuntime
 
 
 
@@ -371,6 +368,17 @@ cardanoTestnet
         liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
         pure shelleyGenesis'
       else pure initialShelleyGenesis
+
+  -- Bring the genesis hashes in the node configuration in line with the genesis
+  -- files: the start times may just have been updated, and the files may have
+  -- been changed since the environment was created.
+  refreshConfigurationHashes nodeConfigFile
+
+  -- With a cardano-tracer, the nodes run on a copy of the configuration that
+  -- forwards their traces to it.
+  nodeConfigFile' <- case mTracer of
+    Nothing -> pure nodeConfigFile
+    Just _ -> liftIOAnnotated $ enableTraceForwarding nodeConfigFile
 
   let portNumbersMap = Map.fromList portNumbers
 
@@ -597,14 +605,33 @@ cardanoTestnet
 -- modified config file.
 enableTraceForwarding :: FilePath -> IO FilePath
 enableTraceForwarding configFile = do
-  Yaml.decodeFileEither configFile >>= \case
-    Left err -> throwString $ "enableTraceForwarding: could not decode node configuration file " <> configFile <> ": " <> show err
-    Right (config :: KeyMap.KeyMap Yaml.Value) -> do
-      let config' = KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding config
-      let configFile' = dropExtension configFile <> "-tracer.yaml"
-      Yaml.encodeFile configFile' config'
-      pure configFile'
+  (document, _warnings) <- readConfigurationDocument configFile
+  (document', _warnings') <-
+    configurationDocumentFromValue
+      . onObject (onKey "Configuration" . onKey "HermodTracing" $
+          KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding)
+      $ configurationDocumentValue document
+  let configFile' = dropExtension configFile <> "-tracer.yaml"
+  writeConfigurationDocument configFile' document'
+  pure configFile'
   where
+    -- The tracing settings are the @HermodTracing@ object of the @Configuration@
+    -- section. A missing object (or one given as a file) is replaced.
+    onObject :: (KeyMap.KeyMap Aeson.Value -> KeyMap.KeyMap Aeson.Value) -> Aeson.Value -> Aeson.Value
+    onObject f = \case
+      Object o -> Object $ f o
+      other -> other
+
+    onKey
+      :: KeyMap.Key
+      -> (KeyMap.KeyMap Aeson.Value -> KeyMap.KeyMap Aeson.Value)
+      -> KeyMap.KeyMap Aeson.Value
+      -> KeyMap.KeyMap Aeson.Value
+    onKey key f o =
+      KeyMap.insert key (Object . f $ case KeyMap.lookup key o of
+        Just (Object inner) -> inner
+        _ -> mempty) o
+
     mergeTraceOptions :: Yaml.Value -> Yaml.Value -> Yaml.Value
     mergeTraceOptions (Object forwarding) (Object existing) =
       Object $ KeyMap.unionWith mergeNamespace forwarding existing
