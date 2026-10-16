@@ -136,7 +136,7 @@ derive-from-cache-jq() {
     cp    "$cache_entry"/shelley-genesis.json  "$outdir"/genesis.shelley.json
     cp    "$cache_entry"/alonzo-genesis.json   "$outdir"/genesis.alonzo.json
     cp    "$cache_entry"/conway-genesis.json   "$outdir"/genesis.conway.json
-    cp    "$cache_entry"/dijkstra-genesis.json "$outdir"/genesis.dijkstra.json
+    # No  "$cache_entry"/dijkstra-genesis.json, see below!
     chmod u+w                                  "$outdir"/genesis.*.json
 
     progress "genesis" "finalizing retrieved cache entry in:  $outdir"
@@ -212,26 +212,21 @@ derive-from-cache-jq() {
       "$outdir"/genesis.alonzo.json |
       sponge "$outdir"/genesis.alonzo.json
 
-    # Dijkstra: fields the cardano-cli in use does not know, then the profile's
+    # Dijkstra: the profile's block over the zero stub
     #
-    # create-testnet-data takes --spec-shelley, --spec-alonzo and --spec-conway,
-    # but no --spec-dijkstra, so genesis.dijkstra.json holds only what that
-    # cardano-cli emits -- four fields, for one that predates Leios. Fill the
-    # rest in from the zero spec so a consumer built against a later ledger
-    # finds every field it expects. The cli's own values win wherever it
-    # produced one, so this adds and never overrides.
-    #
-    # Then lay `.genesis.dijkstra` over the result, which is where a profile's
-    # pparams overlays land (the `leios-6912k` overlay is the one that matters here).
-    # Without --spec-dijkstra the cli cannot be told any of this, so the profile
-    # reaches the genesis only by being patched in after the fact; and unlike
-    # the zero spec, the profile does override, since asking for a value is the
-    # whole point of setting it.
-    jq --argjson zero "$(genesis zero-spec-dijkstra)" \
+    # create-testnet-data has no --spec-dijkstra, so its dijkstra-genesis.json is
+    # cardano-api's defaults alone, whose plutusV4CostModel carries more
+    # parameters than the ledger's decoder accepts -- the node refuses to parse
+    # it. That file stays in the cache entry, untouched and unread; the one the
+    # run uses is built here, as the ripper builds protocol.dijkstra.json. Zero
+    # stub underneath for the fields a later ledger expects, profile on top
+    # because setting a value is asking for it.
+    # Activation check in service/nodes.nix (TestDijkstraHardForkAtEpoch).
+    jq --null-input \
+       --argjson zero "$(genesis zero-spec-dijkstra)" \
        --slurpfile prof "$profile_json" \
-       '$zero * . * ($prof[0].genesis.dijkstra // {})' \
-      "$outdir"/genesis.dijkstra.json |
-      sponge "$outdir"/genesis.dijkstra.json
+       '$zero * ($prof[0].genesis.dijkstra // {})' \
+      > "$outdir"/genesis.dijkstra.json
 
     # Conway: plutusV3CostModel
     jq '$prof[0].genesis.conway as $coay
