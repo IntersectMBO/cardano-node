@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-10-13T17:54:54Z
+  , cardano-haskell-packages 2026-10-15T17:22:01Z
 
 constraints:
   -- The CHaP index bump to 2026-10-13 was for trace-dispatcher 2.13.2, which
