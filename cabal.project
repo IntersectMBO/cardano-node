@@ -78,6 +78,7 @@ allow-newer:
   , cardano-keys:cardano-ledger-core
   , cardano-keys:cardano-ledger-shelley
   , cardano-keys:cardano-protocol
+  , cardano-config:cardano-ledger-alonzo
   , cardano-config:cardano-ledger-conway
   , cardano-config:cardano-ledger-core
   , cardano-config:cardano-ledger-dijkstra
