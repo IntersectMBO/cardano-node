@@ -227,6 +227,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
                         Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
                         Cardano.Testnet.Test.Dijkstra.Common
+                        Cardano.Testnet.Test.Dijkstra.DirectDeposits
                         Cardano.Testnet.Test.Dijkstra.Governance
                         Cardano.Testnet.Test.Dijkstra.NestedTransaction
                         Cardano.Testnet.Test.Dijkstra.Scripts

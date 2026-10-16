@@ -158,14 +158,15 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- TEMPORARY: cardano-cli with the Dijkstra top-level guard data decoder fix
--- (IntersectMBO/cardano-cli#1473). Remove these pins once compatible releases
--- of the CLI, ledger, API, and consensus are available.
+-- TEMPORARY: cardano-cli from srp/direct-deposits-ledger-6189, combining direct
+-- ADA deposits in Dijkstra builders (IntersectMBO/cardano-cli#1469) with the
+-- ledger compatibility fixes from #1473. Remove these pins once compatible
+-- CLI, ledger, API, and consensus releases are available.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 64aca1c00a65fd501e2229547045587cf686a8ce
-  --sha256: sha256-eyckGs9i6mRB+noz3yBEovwC0gAVI6hyOeV1NeiawDU=
+  tag: 5900d772908c62bd40f16cb67ed7e1a9a01fd998
+  --sha256: sha256-RfTI5dpzIilkRpchuXg2OT+8qaYeWzmQVe34brcBIXU=
   subdir:
     cardano-cli
 

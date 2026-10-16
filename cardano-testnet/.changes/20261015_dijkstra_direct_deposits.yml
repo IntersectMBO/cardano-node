@@ -1,0 +1,4 @@
+pr: 6709
+kind:
+  - test
+description: "Add live Dijkstra direct ADA deposit properties covering all three top-level builders, signed nested transactions, multiple recipients, repeated credits, V4 withdrawals with direct and reference witnesses, and rejection of unregistered or wrong-network recipients; pin cardano-cli to a compatibility branch combining PR #1469 with the ledger fixes from PR #1473."
