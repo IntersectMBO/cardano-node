@@ -1,0 +1,3 @@
+kind:
+  - maintenance
+description: Adapt epoch-state logging and Dijkstra guard tests to the ledger revision pinned for cardano-cli PR 1473, preserving the currentStakeDistribution JSON field through the new stake pool distribution getter.

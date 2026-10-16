@@ -108,7 +108,7 @@ runGuardCase ctx label checkMissing guard = do
   let expectedDatum = if isPlutus guard
         then L.SJust $ toAlonzoData $ unsafeHashableScriptData $ ScriptDataNumber 42
         else L.SNothing
-  subTx ^. L.bodyTxL . L.requiredTopLevelGuardsL H.=== Map.singleton (credential guard) expectedDatum
+  subTx ^. L.bodyTxL . L.requiredTopLevelGuardsTxBodyL H.=== Map.singleton (credential guard) expectedDatum
   subTx ^. L.bodyTxL . L.guardsTxBodyL H.=== mempty
   subTx ^. L.witsTxL . L.scriptTxWitsL H.=== mempty
   subTx ^. L.witsTxL . L.rdmrsTxWitsL H.=== mempty

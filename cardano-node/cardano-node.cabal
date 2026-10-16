@@ -140,7 +140,7 @@ library
                       , cardano-ledger-dijkstra
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol ^>= 0.2
+                      , cardano-protocol ^>= 0.3
                       , cardano-slotting >= 0.2
                       , cardano-rpc ^>= 11.5
                       , cborg ^>= 0.2.4

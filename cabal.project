@@ -75,6 +75,16 @@ allow-newer:
   , plutus-scripts-bench:plutus-tx
   , plutus-scripts-bench:plutus-tx-plugin
 
+  -- Temporary ledger SRP versions exceed these released package bounds.
+  , cardano-config:cardano-ledger-alonzo
+  , cardano-config:cardano-ledger-conway
+  , cardano-config:cardano-ledger-core
+  , cardano-config:cardano-ledger-dijkstra
+  , cardano-config:cardano-ledger-shelley
+  , cardano-keys:cardano-ledger-core
+  , cardano-keys:cardano-ledger-shelley
+  , cardano-keys:cardano-protocol
+
 if impl(ghc >= 9.14)
   -- some-1.1 adds EqP/OrdP superclasses to GEq/GCompare, which plutus-core
   -- 1.71.0.0 is not written against:
@@ -148,13 +158,55 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- TEMPORARY: cardano-cli with the `dijkstra sub-transaction` commands
--- (IntersectMBO/cardano-cli#1453), needed by the Dijkstra integration properties.
--- Remove once #1453 is merged and released.
+-- TEMPORARY: cardano-cli with the Dijkstra top-level guard data decoder fix
+-- (IntersectMBO/cardano-cli#1473). Remove these pins once compatible releases
+-- of the CLI, ledger, API, and consensus are available.
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 55cff1ebdd619551c3a270e95fe18701d89a5bf7
-  --sha256: sha256-JT1HY+RvpVv5/AAYg3nisU6Klm1iE0tizyya4zJ7Zqg=
+  tag: 64aca1c00a65fd501e2229547045587cf686a8ce
+  --sha256: sha256-eyckGs9i6mRB+noz3yBEovwC0gAVI6hyOeV1NeiawDU=
   subdir:
     cardano-cli
+
+-- Temporary pin for the Plutus data decoder fix in https://github.com/IntersectMBO/cardano-ledger/pull/6189
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: a2041c4bd73995fb4ab3b90db03fdf8ff464e104
+  --sha256: 0syndgsgzhzg1wk3k4lf4anfvv9wvvzf437wk8c890mlk4g69vjn
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/crypto
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
+
+-- Temporary cardano-api compatibility branch: srp/cardano-ledger-6189
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 326a8f02df4ff1bb8a862aba23ed7e0cbe40a32c
+  --sha256: 0gn5ad80qp7i5bvyjrsqrm2hq6ifmvcjhnzf6yys30286y94km5l
+  subdir: cardano-api
+
+-- Temporary ouroboros-consensus compatibility branch: srp/cardano-ledger-6189
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 7ef5dc2474d42eeccc8244c9d2a5379ea2405df7
+  --sha256: 073rxsv3p5wr9n6kj4hbksa5mirmkpxasayv6h221v1frswp0mr7

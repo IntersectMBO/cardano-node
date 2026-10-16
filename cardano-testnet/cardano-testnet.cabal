@@ -55,7 +55,7 @@ library
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-dijkstra
-                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley >= 1.21
                       , cardano-node
                       , cardano-diffusion:ping ^>= 1.3
                       , cardano-prelude
