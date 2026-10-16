@@ -233,8 +233,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: c1d3fb83d1980425f763dfab5371692bc61c5949
-  --sha256: sha256-G1aKBUzfbK1juvlfD/uD5hKPQmL8ab2nTnYJMRAaAUg=
+  tag: 840e789b1cd112e161820a20d30d4546f30e6209
+  --sha256: sha256-/8uDGUII3fR7N8pDfKQmOvM09/A8lwh8WcUV/tMLEAU=
 
 -- cardano-api leios-prototype with cardano-api master (11.9.0.0) merged
 -- (ch1bo/leios-prototype-2026w42).
