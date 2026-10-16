@@ -84,23 +84,20 @@ main
 
       GenesisFile sgFile <- hoistMaybe (TxGenError "npcShelleyGenesisFile not specified") $
         getShelleyGenesisPath nc
-      shelleyGenesis :: ShelleyGenesis <-
+      genesis :: ShelleyGenesis <-
         readFileJson sgFile
       _ <- firstExceptT TxGenError $ hoistEither $
-        genesisValidate shelleyGenesis
+        genesisValidate genesis
 
       sigKey :: SigningKey PaymentKey <-
         hoistEither =<< handleIOExceptT (TxGenError . show) (readSigningKeyFile $ _nix_sigKey nixService)
 
-      pure (nixService, shelleyGenesis, sigKey, sgFile)
+      pure (nixService, takeDirectory sgFile, genesis, sigKey)
 
     case setup of
       Left err -> die (show err)
-      Right (nixService, shelleyGenesis, sigKey, sgFile) -> do
-        -- Same directory `Cardano.Node.Protocol.Cardano` mounts its HasFS at,
-        -- so extraConfig FILE injections resolve identically here.
-        let shelleyGenesisDir = takeDirectory sgFile
-        fundMsg <- checkFund nixService shelleyGenesisDir shelleyGenesis sigKey
+      Right (nixService, genesisDir, genesis, sigKey) -> do
+        fundMsg <- checkFund nixService genesisDir genesis sigKey
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ fundMsg
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
@@ -125,17 +122,22 @@ showBabbage = ("Babbage: " ++) . showFundCore
 showConway :: Either TxGenError (Maybe (AddressInEra ConwayEra, Api.Coin)) -> String
 showConway = ("Conway: " ++) . showFundCore
 
+showDijkstra :: Either TxGenError (Maybe (AddressInEra DijkstraEra, Api.Coin)) -> String
+showDijkstra = ("Dijkstra: " ++) . showFundCore
+
 checkFund ::
      NixServiceOptions
   -> FilePath
   -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> IO String
-checkFund nixService shelleyGenesisDir shelleyGenesis signingKey
+checkFund nixService genesisDir shelleyGenesis signingKey
   | AnyCardanoEra BabbageEra <- _nix_era nixService
-  = showBabbage <$> checkFundCore shelleyGenesisDir shelleyGenesis signingKey
+  = showBabbage <$> checkFundCore genesisDir shelleyGenesis signingKey
   | AnyCardanoEra ConwayEra <- _nix_era nixService
-  = showConway <$> checkFundCore shelleyGenesisDir shelleyGenesis signingKey
+  = showConway <$> checkFundCore genesisDir shelleyGenesis signingKey
+  | AnyCardanoEra DijkstraEra <- _nix_era nixService
+  = showDijkstra <$> checkFundCore genesisDir shelleyGenesis signingKey
   | otherwise
   = pure "ApiTest.checkFund: unrecognized era"
 
@@ -145,7 +147,8 @@ checkFundCore ::
   -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> IO (Either TxGenError (Maybe (AddressInEra era, Api.Coin)))
-checkFundCore shelleyGenesisDir sg = genesisInitialFundForKey shelleyGenesisDir sg networkId
+checkFundCore genesisDir sg key =
+  genesisWithResolvedInitialFunds genesisDir sg $ \resolved -> genesisInitialFundForKey networkId resolved key
   where
     networkId = fromNetworkMagic $ NetworkMagic $ sgNetworkMagic sg
 

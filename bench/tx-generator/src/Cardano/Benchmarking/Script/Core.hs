@@ -305,13 +305,13 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     Right ledgerParameters ->
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
-          (shelleyGenesisDir, shelleyGenesis) <- getEnvShelleyGenesis
-          destKey     <- getEnvKeys destKeyName
+          genesis  <- getEnvGenesis
+          genesisDir <- getEnvShelleyGenesisDir
+          destKey  <- getEnvKeys destKeyName
           destWallet  <- getEnvWallets wallet
           genesisKey  <- getEnvKeys genesisKeyName
-          eitherTxFund <- liftIO $
-            Genesis.genesisSecureInitialFund
-              shelleyGenesisDir shelleyGenesis networkId genesisKey destKey txParams
+          eitherTxFund <- liftIO $ Genesis.genesisWithResolvedInitialFunds genesisDir genesis $ \resolved ->
+            Genesis.genesisSecureInitialFund networkId resolved genesisKey destKey txParams
           (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither eitherTxFund
           let
             gen = do

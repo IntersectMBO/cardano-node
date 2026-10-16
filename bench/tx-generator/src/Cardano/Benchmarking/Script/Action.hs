@@ -20,6 +20,7 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Types (TxGenError)
+import qualified Cardano.TxGenerator.Types as Types (TxGenError (TxGenError))
 
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra
@@ -66,9 +67,11 @@ startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
   setEnvProtocol protocol
-  case getShelleyGenesisDir nodeConfig of
-    Nothing  -> error "startProtocol: unreachable, protocol is already Cardano"
-    Just dir -> setEnvShelleyGenesis dir (getShelleyGenesis protocol)
+  shelleyGenesisDir <- liftToAction $ pure $ case getShelleyGenesisDir nodeConfig of
+    Nothing  -> Left $ Types.TxGenError "startProtocol: no Shelley genesis file in node config"
+    Just dir -> Right dir
+  setEnvShelleyGenesisDir shelleyGenesisDir
+  setEnvGenesis $ getShelleyGenesis protocol
   iomgr <- askIOManager
 
   networkId <- liftIO $ protocolToNetworkId protocol
