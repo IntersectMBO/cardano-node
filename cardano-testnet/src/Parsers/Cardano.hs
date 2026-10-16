@@ -23,6 +23,7 @@ import           Data.IP (IP)
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Maybe
+import           Data.String (fromString)
 import           Data.Word (Word64)
 import           Network.Socket (PortNumber)
 import           Options.Applicative (CommandFields, Mod, Parser)
@@ -152,11 +153,28 @@ portReader = OA.eitherReader $ \token -> do
   pure $ fromIntegral port
 
 pEnableTracer :: Parser TraceSupport
-pEnableTracer = OA.flag TraceDisabled TraceEnabled
-  (   OA.long "enable-tracer"
-  <>  OA.help "[EXPERIMENTAL] Enable cardano-tracer support on all of testnet nodes. Looks for cardano-tracer via the environment variable CARDANO_TRACER, falling back to looking into PATH. This will start a Prometheus server at 127.0.0.1, on a port that will be reported at runtime."
-  <>  OA.showDefault
-  )
+pEnableTracer = OA.asum
+  [ OA.flag' ()
+      (   OA.long "enable-tracer"
+      <>  OA.help "[EXPERIMENTAL] Enable cardano-tracer support on all of testnet nodes. Looks for cardano-tracer via the environment variable CARDANO_TRACER, falling back to looking into PATH. This will start a Prometheus server at 127.0.0.1 and a random port unless --prometheus-listen-address and --prometheus-listen-port are given."
+      )
+    *> (TraceEnabled
+        <$> OA.option ipReader
+              (   OA.long "prometheus-listen-address"
+              <>  OA.metavar "IP"
+              <>  OA.value (fromString "127.0.0.1")
+              <>  OA.showDefault
+              <>  OA.help "IP address the Prometheus server will listen on. Requires --enable-tracer."
+              )
+        <*> OA.optional
+          (OA.option portReader
+              (   OA.long "prometheus-listen-port"
+              <>  OA.metavar "PORT"
+              <>  OA.help "Base port for Prometheus. A random free port is used when omitted. Requires --enable-tracer."
+              )
+          ))
+  , pure TraceDisabled
+  ]
 
 pKesSource :: Parser PraosCredentialsSource
 pKesSource = OA.flag UseKesKeyFile UseKesSocket

@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -26,6 +26,7 @@ import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Resource (MonadResource)
 import           Data.Aeson (encodeFile)
 import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.IP (IP)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
@@ -46,18 +47,20 @@ import           RIO (runRIO, throwString, unless)
 -- | Configuration record for invoking 'startCardanoTracer'.
 data CardanoTracerConf = CardanoTracerConf
   { tempAbsPath :: FilePath  -- ^ Path to the testnet's temp directory.
+  , prometheusIP :: IP  -- ^ Attempt to bind prometheus on this IP.
+  , prometheusPort :: Maybe PortNumber  -- ^ Attempt to bind prometheus to the port, if given. Choose a random port otherwise.
   , testnetMagic :: Int  -- ^ The magic number for the testnet.
   , logFormat :: LogFormat  -- ^ The format for logs produced by cardano-tracer.
   } deriving (Eq, Show)
 
 mkConfig :: CardanoTracerConf -> Int -> FilePath ->  Sprocket -> TracerConfig
-mkConfig CardanoTracerConf { testnetMagic, logFormat } port logFile sprocket = TracerConfig
+mkConfig CardanoTracerConf { testnetMagic, logFormat, prometheusIP } port logFile sprocket = TracerConfig
   { networkMagic = fromIntegral testnetMagic
   , network = AcceptAt $ LocalPipe $ sprocketArgumentName sprocket
   , loRequestNum = Nothing
   , ekgRequestFreq = Nothing
   , hasEKG = Nothing
-  , hasPrometheus = Just $ Endpoint "127.0.0.1" port $ Just False
+  , hasPrometheus = Just $ Endpoint (show prometheusIP) port $ Just False
   , hasTimeseries = Nothing
   , tlsCertificate = Nothing
   , hasForwarding = Nothing
@@ -91,7 +94,7 @@ startCardanoTracer
   => MonadCatch m
   => CardanoTracerConf
   -> m CardanoTracerRuntime
-startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack $ do
+startCardanoTracer conf@CardanoTracerConf{tempAbsPath, prometheusPort = mPort} = GHC.withFrozenCallStack $ do
   let tmpPath = TmpAbsolutePath tempAbsPath
       logDir = makeLogDir tmpPath
       tempBaseAbsPath = makeTmpBaseAbsPath tmpPath
@@ -108,16 +111,21 @@ startCardanoTracer conf@CardanoTracerConf{tempAbsPath} = GHC.withFrozenCallStack
   hNodeStdout <- liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-  [prometheusPortNo] <- liftIO $ IO.allocateRandomPorts 1
-  let prometheusPort = fromIntegral prometheusPortNo
-  -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
-  -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
-
   let portWaitTimeout = 45
-  isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 prometheusPort
-  unless isClosed $
-    throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting tracer: " <> show prometheusPortNo
-  liftIO $ encodeFile configFile $ mkConfig conf prometheusPortNo logDir sprocket
+  prometheusPort <-
+    case mPort of
+      Just port -> pure port
+      Nothing -> do
+        [prometheusPortNo] <- liftIO $ IO.allocateRandomPorts 1
+        let prometheusPort = fromIntegral prometheusPortNo
+        -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
+        -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
+        isClosed <- liftIOAnnotated $ Ping.waitForPortClosed portWaitTimeout 0.1 prometheusPort
+        unless isClosed $
+          throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting tracer: " <> show prometheusPort
+        pure prometheusPort
+
+  liftIO $ encodeFile configFile $ mkConfig conf (fromIntegral prometheusPort) logDir sprocket
 
   cp <- runRIO () $ procFlex "cardano-tracer" "CARDANO_TRACER"
     [ "--config", configFile

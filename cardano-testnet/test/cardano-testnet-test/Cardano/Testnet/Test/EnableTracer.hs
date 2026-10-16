@@ -34,7 +34,7 @@ hprop_enable_tracer :: H.Property
 hprop_enable_tracer = integrationRetryWorkspace 2 "enable-tracer" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
 
   let creationOptions = def
-      runtimeOptions = def { runtimeEnableTracer = TraceEnabled }
+      runtimeOptions = def { runtimeEnableTracer = TraceEnabled "127.0.0.1" Nothing }
 
   conf <- mkConf tmpDir
   runtime <- createAndRunTestnet creationOptions runtimeOptions conf

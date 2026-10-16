@@ -296,10 +296,12 @@ cardanoTestnet
   -- alongside the nodes (see 'interruptNodesOnSigINT' below).
   (nodeConfigFile', mTracer) <- case cardanoEnableTracer of
     TraceDisabled -> pure (nodeConfigFile, Nothing)
-    TraceEnabled -> do
+    TraceEnabled ip mport -> do
       cfgFile' <- liftIOAnnotated $ enableTraceForwarding nodeConfigFile
       tracerRuntime <- startCardanoTracer $ CardanoTracerConf
         { tempAbsPath = tmpAbsPath
+        , prometheusIP = ip
+        , prometheusPort = mport
         , testnetMagic = testnetMagic
         , logFormat = ForMachine
         }

@@ -16,7 +16,9 @@ Usage: cardano-testnet cardano
   [ --enable-grpc
   | --enable-grpc-http [--grpc-listen-address IP] [--grpc-listen-port-base PORT]
   ]
-  [--enable-tracer]
+  [--enable-tracer
+    [--prometheus-listen-address IP]
+    [--prometheus-listen-port PORT]]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
   

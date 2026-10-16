@@ -14,7 +14,9 @@ Usage: cardano-testnet cardano
   [ --enable-grpc
   | --enable-grpc-http [--grpc-listen-address IP] [--grpc-listen-port-base PORT]
   ]
-  [--enable-tracer]
+  [--enable-tracer
+    [--prometheus-listen-address IP]
+    [--prometheus-listen-port PORT]]
   [--use-kes-agent]
   [--disable-chain-stall-watchdog]
   
@@ -81,8 +83,15 @@ Available options:
                            of testnet nodes. Looks for cardano-tracer via the
                            environment variable CARDANO_TRACER, falling back to
                            looking into PATH. This will start a Prometheus
-                           server at 127.0.0.1, on a port that will be reported
-                           at runtime.
+                           server at 127.0.0.1 and a random port unless
+                           --prometheus-listen-address and
+                           --prometheus-listen-port are given.
+  --prometheus-listen-address IP
+                           IP address the Prometheus server will listen on.
+                           Requires --enable-tracer. (default: 127.0.0.1)
+  --prometheus-listen-port PORT
+                           Base port for Prometheus. A random free port is used
+                           when omitted. Requires --enable-tracer.
   --use-kes-agent          Get Praos block forging credentials from kes-agent
                            via the default socket path
   --disable-chain-stall-watchdog
