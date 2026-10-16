@@ -187,12 +187,13 @@ source-repository-package
     cardano-keys
 
 -- cardano-ledger leios-prototype with the 2026-10-01 release and master 0a72d43f
--- merged, plus the IPv4 relay byte-order fix.
+-- merged, plus the IPv4 relay byte-order fix and the sub-transaction
+-- validation reapplied (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 505fa72260632fca6df33e18e18719730bf9a460
-  --sha256: sha256-QrL63+HOkJ885tBlCKMzpWNuQONjgYtUb4xhlvNslgI=
+  tag: 769e1ed8244de06e37e78d56ae97d242af9e3068
+  --sha256: sha256-oPB12Uz5ciqMYbA5VPMQcJqc0FFJHUyufcpLqZeciU4=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -231,8 +232,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 5cc95f4caf294751318f8637ab2fb60d5de6eb29
-  --sha256: sha256-KldFz2huvtFNtv6TxgSoixvBtO0FbpesP81YRoZJdFU=
+  tag: 9999bcab707acb52b5f103498cb1a6f10af0037f
+  --sha256: sha256-9Ay+kkZ8rnhoGRs7+opLdsMocjgu7IhCipbffD+ic8w=
 
 -- cardano-api leios-prototype with cardano-api-11.8.0.0 merged
 -- (leios-prototype).
