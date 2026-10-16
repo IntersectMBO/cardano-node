@@ -187,14 +187,13 @@ source-repository-package
   subdir:
     cardano-keys
 
--- cardano-ledger leios-prototype with the 2026-10-01 release and master 0a72d43f
--- merged, plus the IPv4 relay byte-order fix and the sub-transaction
--- validation reapplied (ch1bo/leios-prototype-2026w42).
+-- cardano-ledger leios-prototype with cardano-ledger master 07d904eb2c merged
+-- (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 769e1ed8244de06e37e78d56ae97d242af9e3068
-  --sha256: sha256-oPB12Uz5ciqMYbA5VPMQcJqc0FFJHUyufcpLqZeciU4=
+  tag: 9df9f98cce86c5f2195142b2c02dd9b39dd9dc7c
+  --sha256: sha256-di4fCxtSHMOPWIbAd5I5GI1uu+hwReAzTWEFuSwZl2E=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -228,33 +227,33 @@ source-repository-package
     cardano-diffusion
     network-mux
 
--- ouroboros-consensus leios-prototype with release-ouroboros-consensus-5.1.0.1 and main
--- (Praos2) merged, its database on upstream's LeiosDB (leios-prototype).
+-- ouroboros-consensus leios-prototype with GetStakePoolState (#2412) and
+-- GetLeiosCommittee (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 9999bcab707acb52b5f103498cb1a6f10af0037f
-  --sha256: sha256-9Ay+kkZ8rnhoGRs7+opLdsMocjgu7IhCipbffD+ic8w=
+  tag: be822b1f5650135412dcb0be870642749682ff50
+  --sha256: sha256-er5LuV/Fcg0xFG1QhKye9cKbZHTvwSc70H9pRiCGcOE=
 
--- cardano-api leios-prototype with cardano-api-11.8.0.0 merged
--- (leios-prototype).
+-- cardano-api leios-prototype with cardano-api master (11.9.0.0) merged
+-- (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 69483c3a7db6a22ec2ffd60e1aa1cc211968d116
-  --sha256: sha256-n0JTGGHRbDpQ7rv9JeVFxiaTeiMz8Au/1JXHjbtQwLs=
+  tag: bdb59a8e468a23e5dd123560c267945317552a22
+  --sha256: sha256-Q/oTQXx/vEfyLHrtp+iWRyNB9U+1jRhI7sJ5UeBYXkE=
   subdir:
     cardano-api
     cardano-api-gen
     cardano-rpc
 
--- cardano-cli leios-prototype with cardano-cli-11.3.0.0 merged
--- (leios-prototype).
+-- cardano-cli leios-prototype with cardano-cli master (11.3.1.0) merged
+-- (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 40f4167614dc15168f463396db3ae9f5bc381449
-  --sha256: sha256-9owCh3kPZhe+9zD0h9NYXsNic3JsOqEwzNV17vgsb3k=
+  tag: 79198add9a0bbe8c0b4d6cebf0525eb9afc91766
+  --sha256: sha256-N/I3rkjDNHlC6AJn8SbczB/NKuAfPJi18kHH7uFxS9E=
   subdir:
     cardano-cli
 
