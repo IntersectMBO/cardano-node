@@ -1,0 +1,36 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{- |
+Module      :  System.File.OsPath
+Copyright   :  (c) Julian Ospald 2023-2024
+License     :  BSD3
+
+Maintainer  :  hasufell@posteo.de
+Stability   :  stable
+Portability :  portable
+
+This module mimics base API wrt file IO, but using 'OsPath'.
+-}</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="System.File.OsPath.html"><span class="hs-identifier">System.File.OsPath</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="System.File.OsPath.Internal.html#openBinaryFile"><span class="hs-identifier">openBinaryFile</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#withFile"><span class="hs-identifier">withFile</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#withBinaryFile"><span class="hs-identifier">withBinaryFile</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#withFile%27"><span class="hs-identifier">withFile'</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#withBinaryFile%27"><span class="hs-identifier">withBinaryFile'</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#readFile"><span class="hs-identifier">readFile</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#readFile%27"><span class="hs-identifier">readFile'</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#writeFile"><span class="hs-identifier">writeFile</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#writeFile%27"><span class="hs-identifier">writeFile'</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#appendFile"><span class="hs-identifier">appendFile</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#appendFile%27"><span class="hs-identifier">appendFile'</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openFile"><span class="hs-identifier">openFile</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openExistingFile"><span class="hs-identifier">openExistingFile</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openTempFile"><span class="hs-identifier">openTempFile</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openBinaryTempFile"><span class="hs-identifier">openBinaryTempFile</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openTempFileWithDefaultPermissions"><span class="hs-identifier">openTempFileWithDefaultPermissions</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html#openBinaryTempFileWithDefaultPermissions"><span class="hs-identifier">openBinaryTempFileWithDefaultPermissions</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.File.OsPath.Internal.html"><span class="hs-identifier">System.File.OsPath.Internal</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span></pre></body></html>

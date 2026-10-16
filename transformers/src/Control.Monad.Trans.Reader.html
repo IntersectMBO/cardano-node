@@ -1,0 +1,711 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 702
+</span><span class="hs-pragma">{-# LANGUAGE Safe #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if __GLASGOW_HASKELL__ &gt;= 710 &amp;&amp; __GLASGOW_HASKELL__ &lt; 802
+</span><span class="hs-pragma">{-# LANGUAGE AutoDeriveTypeable #-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Module      :  Control.Monad.Trans.Reader</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Copyright   :  (c) Andy Gill 2001,</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Maintainer  :  R.Paterson@city.ac.uk</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Stability   :  experimental</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Portability :  portable</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Declaration of the 'ReaderT' monad transformer, which adds a static</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- environment to a given monad.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- If the computation is to modify the stored information, use</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- &quot;Control.Monad.Trans.State&quot; instead.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html"><span class="hs-identifier">Control.Monad.Trans.Reader</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The Reader monad</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier">Reader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#reader"><span class="hs-identifier">reader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#runReader"><span class="hs-identifier">runReader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReader"><span class="hs-identifier">mapReader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReader"><span class="hs-identifier">withReader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The ReaderT monad transformer</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier">ReaderT</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier">mapReaderT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-identifier">withReaderT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Reader operations</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier">ask</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#local"><span class="hs-identifier">local</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#asks"><span class="hs-identifier">asks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Lifting other operations</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCallCC"><span class="hs-identifier">liftCallCC</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCatch"><span class="hs-identifier">liftCatch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Signatures.html"><span class="hs-identifier">Control.Monad.Signatures</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Class.html"><span class="hs-identifier">Control.Monad.Trans.Class</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_base(4,12,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Contravariant.html"><span class="hs-identifier">Data.Functor.Contravariant</span></a></span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_base(4,9,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.Fail.html"><span class="hs-identifier">Control.Monad.Fail</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Fail</span></span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.Fix.html"><span class="hs-identifier">Control.Monad.Fix</span></a></span><span class="hs-cpp">
+#if !(MIN_VERSION_base(4,6,0))
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control.Monad.Instances</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- deprecated from base-4.6</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if MIN_VERSION_base(4,4,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.Zip.html"><span class="hs-identifier">Control.Monad.Zip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadZip</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mzipWith</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if (MIN_VERSION_base(4,2,0)) &amp;&amp; !(MIN_VERSION_base(4,8,0))
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Functor</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator">&lt;$</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if __GLASGOW_HASKELL__ &gt;= 704
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | The parameterizable reader monad, which is non-strict.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- Computations are functions of a shared environment.</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- The 'return' function ignores the environment, while @m '&gt;&gt;=' k@</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- passes the inherited environment to both subcomputations:</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- &lt;&lt;images/bind-ReaderT.svg&gt;&gt;</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="hs-keyword">type</span><span> </span><span id="Reader"><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-var">Reader</span></a></span></span><span> </span><span id="local-6989586621679097552"><span class="annot"><a href="#local-6989586621679097552"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097552"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><span class="hs-comment">-- | Constructor for computations in the reader monad (equivalent to 'asks').</span></span><span>
+</span><span id="line-86"></span><span id="local-6989586621679097292"><span id="local-6989586621679097293"><span id="local-6989586621679097294"><span class="annot"><a href="Control.Monad.Trans.Reader.html#reader"><span class="hs-identifier hs-type">reader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679097292"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097293"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097294"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097293"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097292"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097294"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-87"></span><span id="reader"><span class="annot"><span class="annottext">reader :: forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#reader"><span class="hs-identifier hs-var hs-var">reader</span></a></span></span><span> </span><span id="local-6989586621679097555"><span class="annot"><span class="annottext">r -&gt; a
+</span><a href="#local-6989586621679097555"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m a) -&gt; (r -&gt; a) -&gt; r -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">r -&gt; a
+</span><a href="#local-6989586621679097555"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#reader"><span class="hs-pragma hs-type">reader</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | Runs a @Reader@ and extracts the final value from it.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- (The inverse of 'reader'.)</span><span>
+</span><span id="line-92"></span><span id="local-6989586621679097307"><span id="local-6989586621679097308"><span class="annot"><a href="Control.Monad.Trans.Reader.html#runReader"><span class="hs-identifier hs-type">runReader</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-type">Reader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097307"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097308"><span class="hs-identifier hs-type">a</span></a></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ A @Reader@ to run.</span></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097307"><span class="hs-identifier hs-type">r</span></a></span><span>                </span><span class="annot"><span class="hs-comment">-- ^ An initial environment.</span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097308"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-96"></span><span id="runReader"><span class="annot"><span class="annottext">runReader :: forall r a. Reader r a -&gt; r -&gt; a
+</span><a href="Control.Monad.Trans.Reader.html#runReader"><span class="hs-identifier hs-var hs-var">runReader</span></a></span></span><span> </span><span id="local-6989586621679097557"><span class="annot"><span class="annottext">Reader r a
+</span><a href="#local-6989586621679097557"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">(Identity a -&gt; a) -&gt; (r -&gt; Identity a) -&gt; r -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Reader r a -&gt; r -&gt; Identity a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">Reader r a
+</span><a href="#local-6989586621679097557"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-97"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#runReader"><span class="hs-pragma hs-type">runReader</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Transform the value returned by a @Reader@.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- * @'runReader' ('mapReader' f m) = f . 'runReader' m@</span><span>
+</span><span id="line-102"></span><span id="local-6989586621679097314"><span id="local-6989586621679097315"><span id="local-6989586621679097316"><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReader"><span class="hs-identifier hs-type">mapReader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097314"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097315"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-type">Reader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097316"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097314"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-type">Reader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097316"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097315"><span class="hs-identifier hs-type">b</span></a></span></span></span></span><span>
+</span><span id="line-103"></span><span id="mapReader"><span class="annot"><span class="annottext">mapReader :: forall a b r. (a -&gt; b) -&gt; Reader r a -&gt; Reader r b
+</span><a href="Control.Monad.Trans.Reader.html#mapReader"><span class="hs-identifier hs-var hs-var">mapReader</span></a></span></span><span> </span><span id="local-6989586621679097560"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679097560"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Identity a -&gt; Identity b)
+-&gt; ReaderT r Identity a -&gt; ReaderT r Identity b
+forall (m :: * -&gt; *) a (n :: * -&gt; *) b r.
+(m a -&gt; n b) -&gt; ReaderT r m a -&gt; ReaderT r n b
+</span><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier hs-var">mapReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; Identity b
+forall a. a -&gt; Identity a
+</span><span class="hs-identifier hs-var">Identity</span></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Identity b) -&gt; (Identity a -&gt; b) -&gt; Identity a -&gt; Identity b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679097560"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; (Identity a -&gt; a) -&gt; Identity a -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReader"><span class="hs-pragma hs-type">mapReader</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- | Execute a computation in a modified environment</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- (a specialization of 'withReaderT').</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- * @'runReader' ('withReader' f m) = 'runReader' m . f@</span><span>
+</span><span id="line-110"></span><span id="local-6989586621679097326"><span id="local-6989586621679097327"><span id="local-6989586621679097328"><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReader"><span class="hs-identifier hs-type">withReader</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097326"><span class="hs-identifier hs-type">r'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097327"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="hs-comment">-- ^ The function to modify the environment.</span></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-type">Reader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097327"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097328"><span class="hs-identifier hs-type">a</span></a></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Computation to run in the modified environment.</span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#Reader"><span class="hs-identifier hs-type">Reader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097326"><span class="hs-identifier hs-type">r'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097328"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-114"></span><span id="withReader"><span class="annot"><span class="annottext">withReader :: forall r' r a. (r' -&gt; r) -&gt; Reader r a -&gt; Reader r' a
+</span><a href="Control.Monad.Trans.Reader.html#withReader"><span class="hs-identifier hs-var hs-var">withReader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r' -&gt; r) -&gt; ReaderT r Identity a -&gt; ReaderT r' Identity a
+forall r' r (m :: * -&gt; *) a.
+(r' -&gt; r) -&gt; ReaderT r m a -&gt; ReaderT r' m a
+</span><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-identifier hs-var">withReaderT</span></a></span><span>
+</span><span id="line-115"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReader"><span class="hs-pragma hs-type">withReader</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | The reader monad transformer,</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- which adds a read-only environment to the given monad.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- The 'return' function ignores the environment, while @m '&gt;&gt;=' k@</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- passes the inherited environment to both subcomputations:</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- &lt;&lt;images/bind-ReaderT.svg&gt;&gt;</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- @ReaderT r m@ is strict if and only if @m@ is.</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">newtype</span><span> </span><span id="ReaderT"><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span></span><span> </span><span id="local-6989586621679097299"><span class="annot"><a href="#local-6989586621679097299"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span id="local-6989586621679097300"><span class="annot"><a href="#local-6989586621679097300"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679097301"><span class="annot"><a href="#local-6989586621679097301"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ReaderT"><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="runReaderT"><span class="annot"><span class="annottext">forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var hs-var">runReaderT</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679097299"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097300"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097301"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 710
+</span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679097563"><span id="local-6989586621679097565"><span class="annot"><span class="annottext">(forall x. ReaderT r m a -&gt; Rep (ReaderT r m a) x)
+-&gt; (forall x. Rep (ReaderT r m a) x -&gt; ReaderT r m a)
+-&gt; Generic (ReaderT r m a)
+forall x. Rep (ReaderT r m a) x -&gt; ReaderT r m a
+forall x. ReaderT r m a -&gt; Rep (ReaderT r m a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall r (m :: * -&gt; *) a x. Rep (ReaderT r m a) x -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a x. ReaderT r m a -&gt; Rep (ReaderT r m a) x
+$cfrom :: forall r (m :: * -&gt; *) a x. ReaderT r m a -&gt; Rep (ReaderT r m a) x
+from :: forall x. ReaderT r m a -&gt; Rep (ReaderT r m a) x
+$cto :: forall r (m :: * -&gt; *) a x. Rep (ReaderT r m a) x -&gt; ReaderT r m a
+to :: forall x. Rep (ReaderT r m a) x -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679097571"><span id="local-6989586621679097575"><span class="annot"><span class="annottext">(forall a. ReaderT r m a -&gt; Rep1 (ReaderT r m) a)
+-&gt; (forall a. Rep1 (ReaderT r m) a -&gt; ReaderT r m a)
+-&gt; Generic1 (ReaderT r m)
+forall a. Rep1 (ReaderT r m) a -&gt; ReaderT r m a
+forall a. ReaderT r m a -&gt; Rep1 (ReaderT r m) a
+forall k (f :: k -&gt; *).
+(forall (a :: k). f a -&gt; Rep1 f a)
+-&gt; (forall (a :: k). Rep1 f a -&gt; f a) -&gt; Generic1 f
+forall r (m :: * -&gt; *) a. Rep1 (ReaderT r m) a -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; Rep1 (ReaderT r m) a
+$cfrom1 :: forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; Rep1 (ReaderT r m) a
+from1 :: forall a. ReaderT r m a -&gt; Rep1 (ReaderT r m) a
+$cto1 :: forall r (m :: * -&gt; *) a. Rep1 (ReaderT r m) a -&gt; ReaderT r m a
+to1 :: forall a. Rep1 (ReaderT r m) a -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic1</span></span></span></span><span class="hs-special">)</span><span class="hs-cpp">
+#elif __GLASGOW_HASKELL__ &gt;= 704
+</span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Generic</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- | Transform the computation inside a @ReaderT@.</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- * @'runReaderT' ('mapReaderT' f m) = f . 'runReaderT' m@</span><span>
+</span><span id="line-137"></span><span id="local-6989586621679097320"><span id="local-6989586621679097321"><span id="local-6989586621679097322"><span id="local-6989586621679097323"><span id="local-6989586621679097324"><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier hs-type">mapReaderT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097320"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097321"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097322"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097323"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097324"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097320"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097321"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097324"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097322"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097323"><span class="hs-identifier hs-type">b</span></a></span></span></span></span></span></span><span>
+</span><span id="line-138"></span><span id="mapReaderT"><span class="annot"><span class="annottext">mapReaderT :: forall (m :: * -&gt; *) a (n :: * -&gt; *) b r.
+(m a -&gt; n b) -&gt; ReaderT r m a -&gt; ReaderT r n b
+</span><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier hs-var hs-var">mapReaderT</span></a></span></span><span> </span><span id="local-6989586621679097581"><span class="annot"><span class="annottext">m a -&gt; n b
+</span><a href="#local-6989586621679097581"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679097582"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097582"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; n b) -&gt; ReaderT r n b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; n b) -&gt; ReaderT r n b) -&gt; (r -&gt; n b) -&gt; ReaderT r n b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">m a -&gt; n b
+</span><a href="#local-6989586621679097581"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; n b) -&gt; (r -&gt; m a) -&gt; r -&gt; n b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097582"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-139"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-pragma hs-type">mapReaderT</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- | Execute a computation in a modified environment</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- (a more general version of 'local').</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- * @'runReaderT' ('withReaderT' f m) = 'runReaderT' m . f@</span><span>
+</span><span id="line-145"></span><span id="local-6989586621679097332"><span id="local-6989586621679097333"><span id="local-6989586621679097334"><span id="local-6989586621679097335"><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-identifier hs-type">withReaderT</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097332"><span class="hs-identifier hs-type">r'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097333"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="hs-comment">-- ^ The function to modify the environment.</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097333"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097334"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097335"><span class="hs-identifier hs-type">a</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Computation to run in the modified environment.</span></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097332"><span class="hs-identifier hs-type">r'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097334"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097335"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span><span>
+</span><span id="line-149"></span><span id="withReaderT"><span class="annot"><span class="annottext">withReaderT :: forall r' r (m :: * -&gt; *) a.
+(r' -&gt; r) -&gt; ReaderT r m a -&gt; ReaderT r' m a
+</span><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-identifier hs-var hs-var">withReaderT</span></a></span></span><span> </span><span id="local-6989586621679097583"><span class="annot"><span class="annottext">r' -&gt; r
+</span><a href="#local-6989586621679097583"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679097584"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097584"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r' -&gt; m a) -&gt; ReaderT r' m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r' -&gt; m a) -&gt; ReaderT r' m a) -&gt; (r' -&gt; m a) -&gt; ReaderT r' m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097584"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; (r' -&gt; r) -&gt; r' -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">r' -&gt; r
+</span><a href="#local-6989586621679097583"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-150"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-pragma hs-type">withReaderT</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097377"><span id="local-6989586621679097378"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="annot"><a href="#local-6989586621679097377"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097378"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097377"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679097591"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; ReaderT r m a -&gt; ReaderT r m b
+</span><span class="hs-identifier hs-var hs-var hs-var">fmap</span></span></span><span> </span><span id="local-6989586621679097592"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679097592"><span class="hs-identifier hs-var">f</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(m a -&gt; m b) -&gt; ReaderT r m a -&gt; ReaderT r m b
+forall (m :: * -&gt; *) a (n :: * -&gt; *) b r.
+(m a -&gt; n b) -&gt; ReaderT r m a -&gt; ReaderT r n b
+</span><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier hs-var">mapReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; m a -&gt; m b
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679097592"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">fmap</span></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,2,0)
+</span><span>    </span><span id="local-6989586621679097594"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679097594"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679097595"><span class="annot"><span class="annottext">&lt;$ :: forall a b. a -&gt; ReaderT r m b -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097595"><span class="hs-operator hs-var hs-var hs-var">&lt;$</span></a></span></span><span> </span><span id="local-6989586621679097597"><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097597"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(m b -&gt; m a) -&gt; ReaderT r m b -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a (n :: * -&gt; *) b r.
+(m a -&gt; n b) -&gt; ReaderT r m a -&gt; ReaderT r n b
+</span><a href="Control.Monad.Trans.Reader.html#mapReaderT"><span class="hs-identifier hs-var">mapReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679097594"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m b -&gt; m a
+forall a b. a -&gt; m b -&gt; m a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><span class="hs-operator hs-var">&lt;$</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097597"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;$</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-160"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097396"><span id="local-6989586621679097397"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Applicative</span></span><span> </span><span class="annot"><a href="#local-6989586621679097396"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097397"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097396"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-161"></span><span>    </span><span id="local-6989586621679097611"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var hs-var hs-var">pure</span></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a r. m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-identifier hs-var">liftReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT r m a) -&gt; (a -&gt; m a) -&gt; a -&gt; ReaderT r m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">pure</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-163"></span><span>    </span><span id="local-6989586621679097614"><span class="annot"><span class="annottext">ReaderT r m (a -&gt; b)
+</span><a href="#local-6989586621679097614"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679097615"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. ReaderT r m (a -&gt; b) -&gt; ReaderT r m a -&gt; ReaderT r m b
+</span><span class="hs-operator hs-var hs-var hs-var">&lt;*&gt;</span></span></span><span> </span><span id="local-6989586621679097616"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097616"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097617"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097617"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m (a -&gt; b) -&gt; r -&gt; m (a -&gt; b)
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m (a -&gt; b)
+</span><a href="#local-6989586621679097614"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097617"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">m (a -&gt; b) -&gt; m a -&gt; m b
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097616"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097617"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,2,0)
+</span><span>    </span><span id="local-6989586621679097619"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097619"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span id="local-6989586621679097620"><span class="annot"><span class="annottext">*&gt; :: forall a b. ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m b
+</span><span class="hs-operator hs-var hs-var hs-var">*&gt;</span></span></span><span> </span><span id="local-6989586621679097621"><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097621"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097622"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097622"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097619"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097622"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m b -&gt; m b
+forall a b. m a -&gt; m b -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><span class="hs-operator hs-var">*&gt;</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m b -&gt; r -&gt; m b
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097621"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097622"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-168"></span><span>    </span><span id="local-6989586621679097624"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097624"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span id="local-6989586621679097625"><span class="annot"><span class="annottext">&lt;* :: forall a b. ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097625"><span class="hs-operator hs-var hs-var hs-var">&lt;*</span></a></span></span><span> </span><span id="local-6989586621679097627"><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097627"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097628"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097628"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097624"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097628"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m b -&gt; m a
+forall a b. m a -&gt; m b -&gt; m a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><span class="hs-operator hs-var">&lt;*</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m b -&gt; r -&gt; m b
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097627"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097628"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if MIN_VERSION_base(4,10,0)
+</span><span>    </span><span id="local-6989586621679097630"><span class="annot"><span class="annottext">liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m c
+</span><a href="#local-6989586621679097630"><span class="hs-identifier hs-var hs-var hs-var">liftA2</span></a></span></span><span> </span><span id="local-6989586621679097632"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679097632"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679097633"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097633"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679097634"><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097634"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m c) -&gt; ReaderT r m c
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m c) -&gt; ReaderT r m c) -&gt; (r -&gt; m c) -&gt; ReaderT r m c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097635"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097635"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+forall a b c. (a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><span class="hs-identifier hs-var">liftA2</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679097632"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097633"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097635"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT r m b -&gt; r -&gt; m b
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m b
+</span><a href="#local-6989586621679097634"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097635"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">liftA2</span></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-176"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097418"><span id="local-6989586621679097419"><span id="local-6989586621679097643"><span id="local-6989586621679097647"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Alternative</span></span><span> </span><span class="annot"><a href="#local-6989586621679097418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Alternative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097419"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-177"></span><span>    </span><span id="local-6989586621679097652"><span class="annot"><span class="annottext">empty :: forall a. ReaderT r m a
+</span><a href="#local-6989586621679097652"><span class="hs-identifier hs-var hs-var hs-var">empty</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a r. m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-identifier hs-var">liftReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+forall a. m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><span class="hs-identifier hs-var">empty</span></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">empty</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679097655"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097655"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679097656"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. ReaderT r m a -&gt; ReaderT r m a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097656"><span class="hs-operator hs-var hs-var hs-var">&lt;|&gt;</span></a></span></span><span> </span><span id="local-6989586621679097658"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097658"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097659"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097659"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097655"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097659"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><span class="hs-operator hs-var">&lt;|&gt;</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097658"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097659"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;|&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097428"><span id="local-6989586621679097429"><span id="local-6989586621679097667"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679097428"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097429"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097428"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#if !(MIN_VERSION_base(4,8,0))
+</span><span>    </span><span class="hs-identifier">return</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">lift</span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-identifier">return</span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">return</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span id="local-6989586621679097673"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097673"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679097674"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. ReaderT r m a -&gt; (a -&gt; ReaderT r m b) -&gt; ReaderT r m b
+</span><span class="hs-operator hs-var hs-var hs-var">&gt;&gt;=</span></span></span><span> </span><span id="local-6989586621679097675"><span class="annot"><span class="annottext">a -&gt; ReaderT r m b
+</span><a href="#local-6989586621679097675"><span class="hs-identifier hs-var">k</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097676"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097676"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-188"></span><span>        </span><span id="local-6989586621679097677"><span class="annot"><a href="#local-6989586621679097677"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097673"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097676"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-189"></span><span>        </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097675"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097677"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679097676"><span class="hs-identifier hs-type">r</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;=</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,8,0)
+</span><span>    </span><span id="local-6989586621679097679"><span class="annot"><span class="annottext">&gt;&gt; :: forall a b. ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m b
+</span><span class="hs-operator hs-var hs-var hs-var">(&gt;&gt;)</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m b
+forall a b. ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><span class="hs-operator hs-var">(*&gt;)</span></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-identifier">m</span><span> </span><span class="hs-operator">&gt;&gt;</span><span> </span><span class="hs-identifier">k</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">ReaderT</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-identifier">r</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">runReaderT</span><span> </span><span class="hs-identifier">m</span><span> </span><span class="hs-identifier">r</span><span> </span><span class="hs-operator">&gt;&gt;</span><span> </span><span class="hs-identifier">runReaderT</span><span> </span><span class="hs-identifier">k</span><span> </span><span class="hs-identifier">r</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if !(MIN_VERSION_base(4,13,0))
+</span><span>    </span><span class="hs-identifier">fail</span><span> </span><span class="hs-identifier">msg</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">lift</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">fail</span><span> </span><span class="hs-identifier">msg</span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">fail</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,9,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097438"><span id="local-6989586621679097439"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Fail.MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679097438"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fail.MonadFail</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097439"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097438"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-204"></span><span>    </span><span id="local-6989586621679097692"><span class="annot"><span class="annottext">fail :: forall a. String -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var hs-var hs-var">fail</span></span></span><span> </span><span id="local-6989586621679097693"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679097693"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; m a
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">Fail.fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679097693"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">fail</span></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-208"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097452"><span id="local-6989586621679097453"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadPlus</span></span><span> </span><span class="annot"><a href="#local-6989586621679097452"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadPlus</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097453"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097452"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-209"></span><span>    </span><span id="local-6989586621679097711"><span class="annot"><span class="annottext">mzero :: forall a. ReaderT r m a
+</span><a href="#local-6989586621679097711"><span class="hs-identifier hs-var hs-var hs-var">mzero</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+forall a. m a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a
+</span><span class="hs-identifier hs-var">mzero</span></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">mzero</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679097714"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097714"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679097715"><span class="annot"><span class="annottext">mplus :: forall a. ReaderT r m a -&gt; ReaderT r m a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097715"><span class="hs-operator hs-var hs-var hs-var">`mplus`</span></a></span></span><span> </span><span id="local-6989586621679097717"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097717"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097718"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097718"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097714"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097718"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a -&gt; m a -&gt; m a
+</span><span class="hs-operator hs-var">`mplus`</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097717"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097718"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">mplus</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097460"><span id="local-6989586621679097461"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFix</span></span><span> </span><span class="annot"><a href="#local-6989586621679097460"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFix</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097461"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097460"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>    </span><span id="local-6989586621679097728"><span class="annot"><span class="annottext">mfix :: forall a. (a -&gt; ReaderT r m a) -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var hs-var hs-var">mfix</span></span></span><span> </span><span id="local-6989586621679097729"><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097729"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097730"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097730"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m a) -&gt; m a
+forall a. (a -&gt; m a) -&gt; m a
+forall (m :: * -&gt; *) a. MonadFix m =&gt; (a -&gt; m a) -&gt; m a
+</span><span class="hs-identifier hs-var">mfix</span></span><span> </span><span class="annot"><span class="annottext">((a -&gt; m a) -&gt; m a) -&gt; (a -&gt; m a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097731"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679097731"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097729"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679097731"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097730"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">mfix</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097441"><span class="annot"><a href="Control.Monad.Trans.Class.html#MonadTrans"><span class="hs-identifier hs-type">MonadTrans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097441"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-219"></span><span>    </span><span id="local-6989586621679097737"><span class="annot"><span class="annottext">lift :: forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var hs-var hs-var">lift</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a r. m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-identifier hs-var">liftReaderT</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Class.html#lift"><span class="hs-pragma hs-type">lift</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097472"><span id="local-6989586621679097473"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679097472"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097473"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097472"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-223"></span><span>    </span><span id="local-6989586621679097749"><span class="annot"><span class="annottext">liftIO :: forall a. IO a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097749"><span class="hs-identifier hs-var hs-var hs-var">liftIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT r m a) -&gt; (IO a -&gt; m a) -&gt; IO a -&gt; ReaderT r m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">liftIO</span></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+
+#if MIN_VERSION_base(4,4,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097486"><span id="local-6989586621679097487"><span id="local-6989586621679097756"><span id="local-6989586621679097761"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadZip</span></span><span> </span><span class="annot"><a href="#local-6989586621679097486"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadZip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097487"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097486"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-228"></span><span>    </span><span id="local-6989586621679097766"><span class="annot"><span class="annottext">mzipWith :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; ReaderT r m a -&gt; ReaderT r m b -&gt; ReaderT r m c
+</span><span class="hs-identifier hs-var hs-var hs-var">mzipWith</span></span></span><span> </span><span id="local-6989586621679097767"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679097767"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span id="local-6989586621679097768"><span class="annot"><span class="annottext">r -&gt; m a
+</span><a href="#local-6989586621679097768"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span id="local-6989586621679097769"><span class="annot"><span class="annottext">r -&gt; m b
+</span><a href="#local-6989586621679097769"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m c) -&gt; ReaderT r m c
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m c) -&gt; ReaderT r m c) -&gt; (r -&gt; m c) -&gt; ReaderT r m c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097770"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097770"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-229"></span><span>        </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+forall a b c. (a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+forall (m :: * -&gt; *) a b c.
+MonadZip m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><span class="hs-identifier hs-var">mzipWith</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679097767"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">r -&gt; m a
+</span><a href="#local-6989586621679097768"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097770"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">r -&gt; m b
+</span><a href="#local-6989586621679097769"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097770"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">mzipWith</span></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,12,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679097499"><span id="local-6989586621679097500"><span id="local-6989586621679097774"><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier hs-type">Contravariant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097499"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier hs-type">Contravariant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097500"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097499"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-235"></span><span>    </span><span id="local-6989586621679097780"><span class="annot"><span class="annottext">contramap :: forall a' a. (a' -&gt; a) -&gt; ReaderT r m a -&gt; ReaderT r m a'
+</span><a href="#local-6989586621679097780"><span class="hs-identifier hs-var hs-var hs-var">contramap</span></a></span></span><span> </span><span id="local-6989586621679097782"><span class="annot"><span class="annottext">a' -&gt; a
+</span><a href="#local-6989586621679097782"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a') -&gt; ReaderT r m a'
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a') -&gt; ReaderT r m a')
+-&gt; (ReaderT r m a -&gt; r -&gt; m a') -&gt; ReaderT r m a -&gt; ReaderT r m a'
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; m a') -&gt; (r -&gt; m a) -&gt; r -&gt; m a'
+forall a b. (a -&gt; b) -&gt; (r -&gt; a) -&gt; r -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a' -&gt; a) -&gt; m a -&gt; m a'
+forall a' a. (a' -&gt; a) -&gt; m a -&gt; m a'
+forall (f :: * -&gt; *) a' a.
+Contravariant f =&gt;
+(a' -&gt; a) -&gt; f a -&gt; f a'
+</span><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Contravariant.html#contramap"><span class="hs-identifier hs-var">contramap</span></a></span><span> </span><span class="annot"><span class="annottext">a' -&gt; a
+</span><a href="#local-6989586621679097782"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; r -&gt; m a')
+-&gt; (ReaderT r m a -&gt; r -&gt; m a) -&gt; ReaderT r m a -&gt; r -&gt; m a'
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span>
+</span><span id="line-236"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Functor.Contravariant.html#contramap"><span class="hs-pragma hs-type">contramap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-239"></span><span id="local-6989586621679097399"><span id="local-6989586621679097400"><span id="local-6989586621679097401"><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-identifier hs-type">liftReaderT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679097399"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097400"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097401"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097399"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097400"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-240"></span><span id="liftReaderT"><span class="annot"><span class="annottext">liftReaderT :: forall (m :: * -&gt; *) a r. m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-identifier hs-var hs-var">liftReaderT</span></a></span></span><span> </span><span id="local-6989586621679097783"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679097783"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; r -&gt; m a
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679097783"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-241"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftReaderT"><span class="hs-pragma hs-type">liftReaderT</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="annot"><span class="hs-comment">-- | Fetch the value of the environment.</span></span><span>
+</span><span id="line-244"></span><span id="local-6989586621679097508"><span id="local-6989586621679097509"><span class="annot"><a href="Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-type">ask</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679097508"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097509"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097508"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097509"><span class="hs-identifier hs-type">r</span></a></span></span></span><span>
+</span><span id="line-245"></span><span id="ask"><span class="annot"><span class="annottext">ask :: forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var hs-var">ask</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m r) -&gt; ReaderT r m r
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">r -&gt; m r
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span>
+</span><span id="line-246"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ask"><span class="hs-pragma hs-type">ask</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- | Execute a computation in a modified environment</span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- (a specialization of 'withReaderT').</span><span>
+</span><span id="line-250"></span><span class="hs-comment">--</span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- * @'runReaderT' ('local' f m) = 'runReaderT' m . f@</span><span>
+</span><span id="line-252"></span><span id="local-6989586621679097512"><span id="local-6989586621679097513"><span id="local-6989586621679097514"><span class="annot"><a href="Control.Monad.Trans.Reader.html#local"><span class="hs-identifier hs-type">local</span></a></span><span>
+</span><span id="line-253"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097512"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097512"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="hs-comment">-- ^ The function to modify the environment.</span></span><span>
+</span><span id="line-254"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097512"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097513"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097514"><span class="hs-identifier hs-type">a</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Computation to run in the modified environment.</span></span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097512"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097513"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097514"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-256"></span><span id="local"><span class="annot"><span class="annottext">local :: forall r (m :: * -&gt; *) a.
+(r -&gt; r) -&gt; ReaderT r m a -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#local"><span class="hs-identifier hs-var hs-var">local</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; r) -&gt; ReaderT r m a -&gt; ReaderT r m a
+forall r' r (m :: * -&gt; *) a.
+(r' -&gt; r) -&gt; ReaderT r m a -&gt; ReaderT r' m a
+</span><a href="Control.Monad.Trans.Reader.html#withReaderT"><span class="hs-identifier hs-var">withReaderT</span></a></span><span>
+</span><span id="line-257"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#local"><span class="hs-pragma hs-type">local</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- | Retrieve a function of the current environment.</span><span>
+</span><span id="line-260"></span><span class="hs-comment">--</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- * @'asks' f = 'liftM' f 'ask'@</span><span>
+</span><span id="line-262"></span><span id="local-6989586621679097788"><span id="local-6989586621679097789"><span id="local-6989586621679097790"><span class="annot"><a href="Control.Monad.Trans.Reader.html#asks"><span class="hs-identifier hs-type">asks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679097788"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097789"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097790"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="hs-comment">-- ^ The selector function to apply to the environment.</span></span><span>
+</span><span id="line-264"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097789"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097788"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097790"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-265"></span><span id="asks"><span class="annot"><span class="annottext">asks :: forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#asks"><span class="hs-identifier hs-var hs-var">asks</span></a></span></span><span> </span><span id="local-6989586621679097793"><span class="annot"><span class="annottext">r -&gt; a
+</span><a href="#local-6989586621679097793"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m a) -&gt; (r -&gt; a) -&gt; r -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">r -&gt; a
+</span><a href="#local-6989586621679097793"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#asks"><span class="hs-pragma hs-type">asks</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-267"></span><span>
+</span><span id="line-268"></span><span class="annot"><span class="hs-comment">-- | Lift a @callCC@ operation to the new monad.</span></span><span>
+</span><span id="line-269"></span><span id="local-6989586621679097521"><span id="local-6989586621679097522"><span id="local-6989586621679097523"><span id="local-6989586621679097525"><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCallCC"><span class="hs-identifier hs-type">liftCallCC</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Signatures.html#CallCC"><span class="hs-identifier hs-type">CallCC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097521"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097522"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097523"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Signatures.html#CallCC"><span class="hs-identifier hs-type">CallCC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097525"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097521"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679097522"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097523"><span class="hs-identifier hs-type">b</span></a></span></span></span></span></span><span>
+</span><span id="line-270"></span><span id="liftCallCC"><span class="annot"><span class="annottext">liftCallCC :: forall (m :: * -&gt; *) a b r.
+CallCC m a b -&gt; CallCC (ReaderT r m) a b
+</span><a href="Control.Monad.Trans.Reader.html#liftCallCC"><span class="hs-identifier hs-var hs-var">liftCallCC</span></a></span></span><span> </span><span id="local-6989586621679097794"><span class="annot"><span class="annottext">CallCC m a b
+</span><a href="#local-6989586621679097794"><span class="hs-identifier hs-var">callCC</span></a></span></span><span> </span><span id="local-6989586621679097795"><span class="annot"><span class="annottext">(a -&gt; ReaderT r m b) -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097795"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097796"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097796"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-271"></span><span>    </span><span class="annot"><span class="annottext">CallCC m a b
+</span><a href="#local-6989586621679097794"><span class="hs-identifier hs-var">callCC</span></a></span><span> </span><span class="annot"><span class="annottext">CallCC m a b -&gt; CallCC m a b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097797"><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679097797"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-272"></span><span>    </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; ReaderT r m b) -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097795"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b)
+-&gt; (a -&gt; r -&gt; m b) -&gt; a -&gt; ReaderT r m b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">m b -&gt; r -&gt; m b
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">(m b -&gt; r -&gt; m b) -&gt; (a -&gt; m b) -&gt; a -&gt; r -&gt; m b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679097797"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097796"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-273"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCallCC"><span class="hs-pragma hs-type">liftCallCC</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span class="annot"><span class="hs-comment">-- | Lift a @catchE@ operation to the new monad.</span></span><span>
+</span><span id="line-276"></span><span id="local-6989586621679097530"><span id="local-6989586621679097531"><span id="local-6989586621679097532"><span id="local-6989586621679097534"><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCatch"><span class="hs-identifier hs-type">liftCatch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Signatures.html#Catch"><span class="hs-identifier hs-type">Catch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097530"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097531"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097532"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Signatures.html#Catch"><span class="hs-identifier hs-type">Catch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097530"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097534"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097531"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679097532"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span><span>
+</span><span id="line-277"></span><span id="liftCatch"><span class="annot"><span class="annottext">liftCatch :: forall e (m :: * -&gt; *) a r. Catch e m a -&gt; Catch e (ReaderT r m) a
+</span><a href="Control.Monad.Trans.Reader.html#liftCatch"><span class="hs-identifier hs-var hs-var">liftCatch</span></a></span></span><span> </span><span id="local-6989586621679097798"><span class="annot"><span class="annottext">Catch e m a
+</span><a href="#local-6989586621679097798"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679097799"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097799"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679097800"><span class="annot"><span class="annottext">e -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097800"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-278"></span><span>    </span><span class="annot"><span class="annottext">(r -&gt; m a) -&gt; ReaderT r m a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m a) -&gt; ReaderT r m a) -&gt; (r -&gt; m a) -&gt; ReaderT r m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097801"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097801"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Catch e m a
+</span><a href="#local-6989586621679097798"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679097799"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097801"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679097802"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679097802"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">e -&gt; ReaderT r m a
+</span><a href="#local-6989586621679097800"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679097802"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679097801"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-279"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Monad.Trans.Reader.html#liftCatch"><span class="hs-pragma hs-type">liftCatch</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-280"></span></pre></body></html>

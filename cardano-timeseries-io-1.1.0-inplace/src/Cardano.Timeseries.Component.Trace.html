@@ -1,0 +1,352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# HLINT ignore &quot;Use :&quot; #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html"><span class="hs-identifier">Cardano.Timeseries.Component.Trace</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTrace"><span class="hs-identifier">TimeseriesTrace</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.Logging</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DetailLevel</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DDetailed</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">LogFormatting</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SeverityS</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.Logging.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MetaTrace</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Namespace</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.API.html"><span class="hs-identifier">Cardano.Timeseries.API</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html"><span class="hs-identifier">Cardano.Timeseries.Component.Types</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html"><span class="hs-identifier">Cardano.Timeseries.Domain.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier">SeriesIdentifier</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.KeyMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">singleton</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">data</span><span> </span><span id="TimeseriesTrace"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTrace"><span class="hs-identifier hs-var">TimeseriesTrace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeseriesTraceCreate"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceCreate"><span class="hs-identifier hs-var">TimeseriesTraceCreate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#TimeseriesConfig"><span class="hs-identifier hs-type">TimeseriesConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TimeseriesTraceReconfigure"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceReconfigure"><span class="hs-identifier hs-var">TimeseriesTraceReconfigure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#TimeseriesConfig"><span class="hs-identifier hs-type">TimeseriesConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TimeseriesTraceInsert"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceInsert"><span class="hs-identifier hs-var">TimeseriesTraceInsert</span></a></span></span><span>
+</span><span id="line-22"></span><span>                         </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#SeriesIdentifier"><span class="hs-identifier hs-type">SeriesIdentifier</span></a></span><span>
+</span><span id="line-23"></span><span>                         </span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span>
+</span><span id="line-24"></span><span>                         </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Domain.Types.html#MetricIdentifier"><span class="hs-identifier hs-type">MetricIdentifier</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Payload</span></span><span>
+</span><span id="line-25"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TimeseriesTraceIssueExecute"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceIssueExecute"><span class="hs-identifier hs-var">TimeseriesTraceIssueExecute</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#QueryId"><span class="hs-identifier hs-type">QueryId</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-26"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TimeseriesTraceYieldExecute"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceYieldExecute"><span class="hs-identifier hs-var">TimeseriesTraceYieldExecute</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Types.html#QueryId"><span class="hs-identifier hs-type">QueryId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.API.html#ExecutionError"><span class="hs-identifier hs-type">ExecutionError</span></a></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Interp.Value.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>                     </span><span class="hs-comment">-- COMMENT: (@russoul) shall we count the number of pruned entries?</span><span>
+</span><span id="line-28"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TimeseriesTracePrune"><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTracePrune"><span class="hs-identifier hs-var">TimeseriesTracePrune</span></a></span></span><span>
+</span><span id="line-29"></span><span>                        </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ retention (ms)</span></span><span>
+</span><span id="line-30"></span><span>                        </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679170224"><span id="local-6989586621679170254"><span id="local-6989586621679170258"><span class="annot"><span class="annottext">Int -&gt; TimeseriesTrace -&gt; ShowS
+[TimeseriesTrace] -&gt; ShowS
+TimeseriesTrace -&gt; String
+(Int -&gt; TimeseriesTrace -&gt; ShowS)
+-&gt; (TimeseriesTrace -&gt; String)
+-&gt; ([TimeseriesTrace] -&gt; ShowS)
+-&gt; Show TimeseriesTrace
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TimeseriesTrace -&gt; ShowS
+showsPrec :: Int -&gt; TimeseriesTrace -&gt; ShowS
+$cshow :: TimeseriesTrace -&gt; String
+show :: TimeseriesTrace -&gt; String
+$cshowList :: [TimeseriesTrace] -&gt; ShowS
+showList :: [TimeseriesTrace] -&gt; ShowS
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679170272"><span id="local-6989586621679170276"><span class="annot"><span class="hs-identifier hs-type">LogFormatting</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTrace"><span class="hs-identifier hs-type">TimeseriesTrace</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679170333"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; TimeseriesTrace -&gt; Object
+</span><a href="#local-6989586621679170333"><span class="hs-identifier hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceCreate"><span class="hs-identifier hs-type">TimeseriesTraceCreate</span></a></span><span> </span><span id="local-6989586621679170335"><span class="annot"><span class="annottext">Maybe TimeseriesConfig
+</span><a href="#local-6989586621679170335"><span class="hs-identifier hs-var">cfg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. Key -&gt; v -&gt; KeyMap v
+</span><span class="hs-identifier hs-var">singleton</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;cfg&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TimeseriesConfig -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">Maybe TimeseriesConfig
+</span><a href="#local-6989586621679170335"><span class="hs-identifier hs-var">cfg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">forMachine</span></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceReconfigure"><span class="hs-identifier hs-type">TimeseriesTraceReconfigure</span></a></span><span> </span><span id="local-6989586621679170336"><span class="annot"><span class="annottext">Maybe TimeseriesConfig
+</span><a href="#local-6989586621679170336"><span class="hs-identifier hs-var">cfg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. Key -&gt; v -&gt; KeyMap v
+</span><span class="hs-identifier hs-var">singleton</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;cfg&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TimeseriesConfig -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">Maybe TimeseriesConfig
+</span><a href="#local-6989586621679170336"><span class="hs-identifier hs-var">cfg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">forMachine</span></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceInsert"><span class="hs-identifier hs-type">TimeseriesTraceInsert</span></a></span><span> </span><span id="local-6989586621679170337"><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679170337"><span class="hs-identifier hs-var">series</span></a></span></span><span> </span><span id="local-6989586621679170338"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170338"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679170339"><span class="annot"><span class="annottext">[(MetricIdentifier, Double)]
+</span><a href="#local-6989586621679170339"><span class="hs-identifier hs-var">batch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;labels&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; SeriesIdentifier -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">SeriesIdentifier
+</span><a href="#local-6989586621679170337"><span class="hs-identifier hs-var">series</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;timestamp&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Timestamp -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170338"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;batch&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [(MetricIdentifier, Double)] -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[(MetricIdentifier, Double)]
+</span><a href="#local-6989586621679170339"><span class="hs-identifier hs-var">batch</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">forMachine</span></span><span> </span><span id="local-6989586621679170340"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679170340"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceIssueExecute"><span class="hs-identifier hs-type">TimeseriesTraceIssueExecute</span></a></span><span> </span><span id="local-6989586621679170341"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170341"><span class="hs-identifier hs-var">queryId</span></a></span></span><span> </span><span id="local-6989586621679170342"><span class="annot"><span class="annottext">MetricIdentifier
+</span><a href="#local-6989586621679170342"><span class="hs-identifier hs-var">queryText</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Object] -&gt; Object) -&gt; [Object] -&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;query_id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Timestamp -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170341"><span class="hs-identifier hs-var">queryId</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">[Object] -&gt; [Object] -&gt; [Object]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;query_text&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; MetricIdentifier -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><a href="#local-6989586621679170342"><span class="hs-identifier hs-var">queryText</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679170340"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DetailLevel -&gt; DetailLevel -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier hs-var">DDetailed</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">forMachine</span></span><span> </span><span id="local-6989586621679170343"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679170343"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceYieldExecute"><span class="hs-identifier hs-type">TimeseriesTraceYieldExecute</span></a></span><span> </span><span id="local-6989586621679170344"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170344"><span class="hs-identifier hs-var">queryId</span></a></span></span><span> </span><span id="local-6989586621679170345"><span class="annot"><span class="annottext">Either ExecutionError Value
+</span><a href="#local-6989586621679170345"><span class="hs-identifier hs-var">result</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Object] -&gt; Object) -&gt; [Object] -&gt; Object
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;query_id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Timestamp -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170344"><span class="hs-identifier hs-var">queryId</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">[Object] -&gt; [Object] -&gt; [Object]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;query_result&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; MetricIdentifier -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">(ExecutionError -&gt; MetricIdentifier)
+-&gt; (Value -&gt; MetricIdentifier)
+-&gt; Either ExecutionError Value
+-&gt; MetricIdentifier
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionError -&gt; MetricIdentifier
+forall a. AsText a =&gt; a -&gt; MetricIdentifier
+</span><a href="Cardano.Timeseries.AsText.html#asText"><span class="hs-identifier hs-var">asText</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; MetricIdentifier
+forall a. Show a =&gt; a -&gt; MetricIdentifier
+</span><span class="hs-identifier hs-var">showT</span></span><span> </span><span class="annot"><span class="annottext">Either ExecutionError Value
+</span><a href="#local-6989586621679170345"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679170343"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DetailLevel -&gt; DetailLevel -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier hs-var">DDetailed</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">forMachine</span></span><span> </span><span class="annot"><span class="annottext">DetailLevel
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTracePrune"><span class="hs-identifier hs-type">TimeseriesTracePrune</span></a></span><span> </span><span id="local-6989586621679170349"><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170349"><span class="hs-identifier hs-var">retMs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. Key -&gt; v -&gt; KeyMap v
+</span><span class="hs-identifier hs-var">singleton</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;retention_millis&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timestamp -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679170349"><span class="hs-identifier hs-var">retMs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679170353"><span id="local-6989586621679170357"><span id="local-6989586621679170361"><span class="annot"><span class="hs-identifier hs-type">MetaTrace</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTrace"><span class="hs-identifier hs-type">TimeseriesTrace</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679170378"><span class="annot"><span class="annottext">allNamespaces :: [Namespace TimeseriesTrace]
+</span><a href="#local-6989586621679170378"><span class="hs-identifier hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">[</span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Create&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Reconfigure&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Insert&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;IssueExecute&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;YieldExecute&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Prune&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679170393"><span class="annot"><span class="annottext">namespaceFor :: TimeseriesTrace -&gt; Namespace TimeseriesTrace
+</span><a href="#local-6989586621679170393"><span class="hs-identifier hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceCreate"><span class="hs-identifier hs-type">TimeseriesTraceCreate</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Create&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">namespaceFor</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceReconfigure"><span class="hs-identifier hs-type">TimeseriesTraceReconfigure</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Reconfigure&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">namespaceFor</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceInsert"><span class="hs-identifier hs-type">TimeseriesTraceInsert</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Insert&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">namespaceFor</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceIssueExecute"><span class="hs-identifier hs-type">TimeseriesTraceIssueExecute</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;IssueExecute&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">namespaceFor</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTraceYieldExecute"><span class="hs-identifier hs-type">TimeseriesTraceYieldExecute</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;YieldExecute&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">namespaceFor</span></span><span> </span><span class="annot"><a href="Cardano.Timeseries.Component.Trace.html#TimeseriesTracePrune"><span class="hs-identifier hs-type">TimeseriesTracePrune</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[MetricIdentifier]
+-&gt; [MetricIdentifier] -&gt; Namespace TimeseriesTrace
+forall a. [MetricIdentifier] -&gt; [MetricIdentifier] -&gt; Namespace a
+</span><span class="hs-identifier hs-var">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Prune&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679170420"><span class="annot"><span class="annottext">severityFor :: Namespace TimeseriesTrace
+-&gt; Maybe TimeseriesTrace -&gt; Maybe SeverityS
+</span><a href="#local-6989586621679170420"><span class="hs-identifier hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Create&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Info</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Reconfigure&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Info</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Insert&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Debug</span></span><span> </span><span class="hs-comment">-- That one clogs up the traces, hence lower severity</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;IssueExecute&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Info</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;YieldExecute&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Info</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Prune&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><span class="hs-identifier hs-var">Debug</span></span><span> </span><span class="hs-comment">-- That one might also be frequent,</span><span>
+</span><span id="line-88"></span><span>                                                                            </span><span class="hs-comment">-- depending on the configuration</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">severityFor</span></span><span> </span><span class="annot"><span class="annottext">Namespace TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span>                                              </span><span class="annot"><span class="annottext">Maybe TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679170454"><span class="annot"><span class="annottext">documentFor :: Namespace TimeseriesTrace -&gt; Maybe MetricIdentifier
+</span><a href="#local-6989586621679170454"><span class="hs-identifier hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Create&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;A timeseries handle has been created.&quot;</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Reconfigure&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;The timeseries handle has been reconfigured.&quot;</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Insert&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;A batch of metrics from one node has been inserted to the store.&quot;</span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;IssueExecute&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;The timeseries query has been issued.&quot;</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;YieldExecute&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;The timeseries query has yielded a result.&quot;</span></span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Namespace</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Timeseries&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;Prune&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MetricIdentifier -&gt; Maybe MetricIdentifier
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">MetricIdentifier
+</span><span class="hs-string">&quot;The timeseries store has been pruned.&quot;</span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">documentFor</span></span><span> </span><span class="annot"><span class="annottext">Namespace TimeseriesTrace
+</span><span class="hs-identifier">_</span></span><span>                                             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe MetricIdentifier
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-98"></span></pre></body></html>
