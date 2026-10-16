@@ -41,7 +41,7 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 11.8
+                      , cardano-api ^>= 11.9
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.3
                       , cardano-crypto-class ^>=2.6
                       , cardano-crypto-wrapper
@@ -55,7 +55,7 @@ library
                       , cardano-ledger-conway
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-dijkstra
-                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley >= 1.21
                       , cardano-node
                       , cardano-diffusion:ping ^>= 1.3
                       , cardano-prelude
@@ -226,6 +226,13 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
                         Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+                        Cardano.Testnet.Test.Dijkstra.Common
+                        Cardano.Testnet.Test.Dijkstra.DirectDeposits
+                        Cardano.Testnet.Test.Dijkstra.Governance
+                        Cardano.Testnet.Test.Dijkstra.NestedTransaction
+                        Cardano.Testnet.Test.Dijkstra.Scripts
+                        Cardano.Testnet.Test.Dijkstra.Staking
+                        Cardano.Testnet.Test.Dijkstra.TopLevelGuards
                         Cardano.Testnet.Test.DumpConfig
                         Cardano.Testnet.Test.EnableTracer
                         Cardano.Testnet.Test.FoldEpochState
@@ -253,6 +260,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.SearchUtxos
                         Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
+                        Cardano.Testnet.Test.Node.DijkstraEra
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.Manifest
@@ -276,6 +284,7 @@ test-suite cardano-testnet-test
                       , cardano-crypto-class
                       , cardano-ledger-binary
                       , cardano-ledger-conway
+                      , cardano-ledger-dijkstra
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude

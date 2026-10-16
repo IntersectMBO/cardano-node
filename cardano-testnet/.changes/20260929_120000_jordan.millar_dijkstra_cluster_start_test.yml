@@ -1,0 +1,13 @@
+pr: 6709
+kind:
+  - test
+description: |
+  Added Dijkstra integration properties covering governance-driven hard forks from
+  Conway through protocol versions 11 and 12, a nested transaction token swap,
+  sub-transaction guards, minting and spending, staking, and governance. Native
+  and Plutus V4 script cases exercise direct and reference witnesses. Top-level
+  guard properties cover key, native and Plutus V4 requirements, including
+  missing-guard rejection and recovery. The generated node configuration enables
+  experimental hard forks so nodes can forge after reaching protocol version 12.
+  The tests use the cardano-cli pinned in cabal.project to PR #1453 for the
+  `dijkstra sub-transaction` commands.
