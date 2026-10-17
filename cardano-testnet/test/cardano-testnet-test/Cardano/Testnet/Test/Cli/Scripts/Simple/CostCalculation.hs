@@ -47,7 +47,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraDijkstra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     eraName = eraToString era

@@ -198,8 +198,8 @@ defaultConwayGenesis = do
 -- | The only era supported by cardano-testnet for the moment.
 -- It's important to keep the era parameterization everywhere, for ease of development
 -- when new eras roll out.
-defaultEra :: ShelleyBasedEra Api.ConwayEra
-defaultEra = ShelleyBasedEraConway
+defaultEra :: ShelleyBasedEra Api.DijkstraEra
+defaultEra = ShelleyBasedEraDijkstra
 
 -- | A @TraceOptions@ that enables the @Forwarder@ backend; allowing nodes to
 -- forward their traces and metrics to cardano-tracer.
@@ -252,6 +252,10 @@ defaultYamlHardforkViaConfig sbe =
   hardforkViaConfig sbe' =
     Aeson.fromList $
       ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+      -- Dijkstra is still experimental. Without this flag the node declares PV11 as its
+      -- maximum protocol version, so it cannot forge once the ledger is at PV12 (its own
+      -- blocks are rejected with ObsoleteNode), and it ignores the Dijkstra genesis file.
+      : ("ExperimentalHardForksEnabled", Aeson.Bool True)
       : (case sbe' of
             ShelleyBasedEraShelley ->
                 [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0) ]

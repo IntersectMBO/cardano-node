@@ -61,7 +61,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       ceo = convert era
       sbe = convert era
       creationOptions = def
@@ -143,7 +143,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
                                                      -- make sure it doesn't change.
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
-  void $ activityChangeProposalTest execConfig epochStateView ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView era gov
                                     "firstProposal" stakeKeys wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -166,7 +166,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
   -- and we have the stake distributed evenly
   let secondTargetDRepActivity = EpochInterval (unEpochInterval firstTargetDRepActivity + 1)
-  void $ activityChangeProposalTest execConfig epochStateView ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView era gov
                                     "failingProposal" stakeKeys wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -178,7 +178,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   -- This is accounted for by the dormant epoch count
   let numOfFillerProposals = 4 :: Int
   sequence_
-    [activityChangeProposalTest execConfig epochStateView ceo gov
+    [activityChangeProposalTest execConfig epochStateView era gov
                                 ("fillerProposalNum" ++ show proposalNum) stakeKeys wallet [(1, "yes")]
                                 (EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral proposalNum))
                                 minEpochsToWaitIfNotChanging Nothing
@@ -191,7 +191,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
   let lastTargetDRepActivity = EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1)
-  void $ activityChangeProposalTest execConfig epochStateView ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView era gov
                                     "lastProposal" stakeKeys wallet0 [(1, "yes")] lastTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -205,7 +205,7 @@ activityChangeProposalTest
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
+  -> Exp.Era era -- ^ The witness for the current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> KeyPair StakeKey -- ^ Registered stake keys
@@ -220,9 +220,10 @@ activityChangeProposalTest
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
   -> m (TxId, Word16) -- ^ The transaction id and the index of the governance action.
-activityChangeProposalTest execConfig epochStateView ceo work prefix
+activityChangeProposalTest execConfig epochStateView era work prefix
                            stakeKeys wallet votes change minWait mExpected maxWait = do
-  let sbe = convert ceo
+  let ceo = convert era
+      sbe = convert era
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
 
