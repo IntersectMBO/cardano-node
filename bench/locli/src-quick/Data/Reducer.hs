@@ -43,7 +43,7 @@ instance  ( Foldable f2
 r1 <-> r2 = Chain r1 r2
 
 -- Explicitly chain reducers with a projection function that extracts a Foldable and
--- an initial accumulator value from the first reducer's reult value
+-- an initial accumulator value from the first reducer's result value
 chainWith ::
   ( Foldable f1
   , Foldable f2
@@ -67,7 +67,7 @@ instance Reducer (HigherOrder a) where
   initialOf _ = ([], Nothing)
 
   reducerOf (Threshold f) = go where
-    -- still in intial state? always use the head of the original sequence as first data point
+    -- still in initial state? always use the head of the original sequence as first data point
     go ([], _) h            = ([h], Just h)
     go (acc@(h:_), _) next
       | f h next            = (next:acc, Just next)
