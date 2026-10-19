@@ -55,6 +55,18 @@ getShelleyGenesisPath nodeConfig =
 getShelleyGenesisDir :: NodeConfiguration -> Maybe FilePath
 getShelleyGenesisDir = fmap (takeDirectory . unGenesisFile) . getShelleyGenesisPath
 
+-- | Kept for downstream consumers; 'getShelleyGenesis' is the same function
+-- under its new name.
+getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
+getGenesis = getShelleyGenesis
+{-# DEPRECATED getGenesis "Use getShelleyGenesis instead." #-}
+
+-- | Kept for downstream consumers; 'getShelleyGenesisPath' is the same
+-- function under its new name.
+getGenesisPath :: NodeConfiguration -> Maybe GenesisFile
+getGenesisPath = getShelleyGenesisPath
+{-# DEPRECATED getGenesisPath "Use getShelleyGenesisPath instead." #-}
+
 mkConsensusProtocol :: NodeConfiguration -> IO (Either TxGenError SomeConsensusProtocol)
 mkConsensusProtocol nodeConfig =
   case ncProtocolConfig nodeConfig of
