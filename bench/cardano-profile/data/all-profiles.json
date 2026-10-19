@@ -15,10 +15,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -101,7 +101,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -1177,7 +1177,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -1235,7 +1235,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -1288,10 +1288,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -1374,7 +1374,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -2450,7 +2450,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -2508,7 +2508,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -2563,10 +2563,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -2652,7 +2652,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -3728,7 +3728,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -3786,7 +3786,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -3842,10 +3842,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -3928,7 +3928,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -4659,7 +4659,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -4717,7 +4717,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -4773,10 +4773,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -4859,7 +4859,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -5590,7 +5590,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -5648,7 +5648,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -5704,10 +5704,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -5790,7 +5790,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -6521,7 +6521,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -6579,7 +6579,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -6635,10 +6635,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -6721,7 +6721,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -7452,7 +7452,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -7510,7 +7510,7 @@
             "major": 9,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -7555,10 +7555,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "performance"
     },
     "chaindb": {
@@ -7652,7 +7652,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -8728,7 +8728,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 432000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -8786,7 +8786,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -8832,10 +8832,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "performance"
     },
     "chaindb": {
@@ -8929,7 +8929,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -10005,7 +10005,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 432000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -10063,7 +10063,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -10109,10 +10109,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "performance"
     },
     "chaindb": {
@@ -10206,7 +10206,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -11282,7 +11282,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 432000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -11340,7 +11340,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -11386,10 +11386,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "performance"
     },
     "chaindb": {
@@ -11483,7 +11483,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -12559,7 +12559,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 432000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -12617,7 +12617,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 2160,
@@ -12671,10 +12671,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -12757,7 +12757,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -13833,7 +13833,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -13891,7 +13891,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -13944,10 +13944,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -14030,7 +14030,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -15106,7 +15106,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -15164,7 +15164,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -15217,10 +15217,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -15303,7 +15303,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -16379,7 +16379,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -16437,7 +16437,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -16490,10 +16490,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -16610,7 +16610,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -17686,7 +17686,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -17744,7 +17744,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -17797,10 +17797,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -17883,7 +17883,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -18959,7 +18959,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -19017,7 +19017,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -19072,10 +19072,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -19161,7 +19161,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -19636,7 +19636,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -19694,7 +19694,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -19749,10 +19749,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -19852,7 +19852,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -20327,7 +20327,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -20385,7 +20385,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -20440,10 +20440,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -20543,7 +20543,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -21018,7 +21018,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -21076,7 +21076,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -21131,10 +21131,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -21220,7 +21220,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -21695,7 +21695,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -21753,7 +21753,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -21808,10 +21808,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -21918,7 +21918,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -22992,7 +22992,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -23050,7 +23050,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -23105,10 +23105,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -23202,7 +23202,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -24276,7 +24276,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -24334,7 +24334,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -24389,10 +24389,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -24486,7 +24486,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -25562,7 +25562,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -25620,7 +25620,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -25675,10 +25675,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -25764,7 +25764,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -27389,7 +27389,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -27447,7 +27447,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -27502,10 +27502,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -27591,7 +27591,7 @@
       "tx_fee": 1452000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -29216,7 +29216,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -29274,7 +29274,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -29327,10 +29327,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -29413,7 +29413,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -30489,7 +30489,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -30547,7 +30547,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -30600,10 +30600,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -30686,7 +30686,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -31762,7 +31762,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -31820,7 +31820,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -31875,10 +31875,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -31964,7 +31964,7 @@
       "tx_fee": 1380000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -32440,7 +32440,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -32498,7 +32498,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -32551,10 +32551,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -32636,7 +32636,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -33712,7 +33712,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -33770,7 +33770,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -33823,10 +33823,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -33943,7 +33943,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -35019,7 +35019,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -35077,7 +35077,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -35130,10 +35130,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -35216,7 +35216,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -36292,7 +36292,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -36350,7 +36350,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -36405,10 +36405,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -36494,7 +36494,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -37570,7 +37570,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -37628,7 +37628,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -37681,10 +37681,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -37767,7 +37767,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -39388,7 +39388,7 @@
         "maxRefScriptSizePerBlock": 1048576,
         "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
-        "minPoolMargin": 1.5e-2,
+        "minPoolMargin": 0.015,
         "plutusV4CostModel": [
           100788,
           420,
@@ -39661,7 +39661,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -39719,7 +39719,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -39772,10 +39772,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -39857,7 +39857,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -41463,8 +41463,275 @@
       "delegator_coin": 0,
       "delegators": 0,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -41484,7 +41751,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -41542,7 +41809,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -41595,10 +41862,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -41686,7 +41953,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -43292,8 +43559,275 @@
       "delegator_coin": 0,
       "delegators": 0,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -43313,7 +43847,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -43371,7 +43905,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -43427,10 +43961,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -43521,7 +44055,7 @@
       "tx_fee": 2000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -45127,8 +45661,275 @@
       "delegator_coin": 0,
       "delegators": 0,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -45148,7 +45949,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -45206,7 +46007,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -45262,10 +46063,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -45356,7 +46157,7 @@
       "tx_fee": 2000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -46962,8 +47763,275 @@
       "delegator_coin": 0,
       "delegators": 0,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -46983,7 +48051,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -47041,7 +48109,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -47097,10 +48165,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -47182,7 +48250,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -48258,7 +49326,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -48316,7 +49384,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -48371,10 +49439,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -48490,7 +49558,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -49566,7 +50634,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -49624,7 +50692,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -49679,10 +50747,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 5.0e-2,
+      "minimum_chain_density": 0.050,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": null
     },
     "cli_args": {
@@ -50898,7 +51966,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 10,
@@ -50953,10 +52021,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -51038,7 +52106,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -52114,7 +53182,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -52172,7 +53240,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -52227,10 +53295,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -52312,7 +53380,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -53388,7 +54456,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -53446,7 +54514,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -53501,10 +54569,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -53589,7 +54657,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -54665,7 +55733,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -54723,7 +55791,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -54778,10 +55846,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -54866,7 +55934,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -55942,7 +57010,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -56000,7 +57068,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -56053,10 +57121,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -56139,7 +57207,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -57215,7 +58283,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -57273,7 +58341,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -57326,10 +58394,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -57412,7 +58480,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -58488,7 +59556,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -58546,7 +59614,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -58599,10 +59667,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -58719,7 +59787,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -59194,7 +60262,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -59252,7 +60320,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -59305,10 +60373,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -59447,7 +60515,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -59922,7 +60990,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -59980,7 +61048,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -60033,10 +61101,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -60119,7 +61187,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -61195,7 +62263,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -61253,7 +62321,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -61308,10 +62376,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -61397,7 +62465,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -62473,7 +63541,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -62531,7 +63599,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -62584,10 +63652,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -62670,7 +63738,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -63746,7 +64814,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -63804,7 +64872,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -63857,10 +64925,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -63943,7 +65011,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -65019,7 +66087,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -65077,7 +66145,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -65132,10 +66200,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -65217,7 +66285,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -66293,7 +67361,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -66351,7 +67419,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -66406,10 +67474,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -66491,7 +67559,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -67567,7 +68635,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -67625,7 +68693,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -67680,10 +68748,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -67765,7 +68833,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -68841,7 +69909,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -68899,7 +69967,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -68954,10 +70022,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -69042,7 +70110,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -70118,7 +71186,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -70176,7 +71244,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -70231,10 +71299,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -70319,7 +71387,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -71393,7 +72461,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -71451,7 +72519,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -71506,10 +72574,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -71594,7 +72662,7 @@
       "tx_fee": 1452000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -72668,7 +73736,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -72726,7 +73794,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -72781,10 +73849,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -72866,7 +73934,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -73942,7 +75010,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -74000,7 +75068,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -74055,10 +75123,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -74140,7 +75208,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -75216,7 +76284,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -75274,7 +76342,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -75329,10 +76397,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -75414,7 +76482,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -76490,7 +77558,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -76548,7 +77616,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -76605,10 +77673,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -76690,7 +77758,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -77766,7 +78834,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -77824,7 +78892,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -77881,10 +78949,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -77966,7 +79034,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -79042,7 +80110,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -79100,7 +80168,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -79155,10 +80223,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -79243,7 +80311,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -80319,7 +81387,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -80377,7 +81445,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -80432,10 +81500,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -80520,7 +81588,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -81594,7 +82662,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -81652,7 +82720,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -81707,10 +82775,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -81792,7 +82860,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -82868,7 +83936,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -82926,7 +83994,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -82983,10 +84051,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -83068,7 +84136,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -84144,7 +85212,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -84202,7 +85270,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -84260,10 +85328,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -84345,7 +85413,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -85421,7 +86489,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -85479,7 +86547,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -85536,10 +86604,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -85621,7 +86689,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -86697,7 +87765,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -86755,7 +87823,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -86813,10 +87881,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -86898,7 +87966,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -87974,7 +89042,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -88032,7 +89100,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -88089,10 +89157,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -88174,7 +89242,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -89250,7 +90318,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -89308,7 +90376,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -89365,10 +90433,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -89450,7 +90518,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -90524,7 +91592,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -90582,7 +91650,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -90637,10 +91705,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -90722,7 +91790,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -91796,7 +92864,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -91854,7 +92922,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -91909,10 +92977,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -91994,7 +93062,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -93068,7 +94136,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -93126,7 +94194,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -93181,10 +94249,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -93266,7 +94334,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -94872,8 +95940,275 @@
       "delegator_coin": 1000000000000000,
       "delegators": 1000000,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -94893,7 +96228,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -94951,7 +96286,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -95032,10 +96367,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -95122,7 +96457,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -96728,8 +98063,275 @@
       "delegator_coin": 1000000000000000,
       "delegators": 1000000,
       "dijkstra": {
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
+        "maxEndorserBlockExecutionUnits": {
+          "memory": 310000000,
+          "steps": 100000000000
+        },
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
+        "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
+        "minPoolMargin": 0.015,
+        "plutusV4CostModel": [
+          100788,
+          420,
+          1,
+          1,
+          1000,
+          173,
+          0,
+          1,
+          1000,
+          59957,
+          4,
+          1,
+          11183,
+          32,
+          201305,
+          8356,
+          4,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          16000,
+          100,
+          100,
+          100,
+          16000,
+          100,
+          94375,
+          32,
+          132994,
+          32,
+          61462,
+          4,
+          72010,
+          178,
+          0,
+          1,
+          22151,
+          32,
+          91189,
+          769,
+          4,
+          2,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          1000,
+          42921,
+          4,
+          2,
+          30623,
+          28755,
+          75,
+          1,
+          898148,
+          27279,
+          1,
+          51775,
+          558,
+          1,
+          39184,
+          1000,
+          60594,
+          1,
+          141895,
+          32,
+          83150,
+          32,
+          15299,
+          32,
+          76049,
+          1,
+          13169,
+          4,
+          22100,
+          10,
+          28999,
+          74,
+          1,
+          28999,
+          74,
+          1,
+          43285,
+          552,
+          1,
+          44749,
+          541,
+          1,
+          33852,
+          32,
+          68246,
+          32,
+          72362,
+          32,
+          7243,
+          32,
+          7391,
+          32,
+          11546,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          90434,
+          519,
+          0,
+          1,
+          74433,
+          32,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          1,
+          85848,
+          123203,
+          7305,
+          -900,
+          1716,
+          960,
+          57,
+          85848,
+          0,
+          1,
+          955506,
+          213312,
+          0,
+          2,
+          270652,
+          22588,
+          4,
+          1457325,
+          64566,
+          4,
+          20467,
+          1,
+          4,
+          0,
+          141992,
+          32,
+          100788,
+          420,
+          1,
+          1,
+          81663,
+          32,
+          59498,
+          32,
+          20142,
+          32,
+          24588,
+          32,
+          20744,
+          32,
+          25933,
+          32,
+          24623,
+          32,
+          43053543,
+          10,
+          53384111,
+          14333,
+          10,
+          43574283,
+          26308,
+          10,
+          16000,
+          100,
+          16000,
+          100,
+          962335,
+          18,
+          2780678,
+          6,
+          442008,
+          1,
+          52538055,
+          3756,
+          18,
+          267929,
+          18,
+          76433006,
+          8868,
+          18,
+          52948122,
+          18,
+          1995836,
+          36,
+          3227919,
+          12,
+          901022,
+          1,
+          166917843,
+          4307,
+          36,
+          284546,
+          36,
+          158221314,
+          26549,
+          36,
+          74698472,
+          36,
+          333849714,
+          1,
+          254006273,
+          72,
+          2174038,
+          72,
+          2261318,
+          64571,
+          4,
+          207616,
+          8310,
+          4,
+          1293828,
+          28716,
+          63,
+          0,
+          1,
+          1006041,
+          43623,
+          251,
+          0,
+          1
+        ],
         "refScriptCostMultiplier": 1.2,
         "refScriptCostStride": 25600
       },
@@ -96749,7 +98351,7 @@
         "v12-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -96807,7 +98409,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -96888,10 +98490,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -96973,7 +98575,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -98047,7 +99649,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -98105,7 +99707,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -98160,10 +99762,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -98245,7 +99847,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -99319,7 +100921,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -99377,7 +100979,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -99432,10 +101034,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 7.5e-3,
+      "minimum_chain_density": 0.0075,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -99517,7 +101119,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 1.5e-2,
+      "active_slots_coeff": 0.015,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -100593,7 +102195,7 @@
         "blocksize6912k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 1.5e-2,
+        "activeSlotsCoeff": 0.015,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -100651,7 +102253,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -100706,10 +102308,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -100791,7 +102393,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -102412,7 +104014,7 @@
         "maxRefScriptSizePerBlock": 1048576,
         "maxRefScriptSizePerEndorserBlock": 4000000,
         "maxRefScriptSizePerTx": 204800,
-        "minPoolMargin": 1.5e-2,
+        "minPoolMargin": 0.015,
         "plutusV4CostModel": [
           100788,
           420,
@@ -102686,7 +104288,7 @@
         "blocksize6912k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 1200,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -102744,7 +104346,7 @@
             "major": 12,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -102799,10 +104401,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 7.5e-3,
+      "minimum_chain_density": 0.0075,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -102884,7 +104486,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 1.5e-2,
+      "active_slots_coeff": 0.015,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -103960,7 +105562,7 @@
         "blocksize6912k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 1.5e-2,
+        "activeSlotsCoeff": 0.015,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -104018,7 +105620,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -104073,10 +105675,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 7.5e-3,
+      "minimum_chain_density": 0.0075,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -104158,7 +105760,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 1.5e-2,
+      "active_slots_coeff": 0.015,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -105234,7 +106836,7 @@
         "blocksize768k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 1.5e-2,
+        "activeSlotsCoeff": 0.015,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -105292,7 +106894,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -105347,10 +106949,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 7.5e-3,
+      "minimum_chain_density": 0.0075,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -105432,7 +107034,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 1.5e-2,
+      "active_slots_coeff": 0.015,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -106508,7 +108110,7 @@
         "blocksize768k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 1.5e-2,
+        "activeSlotsCoeff": 0.015,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -106566,7 +108168,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -106621,10 +108223,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -106706,7 +108308,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -107780,7 +109382,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -107838,7 +109440,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -107893,10 +109495,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -107979,7 +109581,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -109055,7 +110657,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -109113,7 +110715,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -109168,10 +110770,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -109253,7 +110855,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -110329,7 +111931,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -110387,7 +111989,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -110442,10 +112044,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -110527,7 +112129,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -111603,7 +113205,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -111661,7 +113263,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -111716,10 +113318,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -111801,7 +113403,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -112877,7 +114479,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -112935,7 +114537,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -112988,10 +114590,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -113108,7 +114710,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -113583,7 +115185,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -113641,7 +115243,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -113705,10 +115307,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -113847,7 +115449,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -114322,7 +115924,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -114380,7 +115982,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -114447,10 +116049,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -114550,7 +116152,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -115624,7 +117226,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -115682,7 +117284,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -115738,10 +117340,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -115841,7 +117443,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -116917,7 +118519,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -116975,7 +118577,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -117031,10 +118633,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -117117,7 +118719,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -118191,7 +119793,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -118249,7 +119851,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -118305,10 +119907,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -118391,7 +119993,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -119465,7 +121067,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -119523,7 +121125,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -119578,10 +121180,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -119666,7 +121268,7 @@
       "tx_fee": 1380000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -120141,7 +121743,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -120199,7 +121801,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -120255,10 +121857,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -120378,7 +121980,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -120853,7 +122455,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -120911,7 +122513,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -120967,10 +122569,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -121090,7 +122692,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -121565,7 +123167,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -121623,7 +123225,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -121679,10 +123281,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -121802,7 +123404,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -122277,7 +123879,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -122335,7 +123937,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -122391,10 +123993,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -122514,7 +124116,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -122989,7 +124591,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -123047,7 +124649,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -123102,10 +124704,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -123204,7 +124806,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -123679,7 +125281,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -123737,7 +125339,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -123793,10 +125395,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -123930,7 +125532,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -124405,7 +126007,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -124463,7 +126065,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -124518,10 +126120,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -124620,7 +126222,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -125095,7 +126697,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -125153,7 +126755,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -125209,10 +126811,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -125346,7 +126948,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -125821,7 +127423,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -125879,7 +127481,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -125935,10 +127537,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -126067,7 +127669,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -127141,7 +128743,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -127199,7 +128801,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -127255,10 +128857,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -127378,7 +128980,7 @@
       "tx_fee": 1892175
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -128454,7 +130056,7 @@
         "budget/block/memory/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -128512,7 +130114,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -128582,10 +130184,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -128705,7 +130307,7 @@
       "tx_fee": 2463246
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -129781,7 +131383,7 @@
         "budget/block/memory/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -129839,7 +131441,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -129909,10 +131511,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -130032,7 +131634,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -131106,7 +132708,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -131164,7 +132766,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -131220,10 +132822,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -131343,7 +132945,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -132408,7 +134010,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -132466,7 +134068,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -132537,10 +134139,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -132660,7 +134262,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -133725,7 +135327,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -133783,7 +135385,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -133853,10 +135455,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -133976,7 +135578,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -135041,7 +136643,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -135099,7 +136701,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -135170,10 +136772,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -135293,7 +136895,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -135768,7 +137370,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -135826,7 +137428,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -135882,10 +137484,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -135971,7 +137573,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -137045,7 +138647,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -137103,7 +138705,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -137159,10 +138761,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -137248,7 +138850,7 @@
       "tx_fee": 2463246
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -138324,7 +139926,7 @@
         "budget/block/memory/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -138382,7 +139984,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -138452,10 +140054,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -138555,7 +140157,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -139629,7 +141231,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -139687,7 +141289,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -139743,10 +141345,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -139846,7 +141448,7 @@
       "tx_fee": 1008000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -140922,7 +142524,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -140980,7 +142582,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -141036,10 +142638,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -141139,7 +142741,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -142213,7 +143815,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -142271,7 +143873,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -142327,10 +143929,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -142430,7 +144032,7 @@
       "tx_fee": 1004000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -143506,7 +145108,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -143564,7 +145166,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -143620,10 +145222,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -143730,7 +145332,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -144804,7 +146406,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -144862,7 +146464,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -144918,10 +146520,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -145007,7 +146609,7 @@
       "tx_fee": 1415000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -146081,7 +147683,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -146139,7 +147741,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -146195,10 +147797,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -146292,7 +147894,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -147366,7 +148968,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -147424,7 +149026,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -147480,10 +149082,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -147580,7 +149182,7 @@
       "tx_fee": 1275000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -149205,7 +150807,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -149263,7 +150865,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -149319,10 +150921,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -149436,7 +151038,7 @@
       "tx_fee": 572000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -151061,7 +152663,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -151119,7 +152721,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -151175,10 +152777,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -151272,7 +152874,7 @@
       "tx_fee": 915500
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -152897,7 +154499,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -152955,7 +154557,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -153011,10 +154613,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -153114,7 +154716,7 @@
       "tx_fee": 586000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -154739,7 +156341,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -154797,7 +156399,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -154853,10 +156455,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -154997,7 +156599,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -156071,7 +157673,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -156129,7 +157731,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -156185,10 +157787,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -156329,7 +157931,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -157405,7 +159007,7 @@
         "budget/block/steps/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -157463,7 +159065,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -157519,10 +159121,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -157663,7 +159265,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -158739,7 +160341,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -158797,7 +160399,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -158853,10 +160455,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -158987,7 +160589,7 @@
       "tx_fee": 1275000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -160612,7 +162214,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -160670,7 +162272,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -160726,10 +162328,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -160857,7 +162459,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -161931,7 +163533,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -161989,7 +163591,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -162045,10 +163647,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -162176,7 +163778,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -163252,7 +164854,7 @@
         "budget/block/steps/oneandahalf"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -163310,7 +164912,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -163366,10 +164968,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -163497,7 +165099,7 @@
       "tx_fee": 940000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -164573,7 +166175,7 @@
         "budget/block/steps/double"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -164631,7 +166233,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -164687,10 +166289,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -164810,7 +166412,7 @@
       "tx_fee": 1452000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -165884,7 +167486,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -165942,7 +167544,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -165998,10 +167600,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -166121,7 +167723,7 @@
       "tx_fee": 1452000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -167746,7 +169348,7 @@
         "v11-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -167804,7 +169406,7 @@
             "major": 11,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -167857,10 +169459,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -167943,7 +169545,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -169019,7 +170621,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -169077,7 +170679,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -169130,10 +170732,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -169216,7 +170818,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -170292,7 +171894,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -170350,7 +171952,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -170403,10 +172005,10 @@
       "filters": [],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -170489,7 +172091,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -171565,7 +173167,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -171623,7 +173225,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -171678,10 +173280,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -171764,7 +173366,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -172840,7 +174442,7 @@
         "blocksize64k"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 600,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -172898,7 +174500,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 3,
@@ -172954,10 +174556,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -173093,7 +174695,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -173568,7 +175170,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 1200,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -173626,7 +175228,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -173684,10 +175286,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -173823,7 +175425,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -174298,7 +175900,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 1200,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -174356,7 +175958,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -174412,10 +176014,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -174551,7 +176153,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -175026,7 +176628,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 1200,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -175084,7 +176686,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 6,
@@ -175140,10 +176742,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -175260,7 +176862,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -175735,7 +177337,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -175793,7 +177395,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -175849,10 +177451,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -175969,7 +177571,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -176444,7 +178046,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -176502,7 +178104,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -176558,10 +178160,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -176678,7 +178280,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -177153,7 +178755,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -177211,7 +178813,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -177267,10 +178869,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -177387,7 +178989,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -177862,7 +179464,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -177920,7 +179522,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -177976,10 +179578,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -178117,7 +179719,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -178592,7 +180194,7 @@
         "v8-preview"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -178650,7 +180252,7 @@
             "major": 8,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -178706,10 +180308,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -178835,7 +180437,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -179909,7 +181511,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -179967,7 +181569,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -180034,10 +181636,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -180163,7 +181765,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -181237,7 +182839,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -181295,7 +182897,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -181351,10 +182953,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -181471,7 +183073,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -182545,7 +184147,7 @@
       "pparamsEpoch": 537,
       "pparamsOverlays": [],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -182603,7 +184205,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -182659,10 +184261,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -182779,7 +184381,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -183844,7 +185446,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -183902,7 +185504,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -183973,10 +185575,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -184093,7 +185695,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -185158,7 +186760,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -185216,7 +186818,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -185286,10 +186888,10 @@
       ],
       "finish_patience": 21,
       "last_log_spread_s": 120,
-      "minimum_chain_density": 2.5e-2,
+      "minimum_chain_density": 0.025,
       "silence_since_last_block_s": 120,
       "start_log_spread_s": 120,
-      "tx_loss_ratio": 2.0e-2,
+      "tx_loss_ratio": 0.020,
       "type": "standard"
     },
     "cli_args": {
@@ -185406,7 +187008,7 @@
       "tx_fee": 1000000
     },
     "genesis": {
-      "active_slots_coeff": 5.0e-2,
+      "active_slots_coeff": 0.050,
       "alonzo": {
         "collateralPercentage": 150,
         "costModels": {
@@ -186471,7 +188073,7 @@
         "voting"
       ],
       "shelley": {
-        "activeSlotsCoeff": 5.0e-2,
+        "activeSlotsCoeff": 0.050,
         "epochLength": 8000,
         "genDelegs": {
           "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
@@ -186529,7 +188131,7 @@
             "major": 10,
             "minor": 0
           },
-          "rho": 3.0e-3,
+          "rho": 0.0030,
           "tau": 0.2
         },
         "securityParam": 40,
@@ -186582,4 +188184,3 @@
     ]
   }
 }
-
