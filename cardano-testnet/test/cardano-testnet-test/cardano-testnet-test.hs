@@ -35,6 +35,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Manifest
+import qualified Cardano.Testnet.Test.Node.KesKeyFileRemoval
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
 import qualified Cardano.Testnet.Test.Rpc.EraSummary
@@ -123,6 +124,7 @@ tests = do
           -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
           , ignoreOnWindows "Shutdown On SlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
+          , ignoreOnWindows "KES key file removal disables forging on SIGHUP" Cardano.Testnet.Test.Node.KesKeyFileRemoval.hprop_sighup_removed_kes_key_disables_forging
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate

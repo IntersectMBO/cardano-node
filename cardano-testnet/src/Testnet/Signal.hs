@@ -10,12 +10,13 @@
 module Testnet.Signal
   ( hardKillProcess
   , interruptNodesOnSigINT
+  , reloadNodeConfiguration
   ) where
 
 #ifdef UNIX
 import           Control.Monad
-import           System.Posix.Signals (Handler (..), installHandler, raiseSignal, sigINT,
-                   sigKILL, signalProcess)
+import           System.Posix.Signals (Handler (..), installHandler, raiseSignal, sigHUP,
+                   sigINT, sigKILL, signalProcess)
 import           System.Process (ProcessHandle, getPid, interruptProcessGroupOf)
 #else
 import           System.Process (ProcessHandle, terminateProcess)
@@ -48,4 +49,16 @@ hardKillProcess :: ProcessHandle -> IO ()
 hardKillProcess hProcess = getPid hProcess >>= mapM_ (signalProcess sigKILL)
 #else
 hardKillProcess = terminateProcess
+#endif
+
+-- | Ask a running node to re-read its configuration: @SIGHUP@ on unix, which
+-- cardano-node answers by reloading the topology, the RPC configuration and
+-- the block forging credentials. Windows has no equivalent, so the call fails
+-- there; tests that need it are ignored on Windows.
+reloadNodeConfiguration :: ProcessHandle -> IO ()
+#ifdef UNIX
+reloadNodeConfiguration hProcess = getPid hProcess >>= mapM_ (signalProcess sigHUP)
+#else
+reloadNodeConfiguration _ =
+  ioError (userError "reloadNodeConfiguration: SIGHUP is not available on Windows")
 #endif
