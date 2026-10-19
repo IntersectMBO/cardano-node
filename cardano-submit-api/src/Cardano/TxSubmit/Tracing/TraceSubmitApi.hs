@@ -7,6 +7,7 @@ import           Cardano.Api.Pretty (textShow)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Logging
+import           Cardano.TxSubmit.Deprecation (deprecationNotice, guideUrl)
 import           Cardano.TxSubmit.Types (TxCmdError (..))
 
 import           Prelude hiding (take)
@@ -14,7 +15,7 @@ import           Prelude hiding (take)
 import           Data.Aeson (Value (String), toJSON)
 import           Data.Aeson.KeyMap (singleton)
 import           Data.Aeson.Types ((.=))
-import           Data.Text (Text, pack, take)
+import           Data.Text (Text, intercalate, pack, take)
 import           Data.Text.Encoding (decodeLatin1)
 import           GHC.Exception.Type (SomeException, displayException)
 import           GHC.IO.Exception (IOException)
@@ -22,6 +23,7 @@ import           Network.Socket (SockAddr)
 
 data TraceSubmitApi = ApplicationStopping
                     | ApplicationInitializeMetrics
+                    | ApplicationDeprecated
                     | EndpointListeningOnPort SockAddr
                     | EndpointException Text SomeException
                     | EndpointFailedToSubmitTransaction TxCmdError
@@ -78,6 +80,12 @@ instance LogFormatting TraceSubmitApi where
   forMachine _ (MetricsServerPortNotBound port) =
     singleton "port" (toJSON port)
   forMachine _ ApplicationInitializeMetrics = mempty
+  forMachine _ ApplicationDeprecated = mconcat
+    [
+      "kind" .= String "ApplicationDeprecated",
+      "notice" .= String (pack $ unwords deprecationNotice),
+      "guide" .= String (pack guideUrl)
+    ]
 
   forHuman (MetricsServerStarted port) =
     "Starting metrics server on port " <> textShow port
@@ -92,6 +100,8 @@ instance LogFormatting TraceSubmitApi where
   forHuman ApplicationStopping =
     "runTxSubmitWebapi: Stopping TxSubmit API"
   forHuman ApplicationInitializeMetrics = "Metrics initialized"
+  forHuman ApplicationDeprecated =
+    intercalate "\n" . fmap pack $ deprecationNotice <> ["Migration guide: " <> guideUrl]
   forHuman (EndpointListeningOnPort port) =
     "Web API listening on port " <> textShow port
   forHuman EndpointExiting =
@@ -110,6 +120,7 @@ instance MetaTrace TraceSubmitApi where
   allNamespaces = [
       Namespace [] ["Application", "Stopping"],
       Namespace [] ["Application", "InitializeMetrics"],
+      Namespace [] ["Application", "Deprecated"],
 
       Namespace [] ["Endpoint", "ListeningOnPort"],
       Namespace [] ["Endpoint", "Exception"],
@@ -126,6 +137,7 @@ instance MetaTrace TraceSubmitApi where
 
   namespaceFor ApplicationStopping                   = Namespace [] ["Application", "Stopping"]
   namespaceFor ApplicationInitializeMetrics          = Namespace [] ["Application", "InitializeMetrics"]
+  namespaceFor ApplicationDeprecated                 = Namespace [] ["Application", "Deprecated"]
   namespaceFor (EndpointListeningOnPort _)           = Namespace [] ["Endpoint", "ListeningOnPort"]
   namespaceFor (EndpointException _ _)               = Namespace [] ["Endpoint", "Exception"]
   namespaceFor (EndpointFailedToSubmitTransaction _) = Namespace [] ["Endpoint", "FailedToSubmitTransaction"]
@@ -138,6 +150,7 @@ instance MetaTrace TraceSubmitApi where
 
   severityFor (Namespace _ ["Application", "Stopping"]) _               = Just Info
   severityFor (Namespace _ ["Application", "InitializeMetrics"]) _      = Just Debug
+  severityFor (Namespace _ ["Application", "Deprecated"]) _             = Just Warning
   severityFor (Namespace _ ["Endpoint", "ListeningOnPort"]) _           = Just Info
   severityFor (Namespace _ ["Endpoint", "Exception"]) _                 = Just Error
   severityFor (Namespace _ ["Endpoint", "Exiting"]) _                   = Just Info
