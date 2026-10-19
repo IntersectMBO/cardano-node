@@ -133,6 +133,7 @@ class HasKESInfo blk where
 instance HasKESInfo (ShelleyBlock protocol era) where
   getKESInfo _ (HotKey.KESCouldNotEvolve ki _) = Just ki
   getKESInfo _ (HotKey.KESKeyAlreadyPoisoned ki _) = Just ki
+  getKESInfo _ (HotKey.KESKeyFromTheFuture ki _) = Just ki
 
 instance HasKESInfo ByronBlock
 
