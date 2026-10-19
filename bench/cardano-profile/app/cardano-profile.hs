@@ -38,6 +38,7 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profi
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesScalingLocal, profilesScalingCloud)
 -- Dynamic profiles.
 import           Cardano.Benchmarking.Profile.Playground                  (profilesPlayground)
+import           Cardano.Benchmarking.Profile.RefScriptSweep              (profilesRefScriptSweep)
 
 --------------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ performanceAndTracingProfiles =
 
 -- Have fun!
 playgroundProfiles :: [Types.Profile]
-playgroundProfiles = profilesPlayground
+playgroundProfiles = profilesPlayground ++ profilesRefScriptSweep
 
 --------------------------------------------------------------------------------
 

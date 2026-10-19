@@ -67,6 +67,7 @@ library
                       , Cardano.Benchmarking.Profile.Genesis
                       , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Playground
+                      , Cardano.Benchmarking.Profile.RefScriptSweep
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types

@@ -49,6 +49,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , budgetBlockStepsOneAndAHalf, budgetBlockStepsDouble
   -- -- -- Memory:
   , budgetBlockMemoryOneAndAHalf, budgetBlockMemoryDouble
+  -- -- Reference scripts per block (Dijkstra):
+  , refScriptBlockDouble, refScriptBlockQuadruple
   -- -- TX:
 
   -- Others
@@ -461,6 +463,14 @@ budgetBlockMemoryOneAndAHalf = helper_addOverlayOrDie "budget/block/memory/onean
 
 budgetBlockMemoryDouble :: HasCallStack => Types.Profile -> Types.Profile
 budgetBlockMemoryDouble = helper_addOverlayOrDie "budget/block/memory/double"
+
+-- | Twice the reference scripts a block may carry (2 MiB), with the v12 genesis.
+refScriptBlockDouble :: HasCallStack => Types.Profile -> Types.Profile
+refScriptBlockDouble = helper_addOverlayOrDie "refscript-block-2mib"
+
+-- | Four times the reference scripts a block may carry (4 MiB), with the v12 genesis.
+refScriptBlockQuadruple :: HasCallStack => Types.Profile -> Types.Profile
+refScriptBlockQuadruple = helper_addOverlayOrDie "refscript-block-4mib"
 
 -- used to manually reduce block size for e.g. Conway; has to be applied *AFTER* any v?-preview overlay.
 blocksize64k :: HasCallStack => Types.Profile -> Types.Profile

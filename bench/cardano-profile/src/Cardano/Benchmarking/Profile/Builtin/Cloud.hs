@@ -7,7 +7,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Builtin.Cloud (
-  base
+  base, baseVoltaire
 , composeFiftytwo
 , valueDuration, plutusDuration
 , profilesCloud

@@ -1,0 +1,8 @@
+{
+  "description": "Raises the Dijkstra limit on the reference scripts of a block to 4 MiB (from 1 MiB), for the refscript-l-* sweep profiles.",
+  "epoch_params": {
+    "dijkstra": {
+      "maxRefScriptSizePerBlock": 4194304
+    }
+  }
+}
