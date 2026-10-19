@@ -73,6 +73,7 @@ import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
                    NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
+import           Ouroboros.Consensus.Protocol.Praos.Common (KESFileLoadError)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
                    SnapshotPolicyArgs (..), StdRunNodeArgs (..))
@@ -235,7 +236,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
   let fp = maybe  "No file path found!"
                   unConfigPath
                   (getLast (pncConfigFile cmdPc))
-  blockForging <- mkBlockForging nullTracer
+  blockForging <- rethrowKESFileLoadError $ mkBlockForging nullTracer
   -- Tells the Forge.Stats tracer when forging is switched on, so the standby
   -- interval is not booked as missed leadership checks (issue #6698). The
   -- initial state is the one 'rnNodeKernelHook' below installs.
@@ -409,7 +410,8 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
               }
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
-              blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
+              blockForging <- rethrowKESFileLoadError $
+                mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
               unless (ncStartAsNonProducingNode nc) $
                 setBlockForging nodeKernel blockForging
@@ -661,19 +663,25 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
         Just Refl -> do
           -- TODO: check if runP' has changed
           (_, mkBlockForging) <- Api.protocolInfo runP'
-          blockForging <- mkBlockForging kesAgentTracer
-          let enabled = not (null blockForging)
-          -- Only an off-to-on transition starts a new run of slots for
-          -- Forge.Stats; a reload that leaves forging on changes nothing.
-          -- Before 'setBlockForging': the forging thread consensus forks there
-          -- checks the current slot at once, so the fold must already see the
-          -- new generation by the time the first event arrives.
-          noteForgingState forgingStateVar enabled
-          traceWith startupTracer
-                    (BlockForgingUpdate (if enabled
-                                          then EnabledBlockForging
-                                          else DisabledBlockForging))
-          setBlockForging nodeKernel blockForging
+          -- A file-based KES key is loaded here; a bad file is reported as a
+          -- 'KESFileLoadError' and leaves the forging as it was.
+          eBlockForging <- try (mkBlockForging kesAgentTracer)
+          case eBlockForging of
+            Left (err :: KESFileLoadError) ->
+              traceWith startupTracer (BlockForgingUpdateError (kesFileLoadProtocolError err))
+            Right blockForging -> do
+              let enabled = not (null blockForging)
+              -- Only an off-to-on transition starts a new run of slots for
+              -- Forge.Stats; a reload that leaves forging on changes nothing.
+              -- Before 'setBlockForging': the forging thread consensus forks there
+              -- checks the current slot at once, so the fold must already see the
+              -- new generation by the time the first event arrives.
+              noteForgingState forgingStateVar enabled
+              traceWith startupTracer
+                        (BlockForgingUpdate (if enabled
+                                              then EnabledBlockForging
+                                              else DisabledBlockForging))
+              setBlockForging nodeKernel blockForging
         Nothing ->
           traceWith startupTracer
             $ BlockForgingBlockTypeMismatch
@@ -696,6 +704,24 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
     wasFileRemovedFromScope (ByronProtocolInstantiationError _)   = Nothing
     wasFileRemovedFromScope (ShelleyProtocolInstantiationError _) = Nothing
     wasFileRemovedFromScope (CardanoProtocolInstantiationError _) = Nothing
+
+-- | Consensus reads a file-based KES key when the block forging is
+-- instantiated and reports a bad file as a 'KESFileLoadError'. This is the
+-- credentials error it would have been when the node still decoded the key
+-- itself, wrapped the way 'mkConsensusProtocol' wraps credentials errors.
+kesFileLoadProtocolError :: KESFileLoadError -> ProtocolInstantiationError
+kesFileLoadProtocolError =
+    CardanoProtocolInstantiationError
+  . CardanoProtocolInstantiationPraosLeaderCredentialsError
+  . KesKeyFileLoadError
+
+-- | Rethrow a 'KESFileLoadError' from instantiating the block forging as a
+-- 'ProtocolInstantiationError', so that at start-up it is rendered with
+-- 'prettyError' like every other credentials problem.
+rethrowKESFileLoadError :: IO a -> IO a
+rethrowKESFileLoadError =
+  Exception.handle $ \(err :: KESFileLoadError) ->
+    Exception.throwIO (kesFileLoadProtocolError err)
 
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)

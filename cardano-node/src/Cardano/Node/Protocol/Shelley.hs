@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,9 +27,10 @@ module Cardano.Node.Protocol.Shelley
 
 import           Cardano.Api hiding (FileError)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Experimental.Certificate (OperationalCertificate (..), getHotKey)
+import           Cardano.Api.Experimental.Certificate (OperationalCertificate (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Crypto.KES.Class (algorithmNameKES)
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
@@ -39,24 +41,35 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
+import           Cardano.Protocol.Crypto (KES)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
-import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (MonadKESAgent (..))
+import           Ouroboros.Consensus.Protocol.Praos.Common (KESEnvelopeError (..),
+                   KESFileLoadError (..), KESFileLoadReason (..), PraosCanBeLeader (..),
                    PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelleyBased (..),
                    ShelleyLeaderCredentials (..))
 
 import           Control.Exception (IOException)
 import           Control.Monad
+import           Control.Monad.Trans.Maybe (MaybeT (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
+import           Data.Char (ord)
 import qualified Data.Text as T
-import           System.Directory (getFileSize)
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as T
+import           Data.Word (Word8)
+import           System.Directory (doesFileExist, getFileSize)
 import           System.FilePath (takeDirectory)
 import           System.FS.API (SomeHasFS (..))
 import           System.FS.API.Types (MountPoint (MountPoint))
 import           System.FS.IO (ioHasFS)
 import qualified System.IO.MMap as MMap
+
+import           Foreign.Ptr (Ptr, castPtr, plusPtr)
+import           Foreign.Storable (peekByteOff)
 
 
 ------------------------------------------------------------------------------
@@ -190,9 +203,18 @@ readLeaderCredentialsSingleton
 
     (credentialsSource, vkey) <- case kesSource of
       KESKeyFilePath kesFile -> do
-        (OperationalCertificate opCert vkey, KesSigningKey kesKey) <-
-          opCertKesKeyCheck (File kesFile) (File opCertFile)
-        pure (PraosCredentialsUnsound opCert kesKey, vkey)
+        OperationalCertificate opCert vkey <-
+          firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
+        -- 'updateBlockForging' treats a missing KES key file as "forging
+        -- disabled by the operator" and must keep seeing exactly this error.
+        exists <- liftIO $ doesFileExist kesFile
+        unless exists $ left $ FileError $ Api.FileDoesNotExistError kesFile
+        checkKesKeyFileType kesFile
+        -- The key itself is read by consensus, straight into mlocked memory,
+        -- when the credentials are instantiated; the check that it is the hot
+        -- key named in the operational certificate happens there too. Only
+        -- the path travels through the forging configuration.
+        pure (PraosCredentialsFile opCert kesFile Nothing, vkey)
 
       -- TODO: minor yikes: when we're using an agent, we don't check that the
       -- opcert and the key provided by the KES agent match, like we do when
@@ -211,24 +233,107 @@ readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESSource = Nothing} =
      left KESKeyNotSpecified
 
-opCertKesKeyCheck
-  :: File () In
-  -- ^ KES key
-  -> File () In
-  -- ^ Operational certificate
-  -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
-opCertKesKeyCheck kesFile certFile = do
-  opCert <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope certFile)
-  kesSKey <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope kesFile)
-  let opCertSpecifiedKesKeyhash = verificationKeyHash $ getHotKey opCert
-      suppliedKesKeyHash = verificationKeyHash $ getVerificationKey kesSKey
-  -- Specified KES key in operational certificate should match the one
-  -- supplied to the node.
-  if suppliedKesKeyHash /= opCertSpecifiedKesKeyhash
-  then left $ MismatchedKesKey (unFile kesFile) (unFile certFile)
-  else return (opCert, kesSKey)
+-- | Header-only check of a KES signing key file: its text envelope @type@
+-- must be one the node understands, so that an obviously wrong file fails
+-- here, before the node starts syncing, with a readable message.
+--
+-- The hex text in the file is the secret, so the file is read into mlocked
+-- memory (through consensus's 'withKESKeyFileLocked') and only the type
+-- string is copied out; no 'ByteString' of the file ever exists on the GHC
+-- heap. The full validation of the envelope and the key is done by consensus
+-- when the credentials are instantiated.
+checkKesKeyFileType :: FilePath -> ExceptT PraosLeaderCredentialsError IO ()
+checkKesKeyFileType kesFile = do
+  mType <- handleIOExceptT (FileError . Api.FileIOError kesFile) $
+    withKESKeyFileLocked kesFile $ \ptr len -> do
+      mSpan <- scanEnvelopeType ptr len
+      forM mSpan $ \(off, n) ->
+        T.decodeUtf8With T.lenientDecode
+          <$> BS.packCStringLen (castPtr (ptr `plusPtr` off), n)
+  case mType of
+    Nothing ->
+      left $ EnvelopeParseError kesFile "no \"type\" field found in the text envelope"
+    Just ty
+      | ty `elem` acceptedKesKeyTypes -> pure ()
+      | otherwise -> left $ UnsupportedKesKeyType kesFile ty
+
+-- | The text envelope types accepted for @--shelley-kes-key@ files: for now
+-- only the evolution-zero type written by @cardano-cli node key-gen-KES@.
+acceptedKesKeyTypes :: [T.Text]
+acceptedKesKeyTypes =
+  [ T.pack ("KesSigningKey_" <> algorithmNameKES (Proxy @(KES StandardCrypto))) ]
+
+-- | Find the string value of the top-level @"type"@ member of the JSON object
+-- held in a buffer and return its offset and length (the content between
+-- the quotes, escapes left as they are). Only the shape of a text envelope
+-- is understood: an object whose members are all strings. Anything else, or
+-- an object without a @"type"@ member, yields 'Nothing'. Nothing is copied
+-- out of the buffer.
+scanEnvelopeType :: Ptr Word8 -> Int -> IO (Maybe (Int, Int))
+scanEnvelopeType ptr len = runMaybeT $ do
+    i0 <- skipWs 0
+    i1 <- expect 0x7b i0 -- '{'
+    i2 <- skipWs i1
+    member i2
+  where
+    byteAt :: Int -> MaybeT IO Word8
+    byteAt i = do
+      guard (i < len)
+      lift (peekByteOff ptr i)
+
+    skipWs :: Int -> MaybeT IO Int
+    skipWs i
+      | i >= len = pure i
+      | otherwise = do
+          b <- byteAt i
+          if b == 0x20 || b == 0x09 || b == 0x0a || b == 0x0d
+            then skipWs (i + 1)
+            else pure i
+
+    expect :: Word8 -> Int -> MaybeT IO Int
+    expect w i = do
+      b <- byteAt i
+      guard (b == w)
+      pure (i + 1)
+
+    -- A JSON string whose opening quote is at @i@: content offset, content
+    -- length and the position after the closing quote.
+    string :: Int -> MaybeT IO (Int, Int, Int)
+    string i = do
+      start <- expect 0x22 i -- '"'
+      end <- stringEnd start
+      pure (start, end - start, end + 1)
+
+    stringEnd :: Int -> MaybeT IO Int
+    stringEnd i = do
+      b <- byteAt i
+      if | b == 0x22 -> pure i              -- closing '"'
+         | b == 0x5c -> stringEnd (i + 2)   -- skip the escaped character
+         | otherwise -> stringEnd (i + 1)
+
+    -- One @"key": "value"@ member starting at @i@, then the next one after
+    -- a comma; a closing brace before a @"type"@ member ends the search.
+    member :: Int -> MaybeT IO (Int, Int)
+    member i = do
+      (kOff, kLen, i1) <- string i
+      i2 <- skipWs i1 >>= expect 0x3a -- ':'
+      i3 <- skipWs i2
+      (vOff, vLen, i4) <- string i3
+      isType <- lift (spanIs kOff kLen "type")
+      if isType
+        then pure (vOff, vLen)
+        else do
+          i5 <- skipWs i4 >>= expect 0x2c -- ','
+          skipWs i5 >>= member
+
+    spanIs :: Int -> Int -> String -> IO Bool
+    spanIs off n str
+      | n /= length str = pure False
+      | otherwise =
+          and <$> zipWithM (\k c -> (== fromIntegral (ord c)) <$> byteAtIO (off + k)) [0 ..] str
+
+    byteAtIO :: Int -> IO Word8
+    byteAtIO = peekByteOff ptr
 
 data ShelleyCredentials
   = ShelleyCredentials
@@ -353,11 +458,14 @@ data PraosLeaderCredentialsError =
      | OCertNotSpecified
      | VRFKeyNotSpecified
      | KESKeyNotSpecified
-     | MismatchedKesKey
+     | UnsupportedKesKeyType
          FilePath
          -- KES signing key
-         FilePath
-         -- Operational certificate
+         T.Text
+         -- Text envelope type found in the file
+     | KesKeyFileLoadError !KESFileLoadError
+         -- Consensus rejected the KES signing key file when instantiating
+         -- the credentials
   deriving Show
 
 instance Error PraosLeaderCredentialsError where
@@ -370,12 +478,30 @@ instance Error PraosLeaderCredentialsError where
      <> pshow fp <> " Error: " <> pshow err
 
   prettyError (FileError fileErr) = prettyError fileErr
-  prettyError (MismatchedKesKey kesFp certFp) =
-       "The KES key provided at: " <> pshow kesFp
-    <> " does not match the KES key specified in the operational certificate at: " <> pshow certFp
+  prettyError (UnsupportedKesKeyType kesFp ty) =
+       "The KES key file at: " <> pshow kesFp
+    <> " has the text envelope type " <> pshow ty
+    <> ", which this node does not accept; expected one of: " <> pshow acceptedKesKeyTypes
+  prettyError (KesKeyFileLoadError (KESFileLoadError kesFp reason)) =
+       "The KES key file at: " <> pshow kesFp <> " could not be loaded: "
+    <> renderKESFileLoadReason reason
   prettyError OCertNotSpecified  = pshow $ missingFlagMessage "shelley-operational-certificate"
   prettyError VRFKeyNotSpecified = pshow $ missingFlagMessage "shelley-vrf-key"
   prettyError KESKeyNotSpecified = pshow $ missingFlagMessage "shelley-kes-key"
+
+renderKESFileLoadReason :: KESFileLoadReason -> Doc ann
+renderKESFileLoadReason KESFileKeyMismatch =
+  "the signing key does not match the KES verification key in the operational certificate"
+renderKESFileLoadReason KESFileUnsupportedType =
+  "the text envelope type is not supported by this node version"
+renderKESFileLoadReason (KESFileEnvelope err) = case err of
+  EnvelopeNotAnObject -> "the file is not a JSON object"
+  EnvelopeMissingField field -> "the text envelope has no " <> pshow field <> " field"
+  EnvelopeUnknownType -> "unknown text envelope type"
+  EnvelopeBadHex hexErr -> "the cborHex field is not valid hex: " <> pshow hexErr
+  EnvelopeBadCbor -> "the cborHex field does not hold a single CBOR byte string"
+  EnvelopeBadLength expected actual ->
+    "wrong key length: expected " <> pshow expected <> " bytes, found " <> pshow actual
 
 missingFlagMessage :: String -> String
 missingFlagMessage flag =
