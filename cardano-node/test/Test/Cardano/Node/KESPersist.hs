@@ -33,7 +33,7 @@ import           Cardano.Crypto.KES.EnvelopeLocked (KESEnvelopeType (..), Locked
 import           Cardano.Crypto.KES.Locked (serialiseSignKeyKESToLockedBuf)
 import           Cardano.Crypto.Libsodium.Memory (MLockedForeignPtr, withMLockedForeignPtr)
 import           Cardano.Node.KES.Persist (KESPersistConfig (..), TraceKESPersist (..),
-                   withKESPersistWriter)
+                   removeStaleKESTempFiles, withKESPersistWriter)
 import           Cardano.Protocol.Crypto (KES, StandardCrypto)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESPersistHook (..))
@@ -55,7 +55,8 @@ import qualified Data.Text as T
 import           Data.Word (Word64)
 import           System.Directory (createFileLink, listDirectory, renameFile)
 import           System.FilePath ((</>))
-import           System.Posix.Files (fileMode, getFileStatus, setFileMode)
+import           System.IO (IOMode (ReadMode), hClose, openBinaryFile)
+import           System.Posix.Files (createLink, fileMode, getFileStatus, setFileMode)
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -346,6 +347,69 @@ prop_coalescesToNewestPeriod = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -
   (_, period, _) <- readKeyFile path
   period === Just 13
 
+-- | The inode of the replaced file is overwritten with zeros: a descriptor
+-- opened on the old file before the write reads only zeros afterwards.
+prop_replacedFileIsZeroed :: Property
+prop_replacedFileIsZeroed = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
+  (sk, vk) <- newKey
+  let path = dir </> "kes.skey"
+  writeEvolutionZeroFile path sk
+  before <- H.evalIO (BS.readFile path)
+  h <- H.evalIO $ openBinaryFile path ReadMode
+  traces <- runWriter path vk sk [5]
+  traces === [KESPersisted 5]
+  old <- H.evalIO $ BS.hGetContents h
+  H.evalIO $ hClose h
+  BS.length old === BS.length before
+  H.assert (BS.all (== 0) old)
+  (_, period, _) <- readKeyFile path
+  period === Just 5
+
+-- | A file with a second hard link is replaced but not zeroed: the other
+-- link keeps the old contents, and the writer says why.
+prop_hardLinkedFileIsNotZeroed :: Property
+prop_hardLinkedFileIsNotZeroed = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
+  (sk, vk) <- newKey
+  let path = dir </> "kes.skey"
+      link = dir </> "backup.skey"
+  writeEvolutionZeroFile path sk
+  H.evalIO $ createLink path link
+  before <- H.evalIO (BS.readFile path)
+  traces <- runWriter path vk sk [5]
+  case traces of
+    [KESOrphanNotZeroed reason, KESPersisted 5] -> do
+      H.note_ (T.unpack reason)
+      H.assert ("1 other hard link" `T.isInfixOf` reason)
+    _ -> do
+      H.note_ ("expected KESOrphanNotZeroed then KESPersisted 5, got " <> show traces)
+      H.failure
+  H.evalIO (BS.readFile link) >>= (=== before)
+  (_, period, _) <- readKeyFile path
+  period === Just 5
+
+-- | Temporary files left by an interrupted write are removed; the key file,
+-- other files and a missing directory are left alone.
+prop_removesStaleTempFiles :: Property
+prop_removesStaleTempFiles = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
+  (sk, _) <- newKey
+  let path = dir </> "kes.skey"
+  writeEvolutionZeroFile path sk
+  forM_ ["kes.skey1234.tmp", "kes.skeyabcd.tmp", "other.tmp", "kes.skey.bak", "tmp"] $ \f ->
+    H.evalIO $ BS.writeFile (dir </> f) "stale"
+  traces <- H.evalIO $ do
+    ref <- newIORef []
+    removeStaleKESTempFiles (arrow $ emit $ \ev -> modifyIORef' ref (ev :)) path
+    reverse <$> readIORef ref
+  traces === [KESStaleTempRemoved (dir </> "kes.skey1234.tmp"), KESStaleTempRemoved (dir </> "kes.skeyabcd.tmp")]
+  workspaceFiles dir >>= (=== ["kes.skey", "kes.skey.bak", "other.tmp", "tmp"])
+  readKeyFile path >>= \(ty, _, _) -> ty === KESKeyEvolutionZero
+  -- A missing directory is not an error.
+  missing <- H.evalIO $ do
+    ref <- newIORef []
+    removeStaleKESTempFiles (arrow $ emit $ \ev -> modifyIORef' ref (ev :)) (dir </> "nowhere" </> "kes.skey")
+    readIORef ref
+  missing === []
+
 tests :: IO Bool
 tests =
   H.checkSequential $ H.Group "Test.Cardano.Node.KESPersist"
@@ -359,6 +423,9 @@ tests =
     , ("prop_readOnlyDirectoryIsAFailure", prop_readOnlyDirectoryIsAFailure)
     , ("prop_periodWentBackwardsIsTraced", prop_periodWentBackwardsIsTraced)
     , ("prop_coalescesToNewestPeriod", prop_coalescesToNewestPeriod)
+    , ("prop_replacedFileIsZeroed", prop_replacedFileIsZeroed)
+    , ("prop_hardLinkedFileIsNotZeroed", prop_hardLinkedFileIsNotZeroed)
+    , ("prop_removesStaleTempFiles", prop_removesStaleTempFiles)
     ]
 #else
 tests :: IO Bool

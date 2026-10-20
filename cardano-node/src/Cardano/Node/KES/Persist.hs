@@ -30,8 +30,15 @@
 -- write re-reads the file first and refuses to overwrite anything it does not
 -- recognise as an older evolution of the same key, writes a temporary file
 -- next to the target, syncs, renames it over the target, syncs the
--- directory, and verifies the result by reading it back. Every failure is
--- traced as a 'TraceKESPersist' and never affects forging.
+-- directory, and verifies the result by reading it back. The replaced file's
+-- inode is then overwritten with zeros through a descriptor opened before
+-- the rename, as far as the filesystem allows that to mean anything (see
+-- 'KESOrphanNotZeroed'). Every failure is traced as a 'TraceKESPersist' and
+-- never affects forging.
+--
+-- A crash between creating the temporary file and renaming it leaves a
+-- sibling holding a full key; 'removeStaleKESTempFiles' removes such
+-- leftovers when the node starts.
 --
 -- The writer is POSIX only; on other platforms the hook only erases the
 -- buffers it is handed and traces that persistence is unavailable.
@@ -39,6 +46,7 @@ module Cardano.Node.KES.Persist
   ( KESPersistConfig (..)
   , TraceKESPersist (..)
   , withKESPersistWriter
+  , removeStaleKESTempFiles
   ) where
 
 import           Cardano.Crypto.KES.Class (VerKeyKES, algorithmNameKES, deriveVerKeyKES,
@@ -57,29 +65,34 @@ import           Control.Concurrent.Async (wait, withAsync)
 import           Control.Concurrent.STM (atomically, newTVarIO, readTVar, retry, writeTVar)
 import           Control.Exception (Exception (..), SomeAsyncException (..), SomeException, bracket,
                    bracketOnError, catch, finally, onException, throwIO)
-import           Control.Monad (unless, when)
+import           Control.Monad (filterM, forM_, unless, when)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import           Control.Tracer (Tracer, traceWith)
 import           Data.Either (fromLeft)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import           Data.List (isPrefixOf, isSuffixOf, sort)
 import           Data.Maybe (fromMaybe)
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Word (Word64)
-import           System.Directory (canonicalizePath, doesPathExist, pathIsSymbolicLink, removeFile,
-                   renameFile)
-import           System.FilePath (splitFileName, takeDirectory, (<.>))
+import           System.Directory (canonicalizePath, doesDirectoryExist, doesPathExist,
+                   listDirectory, pathIsSymbolicLink, removeFile, renameFile)
+import           System.FilePath (splitFileName, takeDirectory, takeFileName, (<.>), (</>))
 import qualified System.IO as IO
 import           System.IO (hPutBuf, openBinaryTempFile)
 #ifdef UNIX
-import           System.Posix.Files (deviceID, getFileStatus)
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, handleToFd, openFd)
+import           System.Posix.Files (deviceID, fileSize, getFdStatus, getFileStatus, linkCount)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdWriteBuf, handleToFd,
+                   openFd)
+import           System.Posix.Types (Fd)
 import           System.Posix.Unistd (fileSynchronise)
 #endif
 
 import           Foreign.C.Types (CChar)
+import           Foreign.Marshal.Alloc (allocaBytes)
+import           Foreign.Marshal.Utils (fillBytes)
 
 -- | What the writer needs to know.
 data KESPersistConfig = KESPersistConfig
@@ -111,6 +124,13 @@ data TraceKESPersist
     -- copy of the key file, see the design notes on configuration
     -- management. The file is overwritten again. An evolution-zero
     -- envelope carries no period and is reported as period 0.
+  | KESOrphanNotZeroed Text
+    -- ^ The file replaced by a write was not overwritten with zeros: it has
+    -- more than one hard link (zeroing it would destroy the other link's
+    -- contents too), or it could not be opened or written. The text names
+    -- the reason. The new file is in place regardless.
+  | KESStaleTempRemoved FilePath
+    -- ^ A temporary file left behind by an interrupted write was removed.
   deriving (Show, Eq)
 
 -- | Run an action with a 'KESPersistHook' backed by a writer thread for the
@@ -225,18 +245,36 @@ persistOnce KESPersistConfig{kpcKeyPath, kpcExpectedVerKey, kpcTracer} lastWritt
 
     -- Write a temporary file in the same directory, sync it, rename it over
     -- the target and sync the directory, so that the path always holds a
-    -- complete file and the rename survives a power failure.
-    io $ withMLockedForeignPtr keyBuf $ \key ->
-      writeLockedKESEnvelope algorithmName (Just period) key keyLen $ \json jsonLen ->
-        bracketOnError
-          (openBinaryTempFile dir (snd (splitFileName path) <.> "tmp"))
-          (\(tmpPath, h) -> IO.hClose h >> removeFile tmpPath)
-          (\(tmpPath, h) -> do
-              hPutBuf h json jsonLen
-              -- 'handleToFd' flushes and closes the handle.
-              bracket (handleToFd h) closeFd fileSynchronise
-              renameFile tmpPath path
-              bracket (openFd dir ReadOnly defaultFileFlags) closeFd fileSynchronise)
+    -- complete file and the rename survives a power failure. The old file is
+    -- opened first, so that its blocks can be overwritten once nothing
+    -- refers to them any more.
+    io $ withOldFile path $ \mOld -> do
+      withMLockedForeignPtr keyBuf $ \key ->
+        writeLockedKESEnvelope algorithmName (Just period) key keyLen $ \json jsonLen ->
+          bracketOnError
+            (openBinaryTempFile dir (snd (splitFileName path) <.> "tmp"))
+            (\(tmpPath, h) -> IO.hClose h >> removeFile tmpPath)
+            (\(tmpPath, h) -> do
+                hPutBuf h json jsonLen
+                -- 'handleToFd' flushes and closes the handle.
+                bracket (handleToFd h) closeFd fileSynchronise
+                renameFile tmpPath path
+                bracket (openFd dir ReadOnly defaultFileFlags) closeFd fileSynchronise)
+      -- Best effort: the old inode is unreferenced now, so overwrite its
+      -- contents in place. This does nothing useful on copy-on-write
+      -- filesystems, snapshots or backups, which keep the old blocks anyway.
+      case mOld of
+        Left reason -> traceWith kpcTracer (KESOrphanNotZeroed reason)
+        Right fd -> do
+          -- The rename took away the path's link; any link left is
+          -- someone else's name for the same contents.
+          status <- getFdStatus fd
+          if linkCount status /= 0
+            then traceWith kpcTracer $ KESOrphanNotZeroed $
+              "the replaced file still has " <> T.pack (show (linkCount status)) <> " other hard link(s)"
+            else
+              zeroFd fd (fromIntegral (fileSize status))
+                `catchSync` (traceWith kpcTracer . KESOrphanNotZeroed . describeException)
 
     -- Read back what is now at the path.
     written <- io (readKeyFile path)
@@ -286,19 +324,33 @@ readKeyFile path =
 
     expectedKeyLen = fromIntegral (signKeySizeKES (Proxy @(KES StandardCrypto)))
 
+-- | Run an action with a descriptor on the file at the path, opened for
+-- writing, or with the reason why it could not be opened.
+withOldFile :: FilePath -> (Either Text Fd -> IO a) -> IO a
+withOldFile path =
+  bracket
+    ((Right <$> openFd path WriteOnly defaultFileFlags) `catchSync` (pure . Left . describeException))
+    (either (const (pure ())) closeFd)
+
+-- | Overwrite the given number of bytes of a file with zeros, from its
+-- start, and sync it.
+zeroFd :: Fd -> Int -> IO ()
+zeroFd fd size = allocaBytes chunk $ \zeros -> do
+  fillBytes zeros 0 chunk
+  let go remaining
+        | remaining <= 0 = pure ()
+        | otherwise = do
+            n <- fdWriteBuf fd zeros (fromIntegral (min chunk remaining))
+            when (n <= 0) $ ioError (userError "zeroFd: write returned no progress")
+            go (remaining - fromIntegral n)
+  go size
+  fileSynchronise fd
+  where
+    chunk = 4096
+
 algorithmName :: String
 algorithmName = algorithmNameKES (Proxy @(KES StandardCrypto))
 
--- | Catch synchronous exceptions only; asynchronous ones (the node shutting
--- down) propagate.
-catchSync :: IO a -> (SomeException -> IO a) -> IO a
-catchSync act handler =
-  act `catch` \e -> case fromException e of
-    Just (SomeAsyncException _) -> throwIO e
-    Nothing -> handler e
-
-describeException :: SomeException -> Text
-describeException = T.pack . displayException
 #else
 withKESPersistWriter KESPersistConfig{kpcTracer} k =
   k $ KESPersistHook $ \(KESPeriod period) buf len -> do
@@ -311,3 +363,37 @@ eraseBuffer :: MLockedForeignPtr CChar -> Int -> IO ()
 eraseBuffer buf len = do
   withMLockedForeignPtr buf $ \ptr -> zeroMem ptr (fromIntegral len)
   finalizeMLockedForeignPtr buf
+
+-- | Catch synchronous exceptions only; asynchronous ones (the node shutting
+-- down) propagate.
+catchSync :: IO a -> (SomeException -> IO a) -> IO a
+catchSync act handler =
+  act `catch` \e -> case fromException e of
+    Just (SomeAsyncException _) -> throwIO e
+    Nothing -> handler e
+
+describeException :: SomeException -> Text
+describeException = T.pack . displayException
+
+-- | Remove the temporary files an interrupted write of the key file may have
+-- left next to it: siblings named like the key file with a suffix and the
+-- extension @.tmp@ (@kes.skey1234.tmp@ for @kes.skey@). Each removal is
+-- traced; a sibling that cannot be removed, or a directory that cannot be
+-- listed, is left alone silently.
+removeStaleKESTempFiles :: Tracer IO TraceKESPersist -> FilePath -> IO ()
+removeStaleKESTempFiles tracer keyPath = do
+  dirExists <- doesDirectoryExist dir
+  when dirExists $ do
+    entries <- listDirectory dir `catchSync` const (pure [])
+    stale <- filterM (fmap not . pathIsSymbolicLinkOrMissing . (dir </>)) (sort (filter isStale entries))
+    forM_ stale $ \entry -> do
+      let path = dir </> entry
+      removed <- (removeFile path >> pure True) `catchSync` const (pure False)
+      when removed $ traceWith tracer (KESStaleTempRemoved path)
+  where
+    dir = takeDirectory keyPath
+    name = takeFileName keyPath
+    isStale entry =
+      entry /= name && name `isPrefixOf` entry && ".tmp" `isSuffixOf` entry
+    pathIsSymbolicLinkOrMissing path =
+      pathIsSymbolicLink path `catchSync` const (pure True)
