@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.5.1 - Oct 2026
+
+* Fixed a small memory leak in `acceptorActions` function (internal API).
+
 ## 2.4.1 - Mar 2026
 
 * Increase robustness of evaluating trace objects to be forwarded
