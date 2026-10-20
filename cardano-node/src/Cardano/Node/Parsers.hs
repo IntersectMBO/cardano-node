@@ -75,6 +75,7 @@ nodeRunParser = do
   startAsNonProducingNode <- (\depr new -> Last depr <> Last new)
                          <$> parseStartAsNonProducingNodeDeprecated
                          <*> parseStartAsNonProducingNode
+  persistEvolvedKESKey <- Last <$> parsePersistEvolvedKESKey
 
   -- Node Address
   nIPv4Address <- lastOption parseHostIPv4Addr
@@ -115,6 +116,7 @@ nodeRunParser = do
            , pncShutdownConfig =
                Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
            , pncStartAsNonProducingNode = startAsNonProducingNode
+           , pncPersistEvolvedKESKey = persistEvolvedKESKey
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
@@ -446,6 +448,26 @@ parseStartAsNonProducingNode =
     , help $ mconcat
         [ "Start the node as a non block producing node even if "
         , "credentials are specified."
+        ]
+    ]
+
+-- | A parser which returns `Nothing` or `Just True`, like
+-- `parseStartAsNonProducingNode`; the default is set in
+-- `defaultPartialNodeConfiguration`, so the option can also be set in the
+-- configuration file.
+parsePersistEvolvedKESKey :: Parser (Maybe Bool)
+parsePersistEvolvedKESKey =
+  flag Nothing (Just True) $ mconcat
+    [ long "persist-evolved-kes-key"
+    , help $ mconcat
+        [ "Write the evolved KES signing key back to the file given with "
+        , "--shelley-kes-key after every KES period, so that a restart does "
+        , "not start from the original, evolution-zero key. The file's "
+        , "envelope type becomes KesSigningKeyWithPeriod_<algorithm>, which "
+        , "older node versions do not read. Erasure of the old contents is "
+        , "best effort; the KES agent remains the recommended way to keep "
+        , "the key off disk. Equivalent to PersistEvolvedKESKey: true in the "
+        , "configuration file."
         ]
     ]
 

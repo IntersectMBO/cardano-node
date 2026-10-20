@@ -40,6 +40,8 @@ defaultCardanoConfig = emptyTraceConfig {
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Forge", "StateInfo"],
           [ ConfSeverity (SeverityF (Just Info))])
+     ,(["Forge", "KESPersist"],
+          [ ConfSeverity (SeverityF (Just Info))])
      ,(["Net", "InboundGovernor", "Remote"],
           [ ConfSeverity (SeverityF (Just Info))])
      ,(["Mempool"],

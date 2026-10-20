@@ -46,7 +46,7 @@ import           Cardano.Node.Types
 import           Cardano.Protocol.Crypto (KES)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
-import           Ouroboros.Consensus.Protocol.Praos.AgentClient (MonadKESAgent (..))
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESPersistHook, MonadKESAgent (..))
 import           Ouroboros.Consensus.Protocol.Praos.Common (KESEnvelopeError (..),
                    KESFileLoadError (..), KESFileLoadReason (..), PraosCanBeLeader (..),
                    PraosCredentialsSource (..))
@@ -87,18 +87,20 @@ import           Foreign.Storable (peekByteOff)
 mkSomeConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
+  -> Maybe KESPersistHook
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                                   npcShelleyGenesisFile,
                                   npcShelleyGenesisFileHash
                                 }
-                          files = do
+                          files
+                          mKesPersistHook = do
     (genesis, genesisHash) <- firstExceptT GenesisReadError $
                               readGenesis npcShelleyGenesisFile
                                           npcShelleyGenesisFileHash
     firstExceptT GenesisValidationError $ validateGenesis genesis
     leaderCredentials <- firstExceptT PraosLeaderCredentialsError $
-                         readLeaderCredentials files
+                         readLeaderCredentials mKesPersistHook files
 
     -- Filesystem rooted at the Shelley genesis directory, used by the ledger to
     -- read initial funds/staking injected from genesis (testnets only).
@@ -173,22 +175,28 @@ validateGenesis genesis =
     firstExceptT GenesisValidationErrors . hoistEither $
       Shelley.validateGenesis genesis
 
+-- | Read the block-producing credentials named on the command line. The
+-- optional 'KESPersistHook' is installed on a file-based KES key (see
+-- "Cardano.Node.KES.Persist"); the bulk credentials file never gets one.
 readLeaderCredentials
-  :: Maybe ProtocolFilepaths
+  :: Maybe KESPersistHook
+  -> Maybe ProtocolFilepaths
   -> ExceptT PraosLeaderCredentialsError IO [ShelleyLeaderCredentials StandardCrypto]
-readLeaderCredentials Nothing = return []
-readLeaderCredentials (Just pfp) =
+readLeaderCredentials _ Nothing = return []
+readLeaderCredentials mKesPersistHook (Just pfp) =
   -- The set of credentials is a sum total of what comes from the CLI,
   -- as well as what's in the bulk credentials file.
-  (<>) <$> readLeaderCredentialsSingleton pfp
+  (<>) <$> readLeaderCredentialsSingleton mKesPersistHook pfp
        <*> readLeaderCredentialsBulk      pfp
 
 readLeaderCredentialsSingleton ::
+     Maybe KESPersistHook ->
      ProtocolFilepaths ->
      ExceptT PraosLeaderCredentialsError IO
              [ShelleyLeaderCredentials StandardCrypto]
 -- It's OK to supply none of the files on the CLI
 readLeaderCredentialsSingleton
+   _
    ProtocolFilepaths
      { shelleyCertFile      = Nothing,
        shelleyVRFFile       = Nothing,
@@ -196,6 +204,7 @@ readLeaderCredentialsSingleton
      } = pure []
 -- Or to supply all of the files
 readLeaderCredentialsSingleton
+  mKesPersistHook
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
                       shelleyKESSource = Just kesSource
@@ -215,8 +224,9 @@ readLeaderCredentialsSingleton
         -- The key itself is read by consensus, straight into mlocked memory,
         -- when the credentials are instantiated; the check that it is the hot
         -- key named in the operational certificate happens there too. Only
-        -- the path travels through the forging configuration.
-        pure (PraosCredentialsFile opCert kesFile Nothing, vkey)
+        -- the path travels through the forging configuration, together with
+        -- the hook that persists the evolved key back to it.
+        pure (PraosCredentialsFile opCert kesFile mKesPersistHook, vkey)
 
       -- TODO: minor yikes: when we're using an agent, we don't check that the
       -- opcert and the key provided by the KES agent match, like we do when
@@ -228,11 +238,11 @@ readLeaderCredentialsSingleton
     return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
 
 -- But not OK to supply some of the files without the others.
-readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
+readLeaderCredentialsSingleton _ ProtocolFilepaths {shelleyCertFile = Nothing} =
      left OCertNotSpecified
-readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
+readLeaderCredentialsSingleton _ ProtocolFilepaths {shelleyVRFFile = Nothing} =
      left VRFKeyNotSpecified
-readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESSource = Nothing} =
+readLeaderCredentialsSingleton _ ProtocolFilepaths {shelleyKESSource = Nothing} =
      left KESKeyNotSpecified
 
 -- | Header-only check of a KES signing key file: its text envelope @type@

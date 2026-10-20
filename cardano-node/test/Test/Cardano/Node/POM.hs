@@ -143,6 +143,7 @@ testPartialYamlConfig =
     , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
+    , pncPersistEvolvedKESKey = Last $ Just False
     , pncDiffusionMode = Last Nothing
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
@@ -195,6 +196,7 @@ testPartialCliConfig =
     { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , pncStartAsNonProducingNode = Last $ Just False
+    , pncPersistEvolvedKESKey = Last $ Just False
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -248,6 +250,7 @@ eExpectedConfig = do
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
     , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , ncStartAsNonProducingNode = False
+    , ncPersistEvolvedKESKey = False
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = OnePathForAllDbs "mainnet/db/"
@@ -473,6 +476,39 @@ prop_rpcReload_cliOverridesYaml =
         merged = defaultPartialNodeConfiguration <> yamlConfig <> cliConfig
     NodeConfiguration{ncRpcConfig = RpcConfig{isEnabled}} <- evalEither $ makeNodeConfiguration merged
     isEnabled === Identity True
+
+-- | PersistEvolvedKESKey is off unless the YAML or the CLI turns it on; the
+-- CLI flag (Just True) wins over the YAML, and a YAML "true" survives a
+-- silent CLI.
+prop_persistEvolvedKESKey_defaultOff :: Property
+prop_persistEvolvedKESKey_defaultOff =
+  H.propertyOnce $ do
+    let merged = defaultPartialNodeConfiguration
+                   <> testPartialYamlConfig { pncPersistEvolvedKESKey = mempty }
+                   <> testPartialCliConfig { pncPersistEvolvedKESKey = mempty }
+    NodeConfiguration{ncPersistEvolvedKESKey} <- evalEither $ makeNodeConfiguration merged
+    ncPersistEvolvedKESKey === False
+
+prop_persistEvolvedKESKey_fromYaml :: Property
+prop_persistEvolvedKESKey_fromYaml =
+  H.propertyOnce $ do
+    let yamlJson = "{ " <> dummyRequiredValues <> ", \"PersistEvolvedKESKey\": true }"
+    yamlConfig :: PartialNodeConfiguration <- evalEither $ eitherDecode yamlJson
+    pncPersistEvolvedKESKey yamlConfig === Last (Just True)
+    let merged = defaultPartialNodeConfiguration
+                   <> testPartialYamlConfig <> yamlConfig
+                   <> testPartialCliConfig { pncPersistEvolvedKESKey = mempty }
+    NodeConfiguration{ncPersistEvolvedKESKey} <- evalEither $ makeNodeConfiguration merged
+    ncPersistEvolvedKESKey === True
+
+prop_persistEvolvedKESKey_fromCli :: Property
+prop_persistEvolvedKESKey_fromCli =
+  H.propertyOnce $ do
+    let merged = defaultPartialNodeConfiguration
+                   <> testPartialYamlConfig
+                   <> testPartialCliConfig { pncPersistEvolvedKESKey = Last (Just True) }
+    NodeConfiguration{ncPersistEvolvedKESKey} <- evalEither $ makeNodeConfiguration merged
+    ncPersistEvolvedKESKey === True
 
 -- -----------------------------------------------------------------------------
 

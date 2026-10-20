@@ -35,6 +35,7 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESPersistHook)
 
 import           Prelude
 
@@ -69,6 +70,7 @@ mkSomeConsensusProtocolCardano
   -> NodeHardForkProtocolConfiguration
   -> NodeCheckpointsConfiguration
   -> Maybe ProtocolFilepaths
+  -> Maybe KESPersistHook
   -> ExceptT CardanoProtocolInstantiationError IO (SomeConsensusProtocol, GenesisHashShelley)
 mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,
@@ -108,7 +110,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcExperimentalHardForksEnabled
                            }
                            checkpointsConfiguration
-                           files = do
+                           files
+                           mKesPersistHook = do
     byronGenesis <-
       firstExceptT CardanoProtocolInstantiationErrorByron $
         Byron.readGenesis npcByronGenesisFile
@@ -145,7 +148,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
-        Shelley.readLeaderCredentials files
+        Shelley.readLeaderCredentials mKesPersistHook files
 
     checkpointsMap <-
       firstExceptT CardanoProtocolInstantiationCheckpointsReadError $

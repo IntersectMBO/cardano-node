@@ -12,6 +12,7 @@ import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESPersistHook)
 
 import           Control.Exception
 
@@ -22,8 +23,10 @@ import           Control.Exception
 mkConsensusProtocol
   :: NodeProtocolConfiguration
   -> Maybe ProtocolFilepaths
+  -> Maybe KESPersistHook
+  -- ^ Installed on a file-based KES key, see 'Cardano.Node.KES.Persist'
   -> ExceptT ProtocolInstantiationError IO (SomeConsensusProtocol, GenesisHashShelley)
-mkConsensusProtocol ncProtocolConfig mProtocolFiles =
+mkConsensusProtocol ncProtocolConfig mProtocolFiles mKesPersistHook =
   case ncProtocolConfig of
     NodeProtocolConfigurationCardano
         byronConfig
@@ -43,6 +46,7 @@ mkConsensusProtocol ncProtocolConfig mProtocolFiles =
           hardForkConfig
           checkpointsConfig
           mProtocolFiles
+          mKesPersistHook
 
 ------------------------------------------------------------------------------
 -- Errors

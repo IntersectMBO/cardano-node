@@ -25,6 +25,7 @@ module Cardano.Node.Run
 
 import           Cardano.Api (File (..), FileDirection (..))
 import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Experimental.Certificate (OperationalCertificate (..))
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
@@ -42,6 +43,8 @@ import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), installSigTermHandler)
+import           Cardano.Node.KES.Persist (KESPersistConfig (..), TraceKESPersist,
+                   removeStaleKESTempFiles, withKESPersistWriter)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
@@ -63,6 +66,7 @@ import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
+import           Cardano.Protocol.TPraos.OCert (ocertVkHot)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Logging.Types (LogFormatting)
 import           Cardano.Logging.Utils (showT)
@@ -72,7 +76,8 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
                    NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
-import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
+import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace,
+                   KESPersistHook)
 import           Ouroboros.Consensus.Protocol.Praos.Common (KESFileLoadError)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
@@ -197,15 +202,62 @@ runNode cmdPc = do
   forM_ mShelleyVrfFile $
     runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-  (consensusProtocol, shelleyGenesisHash) <-
-    runThrowExceptT $
-      mkConsensusProtocol
-       ncProtocolConfig
-       -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
-       -- don't need these.
-       (Just ncProtocolFiles)
+  -- The writer that persists the evolved KES key (if enabled) must exist
+  -- before the credentials are read, because its hook travels inside them;
+  -- the trace dispatcher exists only later, so the writer's tracer is bound
+  -- late through this reference, by 'handleNodeWithTracers'.
+  kesPersistTracerRef <- newIORef nullTracer
+  let kesPersistTracer = arrow $ emit $ \ev ->
+        readIORef kesPersistTracerRef >>= \tr -> traceWith tr ev
 
-  handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash
+  withKESPersistHook kesPersistTracer nc $ \mKesPersistHook -> do
+    (consensusProtocol, shelleyGenesisHash) <-
+      runThrowExceptT $
+        mkConsensusProtocol
+         ncProtocolConfig
+         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+         -- don't need these.
+         (Just ncProtocolFiles)
+         mKesPersistHook
+
+    handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash kesPersistTracerRef mKesPersistHook
+
+-- | The KES signing key file the node persists the evolved key to: the file
+-- given with @--shelley-kes-key@, when @PersistEvolvedKESKey@ is on. The
+-- bulk credentials file and a KES agent never get persistence.
+persistedKesKeyFile :: NodeConfiguration -> Maybe (FilePath, FilePath)
+persistedKesKeyFile nc
+  | ncPersistEvolvedKESKey nc
+  , ProtocolFilepaths { shelleyKESSource = Just (KESKeyFilePath kesFile)
+                      , shelleyCertFile = Just certFile } <- ncProtocolFiles nc
+  = Just (kesFile, certFile)
+  | otherwise = Nothing
+
+-- | Run the node with the writer of "Cardano.Node.KES.Persist" when the
+-- configuration asks for it, handing the hook to install on the file-based
+-- KES key to the continuation. The writer needs the hot key of the
+-- operational certificate; if the certificate cannot be read here, the node
+-- starts without the hook and the credentials loader reports the problem
+-- as it always did.
+withKESPersistHook
+  :: Tracer IO TraceKESPersist
+  -> NodeConfiguration
+  -> (Maybe KESPersistHook -> IO a)
+  -> IO a
+withKESPersistHook tracer nc k = case persistedKesKeyFile nc of
+  Nothing -> k Nothing
+  Just (kesFile, certFile) -> do
+    eOpCert <- Api.readFileTextEnvelope (File certFile)
+    case eOpCert of
+      Left (_ :: Api.FileError Api.TextEnvelopeError) -> k Nothing
+      Right (OperationalCertificate opCert _) ->
+        withKESPersistWriter
+          KESPersistConfig
+            { kpcKeyPath = kesFile
+            , kpcExpectedVerKey = ocertVkHot opCert
+            , kpcTracer = tracer
+            }
+          (k . Just)
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
@@ -226,8 +278,11 @@ handleNodeWithTracers
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> Api.GenesisHashShelley
+  -> IORef (Tracer IO TraceKESPersist)
+  -- ^ Bound to the real tracer once the dispatcher is up
+  -> Maybe KESPersistHook
   -> IO ()
-handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
+handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGenesisHash kesPersistTracerRef mKesPersistHook = do
   (pInfo@ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
@@ -252,6 +307,12 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
       (null blockForging)
       forgingStateVar
 
+  -- From here on the KES key writer traces through the dispatcher. Leftovers
+  -- of an interrupted write are removed now, before the first write.
+  writeIORef kesPersistTracerRef (kesPersistTracer tracers)
+  forM_ (persistedKesKeyFile nc) $ \(kesFile, _) ->
+    removeStaleKESTempFiles (kesPersistTracer tracers) kesFile
+
   startupInfo <- getStartupInfo nc blockType pInfoConfig fp
   mapM_ (traceWith $ startupTracer tracers) startupInfo
   traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
@@ -262,7 +323,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
                                   then DisabledBlockForging
                                   else EnabledBlockForging))
 
-  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingStateVar nc cmdPc networkMagic
+  handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingStateVar nc cmdPc networkMagic mKesPersistHook
     (\nk -> do
         setNodeKernel nodeKernelData nk
         traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -309,12 +370,15 @@ handleSimpleNode
   -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
   -- overrides are preserved when re-reading the YAML file.
   -> NetworkMagic
+  -> Maybe KESPersistHook
+  -- ^ Installed on a file-based KES key whenever the credentials are
+  -- re-read (SIGHUP)
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingStateVar nc cmdPc networkMagic onKernel = do
+handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingStateVar nc cmdPc networkMagic mKesPersistHook onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -495,7 +559,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
                 -- reinstall `SIGHUP` handler
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
                                      forgingStateVar
-                                     blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                     blockType nc cmdPc networkMagic mKesPersistHook nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
@@ -602,6 +666,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> NodeConfiguration
                      -> PartialNodeConfiguration -- ^ original CLI configuration
                      -> NetworkMagic
+                     -> Maybe KESPersistHook
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                      -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
                      -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
@@ -612,15 +677,15 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc cmdPc networkMagic nodeKernel localRootsVar
+installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc cmdPc networkMagic mKesPersistHook nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                      rpcConfigVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
-      updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
+      updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc mKesPersistHook
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -644,11 +709,13 @@ updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
+                   -> Maybe KESPersistHook
                    -> IO ()
-updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc = do
+updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc mKesPersistHook = do
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
                                        (ncProtocolConfig nc)
                                        (Just (ncProtocolFiles nc))
+                                       mKesPersistHook
   case eitherSomeProtocol of
     Left err ->
       case wasFileRemovedFromScope err of

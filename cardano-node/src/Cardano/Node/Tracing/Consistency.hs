@@ -28,6 +28,7 @@ import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.KES.Persist (TraceKESPersist)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
@@ -37,6 +38,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.Consensus (ClientMetrics)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.KESPersist ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -198,6 +200,8 @@ getAllNamespaces =
 
         forgeKESInfoNS = map (nsGetTuple . nsReplacePrefix ["Forge"])
                     (allNamespaces :: [Namespace HotKey.KESInfo])
+        kesPersistNS = map (nsGetTuple . nsReplacePrefix ["Forge", "KESPersist"])
+                    (allNamespaces :: [Namespace TraceKESPersist])
 
         txInboundNS = map (nsGetTuple . nsReplacePrefix ["TxSubmission", "TxInbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
@@ -460,6 +464,7 @@ getAllNamespaces =
             <> blockFetchClientMetricsNS
             <> blockFetchServerNS
             <> forgeKESInfoNS
+            <> kesPersistNS
             <> txInboundNS
             <> txOutboundNS
             <> localTxSubmissionServerNS

@@ -99,6 +99,10 @@ data NodeConfiguration
 
        , ncStartAsNonProducingNode :: !Bool
 
+         -- | Persist the evolved KES signing key back to its file after
+         -- every evolution (file-based credentials only). Default off.
+       , ncPersistEvolvedKESKey :: !Bool
+
         -- Protocol-specific parameters:
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
@@ -238,6 +242,7 @@ data PartialNodeConfiguration
        , pncShutdownConfig  :: !(Last ShutdownConfig)
 
        , pncStartAsNonProducingNode :: !(Last Bool)
+       , pncPersistEvolvedKESKey :: !(Last Bool)
 
          -- Protocol-specific parameters:
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
@@ -325,6 +330,7 @@ instance FromJSON PartialNodeConfiguration where
   parseJSON =
     withObject "PartialNodeConfiguration" $ \v -> do
       pncStartAsNonProducingNode <- Last <$> v .:? "StartAsNonProducingNode"
+      pncPersistEvolvedKESKey <- Last <$> v .:? "PersistEvolvedKESKey"
 
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
@@ -436,6 +442,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
            , pncStartAsNonProducingNode
+           , pncPersistEvolvedKESKey
            , pncMaybeMempoolCapacityOverride
            , pncLedgerDbConfig
            , pncProtocolIdleTimeout
@@ -774,6 +781,7 @@ defaultPartialNodeConfiguration =
     , pncValidateDB = Last $ Just False
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
+    , pncPersistEvolvedKESKey = Last $ Just False
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
@@ -846,6 +854,7 @@ makeNodeConfiguration pnc = do
   databaseFile <- lastToEither "Missing DatabaseFile" $ pncDatabaseFile pnc
   validateDB <- lastToEither "Missing ValidateDB" $ pncValidateDB pnc
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
+  persistEvolvedKESKey <- lastToEither "Missing PersistEvolvedKESKey" $ pncPersistEvolvedKESKey pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
@@ -995,6 +1004,7 @@ makeNodeConfiguration pnc = do
              , ncValidateDB = validateDB
              , ncShutdownConfig = shutdownConfig
              , ncStartAsNonProducingNode = startAsNonProducingNode
+             , ncPersistEvolvedKESKey = persistEvolvedKESKey
              , ncProtocolConfig = protocolConfig
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode

@@ -12,6 +12,7 @@ module Cardano.Node.Tracing
 import           Cardano.Logging.Resources
 import qualified Cardano.Network.Diffusion as Cardano.Diffusion
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.KES.Persist (TraceKESPersist)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
 import           Cardano.Node.Tracing.StateRep (NodeState)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
@@ -52,4 +53,6 @@ data Tracers peer localPeer blk m = Tracers
   , resourcesTracer       :: !(Tracer IO ResourceStats)
   , ledgerMetricsTracer   :: !(Tracer IO LedgerMetrics)
   , rpcTracer             :: !(Tracer IO TraceRpc)
+    -- | The writer that persists the evolved KES key to its file
+  , kesPersistTracer      :: !(Tracer IO TraceKESPersist)
   }

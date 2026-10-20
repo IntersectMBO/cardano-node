@@ -37,6 +37,7 @@ import           Cardano.Network.Tracing.PeerSelection ()
 import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.KES.Persist (TraceKESPersist)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
@@ -49,6 +50,7 @@ import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.KESPersist ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -352,6 +354,13 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [forgeKESInfoTr]
     forgeKESInfoTrDoc <- documentTracer (forgeKESInfoTr ::
       Logging.Trace IO (Consensus.TraceLabelCreds HotKey.KESInfo))
+
+    kesPersistTr  <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Forge", "KESPersist"]
+    configureTracers configReflection trConfig [kesPersistTr]
+    kesPersistTrDoc <- documentTracer (kesPersistTr ::
+      Logging.Trace IO TraceKESPersist)
 
     txInboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -818,6 +827,7 @@ docTracersFirstPhase condConfigFileName = do
             <> blockFetchClientMetricsDoc
             <> blockFetchServerTrDoc
             <> forgeKESInfoTrDoc
+            <> kesPersistTrDoc
             <> txInboundTrDoc
             <> txOutboundTrDoc
             <> localTxSubmissionServerTrDoc

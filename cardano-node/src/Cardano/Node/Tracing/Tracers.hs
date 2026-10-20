@@ -34,6 +34,7 @@ import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar, calcForgeStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
+import           Cardano.Node.Tracing.Tracers.KESPersist ()
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -124,6 +125,9 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig forgi
     !nodeVersionTr <- mkCardanoTracer trBase trForward mbTrEKG ["Version"]
     configureTracers configReflection trConfig  [nodeVersionTr]
 
+    !kesPersistTr <- mkCardanoTracer trBase trForward mbTrEKG ["Forge", "KESPersist"]
+    configureTracers configReflection trConfig [kesPersistTr]
+
     -- Filter out replayed blocks for this tracer
     let chainDBTr' = filterTrace
                       (\case (_, ChainDB.TraceLedgerDBEvent
@@ -193,6 +197,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig forgi
       , resourcesTracer = mkTracer (traceWith resourcesTr)
       , ledgerMetricsTracer = mkTracer (traceWith ledgerMetricsTr)
       , rpcTracer = mkTracer (traceWith rpcTr)
+      , kesPersistTracer = mkTracer (traceWith kesPersistTr)
     }
 
 mkConsensusTracers :: forall blk.

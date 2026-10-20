@@ -73,7 +73,7 @@ readCredentials
   :: (MonadIO m, H.MonadTest m)
   => ProtocolFilepaths
   -> m (Either PraosLeaderCredentialsError [ShelleyLeaderCredentials StandardCrypto])
-readCredentials pfp = H.evalIO $ runExceptT $ readLeaderCredentials (Just pfp)
+readCredentials pfp = H.evalIO $ runExceptT $ readLeaderCredentials Nothing (Just pfp)
 
 -- | Rewrite the @type@ field of the text envelope in the file.
 setEnvelopeType :: (MonadIO m, H.MonadTest m) => FilePath -> Text -> m ()
