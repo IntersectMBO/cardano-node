@@ -142,7 +142,7 @@ jobs:
       run: |
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
-    - name: Validate produced manifest files against schema
+    - name: Validate produced manifest and status output against schemas
       if: matrix.validate-manifest
       run: |
         # This job has no nix, that is why we pin the version with pipx separately.
@@ -159,6 +159,9 @@ jobs:
           if ! kill -0 "$testnet_pid" 2>/dev/null; then break; fi
           sleep 5
         done
+        # Exit code 0: the chain is producing blocks.
+        status_rc=0
+        "$(cabal list-bin cardano-testnet)" status --testnet-dir "$dir" --json > "$RUNNER_TEMP/status.json" || status_rc=$?
         # SIGINT, not SIGTERM: the harness tears its nodes down on SIGINT only
         # (see Testnet.Signal.interruptNodesOnSigINT).
         kill -INT "$testnet_pid" 2>/dev/null || true
@@ -169,6 +172,12 @@ jobs:
           exit 1
         fi
         check-jsonschema --schemafile cardano-testnet/schemas/manifest.schema.json "$dir/manifest.json"
+        cat "$RUNNER_TEMP/status.json"
+        if [ "$status_rc" != 0 ]; then
+          echo "ERROR: cardano-testnet status exited with $status_rc"
+          exit 1
+        fi
+        check-jsonschema --schemafile cardano-testnet/schemas/status.schema.json "$RUNNER_TEMP/status.json"
 
     - name: Tar failed tests workspaces
       if: ${{ failure() }}
