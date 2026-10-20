@@ -31,6 +31,8 @@ import           Cardano.Api.Experimental.Certificate (OperationalCertificate (.
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Crypto.KES.Class (algorithmNameKES)
+import           Cardano.Crypto.KES.EnvelopeLocked (kesEvolutionZeroTypeString,
+                   kesWithPeriodTypeString)
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
@@ -257,11 +259,19 @@ checkKesKeyFileType kesFile = do
       | ty `elem` acceptedKesKeyTypes -> pure ()
       | otherwise -> left $ UnsupportedKesKeyType kesFile ty
 
--- | The text envelope types accepted for @--shelley-kes-key@ files: for now
--- only the evolution-zero type written by @cardano-cli node key-gen-KES@.
+-- | The text envelope types accepted for @--shelley-kes-key@ files: the
+-- evolution-zero type written by @cardano-cli node key-gen-KES@ and the
+-- period-carrying type the node itself writes when it persists the evolved
+-- key (see "Cardano.Crypto.KES.EnvelopeLocked"). Consensus checks the
+-- stored period against the operational certificate and the key's structure
+-- when it loads the file.
 acceptedKesKeyTypes :: [T.Text]
 acceptedKesKeyTypes =
-  [ T.pack ("KesSigningKey_" <> algorithmNameKES (Proxy @(KES StandardCrypto))) ]
+  [ T.decodeUtf8 (kesEvolutionZeroTypeString algorithmName)
+  , T.decodeUtf8 (kesWithPeriodTypeString algorithmName)
+  ]
+  where
+    algorithmName = algorithmNameKES (Proxy @(KES StandardCrypto))
 
 -- | Find the string value of the top-level @"type"@ member of the JSON object
 -- held in a buffer and return its offset and length (the content between
@@ -489,17 +499,32 @@ instance Error PraosLeaderCredentialsError where
   prettyError VRFKeyNotSpecified = pshow $ missingFlagMessage "shelley-vrf-key"
   prettyError KESKeyNotSpecified = pshow $ missingFlagMessage "shelley-kes-key"
 
+-- | Operator-facing text for every reason consensus can reject a KES signing
+-- key file. Only the path (added by the caller), field names, sizes and
+-- periods are rendered; nothing from the file itself.
 renderKESFileLoadReason :: KESFileLoadReason -> Doc ann
 renderKESFileLoadReason KESFileKeyMismatch =
-  "the signing key does not match the KES verification key in the operational certificate"
-renderKESFileLoadReason KESFileUnsupportedType =
-  "the text envelope type is not supported by this node version"
+     "the signing key is not the KES key named in the operational certificate "
+  <> "(it signs for that certificate's hot key at no evolution)"
+renderKESFileLoadReason (KESFilePeriodBeforeOCert period start) =
+     "the file holds a key evolved to KES period " <> pshow period
+  <> ", which lies before the start period " <> pshow start
+  <> " of the operational certificate; the certificate is newer than the persisted key, "
+  <> "so the key file must be replaced by the one the certificate was issued for"
+renderKESFileLoadReason (KESFileEvolutionTooHigh evolution maxEvolutions) =
+     "the file holds a key at evolution " <> pshow evolution
+  <> " of the operational certificate, but at most " <> pshow maxEvolutions
+  <> " evolutions are allowed; the key has expired and must be rotated"
+renderKESFileLoadReason (KESFileStructureMismatch claimed actual) =
+     "the file claims the key is at evolution " <> pshow claimed
+  <> " but the key itself is at evolution " <> pshow actual
+  <> "; the file is corrupt or was assembled by hand"
 renderKESFileLoadReason (KESFileEnvelope err) = case err of
   EnvelopeNotAnObject -> "the file is not a JSON object"
   EnvelopeMissingField field -> "the text envelope has no " <> pshow field <> " field"
   EnvelopeUnknownType -> "unknown text envelope type"
   EnvelopeBadHex hexErr -> "the cborHex field is not valid hex: " <> pshow hexErr
-  EnvelopeBadCbor -> "the cborHex field does not hold a single CBOR byte string"
+  EnvelopeBadCbor -> "the cborHex field does not have the CBOR shape of its envelope type"
   EnvelopeBadLength expected actual ->
     "wrong key length: expected " <> pshow expected <> " bytes, found " <> pshow actual
 

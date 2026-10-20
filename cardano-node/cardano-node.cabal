@@ -238,6 +238,7 @@ test-suite cardano-node-test
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-api
+                      , cardano-protocol
                       , cardano-rpc
                       , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
                       , cardano-node

@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Tests for the file-based leader credentials of
 -- "Cardano.Node.Protocol.Shelley": a KES signing key file given on the
@@ -13,15 +15,19 @@ import           Cardano.Api hiding (FileError)
 import           Cardano.Api.Experimental.Certificate (KESPeriod (..),
                    OperationalCertificateIssueCounter (..), issueOperationalCertificate)
 
+import           Cardano.Crypto.KES.Class (algorithmNameKES)
+import           Cardano.Crypto.KES.EnvelopeLocked (kesWithPeriodTypeString)
 import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..),
                    readLeaderCredentials)
 import           Cardano.Node.Types (KESSource (..), ProtocolFilepaths (..))
+import           Cardano.Protocol.Crypto (KES)
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..),
                    PraosCredentialsSource (..))
 import           Ouroboros.Consensus.Shelley.Node (ShelleyLeaderCredentials (..))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Text.Encoding as T
 import           System.Directory (removeFile)
 import           System.FilePath ((</>))
 
@@ -108,18 +114,39 @@ prop_missingKesKeyFileIsFileDoesNotExistError = H.propertyOnce $ H.moduleWorkspa
       H.note_ "expected Left (FileError (FileDoesNotExistError _))"
       H.failure
 
--- | A KES key file of a known but unsupported envelope type (the
--- period-carrying one) is refused before the node starts.
-prop_unsupportedKesKeyTypeIsRefused :: Property
-prop_unsupportedKesKeyTypeIsRefused = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
+-- | A KES key file of the period-carrying envelope type (the one the node
+-- writes when it persists the evolved key) passes the node's header check
+-- and is handed to consensus as a path, like the evolution-zero type.
+prop_periodCarryingKesKeyTypeIsAccepted :: Property
+prop_periodCarryingKesKeyTypeIsAccepted = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
   pfp <- writeCredentials dir
-  let withPeriodType = "KesSigningKeyWithPeriod_ed25519_kes_2^6"
+  let withPeriodType =
+        T.decodeUtf8 (kesWithPeriodTypeString (algorithmNameKES (Proxy @(KES StandardCrypto))))
+  withPeriodType === "KesSigningKeyWithPeriod_ed25519_kes_2^6"
   setEnvelopeType (kesKeyPath pfp) withPeriodType
+  creds <- readCredentials pfp >>= H.evalEither
+  case creds of
+    [ ShelleyLeaderCredentials
+        { shelleyLeaderCredentialsCanBeLeader =
+            PraosCanBeLeader { praosCanBeLeaderCredentialsSource = PraosCredentialsFile _ path Nothing }
+        }
+      ] -> path === kesKeyPath pfp
+    _ -> do
+      H.note_ "expected exactly one credential with a PraosCredentialsFile source"
+      H.failure
+
+-- | A KES key file whose envelope type is neither of the two KES signing key
+-- types is refused before the node starts.
+prop_unknownKesKeyTypeIsRefused :: Property
+prop_unknownKesKeyTypeIsRefused = H.propertyOnce $ H.moduleWorkspace "kes" $ \dir -> do
+  pfp <- writeCredentials dir
+  let unknownType = "KesSigningKey_ed25519_kes_2^7"
+  setEnvelopeType (kesKeyPath pfp) unknownType
   result <- readCredentials pfp
   case result of
     Left (UnsupportedKesKeyType path ty) -> do
       path === kesKeyPath pfp
-      ty === withPeriodType
+      ty === unknownType
     _ -> do
       H.note_ "expected Left (UnsupportedKesKeyType _ _)"
       H.failure
@@ -142,6 +169,7 @@ tests =
   H.checkSequential $ H.Group "Test.Cardano.Node.LeaderCredentials"
     [ ("prop_fileModeYieldsPraosCredentialsFile", prop_fileModeYieldsPraosCredentialsFile)
     , ("prop_missingKesKeyFileIsFileDoesNotExistError", prop_missingKesKeyFileIsFileDoesNotExistError)
-    , ("prop_unsupportedKesKeyTypeIsRefused", prop_unsupportedKesKeyTypeIsRefused)
+    , ("prop_periodCarryingKesKeyTypeIsAccepted", prop_periodCarryingKesKeyTypeIsAccepted)
+    , ("prop_unknownKesKeyTypeIsRefused", prop_unknownKesKeyTypeIsRefused)
     , ("prop_nonEnvelopeKesKeyFileIsRefused", prop_nonEnvelopeKesKeyFileIsRefused)
     ]
