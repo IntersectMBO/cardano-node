@@ -11,7 +11,6 @@ module Cardano.Benchmarking.OuroborosImports
   , SigningKey
   , SigningKeyFile
   , NetworkId
-  -- , getGenesis
   , makeLocalConnectInfo
   , protocolToTopLevelConfig
   , protocolToNetworkId
