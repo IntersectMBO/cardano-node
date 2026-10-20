@@ -48,6 +48,8 @@ import qualified Cardano.Testnet.Test.Rpc.Transaction
 import qualified Cardano.Testnet.Test.RunTestnet
 import qualified Cardano.Testnet.Test.SanityCheck
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
+import qualified Cardano.Testnet.Test.Status
+import qualified Cardano.Testnet.Test.StatusRules
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 import qualified Cardano.Testnet.Test.UpdateTimeStamps
 
@@ -154,6 +156,9 @@ tests = do
           , ignoreOnWindows "Stale manifest is removed by createTestnetEnv" Cardano.Testnet.Test.Manifest.hprop_manifest_stale
           , H.testPropertyNamed "Manifest Windows pipe path" (fromString "hprop_manifest_windows_pipe_path")
               Cardano.Testnet.Test.Manifest.hprop_manifest_windows_pipe_path
+          , ignoreOnWindows "Status reports network health" Cardano.Testnet.Test.Status.hprop_status
+          , H.testPropertyNamed "Status without a testnet" (fromString "hprop_status_no_testnet")
+              Cardano.Testnet.Test.Status.hprop_status_no_testnet
           ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
@@ -167,6 +172,14 @@ tests = do
         , ignoreOnWindows "RPC SearchUtxos" Cardano.Testnet.Test.Rpc.SearchUtxos.hprop_rpc_search_utxos
         , ignoreOnWindows "RPC Transaction Submit" Cardano.Testnet.Test.Rpc.Transaction.hprop_rpc_transaction
         , ignoreOnWindows "RPC Eval Tx" Cardano.Testnet.Test.Rpc.Eval.hprop_rpc_eval_tx
+        ]
+    , T.testGroup "Status rules"
+        [ H.testPropertyNamed "Node state" (fromString "unit_node_state")
+            Cardano.Testnet.Test.StatusRules.unit_node_state
+        , H.testPropertyNamed "Network status" (fromString "unit_classify_network")
+            Cardano.Testnet.Test.StatusRules.unit_classify_network
+        , H.testPropertyNamed "Status exit codes" (fromString "unit_exit_codes")
+            Cardano.Testnet.Test.StatusRules.unit_exit_codes
         ]
     , T.testGroup "NodesWithOptions parser"
         [ H.testPropertyNamed "Roundtrip" (fromString "prop_parseNodeSpecs_roundtrip")

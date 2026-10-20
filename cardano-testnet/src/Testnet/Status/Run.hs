@@ -2,6 +2,10 @@
 
 module Testnet.Status.Run (
     runCheckStatusOptions,
+    checkStatus,
+    calcNodeState,
+    classifyNetwork,
+    renderStatusReportHumanReadable,
 ) where
 
 import           Cardano.Api (BlockNo (..), CardanoEra (..), ChainTip (..),

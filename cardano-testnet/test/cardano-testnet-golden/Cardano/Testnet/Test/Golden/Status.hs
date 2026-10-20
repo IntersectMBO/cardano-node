@@ -4,6 +4,7 @@
 
 module Cardano.Testnet.Test.Golden.Status
   ( golden_StatusJson
+  , golden_StatusTable
   ) where
 
 import           Cardano.Api (BlockHeader, BlockNo (..), Hash, SlotNo (..),
@@ -21,6 +22,7 @@ import           Data.Time.Clock (UTCTime (..))
 import           System.FilePath ((</>))
 
 import           Testnet.Manifest (ManifestNodeRole (..))
+import           Testnet.Status.Run (renderStatusReportHumanReadable)
 import           Testnet.Status.Types
 
 import           Hedgehog (Property)
@@ -84,3 +86,13 @@ golden_StatusJson = propertyOnce $ do
   diffVsGoldenFile (encode sampleNoTestnetReport) $ base </> goldenFile "status_no_testnet.json"
   where
     encode = Text.unpack . Text.decodeUtf8 . LBS.toStrict . encodePretty
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_StatusTable/"'@
+golden_StatusTable :: Property
+golden_StatusTable = propertyOnce $ do
+  base <- H.getProjectBase
+  diffVsGoldenFile (renderStatusReportHumanReadable sampleReport) $
+    base </> goldenFile "status.txt"
+  diffVsGoldenFile (renderStatusReportHumanReadable sampleNoTestnetReport) $
+    base </> goldenFile "status_no_testnet.txt"
