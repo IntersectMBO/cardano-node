@@ -204,6 +204,7 @@ test-suite cardano-testnet-golden
 
 test-suite cardano-testnet-test
   import:               project-config
+                      , maybe-unix
 
   hs-source-dirs:       test/cardano-testnet-test
 
@@ -254,6 +255,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.KesKeyFileRemoval
+                        Cardano.Testnet.Test.Node.KesKeyPersistence
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.Manifest
@@ -275,6 +277,7 @@ test-suite cardano-testnet-test
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-ledger-api
                       , cardano-crypto-class
+                      , cardano-protocol
                       , cardano-ledger-binary
                       , cardano-ledger-conway
                       , cardano-ledger-core

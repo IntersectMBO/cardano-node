@@ -36,6 +36,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Manifest
 import qualified Cardano.Testnet.Test.Node.KesKeyFileRemoval
+import qualified Cardano.Testnet.Test.Node.KesKeyPersistence
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
 import qualified Cardano.Testnet.Test.Rpc.EraSummary
@@ -125,6 +126,9 @@ tests = do
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
           , ignoreOnWindows "Shutdown On SlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
           , ignoreOnWindows "KES key file removal disables forging on SIGHUP" Cardano.Testnet.Test.Node.KesKeyFileRemoval.hprop_sighup_removed_kes_key_disables_forging
+          , ignoreOnWindows "KES key persistence across evolutions and restarts" Cardano.Testnet.Test.Node.KesKeyPersistence.hprop_persist_evolved_kes_key_across_evolutions_and_restarts
+          , ignoreOnWindows "KES key persistence file ahead of clock stops forging" Cardano.Testnet.Test.Node.KesKeyPersistence.hprop_kes_key_file_ahead_of_clock_stops_forging
+          , ignoreOnWindows "KES key persistence failure injections keep forging" Cardano.Testnet.Test.Node.KesKeyPersistence.hprop_kes_persist_failure_injections_keep_forging
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "Transaction Build Estimate" Cardano.Testnet.Test.Cli.Transaction.BuildEstimate.hprop_tx_build_estimate

@@ -1,0 +1,5 @@
+pr: 0
+kind:
+  - test
+description: |
+  Added `Cardano.Testnet.Test.Node.KesKeyPersistence`: three tests of `PersistEvolvedKESKey` on a single-SPO testnet with five-second KES periods. The key file follows the evolutions and the node restarts from the persisted file at its evolution; a key file ahead of the clock loads but stops forging with `KESKeyFromTheFuture`; and SIGHUP reloads, an unwritable key directory, a foreign key in the path, a hard-linked key file and a symbolic link at the key path each produce their `Forge.KESPersist` warning while forging continues.
