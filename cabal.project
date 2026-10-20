@@ -162,20 +162,20 @@ if impl(ghc >= 9.14)
     , with-utf8:base
 -- cabal-allow-newer end
 
--- [POC] hardened KES key file: cardano-crypto-class from perturbing/harden-kes-file-poc/1-locked-hex-deserialise
+-- [POC] hardened KES key file: cardano-crypto-class from perturbing/harden-kes-file-poc/2-locked-serialise-envelope
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-base.git
-  tag: 0fa8421c850f6d4aae57cc4e90c76f9bc5ed9511
-  --sha256: sha256-4dqxXfvoqYFZD8CFAh6mVloYwHw/9df4UlSCJN+EHwY=
+  tag: 28bdb02e458c5f0f6d6c1020051c46b9f1df7241
+  --sha256: sha256-/ADKIYbXSTmYVXeeuXJlW/mhkgK0sMmV0m/mR/JU/2Q=
   subdir: cardano-crypto-class
 
--- [POC] hardened KES key file: ouroboros-consensus from perturbing/harden-kes-file-poc/2-file-credentials
+-- [POC] hardened KES key file: ouroboros-consensus from perturbing/harden-kes-file-poc/3-evolved-load-persist-hook
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 60144fdbf67844e3cdc6ad1dab85c35ff6693373
-  --sha256: sha256-lM7yso3z7xa11Ow1QjqKEo5IaE+yMsc8Dlg0KJXShN0=
+  tag: cda4105dfee18bc608cb99a42583d988c2970b61
+  --sha256: sha256-nfJt3jm+tMQNNm8AUXfEiXfH74Z9/KA4AOZ2SeKR3qs=
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
