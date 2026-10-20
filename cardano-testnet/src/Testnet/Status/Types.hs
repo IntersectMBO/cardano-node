@@ -45,7 +45,8 @@ instance Default OutputFormat where
 -- Output types
 
 -- | Version of the JSON output, pinned by
--- @cardano-testnet/schemas/status.schema.json@.
+-- @cardano-testnet/schemas/status.schema.json@. Any change to the output
+-- shape, including new fields, bumps it.
 statusSchemaVersion :: Int
 statusSchemaVersion = 1
 

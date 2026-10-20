@@ -175,6 +175,7 @@ test-suite cardano-testnet-golden
   other-modules:        Cardano.Testnet.Test.Golden.Config
                         Cardano.Testnet.Test.Golden.Help
                         Cardano.Testnet.Test.Golden.Manifest
+                        Cardano.Testnet.Test.Golden.Status
                         Cardano.Testnet.Test.Golden.Util
 
   type:                 exitcode-stdio-1.0

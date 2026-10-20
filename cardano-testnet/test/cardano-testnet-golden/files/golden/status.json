@@ -1,0 +1,57 @@
+{
+    "bestTip": {
+        "ageSeconds": 0.5,
+        "blockNo": 56,
+        "hash": "cc061706c16ad2b35450f1528f5652ff172f9b0acabcdc29284e2363d3bebb2a",
+        "slot": 1234
+    },
+    "chainProducingBlocks": true,
+    "checkedAt": "2026-01-01T00:01:00Z",
+    "exitCode": 0,
+    "nodes": [
+        {
+            "name": "node1",
+            "pid": 12345,
+            "pidAlive": true,
+            "role": "spo",
+            "state": "ok",
+            "tip": {
+                "ageSeconds": 0.5,
+                "blockNo": 56,
+                "hash": "cc061706c16ad2b35450f1528f5652ff172f9b0acabcdc29284e2363d3bebb2a",
+                "slot": 1234
+            }
+        },
+        {
+            "name": "node2",
+            "pid": 12346,
+            "pidAlive": true,
+            "role": "relay",
+            "state": "stalled",
+            "tip": {
+                "ageSeconds": 83.4,
+                "blockNo": 20,
+                "hash": "5b1e29bbc6e3e4d1f4f4f6bb2dbd3c1b2a7c68b7a8a4b3a1c4e0d2f9e8a7b6c5",
+                "slot": 400
+            }
+        },
+        {
+            "name": "node3",
+            "pid": null,
+            "pidAlive": null,
+            "role": "relay",
+            "state": "unreachable",
+            "tip": null
+        },
+        {
+            "name": "node4",
+            "pid": 12348,
+            "pidAlive": false,
+            "role": "relay",
+            "state": "down",
+            "tip": null
+        }
+    ],
+    "schemaVersion": 1,
+    "status": "degraded"
+}

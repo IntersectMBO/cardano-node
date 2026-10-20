@@ -443,6 +443,24 @@ readers never see a partial file. It is written once and never modified.
 A pre-existing manifest from an earlier run in the same directory is deleted
 before nodes start.
 
+### Status output
+
+`cardano-testnet status --json` prints the health of a testnet as a single
+JSON object: the state of the network, the exit code of the command, the
+freshest tip, and the state and tip of every node. The exit code is 0 while
+the chain is producing blocks, even when some nodes are not healthy. A script
+that needs every node to be healthy can check the `status` field:
+
+```bash
+[ "$(cardano-testnet status --testnet-dir testnet --json | jq -r '.status')" = running ]
+```
+
+**Stability promise.** Like the manifest, the output has a strict JSON Schema
+(`cardano-testnet/schemas/status.schema.json`, draft 2020-12, unknown fields
+are an error) that lives in the repository and is the contract. Any change to
+the output shape — including new fields — bumps the schema version, so the
+output always matches the schema of its own version exactly.
+
 ## Supported versions
 
 cardano-testnet is designed to run the cardano-cli and cardano-node that ship
