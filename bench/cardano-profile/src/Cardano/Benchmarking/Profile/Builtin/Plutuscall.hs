@@ -56,6 +56,16 @@ profilesPlutuscall =
       blstVolt        = plutusCall & V.plutusTypeBLST       . V.plutusDoublePlusSaturation . P.analysisSizeModerate2    . P.analysisEpoch3Plus
       ripemdVolt      = plutusCall & V.plutusTypeRIPEMD     . V.plutusDoublePlusSaturation . P.analysisSizeSmall        . P.analysisEpoch3Plus
 
+      -- LoopV3 alone, then as 200 variants of 15 KB, each input locked at one,
+      -- its script in the witnesses or by reference. The variants' padding is
+      -- never run, so the three differ in script bytes, not execution. All pay
+      -- the fee of the dearest, the witness discharge. No size filter, as their
+      -- blocks differ in size by the scripts.
+      loopV3          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+      loopV3Script15k src =
+                        plutusCall & P.plutusVariants src 200 (Just 15000) . P.txFeeOverwrite 2000000
+                                   . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+
       postPlomin      = V.genesisVariantVoltaire
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
@@ -68,6 +78,10 @@ profilesPlutuscall =
   , loopVolt    & P.name "plutuscall-volt-loop"            . postPlomin
   , blstVolt    & P.name "plutuscall-volt-blst"            . postPlomin
   , ripemdVolt  & P.name "plutuscall-volt-ripemd"          . postPlomin
+
+  , loopV3                                  & P.name "plutuscall-volt-loopv3"              . postPlomin
+  , loopV3Script15k Types.ScriptInWitness   & P.name "plutuscall-volt-loopv3-script15k"    . postPlomin
+  , loopV3Script15k Types.ScriptByReference & P.name "plutuscall-volt-loopv3-refscript15k" . postPlomin
 
   -- PlutusV3 benchmarks, targeting PV11
   , ripemdVolt4tx  & P.name "plutuscall-voltv11-ripemd"    . postPlomin . P.v11Preview
