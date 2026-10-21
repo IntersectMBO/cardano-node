@@ -128,8 +128,9 @@ addCollaterals src = do
 
 -- | With variants of the Plutus script, 'addScriptSet' defines them as a
 -- script set, for the last splitting step to lock the benchmarking inputs at,
--- and to be spent by reference, publishes them with funds from @src@. Returns
--- the name of the script set.
+-- and publishes them with funds from @src@. Returns the name of the script
+-- set. They are published whether the benchmarking transactions spend them by
+-- reference or not, so that the setup is the same either way.
 addScriptSet :: SrcWallet -> Compiler (Maybe String)
 addScriptSet src = askNixOption _nix_plutus >>= \case
   Just PlutusOn{plutusScript, plutusVariants = Just PlutusVariants{..}} -> do
@@ -140,15 +141,14 @@ addScriptSet src = askNixOption _nix_plutus >>= \case
       , scriptSetCount = variantsCount
       , scriptSetSize  = maybe ScriptSizeMinimal ScriptSizeFixed variantsSize
       }
-    when variantsByReference $ do
-      logMsg "Publish reference scripts."
-      era <- askNixOption _nix_era
-      txParams <- askNixOption txGenTxParams
-      setupMode <- getSetupSubmitMode
-      emit $ Submit era setupMode txParams $
-        PublishScripts src name keyNameReferenceScripts (PayToAddr keyNameTxGenFunds src)
-      delay
-      logMsg "Publish reference scripts. Done."
+    logMsg "Publish reference scripts."
+    era <- askNixOption _nix_era
+    txParams <- askNixOption txGenTxParams
+    setupMode <- getSetupSubmitMode
+    emit $ Submit era setupMode txParams $
+      PublishScripts src name keyNameReferenceScripts (PayToAddr keyNameTxGenFunds src)
+    delay
+    logMsg "Publish reference scripts. Done."
     return $ Just name
   _ -> return Nothing
 
