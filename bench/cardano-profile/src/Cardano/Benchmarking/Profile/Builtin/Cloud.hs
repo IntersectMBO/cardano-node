@@ -144,6 +144,14 @@ profilesCloud =
       loop2024   = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
       loopVolt   = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
       loopV3Volt = plutusVolt & plutusLoopBase   . V.plutusTypeLoopV3   . P.analysisSizeSmall
+      -- A matched pair: LoopV3 as 200 variants of 15 KB, each input locked at
+      -- one, its script in the witnesses or by reference, and nothing else
+      -- different. Both publish the variants, both pay the fee of the dearer
+      -- witness discharge. Their blocks differ in size by the scripts, so no
+      -- size filter.
+      loopV3Script15k src =
+                   plutusVolt & P.plutusVariants src 200 (Just 15000) . P.txFeeOverwrite 2000000
+                              . plutusLoopBase . V.plutusTypeLoopV3
       -- steps-constrained
       ecdsa    = plutus     & plutusSecpBase   . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
@@ -193,6 +201,8 @@ profilesCloud =
   , loopVolt    & P.name "plutus-volt-nomadperf"                           . P.dreps  10000
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
   , loopV3Volt  & P.name "plutusv3-voltv11-nomadperf"                      . P.dreps  10000 . P.v11Preview
+  , loopV3Script15k Types.ScriptInWitness   & P.name "plutusv3-volt-script15k-nomadperf"    . P.dreps 10000
+  , loopV3Script15k Types.ScriptByReference & P.name "plutusv3-volt-refscript15k-nomadperf" . P.dreps 10000
   , loopVolt    & P.name "plutus-volt-memx15-nomadperf"                    . P.dreps  10000 . blockMem15x
   , loopVolt    & P.name "plutus-volt-memx2-nomadperf"                     . P.dreps  10000 . blockMem2x
   , loopVolt    & P.name "plutus-volt-lsmt-nomadperf"                      . P.dreps  10000 . ephemeral . P.lsmt
