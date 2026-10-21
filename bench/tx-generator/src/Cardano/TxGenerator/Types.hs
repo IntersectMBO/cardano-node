@@ -145,9 +145,10 @@ data TxGenPlutusParams
 -- | Variants of a Plutus script, with distinct hashes, for the benchmarking
 -- transactions to spend in turn (see "Cardano.TxGenerator.ScriptVariants"):
 -- 'variantsCount' of them, each 'variantsSize' bytes, or as small as they can
--- be. With 'variantsByReference', a setup phase publishes them as reference
--- scripts, and the benchmarking transactions refer to them rather than carry
--- them in their witnesses.
+-- be. A setup phase publishes them as reference scripts. With
+-- 'variantsByReference', the benchmarking transactions refer to them rather
+-- than carry them in their witnesses; without, the setup is the same, so
+-- that the two compare.
 data PlutusVariants = PlutusVariants
   { variantsCount       :: !Int
   , variantsSize        :: !(Maybe Int)
