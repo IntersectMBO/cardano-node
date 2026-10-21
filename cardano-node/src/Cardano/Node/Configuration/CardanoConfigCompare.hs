@@ -8,12 +8,16 @@
 -- the node default and therefore surfaces here as a divergence (see
 -- 'Cardano.Node.Configuration.CardanoConfigAdapter.adapterGaps'), with one
 -- exception: the Byron supported-protocol-version trio, which is excluded from
--- the comparison (see 'ignoreByronSupportedVersion').
+-- the comparison (see 'ignoreByronSupportedVersion'). Some fields that the two
+-- sides spell differently but resolve to the same value are normalised before
+-- comparing (see 'ignoreAbsentMempoolOverride' and 'ignoreDefaultLsmPath').
 module Cardano.Node.Configuration.CardanoConfigCompare
   ( compareConfigurations
   , deprecatedFlagWarnings
   ) where
 
+import           Cardano.Node.Configuration.LedgerDB (LedgerDbConfiguration (..),
+                   LedgerDbSelectorFlag (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (NodeByronProtocolConfiguration (..),
                    NodeProtocolConfiguration (..))
@@ -73,7 +77,9 @@ compareConfigurations pom adapted =
       , cmpValues "MaybeMempoolCapacityOverride"
           (ignoreAbsentMempoolOverride (ncMaybeMempoolCapacityOverride pom))
           (ignoreAbsentMempoolOverride (ncMaybeMempoolCapacityOverride adapted))
-      , cmp "LedgerDbConfig" ncLedgerDbConfig
+      , cmpValues "LedgerDbConfig"
+          (ignoreDefaultLsmPath (ncLedgerDbConfig pom))
+          (ignoreDefaultLsmPath (ncLedgerDbConfig adapted))
       , cmp "ProtocolIdleTimeout" ncProtocolIdleTimeout
       , cmp "TimeWaitTimeout" ncTimeWaitTimeout
       , cmp "EgressPollInterval" ncEgressPollInterval
@@ -163,3 +169,16 @@ ignoreAbsentMempoolOverride ::
   Maybe MempoolCapacityBytesOverride -> Maybe MempoolCapacityBytesOverride
 ignoreAbsentMempoolOverride (Just NoMempoolCapacityBytesOverride) = Nothing
 ignoreAbsentMempoolOverride other = other
+
+-- | Fold the two spellings of "the default LSM database path" together.
+--
+-- POM keeps 'Nothing' for a @V2LSM@ backend whose configuration writes no
+-- @LSMDatabasePath@, whereas cardano-config resolves the absent path to its
+-- default @"lsm"@. Both open the database at the same place: the node applies
+-- that same default when it builds the backend arguments (see
+-- 'Cardano.Node.Configuration.LedgerDB.selectorToArgs').
+ignoreDefaultLsmPath :: LedgerDbConfiguration -> LedgerDbConfiguration
+ignoreDefaultLsmPath
+  (LedgerDbConfiguration snapshots batchSize (V2LSM Nothing exportPath) deprecated) =
+    LedgerDbConfiguration snapshots batchSize (V2LSM (Just "lsm") exportPath) deprecated
+ignoreDefaultLsmPath other = other
