@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-09-02T14:05:07Z
+  , hackage.haskell.org 2026-09-29T11:48:37Z
   , cardano-haskell-packages 2026-10-21T10:21:18Z
 
 constraints:
@@ -23,6 +23,7 @@ constraints:
   , any.proto-lens >= 0.7.1.7
   -- https://github.com/channable/alfred-margaret/pull/76
   , any.alfred-margaret < 2.1.1.0 || > 2.1.1.0
+  , any.grapesy >= 1.2.1
 
 -- acts has a finitary flag; disabling it avoids pulling in finitary entirely,
 -- which sidesteps the GHC type-checker plugin incompatibility with
