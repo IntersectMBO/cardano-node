@@ -43930,8 +43930,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},
@@ -46032,8 +46031,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},
@@ -48134,8 +48132,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},
@@ -149042,8 +149039,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},
@@ -150324,8 +150320,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},
@@ -151606,8 +151601,7 @@
       "tracing_backend": "trace-dispatcher",
       "utxo_lsmt": false,
       "verbatim": {
-        "EnableP2P": true,
-        "TxSubmissionInitDelay": 0
+        "EnableP2P": true
       }
     },
     "overlay": {},

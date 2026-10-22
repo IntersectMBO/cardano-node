@@ -163,6 +163,13 @@ with pkgs.lib; let
                 SyncTargetNumberOfEstablishedPeers = max 40 valency;
                 TargetNumberOfActivePeers = max 15 valency;
                 TargetNumberOfEstablishedPeers = max 40 valency;
+                ## Seconds a node waits before asking a new peer for
+                ## transactions; the default is 60 (ouroboros-network's
+                ## defaultTxSubmissionInitDelay). In a fresh cluster every
+                ## connection is new, so for a minute a submitted transaction
+                ## stays in one mempool, and is lost if the block it goes into
+                ## loses a slot battle. A profile's verbatim section overrides.
+                TxSubmissionInitDelay = 1;
 
                 ByronGenesisFile = "../genesis/genesis.byron.json";
                 ShelleyGenesisFile = "../genesis/genesis.shelley.json";
