@@ -180,6 +180,8 @@ tests = do
             Cardano.Testnet.Test.StatusRules.unit_classify_network
         , H.testPropertyNamed "Status exit codes" (fromString "unit_exit_codes")
             Cardano.Testnet.Test.StatusRules.unit_exit_codes
+        , H.testPropertyNamed "Best tip" (fromString "unit_best_tip")
+            Cardano.Testnet.Test.StatusRules.unit_best_tip
         ]
     , T.testGroup "NodesWithOptions parser"
         [ H.testPropertyNamed "Roundtrip" (fromString "prop_parseNodeSpecs_roundtrip")

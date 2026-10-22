@@ -132,7 +132,7 @@ data StatusReport = StatusReport
   { reportOutputDir          :: !FilePath
   , reportCheckedAt          :: !UTCTime
   , reportStatus             :: !NetworkStatus
-  , reportBestTip            :: !(Maybe TipInfo)         -- ^ the freshest tip of all nodes
+  , reportBestTip            :: !(Maybe TipInfo)         -- ^ the newest tip of all nodes: the one with the highest slot
   , reportNodes              :: ![NodeProbeResult]       -- ^ empty for 'NoTestnet'
   , reportProblemExplanation :: !(Maybe String)          -- ^ why there is no testnet
   } deriving (Eq, Show)

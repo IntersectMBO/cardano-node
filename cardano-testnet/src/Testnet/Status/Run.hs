@@ -5,6 +5,7 @@ module Testnet.Status.Run (
     checkStatus,
     calcNodeState,
     classifyNetwork,
+    newestTip,
     renderStatusReportHumanReadable,
 ) where
 
@@ -26,6 +27,7 @@ import           Data.Either (fromRight)
 import           Data.Either.Extra (mapLeft)
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
+import           Data.Ord (Down (..))
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (exitWith)
@@ -104,7 +106,7 @@ checkNodes outputDir timeoutSeconds manifest@(Manifest{manifestNetwork = Manifes
             { reportOutputDir = outputDir
             , reportCheckedAt = checkedAt
             , reportStatus = classifyNetwork (probeNodeState <$> nodes)
-            , reportBestTip = listToMaybe . List.sortOn tipAge . mapMaybe probeNodeTipInfo $ toList nodes
+            , reportBestTip = newestTip . mapMaybe probeNodeTipInfo $ toList nodes
             , reportNodes = toList nodes
             , reportProblemExplanation = Nothing
             }
@@ -210,6 +212,13 @@ calcNodeState _limit _pidAlive AnsweredNoBlocks = NodeStalled
 calcNodeState _limit pidAlive NoAnswer
     | pidAlive == Just False = NodeDown
     | otherwise = NodeUnreachable
+
+{- | The rule for the best tip: the newest one, which is the one with the
+highest slot. The ages cannot tell: each age is measured when its node
+answered, and the nodes answer at different times.
+-}
+newestTip :: [TipInfo] -> Maybe TipInfo
+newestTip = listToMaybe . List.sortOn (Down . tipSlot)
 
 -- | The 'StatusReport' when there is no manifest, with a hint about why.
 noTestnetReport :: FilePath -> IO StatusReport

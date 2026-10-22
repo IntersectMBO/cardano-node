@@ -40,7 +40,7 @@
             "description": "True when the exit code is 0: the status is \"running\" or \"degraded\"."
         },
         "bestTip": {
-            "description": "The freshest tip of all nodes, or null when no node answered with a tip.",
+            "description": "The newest tip of all nodes: the one with the highest slot. Null when no node answered with a tip.",
             "oneOf": [
                 { "type": "null" },
                 { "$ref": "#/$defs/tip" }
