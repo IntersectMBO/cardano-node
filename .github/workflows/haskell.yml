@@ -89,6 +89,16 @@ jobs:
         f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
+    # The macos-26-arm64 image 20261013 ships Command Line Tools 27 (SDK 27.0)
+    # next to Xcode 26.6, whose ld cannot read the SDK 27 .tbd stubs
+    # ("tapi error: malformed file ... unknown architecture arm64e.x1").
+    # Use the Command Line Tools toolchain so ld and SDK match.
+    # Remove once https://github.com/actions/runner-images/issues/14940 is fixed
+    # in the image (its README lists Command Line Tools 26.x again).
+    - name: Use Command Line Tools toolchain on macOS
+      if: runner.os == 'macOS'
+      run: sudo xcode-select -s /Library/Developer/CommandLineTools
+
     - name: Install Haskell
       uses: input-output-hk/actions/haskell@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
       id: setup-haskell

@@ -53,6 +53,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapsh
                    mithrilSnapshotPolicyArgs)
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import           Ouroboros.Network.Hashable (mkSaltIO)
 import qualified Ouroboros.Network.Mux as Mux
 import           Ouroboros.Network.OrphanInstances ()
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
@@ -74,7 +75,6 @@ import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
-import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -213,7 +213,7 @@ data NodeConfiguration
 --
 -- * `NoResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
 -- * `ResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
---   with a `randomIO` generated salt and `getNumCapabilities`.
+--   with a `mkSaltIO` generated salt and `getNumCapabilities`.
 --
 data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffinity deriving (Eq, Show, Generic, FromJSON)
 
@@ -221,7 +221,7 @@ data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffini
 getForkPolicy :: Hashable peerAddr => ResponderCoreAffinityPolicy -> IO (Mux.ForkPolicy peerAddr)
 getForkPolicy = \case
   NoResponderCoreAffinity -> pure Mux.noBindForkPolicy
-  ResponderCoreAffinity -> Mux.responderForkPolicy <$> randomIO <*> getNumCapabilities
+  ResponderCoreAffinity -> Mux.responderForkPolicy <$> mkSaltIO <*> getNumCapabilities
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
@@ -499,9 +499,9 @@ instance FromJSON PartialNodeConfiguration where
         mTopLevelSnapNum <- snapNum v
 
         let topLevelOptionsSet =
-                   zip [ void mTopLevelSnapInterval
-                       , void mTopLevelSnapNum]
-                       ["SnapshotInterval", "NumOfDiskSnapshots"]
+                   zip
+                    [void mTopLevelSnapInterval, void mTopLevelSnapNum]
+                    ["SnapshotInterval", "NumOfDiskSnapshots"]
             deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
 
         mLedgerDB <- v .:? "LedgerDB"
@@ -775,8 +775,14 @@ defaultPartialNodeConfiguration =
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncProtocolConfig = mempty
-    , pncMaxConcurrencyBulkSync = mempty
-    , pncMaxConcurrencyDeadline = mempty
+    , -- Leaving these unset means "do not override the block-fetch defaults",
+      -- which are 1 and 1 (see 'Cardano.defaultBlockFetchConfiguration'). State
+      -- that value instead of implying it, so that the configuration the node
+      -- runs on says what the concurrency is. cardano-config's own default layer
+      -- pins the same 1, so the two must be changed together, and either one
+      -- changing on its own shows up as a divergence at startup.
+      pncMaxConcurrencyBulkSync = Last (Just (MaxConcurrencyBulkSync 1))
+    , pncMaxConcurrencyDeadline = Last (Just (MaxConcurrencyDeadline 1))
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -794,7 +800,13 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit
-    , pncChainSyncIdleTimeout     = mempty
+    , pncChainSyncIdleTimeout     =
+        Last (Just (case Cardano.defaultChainSyncIdleTimeout of
+                      Cardano.ChainSyncIdleTimeout t -> t
+                      -- 'customizeChainSyncTimeout' in "Cardano.Node.Run" reads
+                      -- 0 back as "no idle timeout".
+                      Cardano.ChainSyncNoIdleTimeout -> 0))
+      -- https://ouroboros-network.cardano.intersectmbo.org/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultChainSyncIdleTimeout
     , pncMempoolTimeoutSoft       = mempty
     , pncMempoolTimeoutHard       = mempty
     , pncMempoolTimeoutCapacity   = mempty

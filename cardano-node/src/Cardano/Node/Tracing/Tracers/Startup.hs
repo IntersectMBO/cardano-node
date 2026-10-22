@@ -549,13 +549,6 @@ instance MetaTrace  (StartupTrace blk) where
 
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
 nodeToClientVersionToInt = \case
-  NodeToClientV_16 -> 16
-  NodeToClientV_17 -> 17
-  NodeToClientV_18 -> 18
-  NodeToClientV_19 -> 19
-  NodeToClientV_20 -> 20
-  NodeToClientV_21 -> 21
-  NodeToClientV_22 -> 22
   NodeToClientV_23 -> 23
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int

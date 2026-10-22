@@ -18,6 +18,7 @@ Cross-reference: https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059
 | 2023/02 | Goguen   | Babbage |    84844885 |          394 |              8,0 | Praos           | Ouroboros Praos         | Valentine HF       |
 | 2024/09 | Voltaire | Conway  |   133660855 |          507 |              9,0 | Praos           | Ouroboros Genesis/Praos | Chang HF           |
 | 2025/01 | Voltaire | Conway  |   146620809 |          537 |             10,0 | Praos           | Ouroboros Genesis/Praos | Plomin HF          |
+| 2026/06 | Voltaire | Conway  |   190252800 |          638 |             11,0 | Praos           | Ouroboros Genesis/Praos | Van Rossem HF      |
 
 ## Cost-model parameter timeline
 

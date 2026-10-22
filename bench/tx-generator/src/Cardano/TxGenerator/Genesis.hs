@@ -12,6 +12,7 @@
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
+  , genesisWithResolvedInitialFunds
   , genesisTxInput
   , genesisExpenditure
   , genesisSecureInitialFund
@@ -24,16 +25,20 @@ import           Cardano.Api hiding (ShelleyGenesis)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Shelley.API (Addr (..))
-import           Cardano.Ledger.Shelley.Genesis (InjectionData (..), ShelleyExtraConfig (..))
+import           Cardano.Ledger.Shelley.Genesis (InjectionData (..), ShelleyExtraConfig (..),
+                   foldInjectionData)
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
+import           Control.Exception (SomeException, displayException, evaluate, try)
 import           Data.Bifunctor (bimap, second)
 import           Data.Function ((&))
 import           Data.List (find)
-import qualified Data.ListMap as ListMap (toList)
+import qualified Data.ListMap as ListMap (fromList, toList)
+import           System.FS.API.Types (MountPoint (..))
+import           System.FS.IO (ioHasFS)
 
 
 genesisValidate ::  ShelleyGenesis -> Either String ()
@@ -86,9 +91,39 @@ embeddedInitialFunds g =
           Left $ TxGenError "genesisInitialFunds: both initialFunds and extraConfig.initialFunds are populated; please use only one source"
       EmbeddedInjection lm -> Right (ListMap.toList lm)
       InjectionFromFile{}  ->
-        Left $ TxGenError "genesisInitialFunds: file-based initial-funds injection is unsupported; expected embedded funds in extraConfig.initialFunds or initialFunds"
+        Left $ TxGenError "genesisInitialFunds: unresolved file-based initial-funds injection; use genesisWithResolvedInitialFunds"
  where
   legacy = ListMap.toList $ sgInitialFunds g
+
+-- | 'genesisWithResolvedInitialFunds' runs a pure computation on the genesis with a
+-- file-based @extraConfig.initialFunds@ injection resolved into an embedded
+-- one, so the pure functions in this module can consume it unchanged. Any other
+-- genesis is passed to the computation as is.
+--
+-- The first argument is the directory containing the Shelley genesis file; the
+-- node mounts its 'System.FS.API.HasFS' for injection files at that same
+-- directory, and reading, hashing and parsing are delegated to ledger's
+-- 'foldInjectionData', so resolution matches the node's.
+--
+-- The resolved genesis never escapes: the caller's genesis keeps its original
+-- field, and the result is forced to WHNF before returning, so the (potentially
+-- huge) resolved funds become garbage right after. However, if the result @a@
+-- keeps a reference to the resolved genesis or its funds -- directly, or via a
+-- thunk not yet evaluated -- they stay on the heap for as long as @a@ is
+-- reachable; e.g. throughout the process lifetime when @a@ is stored in a
+-- long-lived environment.
+genesisWithResolvedInitialFunds :: FilePath -> ShelleyGenesis -> (ShelleyGenesis -> Either TxGenError a) -> IO (Either TxGenError a)
+genesisWithResolvedInitialFunds shelleyGenesisDir g k =
+  case sgExtraConfig g of
+    SJust extraConfig | source@InjectionFromFile{} <- secInitialFunds extraConfig -> do
+      let hasFS = ioHasFS (MountPoint shelleyGenesisDir)
+      res <- try @SomeException $ foldInjectionData hasFS source (flip (:)) []
+      case res of
+        Left err    -> pure $ Left $ TxGenError $ "genesisWithResolvedInitialFunds: " ++ displayException err
+        Right funds ->
+          let embedded = EmbeddedInjection $ ListMap.fromList $ reverse funds
+          in evaluate $ k g { sgExtraConfig = SJust extraConfig { secInitialFunds = embedded } }
+    _ -> evaluate (k g)
 
 genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
   => NetworkId

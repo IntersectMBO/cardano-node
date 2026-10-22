@@ -199,16 +199,26 @@ let
         )
         echo "''${cmd[*]}" > $out/wb-start.sh
 
+        ## stdenv runs builders with `set -e -o pipefail`, so a failing `wb
+        ## start` would abort the script right here -- before the diagnostics
+        ## below ever run, leaving CI with no node logs at all. Disable both
+        ## for the pipeline and read the status of `wb start` itself out of
+        ## PIPESTATUS rather than `$?`, which only reports `tee`'s status.
+        set +e +o pipefail
         time "''${cmd[@]}" 2>&1 |
           tee $out/wb-start.log
-        status=$?
+        status=''${PIPESTATUS[0]}
+        set -e -o pipefail
         if test $status != 0
         then echo "wb start failed"
              cd run/current
              echo "==========  txgen  stdout:"; cat generator/stdout || true
              echo "==========  txgen  stderr:"; cat generator/stderr || true
-             echo "==========  node-0 stdout:"; cat node-0/stdout || true
-             echo "==========  node-0 stderr:"; cat node-0/stderr || true
+             for node in ${__concatStringsSep " "
+                            (__attrNames profileBundle.node-specs.value)}
+             do echo "==========  $node stdout:"; cat "$node"/stdout || true
+                echo "==========  $node stderr:"; cat "$node"/stderr || true
+             done
              wb call fail "wb start failed"
         fi
 
