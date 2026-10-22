@@ -112,7 +112,7 @@ local =
   . P.v12Preview . P.v11Preview . V.genesisVariantVoltaire64k
   . V.timescaleCompressed . P.generatorEpochs 4 . P.shutdownOnOff
   . P.uniCircle . V.hosts 2 . P.loopback
-  . P.traceForwardingOn . P.txSubmissionInitDelay 0
+  . P.traceForwardingOn
   . P.analysisSizeSmall
   . P.desc "Reference script sweep, 2 nodes, 4 compressed epochs"
 

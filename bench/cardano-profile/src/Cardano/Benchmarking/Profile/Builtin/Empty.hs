@@ -149,12 +149,12 @@ profilesEmpty = (++ profilesIdle) $ map baseNoDataset
   -- shutdown at block 8 are full (about 45 of these transactions each); the rate keeps
   -- the mempool topped up. Without the nodes' default 60s wait before taking
   -- transactions from a new peer, which would leave about 3 of those blocks empty.
-  , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueLocal . P.subTxs 4 2 2 . P.txCount 300 . P.txSubmissionInitDelay 0 . P.traceForwardingOn
+  , ciTest genesisV12 & P.name "ci-test-v12-nested" . V.valueLocal . P.subTxs 4 2 2 . P.txCount 300 . P.traceForwardingOn
   -- Plutus workloads whose transactions spend outputs locked at script variants:
   -- finding the scripts by reference to outputs a setup phase publishes them in,
   -- or in their witnesses, for comparison.
-  , ciTest genesisV12 & P.name "ci-test-v12-plutus-ref"    . loopV3Variants Types.ScriptByReference . P.txSubmissionInitDelay 0 . P.traceForwardingOn . P.analysisSizeSmall
-  , ciTest genesisV12 & P.name "ci-test-v12-plutus-inline" . loopV3Variants Types.ScriptInWitness   . P.txSubmissionInitDelay 0 . P.traceForwardingOn . P.analysisSizeSmall
+  , ciTest genesisV12 & P.name "ci-test-v12-plutus-ref"    . loopV3Variants Types.ScriptByReference . P.traceForwardingOn . P.analysisSizeSmall
+  , ciTest genesisV12 & P.name "ci-test-v12-plutus-inline" . loopV3Variants Types.ScriptInWitness   . P.traceForwardingOn . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------

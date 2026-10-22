@@ -60,16 +60,11 @@ profilesPlutuscall =
       -- its script in the witnesses or by reference. The variants' padding is
       -- never run, so the three differ in script bytes, not execution. All pay
       -- the fee of the dearest, the witness discharge. No size filter, as their
-      -- blocks differ in size by the scripts. The nodes take transactions from
-      -- their peers at once: by default a node waits 60 s before asking a new
-      -- peer, and a setup transaction that is in one mempool only is lost when
-      -- the block it went into loses a slot battle.
+      -- blocks differ in size by the scripts.
       loopV3          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
-                                   . P.txSubmissionInitDelay 0
       loopV3Script15k src =
                         plutusCall & P.plutusVariants src 200 (Just 15000) . P.txFeeOverwrite 2000000
                                    . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
-                                   . P.txSubmissionInitDelay 0
 
       postPlomin      = V.genesisVariantVoltaire
   in [
