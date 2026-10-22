@@ -39,7 +39,7 @@ jobs:
         ghc: [&ghc-stable "9.6", &ghc-latest "9.12", "9.14"]
         cabal: [&cabal-version "3.16"]
         sys:
-          - { os: ubuntu-latest, shell: bash }
+          - { os: ubuntu-latest }
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
@@ -47,24 +47,19 @@ jobs:
             cabal: *cabal-version
             sys:
               os: macos-latest
-              shell: bash
           - ghc: *ghc-latest
             cabal: *cabal-version
             sys:
               os: windows-latest
-              shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
           - ghc: *ghc-latest
             validate-manifest: true
     defaults:
       run:
-        shell: ${{ matrix.sys.shell }}
+        shell: bash
 
     env:
       # Modify this value to "invalidate" the cabal cache.
       CABAL_CACHE_VERSION: "2024-07-26"
-      # these two are msys2 env vars, they have no effect on non-msys2 installs.
-      MSYS2_PATH_TYPE: inherit
-      MSYSTEM: MINGW64
 
     concurrency:
       group: >
@@ -97,7 +92,7 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
+      uses: input-output-hk/actions/base@6217329012a2fd613c8eec9a3f523684a8e91720 # latest
       with:
         use-sodium-vrf: true # default is true
 
@@ -205,15 +200,7 @@ jobs:
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
-    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
-    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
-    # will put them in.
-    # You may also want to run
-    #
-    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
-    #
-    # to restore the original path.  Do note that some test might need msys2
-    # and will silently fail if msys2 is not in path. See the "Run tests" step.
+    # the tmux session to debug `pwsh` issues.
     #
     # - name: Setup tmate session
     #   if: ${{ failure() }}
