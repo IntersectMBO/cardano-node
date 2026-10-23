@@ -604,35 +604,39 @@ cardanoTestnet
 -- | Copy and modify a node configuration file so that its @TraceOptions@
 -- enables the @Forwarder@ backend. This is required for nodes to actually
 -- forward their traces and metrics to cardano-tracer. Returns a path to the
--- modified config file.
+-- modified config file. Fails if the tracing settings are not an object in the
+-- file itself (for example a @HermodTracing@ file path), instead of dropping them.
 enableTraceForwarding :: FilePath -> IO FilePath
 enableTraceForwarding configFile = do
   (document, _warnings) <- readConfigurationDocument configFile
-  (document', _warnings') <-
-    configurationDocumentFromValue
-      . onObject (onKey "Configuration" . onKey "HermodTracing" $
-          KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding)
+  value' <-
+    either (\err -> throwString $ "enableTraceForwarding: " <> configFile <> ": " <> err) pure
+      . addForwarding
       $ configurationDocumentValue document
+  (document', _warnings') <- configurationDocumentFromValue value'
   let configFile' = dropExtension configFile <> "-tracer.yaml"
   writeConfigurationDocument configFile' document'
   pure configFile'
   where
     -- The tracing settings are the @HermodTracing@ object of the @Configuration@
-    -- section. A missing object (or one given as a file) is replaced.
-    onObject :: (KeyMap.KeyMap Aeson.Value -> KeyMap.KeyMap Aeson.Value) -> Aeson.Value -> Aeson.Value
-    onObject f = \case
-      Object o -> Object $ f o
-      other -> other
-
-    onKey
-      :: KeyMap.Key
-      -> (KeyMap.KeyMap Aeson.Value -> KeyMap.KeyMap Aeson.Value)
-      -> KeyMap.KeyMap Aeson.Value
-      -> KeyMap.KeyMap Aeson.Value
-    onKey key f o =
-      KeyMap.insert key (Object . f $ case KeyMap.lookup key o of
-        Just (Object inner) -> inner
-        _ -> mempty) o
+    -- section. A missing one is created; any other shape is an error, because
+    -- replacing it would silently drop the tracing settings.
+    addForwarding :: Aeson.Value -> Either String Aeson.Value
+    addForwarding = \case
+      Object envelope -> case KeyMap.lookup "Configuration" envelope of
+        Just (Object configuration) -> do
+          tracing <- case KeyMap.lookup "HermodTracing" configuration of
+            Nothing -> Right mempty
+            Just (Object inline) -> Right inline
+            Just (String path) -> Left $
+              "Configuration.HermodTracing is a file path (" <> Text.unpack path
+                <> "), but the tracer needs the tracing settings inline"
+            Just _ -> Left "Configuration.HermodTracing must be an object or a file path"
+          let tracing' = KeyMap.insertWith mergeTraceOptions "TraceOptions" Defaults.traceOptionsForwarding tracing
+              configuration' = KeyMap.insert "HermodTracing" (Object tracing') configuration
+          Right . Object $ KeyMap.insert "Configuration" (Object configuration') envelope
+        _ -> Left "expected a Configuration object"
+      _ -> Left "expected a JSON or YAML object"
 
     mergeTraceOptions :: Yaml.Value -> Yaml.Value -> Yaml.Value
     mergeTraceOptions (Object forwarding) (Object existing) =
