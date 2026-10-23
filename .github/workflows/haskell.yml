@@ -110,16 +110,11 @@ jobs:
     # libc++.a (pulled in by protobuf). GHC's runtime linker then resolves -lc++
     # to it instead of the libc++ bundled with GHC, and crashes while running
     # Template Haskell (plutus-core, "Access violation in generated code").
-    # snappy-c (extra-libraries: snappy) is the only thing that needs
-    # LIBRARY_PATH, so point it at a directory holding only libsnappy's import
-    # library. Remove once the grpc-deps action does this itself.
-    - name: Restrict LIBRARY_PATH to libsnappy on Windows
+    # snappy-c finds libsnappy through pkg-config instead (see cabal.project).
+    # Remove once the grpc-deps action stops setting LIBRARY_PATH on Windows.
+    - name: Unset LIBRARY_PATH on Windows
       if: runner.os == 'Windows'
-      run: |
-        dir="$RUNNER_TEMP/snappy-lib"
-        mkdir -p "$dir"
-        cp C:/msys64/clang64/lib/libsnappy.dll.a "$dir/"
-        echo "LIBRARY_PATH=$(cygpath -m "$dir")" >> "$GITHUB_ENV"
+      run: echo "LIBRARY_PATH=" >> "$GITHUB_ENV"
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
