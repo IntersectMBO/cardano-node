@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-29T11:48:37Z
-  , cardano-haskell-packages 2026-10-22T08:15:23Z
+  , cardano-haskell-packages 2026-10-23T18:44:19Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -147,13 +147,3 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
--- Temporary, until the next cardano-cli release: the change that checks node
--- configurations through cardano-api's cardano-config reader.
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-cli
-  tag: f464a86a0628e81a61881552f5b865764fb1b500
-  --sha256: sha256-bLANsY56OrZxsw1GshonJ/Nvxy/d4lmGiVEUZfuezHM=
-  subdir:
-    cardano-cli
