@@ -30,7 +30,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.sys.os }}
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
@@ -38,33 +38,25 @@ jobs:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         ghc: [&ghc-stable "9.6", &ghc-latest "9.12", "9.14"]
         cabal: [&cabal-version "3.16"]
-        sys:
-          - { os: ubuntu-latest, shell: bash }
+        os: [ubuntu-latest]
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
           - ghc: *ghc-stable
             cabal: *cabal-version
-            sys:
-              os: macos-latest
-              shell: bash
+            os: macos-latest
           - ghc: *ghc-latest
             cabal: *cabal-version
-            sys:
-              os: windows-latest
-              shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
+            os: windows-latest
           - ghc: *ghc-latest
             validate-manifest: true
     defaults:
       run:
-        shell: ${{ matrix.sys.shell }}
+        shell: bash
 
     env:
       # Modify this value to "invalidate" the cabal cache.
       CABAL_CACHE_VERSION: "2024-07-26"
-      # these two are msys2 env vars, they have no effect on non-msys2 installs.
-      MSYS2_PATH_TYPE: inherit
-      MSYSTEM: MINGW64
 
     concurrency:
       group: >
@@ -73,7 +65,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.sys.os }}
+        f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
 
@@ -86,8 +78,18 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.sys.os }}
+        f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+
+    # The macos-26-arm64 image 20261013 ships Command Line Tools 27 (SDK 27.0)
+    # next to Xcode 26.6, whose ld cannot read the SDK 27 .tbd stubs
+    # ("tapi error: malformed file ... unknown architecture arm64e.x1").
+    # Use the Command Line Tools toolchain so ld and SDK match.
+    # Remove once https://github.com/actions/runner-images/issues/14940 is fixed
+    # in the image (its README lists Command Line Tools 26.x again).
+    - name: Use Command Line Tools toolchain on macOS
+      if: runner.os == 'macOS'
+      run: sudo xcode-select -s /Library/Developer/CommandLineTools
 
     - name: Install Haskell
       uses: input-output-hk/actions/haskell@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
@@ -97,12 +99,22 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@dbb6ea6d50ffc37a2d481fd8047aff028bac3223 # latest
+      uses: input-output-hk/actions/base@6217329012a2fd613c8eec9a3f523684a8e91720 # latest
       with:
         use-sodium-vrf: true # default is true
 
     - name: Install gRPC system dependencies
-      uses: input-output-hk/cardano-dev/actions/grpc-deps@64bbe67966d5ee404a795803a2b56718baebffb4 # grpc-deps-0.0.1.0
+      uses: input-output-hk/cardano-dev/actions/grpc-deps@6a8c25b364b2e82692c9d40f1450613c66cf4ec1 # grpc-deps-0.0.2.0
+
+    # grpc-deps sets LIBRARY_PATH=C:/msys64/clang64/lib, which also holds MSYS2's
+    # libc++.a (pulled in by protobuf). GHC's runtime linker then resolves -lc++
+    # to it instead of the libc++ bundled with GHC, and crashes while running
+    # Template Haskell (plutus-core, "Access violation in generated code").
+    # snappy-c finds libsnappy through pkg-config instead (see cabal.project).
+    # Remove once the grpc-deps action stops setting LIBRARY_PATH on Windows.
+    - name: Unset LIBRARY_PATH on Windows
+      if: runner.os == 'Windows'
+      run: echo "LIBRARY_PATH=" >> "$GITHUB_ENV"
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
@@ -170,7 +182,7 @@ jobs:
       if: ${{ failure() }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        name: failed-test-workspaces-${{ matrix.sys.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
 
     - name: "Tar artifacts"
@@ -201,19 +213,11 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
-    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
-    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
-    # will put them in.
-    # You may also want to run
-    #
-    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
-    #
-    # to restore the original path.  Do note that some test might need msys2
-    # and will silently fail if msys2 is not in path. See the "Run tests" step.
+    # the tmux session to debug `pwsh` issues.
     #
     # - name: Setup tmate session
     #   if: ${{ failure() }}

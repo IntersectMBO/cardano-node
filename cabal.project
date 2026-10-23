@@ -74,6 +74,13 @@ package bitvec
 package cardano-diffusion
   flags: +optparse-applicative-fork
 
+-- Find libsnappy through pkg-config instead of LIBRARY_PATH. On Windows,
+-- LIBRARY_PATH pointing at MSYS2's clang64/lib makes GHC pick up its libc++.a
+-- instead of the one bundled with GHC, which crashes Template Haskell.
+if os(windows)
+  package snappy-c
+    flags: +pkg-config
+
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
