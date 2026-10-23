@@ -1,4 +1,4 @@
 pr: 0
 kind:
   - maintenance
-description: Bumped cardano-api to 11.9 and cardano-cli to its master branch.
+description: Bumped cardano-api to 11.10 and cardano-cli to 11.4.

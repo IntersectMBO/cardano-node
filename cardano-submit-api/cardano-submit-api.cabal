@@ -41,7 +41,7 @@ library
                       , bytestring
                       , cardano-api ^>= 11.10
                       , cardano-binary
-                      , cardano-cli ^>= 11.3
+                      , cardano-cli ^>= 11.4
                       , cardano-crypto-class ^>=2.6
                       , containers
                       , ekg-core
