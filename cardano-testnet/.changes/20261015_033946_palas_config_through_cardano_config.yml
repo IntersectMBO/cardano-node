@@ -1,0 +1,4 @@
+pr: 0
+kind:
+  - breaking
+description: Testnet node configurations are written in the cardano-config format and through cardano-config, with their genesis hashes refreshed whenever the testnet starts and the node's default tracing options written out; removed createConfigJson, createConfigJsonNoHash, getByronGenesisHash, getShelleyGenesisHash, GenesisHashesPolicy and the configPath field of SubmitApiConf, and getStartTime no longer takes a path.

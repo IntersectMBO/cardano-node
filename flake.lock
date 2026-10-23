@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1792579734,
-        "narHash": "sha256-rgEvWKN3e1LOAX0+NDYHTvprAOVF2mTcCHfFhvJY4iI=",
+        "lastModified": 1792784504,
+        "narHash": "sha256-O/xasv4ompPTXMQIAyaBu7QLifqUFZH6aQukPFW4Wt4=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "e638412c0fdc6e5ee0687eef520bce92266c9c10",
+        "rev": "029e010d3346c54450b9fe45481948bcc92e4f87",
         "type": "github"
       },
       "original": {
@@ -173,6 +173,23 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "cardano-automation",
+        "type": "github"
+      }
+    },
+    "cardano-config": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792141866,
+        "narHash": "sha256-zF5LFdthGAChJGjGQ3NGkz6LRtB8N/3Hie6A70vY5gI=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-config",
+        "rev": "f22b91530d4a1de56882b71a79ebbfbea7de83d8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "cardano-config-2.2.2.0",
+        "repo": "cardano-config",
         "type": "github"
       }
     },
@@ -1135,6 +1152,7 @@
     "iohkNix_2": {
       "inputs": {
         "blst": "blst_2",
+        "cardano-config": "cardano-config",
         "nixpkgs": [
           "nixpkgs"
         ],
@@ -1142,15 +1160,16 @@
         "sodium": "sodium_2"
       },
       "locked": {
-        "lastModified": 1787718550,
-        "narHash": "sha256-Wkevfb7P201JHWpP4sbSg3HEO4YDPuCrwvARatfF2RI=",
+        "lastModified": 1792756495,
+        "narHash": "sha256-KUXDHN2p9e83PPtespiYf/MMW41/ngYDq5Bgi+PmGoU=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "af463a46dbe9c6e2db6b2639c0f35f5689e0c3a8",
+        "rev": "d0031fb59ddfedc713129718b62f931581039f5d",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/node-11.2",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -1198,16 +1217,16 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1785407305,
-        "narHash": "sha256-8Ay4GLKQGeJwGQPLliUNvgfkKCHFVUeASWFu/e0SxqM=",
+        "lastModified": 1789639081,
+        "narHash": "sha256-l6ACwepW8R5zsx1iNw9VOzdRfOWhfSE3+GcP6VkX8Zc=",
         "owner": "IntersectMBO",
         "repo": "mithril",
-        "rev": "23e124d99320adea6eb3eca361132c6c43d59cfa",
+        "rev": "3f6cb73f491eb3195d02318643e40836fb093acc",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
-        "ref": "refs/tags/2630.0",
+        "ref": "refs/tags/2630.1-hotfix",
         "repo": "mithril",
         "type": "github"
       }

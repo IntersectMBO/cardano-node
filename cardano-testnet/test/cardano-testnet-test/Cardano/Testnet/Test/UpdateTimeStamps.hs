@@ -18,8 +18,7 @@ import           GHC.Float (double2Int)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Cardano (liftToIntegration)
-import           Testnet.Start.Types (GenesisHashesPolicy (..), GenesisOptions (..),
-                   UpdateTimestamps (..))
+import           Testnet.Start.Types (GenesisOptions (..), UpdateTimestamps (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -33,11 +32,7 @@ hprop_update_time_stamps = integrationRetryWorkspace 2 "update-time-stamps" $ \t
 
   -- Generate the sandbox
   conf <- mkConf tmpDir
-  liftToIntegration $ createTestnetEnv
-    creationOptions
-    -- Do not add hashes to the main config file, so that genesis files
-    -- can be modified without having to recompute hashes every time.
-    conf{genesisHashesPolicy = WithoutHashes}
+  liftToIntegration $ createTestnetEnv creationOptions conf
 
   -- Wait for 20% more than `startTimeOffsetSeconds`, to ensure that
   -- the time bounds in the sandbox' config files are no longer valid

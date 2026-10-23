@@ -50,7 +50,7 @@
     incl.url = "github:divnix/incl";
 
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/jl/node-11.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -66,7 +66,7 @@
     # Bump the tag and then run: nix flake lock --update-input mithril.
     # Changing the tag alone only relocks mithril itself, leaving its
     # transitive pins on an old release.
-    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.0";
+    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.1-hotfix";
   };
 
   outputs = {

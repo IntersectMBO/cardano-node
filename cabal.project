@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-29T11:48:37Z
-  , cardano-haskell-packages 2026-10-21T10:21:18Z
+  , cardano-haskell-packages 2026-10-23T18:44:19Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -69,6 +69,11 @@ package bitvec
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
+
+-- plutus-scripts-bench bounds cardano-api ^>=11.8, below the 11.10 everything
+-- else resolves to.
+allow-newer:
+  , plutus-scripts-bench:cardano-api
 
 if impl(ghc >= 9.14)
   -- some-1.1 adds EqP/OrdP superclasses to GEq/GCompare, which plutus-core
