@@ -135,7 +135,7 @@ setupTracers configFile = do
     either
       (\(_ :: SomeException) -> defaultTraceConfig)
       id
-      <$> try (Logging.readConfiguration configFile)
+      <$> try (Logging.readConfiguration (Logging.FromFile configFile))
   configReflection <- Logging.emptyConfigReflection
   stdoutTrace      <- Logging.standardTracer
   let trForward = mempty
@@ -417,7 +417,7 @@ instance Logging.MetaTrace BuilderTrace where
 -- @ouroboros-network@'s @TraceSendRecv@ with fields that are easy to parse and
 -- verify.
 --
--- Every constructor carries a @target@ field identifying the remote node (the 
+-- Every constructor carries a @target@ field identifying the remote node (the
 -- 'Runtime.targetName' of the 'Runtime.Target').
 data TxSubmission
   = -- | The node asked us to announce transaction identifiers

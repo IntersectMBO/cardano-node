@@ -70,7 +70,7 @@ queryUTxOsAtAddresses socketPath networkId addrs = do
     Left acqFailure ->
       pure $ Left $ "QueryCurrentEra acquire failed: " ++ show acqFailure
     Right (Api.AnyCardanoEra era) ->
-      Api.caseByronOrShelleyBasedEra
+      Api.inEonForEra
         (pure $ Left
           "Node is in Byron era; UTxO discovery requires a Shelley-based era")
         (\sbe -> queryShelleyEra connectInfo sbe addrSet)
