@@ -142,3 +142,86 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- For networks with the Leios prototype (branches leios-main-compat).
+
+-- master past PR #695: proofs of possession use the IETF BLS_POP_ DST and the BLS
+-- DSTs take no signing context, as in the Leios prototype nodes.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: c1e1ed8d7ae39c111c73fc5f59ac37ce5933b83c
+  --sha256: sha256-UawlVBgCkU8H6o1k8BHj6pRkZjbHsdVEVIBW0ZFpWkc=
+  subdir:
+    cardano-base
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-leios
+    cardano-crypto-praos
+    cardano-slotting
+    cardano-strict-containers
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-keys
+  tag: a549816eca553796229df017980ea945cfda3d29
+  --sha256: sha256-UFi8gv6+WtpjeAUaY+dkOiAWUeQTjT9XqpFhQjq9FFA=
+  subdir:
+    cardano-keys
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: b7912102b4dae0908e3fcdca8379c950310b169b
+  --sha256: sha256-Hj8dfyVSLmeuXBNubcrhLKTlGtNv0KXeQ5MxvhFCK/s=
+  subdir:
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/small-steps
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/crypto
+    eras/shelley/impl
+    eras/mary/impl
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 05c1f01664e2517838bb95eac6ab49cc42137ce6
+  --sha256: sha256-xdEDwRhsalNbHHxxY2Nj6rMuYuY0WVceCdjfJxNg/xs=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 5783a4d0112e808d56a96690b68b63bc9a5fa31b
+  --sha256: sha256-THLIGdWFl9karsLnYHH0GfuRFNcfHvihpR4CN97qWUY=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: b4beee6efb5f63130d329c5098b9f516e2864d93
+  --sha256: sha256-hid9HsTUcCvbX4L5G6GHj0Va19UJ1kMFFSu9/dFbHbc=
+  subdir:
+    cardano-cli
+
+allow-newer:
+    , cardano-config:cardano-ledger-alonzo
+    , cardano-config:cardano-ledger-conway
+    , cardano-config:cardano-ledger-core
+    , cardano-config:cardano-ledger-dijkstra
+    , cardano-config:cardano-ledger-shelley
+
+-- consensus main still carries version 5.0
+allow-older: *:ouroboros-consensus
