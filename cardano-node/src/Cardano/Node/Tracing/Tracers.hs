@@ -55,6 +55,7 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
+import           Control.Tracer (nullTracer)
 import           Data.Aeson (ToJSON (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
@@ -445,6 +446,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith perasCertInclusionTr
       , Consensus.perasVoteForgingTracer = mkTracer $
           traceWith perasVoteForgingTr
+      , Consensus.leiosFetchServerTracer = nullTracer
+      , Consensus.leiosDbTracer = nullTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -568,6 +571,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith txPerasCertDiffusion
       , NtN.tPerasVoteDiffusionTracer = mkTracer $
           traceWith txPerasVoteDiffusion
+      , NtN.tLeiosNotifyTracer = nullTracer
+      , NtN.tLeiosFetchTracer = nullTracer
       }
 
 mkDiffusionTracers ::
