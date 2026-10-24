@@ -113,7 +113,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
   myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-                ByteString ByteString ByteString
+                ByteString ByteString ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
