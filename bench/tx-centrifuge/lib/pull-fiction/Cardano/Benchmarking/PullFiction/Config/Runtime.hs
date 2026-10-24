@@ -738,4 +738,3 @@ partitionInputs n xs
     go remaining k =
       let (chunk, rest) = splitAt chunkSize remaining
       in  chunk : go rest (k - 1)
-
