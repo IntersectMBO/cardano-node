@@ -55,6 +55,18 @@ runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $
    setLOhost :: Host -> LogObject -> LogObject
    setLOhost h lo = lo { loHost = h }
 
+-- | Placeholder `LogObject` standing in for a raw log line that failed to
+--   JSON-decode altogether, so that such lines can flow through the rest of
+--   the pipeline (and be archived) rather than aborting the whole run.
+decodeErrorLogObject :: LBS.ByteString -> String -> LogObject
+decodeErrorLogObject bs errStr =
+  LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "" (TId "0")
+  $ LODecodeError rawInput (Text.fromText $ TS.pack errStr)
+ where
+   rawInput =
+     Text.fromByteString (LBS.toStrict bs)
+     & fromMaybe "#<ERROR decoding input fromByteString>"
+
 readLogObjectStream :: FilePath -> Bool -> Maybe [LOAnyType] -> IO [LogObject]
 readLogObjectStream f okDErr loAnyLimit =
   LBS.readFile f
@@ -77,15 +89,7 @@ readLogObjectStream f okDErr loAnyLimit =
                 _ -> True)
              . loBody) .
     filter (not . isDecodeError "Error in $: not enough input" . loBody) .
-    fmap (\bs ->
-            AE.eitherDecode bs &
-            either
-            (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0")
-             . LODecodeError (Text.fromByteString (LBS.toStrict bs)
-                               & fromMaybe "#<ERROR decoding input fromByteString>")
-              . Text.fromText
-              . TS.pack)
-            id)
+    fmap (\bs -> AE.eitherDecode bs & either (decodeErrorLogObject bs) id)
     . filter (not . LBS.null)
     . LBS.split (fromIntegral $ fromEnum '\n')
  where
