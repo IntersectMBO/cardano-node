@@ -23,6 +23,7 @@ import System.IO (hFlush, hPutStrLn, stderr)
 import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
 -----------------
 -- cardano-api --
 -----------------
@@ -132,7 +133,8 @@ txTests = Tasty.testGroup "node"
               let body = Api.getTxBody tx
               case Api.txMetadata (Api.getTxBodyContent body) of
                 Api.TxMetadataNone -> bytes @?= 0
-                Api.TxMetadataInEra _ (Api.TxMetadata metadata) ->
+                Api.TxMetadataInEra _ (Api.TxMetadata metadata) -> do
+                  HUnit.assertBool "zero bytes must omit metadata" (bytes > 0)
                   case Map.lookup 0 metadata of
                     Just (Api.TxMetaList chunks) -> do
                       let payloads = [b | Api.TxMetaBytes b <- chunks]
@@ -147,6 +149,43 @@ txTests = Tasty.testGroup "node"
                 Right decoded -> Api.getTxId (Api.getTxBody decoded) @?= Api.getTxId body
       | bytes <- [0, 1, 64, 65, 1024]
       ]
+
+  , HUnit.testCase "buildTx: sibling inputs have distinct, reproducible metadata" $ do
+      (_, signKey, addr) <- testSetup
+      let fund0 = mkDummyFund signKey 0 10_000_000
+          fund1 = mkDummyFund signKey 1 10_000_000
+          build funds = either fail pure $
+            TxAssembly.buildTx addr signKey funds 1 (L.Coin 200_000) 1024
+      (tx0, _) <- build [fund0]
+      (tx1, _) <- build [fund1]
+      (tx0Again, _) <- build [fund0]
+      chunks0 <- metadataPayloads tx0
+      chunks1 <- metadataPayloads tx1
+      HUnit.assertBool "output index contributes to filler" (chunks0 /= chunks1)
+      Api.serialiseToCBOR tx0Again @?= Api.serialiseToCBOR tx0
+
+  , HUnit.testCase "buildTx: all input references contribute to metadata" $ do
+      (_, signKey, addr) <- testSetup
+      let fund i = mkDummyFund signKey i 10_000_000
+          build second = either fail pure $
+            TxAssembly.buildTx addr signKey [fund 0, fund second] 1 (L.Coin 200_000) 64
+      (tx1, _) <- build 1
+      (tx2, _) <- build 2
+      chunks1 <- metadataPayloads tx1
+      chunks2 <- metadataPayloads tx2
+      HUnit.assertBool "later input references contribute to filler" (chunks1 /= chunks2)
+
+  , HUnit.testCase "buildTx: metadata chunks do not repeat after 256 chunks" $ do
+      (_, signKey, addr) <- testSetup
+      let fund = mkDummyFund signKey 0 10_000_000
+      (tx, _) <- either fail pure $
+        TxAssembly.buildTx addr signKey [fund] 1 (L.Coin 200_000) (257 * 64)
+      chunks <- metadataPayloads tx
+      length chunks @?= 257
+      Set.size (Set.fromList chunks) @?= 257
+      HUnit.assertBool "full chunks contain 64 bytes" (all ((== 64) . BS.length) chunks)
+      HUnit.assertBool "64-byte chunks do not repeat a 32-byte seed"
+        (all (\b -> BS.take 32 b /= BS.drop 32 b) chunks)
 
   , HUnit.testCase
       "buildTx: signing throughput (single-threaded)" $ do
@@ -202,6 +241,18 @@ txTests = Tasty.testGroup "node"
 --------------------------------------------------------------------------------
 -- Test helpers
 --------------------------------------------------------------------------------
+
+metadataPayloads :: Api.Tx Api.ConwayEra -> IO [BS.ByteString]
+metadataPayloads tx =
+  case Api.txMetadata (Api.getTxBodyContent (Api.getTxBody tx)) of
+    Api.TxMetadataInEra _ (Api.TxMetadata metadata) ->
+      case Map.lookup 0 metadata of
+        Just (Api.TxMetaList chunks) -> mapM payload chunks
+        _ -> fail "missing filler metadata list"
+    Api.TxMetadataNone -> fail "missing filler metadata"
+  where
+    payload (Api.TxMetaBytes bytes) = pure bytes
+    payload _ = fail "filler metadata contains a non-byte chunk"
 
 -- | Load protocol parameters and create common test fixtures.
 testSetup
