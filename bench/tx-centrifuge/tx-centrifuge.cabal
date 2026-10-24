@@ -178,9 +178,11 @@ test-suite tx-centrifuge-test
   autogen-modules:    Paths_tx_centrifuge
   build-depends:      base >=4.12 && <5
                     , aeson
+                    , bytestring
                     , cardano-api
                     , cardano-ledger-core
                     , clock
+                    , containers
                     , tasty
                     , tasty-hunit
                     , tx-centrifuge:tx-centrifuge-lib
@@ -215,4 +217,3 @@ benchmark core-bench
                     , deepseq
                     , tx-centrifuge:pull-fiction
                     , tx-centrifuge:test-harness
-
