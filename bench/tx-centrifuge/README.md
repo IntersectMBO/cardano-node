@@ -224,6 +224,7 @@ Workload and target names must be non-empty and must not contain `.` or start wi
 These parameters define the **transaction profile** for a workload:
 - `inputs_per_tx` / `outputs_per_tx`: Controls the transaction structure (size and complexity).
 - `fee`: Fixed Lovelace fee per transaction.
+- `metadata_bytes` (optional, default `0`): Bytes of filler metadata per transaction, split into chunks of at most 64 bytes. CBOR headers and the auxiliary data hash add overhead beyond this size. Use this to increase transaction size without changing the number or value of outputs.
 - `recycle` (optional): Controls when output UTxOs are returned to the input queue. See [Resource Recycling](#resource-recycling) for the three strategies (`on_build`, `on_pull`, `on_confirm`). When omitted, outputs are **not recycled** — the generator consumes initial funds and eventually exhausts them.
 
 ## Usage

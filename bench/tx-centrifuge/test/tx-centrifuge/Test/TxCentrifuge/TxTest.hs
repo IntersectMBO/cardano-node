@@ -21,6 +21,8 @@ import System.IO (hFlush, hPutStrLn, stderr)
 -- aeson --
 -----------
 import Data.Aeson qualified as Aeson
+import Data.ByteString qualified as BS
+import Data.Map.Strict qualified as Map
 -----------------
 -- cardano-api --
 -----------------
@@ -61,7 +63,7 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx addr signKey [fund] 1 fee 0 of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
         Right (tx, outFunds) -> do
@@ -79,8 +81,8 @@ txTests = Tasty.testGroup "node"
       let fund1 = mkDummyFund signKey 0 5_000_000
           fund2 = mkDummyFund signKey 1 5_000_000
           fee   = L.Coin 200_000
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey
-             [fund1, fund2] 3 fee of
+      case TxAssembly.buildTx addr signKey
+             [fund1, fund2] 3 fee 0 of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
         Right (_tx, outFunds) -> do
@@ -94,7 +96,7 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 100_000
           fee  = L.Coin 200_000
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx addr signKey [fund] 1 fee 0 of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -103,7 +105,7 @@ txTests = Tasty.testGroup "node"
   , HUnit.testCase "buildTx: no input funds" $ do
       (_ledgerPP, signKey, addr) <- testSetup
       let fee = L.Coin 200_000
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [] 1 fee of
+      case TxAssembly.buildTx addr signKey [] 1 fee 0 of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -113,11 +115,38 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 0 fee of
+      case TxAssembly.buildTx addr signKey [fund] 0 fee 0 of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
             "buildTx should fail with 0 outputs"
+
+  , Tasty.testGroup "buildTx: filler metadata"
+      [ HUnit.testCase (show bytes ++ " bytes") $ do
+          (_, signKey, addr) <- testSetup
+          let fund = mkDummyFund signKey 0 10_000_000
+          case TxAssembly.buildTx addr signKey [fund] 1 (L.Coin 200_000) bytes of
+            Left err -> HUnit.assertFailure $ "buildTx failed: " ++ err
+            Right (tx, outFunds) -> do
+              map Fund.fundValue outFunds @?= [9_800_000]
+              let body = Api.getTxBody tx
+              case Api.txMetadata (Api.getTxBodyContent body) of
+                Api.TxMetadataNone -> bytes @?= 0
+                Api.TxMetadataInEra _ (Api.TxMetadata metadata) ->
+                  case Map.lookup 0 metadata of
+                    Just (Api.TxMetaList chunks) -> do
+                      let payloads = [b | Api.TxMetaBytes b <- chunks]
+                      length payloads @?= length chunks
+                      sum (map BS.length payloads) @?= fromIntegral bytes
+                      HUnit.assertBool "metadata chunks fit the ledger limit"
+                        (all (\b -> BS.length b > 0 && BS.length b <= 64) payloads)
+                    _ -> HUnit.assertFailure "missing filler metadata list"
+              case Api.deserialiseFromCBOR (Api.AsTx Api.AsConwayEra)
+                     (Api.serialiseToCBOR tx) of
+                Left err -> HUnit.assertFailure $ "transaction roundtrip failed: " ++ show err
+                Right decoded -> Api.getTxId (Api.getTxBody decoded) @?= Api.getTxId body
+      | bytes <- [0, 1, 64, 65, 1024]
+      ]
 
   , HUnit.testCase
       "buildTx: signing throughput (single-threaded)" $ do
@@ -162,7 +191,7 @@ txTests = Tasty.testGroup "node"
        -> Api.SigningKey Api.PaymentKey -> L.Coin -> IO ()
     go 0 _ _ _ _ _ = pure ()
     go remaining fund ledgerPP addr signKey fee =
-      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx addr signKey [fund] 1 fee 0 of
         Left err ->
           error $ "throughput test: buildTx failed at iteration "
             ++ show remaining ++ ": " ++ err
