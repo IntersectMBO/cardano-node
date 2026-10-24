@@ -12,7 +12,6 @@ module Cardano.Benchmarking.TxCentrifuge.TxAssembly
 ----------
 -- base --
 ----------
-import Data.Bits (xor)
 import Data.Function ((&))
 import Data.List (nubBy)
 import Data.Map.Strict qualified as Map
@@ -22,6 +21,10 @@ import Numeric.Natural (Natural)
 -- bytestring --
 ------------------
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Codec.Serialise qualified as Serialise
+import Cardano.Crypto.Hash qualified as Hash
+import Cardano.Crypto.Hash.SHA512 (SHA512)
 -----------------
 -- cardano-api --
 -----------------
@@ -126,35 +129,29 @@ buildTx destAddr outKey inFunds numOutputs fee metadataBytes
                 (Map.singleton metadataLabel (Api.TxMetaList metadataChunks))
             )
 
-    -- Filler is seeded from the first input's transaction id and varied per
-    -- chunk, so two transactions do not carry the same metadata and no chunk
-    -- repeats within one. A constant payload would compress or deduplicate
-    -- away wherever anything on the path does either, and would make the
-    -- auxiliary data hash identical on every transaction. Deterministic for a
-    -- given set of inputs, so a run is still reproducible.
+    -- Include every input's transaction id AND output index so sibling UTxOs
+    -- produce different filler. CBOR delimits the seed and arbitrary-precision
+    -- chunk counter unambiguously. SHA512 supplies a full 64-byte chunk with
+    -- no short repeating pattern, while identical inputs remain reproducible.
     fillerSeed :: BS.ByteString
-    fillerSeed = case inFunds of
-      Fund{fundTxIn = Api.TxIn txid _} : _ -> Api.serialiseToRawBytes txid
-      -- Unreachable: the null inFunds guard above returns before this.
-      [] -> BS.singleton 0x5a
+    fillerSeed = BSL.toStrict $ Serialise.serialise
+      [ (Api.serialiseToRawBytes txid, ix)
+      | Fund{fundTxIn = Api.TxIn txid (Api.TxIx ix)} <- inFunds
+      ]
 
-    chunkBytes :: Int -> Int -> BS.ByteString
-    chunkBytes i n =
-      BS.pack
-        [ BS.index fillerSeed ((i + j) `mod` seedLen) `xor` fromIntegral i
-        | j <- [0 .. n - 1]
-        ]
-     where
-      seedLen = max 1 (BS.length fillerSeed)
+    chunkBytes :: Natural -> Int -> BS.ByteString
+    chunkBytes i n = BS.take n $ Hash.hashToBytes $
+      Hash.hashWith @SHA512 id $
+        BSL.toStrict $ Serialise.serialise (fillerSeed, i)
 
     metadataChunks :: [Api.TxMetadataValue]
-    metadataChunks = go 0 (fromIntegral metadataBytes)
+    metadataChunks = go 0 metadataBytes
      where
-      go i remaining
-        | remaining <= 0 = []
-        | otherwise =
-            let n = min metadataChunkSize remaining
-            in Api.TxMetaBytes (chunkBytes i n) : go (i + 1) (remaining - n)
+      go _ 0 = []
+      go i remaining =
+        let n = min (fromIntegral metadataChunkSize) remaining
+        in Api.TxMetaBytes (chunkBytes i (fromIntegral n))
+             : go (i + 1) (remaining - n)
 
     totalIn :: Integer
     totalIn = sum (map fundValue inFunds)
