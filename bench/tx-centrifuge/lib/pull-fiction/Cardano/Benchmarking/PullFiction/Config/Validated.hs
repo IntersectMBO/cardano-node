@@ -447,4 +447,3 @@ validateName context name = do
     _ -> pure ()
   when ('.' `elem` name) $
     Left $ context ++ ": name must not contain '.', got " ++ show name
-

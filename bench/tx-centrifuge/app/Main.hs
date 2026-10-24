@@ -1044,4 +1044,3 @@ protocolToNetworkMagic
       <$> Api.protocolInfo @IO info
 protocolToNetworkMagic _ =
   error "protocolToNetworkMagic: non-Cardano protocol"
-
