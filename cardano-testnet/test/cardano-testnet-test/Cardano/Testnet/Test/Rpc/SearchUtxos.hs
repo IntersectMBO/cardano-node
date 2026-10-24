@@ -19,9 +19,9 @@ import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
-import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as UtxoRpc hiding (items)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c hiding (anyOf, items, match, predicate)
+import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc hiding (anyOf, items, match)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPredicate,
                    serialisePaymentCredential)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type

@@ -22,6 +22,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson.Types
+import qualified Data.List.NonEmpty as NE
 import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import           Text.Printf (PrintfArg (..))
@@ -80,6 +81,6 @@ instance HasTypeProxy (PraosCredentialsSource StandardCrypto) where
 
 -- TODO(11.0): consider moving to `cardano-api`
 instance HasTextEnvelope (PraosCredentialsSource StandardCrypto) where
-  textEnvelopeType _ =
-    "PraosCredentialsSource_"
+  textEnvelopeTypes _ =
+    NE.singleton $ "PraosCredentialsSource_"
       <> fromString (Crypto.algorithmNameKES (Proxy @(KES StandardCrypto)))
