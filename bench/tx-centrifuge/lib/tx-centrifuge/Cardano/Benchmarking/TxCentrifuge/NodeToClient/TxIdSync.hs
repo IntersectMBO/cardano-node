@@ -331,4 +331,3 @@ processNewBlock state newBlock = do
   -- Broadcast orphaned txs.
   forM_ toOrphan $ \entry -> do -- No `toList`, skips intermediate list.
     STM.writeTChan (stateBroadcast state) (Left entry)
-

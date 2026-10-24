@@ -147,4 +147,3 @@ fromGenTxId (Cardano.GenTxIdConway   (Mempool.ShelleyTxId i)) =
   Api.fromShelleyTxId i
 fromGenTxId (Cardano.GenTxIdDijkstra (Mempool.ShelleyTxId i)) =
   Api.fromShelleyTxId i
-

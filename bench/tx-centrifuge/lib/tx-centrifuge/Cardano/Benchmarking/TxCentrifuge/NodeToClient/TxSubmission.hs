@@ -105,4 +105,3 @@ txSubmissionClient _targetName blockingFetch onResult =
       -> SubmitResult String
     mapResult SubmitSuccess    = SubmitSuccess
     mapResult (SubmitFail err) = SubmitFail (show err)
-
