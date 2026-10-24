@@ -480,18 +480,16 @@ checkTpsTolerance tolerance expectedTps result
 -- | Check a single target's token count against its expected TPS. Returns
 -- 'Nothing' on success, or 'Just' an error message on failure.
 --
--- Applies a per-target discrete-distribution continuity correction: the actual
--- token count is an integer, so even a perfect system deviates from a
--- non-integer expected count by at least the rounding distance. We subtract
--- this /quantization floor/ so that the tolerance measures only the /excess/
--- deviation attributable to the scheduling algorithm, not to integer
--- arithmetic.
+-- Round the tolerance interval outwards to whole tokens. The limiter emits
+-- its first token immediately, and the final emission can race the test timer.
+-- At 0.2 TPS over 60 seconds, both 12 and 13 tokens are valid observations;
+-- comparing their relative error directly would reject 13 at a 5% tolerance.
 checkTargetFairness
   :: Double                 -- ^ Tolerance (e.g. 0.10 for 10%).
   -> Map.Map String Double  -- ^ Expected TPS per target.
   -> TestResult -> String -> Maybe String
 checkTargetFairness tolerance expectedTps result name
-  | excessDev <= tolerance = Nothing
+  | actual >= lowerBound && actual <= upperBound = Nothing
   | otherwise = Just $
       show (round (dev * 100) :: Int) ++ "% from expected "
       ++ show (round expectedCount :: Int)
@@ -502,8 +500,5 @@ checkTargetFairness tolerance expectedTps result name
     eTps          = Map.findWithDefault 0 name expectedTps
     expectedCount = eTps * elapsed
     dev           = abs (fromIntegral actual - expectedCount) / expectedCount
-    frac          = expectedCount - fromIntegral (floor expectedCount :: Int)
-    qFloor
-      | frac == 0 = 0
-      | otherwise = min frac (1 - frac) / expectedCount
-    excessDev     = max 0 (dev - qFloor)
+    lowerBound    = floor (expectedCount * (1 - tolerance))
+    upperBound    = ceiling (expectedCount * (1 + tolerance))
