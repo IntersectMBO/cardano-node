@@ -13,6 +13,7 @@ module Test.PullFiction.GeneratorTest
 -- containers --
 ----------------
 import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust)
 -----------
 -- tasty --
 -----------
@@ -31,7 +32,17 @@ import Test.PullFiction.Harness qualified as Harness
 
 generatorTests :: Double -> Tasty.TestTree
 generatorTests duration = Tasty.testGroup "TPS"
-  [ -- A "shared" global rate limiter.
+  [ Tasty.testGroup "Low-rate sampling boundaries"
+      [ HUnit.testCase (show count ++ " tokens") $ do
+          let expected = Map.singleton "target" 0.2
+              result = Harness.TestResult 60 (Map.singleton "target" count)
+              failure = Harness.checkTargetFairness 0.05 expected result "target"
+          HUnit.assertBool "sampling allowance must remain within one token"
+            (isJust failure == shouldFail)
+      | (count, shouldFail) <- [(12, False), (13, False), (14, True), (0, True)]
+      ]
+    -- A "shared" global rate limiter.
+  ,
     tpsTestGroup "Shared-limiter mode (50 targets, 10 TPS)"
       "data/config-shared-10.json"
       (Map.fromList
