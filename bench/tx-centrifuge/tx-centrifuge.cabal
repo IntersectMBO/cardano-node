@@ -118,6 +118,7 @@ library tx-centrifuge-lib
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode.KeepAlive
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxIdSync
                       Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxSubmission
+                      Cardano.Benchmarking.TxCentrifuge.Supervision
                       Cardano.Benchmarking.TxCentrifuge.Tracing
                       Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans
                       Cardano.Benchmarking.TxCentrifuge.TxAssembly
@@ -174,10 +175,12 @@ test-suite tx-centrifuge-test
   hs-source-dirs:     test/tx-centrifuge
   main-is:            Main.hs
   other-modules:      Test.TxCentrifuge.TxTest
+                      Test.TxCentrifuge.SupervisionTest
                       Paths_tx_centrifuge
   autogen-modules:    Paths_tx_centrifuge
   build-depends:      base >=4.12 && <5
                     , aeson
+                    , async
                     , bytestring
                     , cardano-api
                     , cardano-ledger-core
