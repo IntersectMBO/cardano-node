@@ -37,6 +37,7 @@ import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Leios.VoteState (TraceLeiosVoteState (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
@@ -61,6 +62,7 @@ import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Mux.Trace as Mux
 import           Network.Mux.Tracing ()
+import           System.IO (hPutStrLn, stderr)
 
 -- | Construct tracers for all system components.
 --
@@ -448,7 +450,17 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith perasVoteForgingTr
       , Consensus.leiosFetchServerTracer = nullTracer
       , Consensus.leiosDbTracer = nullTracer
+      , Consensus.leiosNotifyClientTracer = nullTracer
+      , Consensus.leiosVoteStateTracer = mkTracer traceLeiosVoteStateToStderr
       }
+
+-- | Until the vote state is traced properly (ouroboros-consensus#2447), the
+-- certificates and missed quorums go to stderr, for the acceptance demo.
+traceLeiosVoteStateToStderr :: TraceLeiosVoteState -> IO ()
+traceLeiosVoteStateToStderr = \case
+  TraceLeiosVoteVerified{} -> pure ()
+  TraceLeiosCertified rbHash _cert -> hPutStrLn stderr ("TraceLeiosCertified " <> show rbHash)
+  ev -> hPutStrLn stderr (show ev)
 
 mkNodeToClientTracers :: forall blk.
      Consensus.RunNode blk
