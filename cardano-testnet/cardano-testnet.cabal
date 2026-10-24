@@ -133,6 +133,9 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Cardano
                         Testnet.Start.Types
+                        Testnet.Status.Parsers
+                        Testnet.Status.Run
+                        Testnet.Status.Types
                         Testnet.SubmitApi
                         Testnet.TestQueryCmds
                         Testnet.Types
@@ -172,6 +175,7 @@ test-suite cardano-testnet-golden
   other-modules:        Cardano.Testnet.Test.Golden.Config
                         Cardano.Testnet.Test.Golden.Help
                         Cardano.Testnet.Test.Golden.Manifest
+                        Cardano.Testnet.Test.Golden.Status
                         Cardano.Testnet.Test.Golden.Util
 
   type:                 exitcode-stdio-1.0
@@ -256,6 +260,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.Parser
                         Cardano.Testnet.Test.Manifest
+                        Cardano.Testnet.Test.Status
+                        Cardano.Testnet.Test.StatusRules
                         Cardano.Testnet.Test.MainnetParams
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.RunTestnet

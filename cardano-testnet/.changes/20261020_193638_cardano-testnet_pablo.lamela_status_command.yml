@@ -1,0 +1,7 @@
+description: Added `status` command that checks the status of a testnet created with
+  `cardano-testnet`. The output can be either in human readable format or JSON (if
+  the `--json` flag is specified).
+kind:
+- feature
+pr: 6741
+project: cardano-testnet

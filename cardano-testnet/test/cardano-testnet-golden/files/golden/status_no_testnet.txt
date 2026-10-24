@@ -1,0 +1,2 @@
+Network: NO-TESTNET - no manifest.json in testnet
+No testnet (The directory testnet does not exist.)

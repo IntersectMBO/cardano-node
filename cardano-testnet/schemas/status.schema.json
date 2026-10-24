@@ -1,0 +1,124 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/IntersectMBO/cardano-node/cardano-testnet/schemas/status.schema.json",
+    "title": "cardano-testnet status",
+    "description": "Output of 'cardano-testnet status --json': the health of a testnet, found by asking every node in its manifest for its chain tip. The schema is strict: it describes schema version 1 exactly, unknown fields are an error, and any change to the output shape bumps schemaVersion.",
+    "type": "object",
+    "required": [
+        "schemaVersion",
+        "checkedAt",
+        "status",
+        "exitCode",
+        "chainProducingBlocks",
+        "bestTip",
+        "nodes"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "schemaVersion": {
+            "type": "integer",
+            "const": 1,
+            "description": "Schema version. Any change to the output shape, including new fields or values, bumps it."
+        },
+        "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC time the check started (ISO-8601)."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["running", "degraded", "stalled", "stopped", "no-testnet"],
+            "description": "State of the whole network. \"running\": every node is ok. \"degraded\": some nodes are ok, but not all. \"stalled\": some nodes answer, but none is ok. \"stopped\": no node answers. \"no-testnet\": there is no manifest in the directory."
+        },
+        "exitCode": {
+            "type": "integer",
+            "enum": [0, 3, 4, 5],
+            "description": "Exit code of the command: 0 for \"running\" and \"degraded\", 3 for \"stalled\", 4 for \"stopped\", 5 for \"no-testnet\"."
+        },
+        "chainProducingBlocks": {
+            "type": "boolean",
+            "description": "True when the exit code is 0: the status is \"running\" or \"degraded\"."
+        },
+        "bestTip": {
+            "description": "The newest tip of all nodes: the one with the highest slot. Null when no node answered with a tip.",
+            "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/$defs/tip" }
+            ]
+        },
+        "nodes": {
+            "type": "array",
+            "description": "One entry per node, in the order of the manifest. Empty for \"no-testnet\".",
+            "items": {
+                "type": "object",
+                "required": ["name", "role", "pid", "pidAlive", "state", "tip"],
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Node name, as in the manifest."
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["spo", "relay"],
+                        "description": "\"spo\" for stake pool operators, \"relay\" for relay nodes, as in the manifest."
+                    },
+                    "pid": {
+                        "description": "OS process ID from the manifest, or null when the manifest has none.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "type": "integer" }
+                        ]
+                    },
+                    "pidAlive": {
+                        "description": "Whether a process with this pid exists, or null when that is unknown: no pid, or Windows.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "type": "boolean" }
+                        ]
+                    },
+                    "state": {
+                        "type": "string",
+                        "enum": ["ok", "stalled", "unreachable", "down"],
+                        "description": "\"ok\": it answers, and its tip is fresh. \"stalled\": it answers, but its tip is too old, or it has no blocks yet. \"unreachable\": it does not answer, but its process may be alive. \"down\": it does not answer, and its process is gone."
+                    },
+                    "tip": {
+                        "description": "The node's tip, or null when it did not answer with one.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "$ref": "#/$defs/tip" }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "$defs": {
+        "tip": {
+            "type": "object",
+            "required": ["slot", "blockNo", "hash", "ageSeconds"],
+            "additionalProperties": false,
+            "properties": {
+                "slot": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Slot number of the tip."
+                },
+                "blockNo": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Block number of the tip."
+                },
+                "hash": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$",
+                    "description": "Block header hash of the tip, hex-encoded."
+                },
+                "ageSeconds": {
+                    "type": "number",
+                    "description": "Seconds from the start of the tip's slot until the node answered."
+                }
+            }
+        }
+    }
+}

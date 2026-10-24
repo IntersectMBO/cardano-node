@@ -34,3 +34,6 @@ jobs:
 
     - name: Validate cardano-testnet manifest golden file against its schema
       run: make testnet-manifest-validate
+
+    - name: Validate cardano-testnet status golden files against their schema
+      run: make testnet-status-validate
