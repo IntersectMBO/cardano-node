@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
@@ -72,8 +73,8 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = Exp.DijkstraEra
+      sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationNumDReps = 3
@@ -102,13 +103,13 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  initialDesiredNumberOfPools <- getDesiredPoolNumberValue epochStateView ceo
+  initialDesiredNumberOfPools <- getDesiredPoolNumberValue epochStateView era
 
   let newNumberOfDesiredPools = initialDesiredNumberOfPools + 1
 
   -- Do some proposal and vote yes with the first DRep only
   -- and assert that proposal does NOT pass.
-  void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
+  void $ desiredPoolNumberProposalTest execConfig epochStateView era gov "firstProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools 3 (Just initialDesiredNumberOfPools) 10
 
   -- Take the last two stake delegators and delegate them to "Abstain".
@@ -120,7 +121,7 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
   -- Do some other proposal and vote yes with first DRep only
   -- and assert the new proposal passes now.
   let newNumberOfDesiredPools2 = newNumberOfDesiredPools + 1
-  void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
+  void $ desiredPoolNumberProposalTest execConfig epochStateView era gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
 delegateToAlwaysAbstain
@@ -170,7 +171,7 @@ desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
+  -> Exp.Era DijkstraEra -- ^ The era in which the test runs
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
@@ -183,9 +184,9 @@ desiredPoolNumberProposalTest
   -> Maybe Integer -- ^ What the expected result is of the change (if anything)
   -> Integer -- ^ Maximum number of epochs to wait while waiting for the result
   -> m (TxId, Word16)
-desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
+desiredPoolNumberProposalTest execConfig epochStateView era work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
-  let sbe = convert ceo
+  let sbe = convert era
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
@@ -194,7 +195,7 @@ desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
   annotateShow propVotes
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
-    makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo baseDir "proposal"
+    makeDesiredPoolNumberChangeProposal execConfig epochStateView era baseDir "proposal"
                                         previousProposalInfo (fromIntegral change) wallet
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
@@ -217,7 +218,7 @@ makeDesiredPoolNumberChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> Exp.Era DijkstraEra -- ^ The era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> Maybe (String, Word16) -- ^ The transaction identifier and index of the previous passed
@@ -225,12 +226,12 @@ makeDesiredPoolNumberChangeProposal
   -> Word16 -- ^ What to change the @desiredPoolNumber@ to
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m (TxId, Word16)
-makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
+makeDesiredPoolNumberChangeProposal execConfig epochStateView era work prefix
                                     prevGovActionInfo desiredPoolNumber wallet = do
 
-  let sbe = convert ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+  let ceo = convert era
+      sbe = convert era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
@@ -255,7 +256,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   proposalFile <- H.note $ baseDir </> "sample-proposal-file"
 
   void $ H.execCli' execConfig $
-    [ "conway", "governance", "action", "create-protocol-parameters-update"
+    [ eraToString sbe, "governance", "action", "create-protocol-parameters-update"
     , "--testnet"
     , "--governance-action-deposit", show @Integer minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -273,7 +274,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
 
   void $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn txIn
     , "--proposal-file", proposalFile
@@ -303,7 +304,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
+  -> ShelleyBasedEra DijkstraEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraDijkstra).
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> TxId -- ^ Transaction id of the governance action to vote.
@@ -337,9 +338,9 @@ voteChangeProposal execConfig epochStateView sbe work prefix
 -- incentivize that the number of SPOs stays close to the parameter value.
 getDesiredPoolNumberValue :: (EraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
   => EpochStateView
-  -> ConwayEraOnwards era
+  -> Exp.Era era
   -> m Integer
-getDesiredPoolNumberValue epochStateView ceo = do
-   govState :: ConwayGovState era <- getGovState epochStateView ceo
+getDesiredPoolNumberValue epochStateView era = do
+   govState :: ConwayGovState era' <- getGovState epochStateView (convert era)
    return $ toInteger $ govState ^. cgsCurPParamsL
                                   . ppNOptL

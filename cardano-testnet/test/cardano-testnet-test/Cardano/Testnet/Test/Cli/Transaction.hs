@@ -50,7 +50,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraDijkstra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'

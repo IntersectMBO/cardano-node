@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Gov.InfoAction
   ) where
 
 import           Cardano.Api hiding (txId)
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
@@ -60,8 +61,10 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = Exp.DijkstraEra
+
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
       creationOptions = def
