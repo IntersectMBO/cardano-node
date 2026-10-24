@@ -177,6 +177,7 @@ mkBlockFetchMiniProtocol
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString
   -> TxIdSync.BlockFetchClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -199,6 +200,7 @@ mkChainSyncMiniProtocol
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString
   -> TxIdSync.ChainSyncClient
   -> NetMux.MiniProtocol
        'Mux.InitiatorMode
@@ -221,6 +223,7 @@ mkKeepAliveMiniProtocol
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString
   -> Tracing.Tracers
   -> KeepAlive.KeepAliveClient
   -> NetMux.MiniProtocol
@@ -249,6 +252,7 @@ mkTxSubmissionMiniProtocol
        Serialise.DeserialiseFailure IO
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
        BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+       BSL.ByteString BSL.ByteString
   -> Tracing.Tracers
   -> TxSubmission.TxSubmissionClient
   -> NetMux.MiniProtocol
@@ -368,6 +372,7 @@ connect
            Serialise.DeserialiseFailure IO
            BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
            BSL.ByteString BSL.ByteString BSL.ByteString BSL.ByteString
+           BSL.ByteString BSL.ByteString
       -> NetMux.OuroborosBundle
            'Mux.InitiatorMode
            (NetCtx.MinimalInitiatorContext NtN.RemoteAddress)
@@ -395,4 +400,3 @@ connect
                 -> NetMux.OuroborosApplication mode initiatorCtx responderCtx bs m a b
     bundleToApp (NetMux.TemperatureBundle (NetMux.WithHot h) (NetMux.WithWarm w) (NetMux.WithEstablished e)) =
       NetMux.OuroborosApplication (h <> w <> e)
-
