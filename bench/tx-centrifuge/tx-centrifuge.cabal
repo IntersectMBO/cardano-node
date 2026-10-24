@@ -127,6 +127,7 @@ library tx-centrifuge-lib
                     , aeson
                     , bytestring
                     , cardano-api
+                    , cardano-crypto-class
                     , cardano-diffusion
                     , cardano-ledger-api
                     , cardano-ledger-core
