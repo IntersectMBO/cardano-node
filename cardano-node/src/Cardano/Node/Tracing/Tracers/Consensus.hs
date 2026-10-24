@@ -22,6 +22,10 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , txsMempoolTimeoutSoftCounterName
   , txsSyncDurationTotalCounterName
   , impliesMempoolTimeoutSoft
+  , WrapPerasCertDiffusionInbound (..)
+  , WrapPerasCertDiffusionOutbound (..)
+  , WrapPerasVoteDiffusionInbound (..)
+  , WrapPerasVoteDiffusionOutbound (..)
   ) where
 
 
@@ -64,6 +68,7 @@ import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert
                    (TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote
                    (TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
+import           Ouroboros.Consensus.Peras.Voting.Trace (TracePerasVoteForgingEvent (..))
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -1097,7 +1102,7 @@ instance
           .= map
             ( \(tx, err) ->
                 Aeson.object $
-                  [ "tx" .= forMachine dtal (txForgetValidated tx)
+                  [ "tx" .= forMachine dtal tx
                   ] <>
                   [ "err" .= forMachine dtal err
                   | dtal >= DDetailed
@@ -1110,7 +1115,7 @@ instance
     mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= map (String . renderTxIdForDetails dtal) (toList txs0)
-      , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
+      , "txsInvalidated" .= map (forMachine dtal) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolSyncNotNeeded t) =
@@ -1272,7 +1277,8 @@ instance ( tx ~ GenTx blk
          , Show (TxId (GenTx blk))
          , LogFormatting (CannotForge blk)
          , LogFormatting (ExtValidationError blk)
-         , LogFormatting (ForgeStateUpdateError blk))
+         , LogFormatting (ForgeStateUpdateError blk)
+         , Show (PerasError blk))
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
     mconcat
@@ -2379,23 +2385,41 @@ allNamespacesObjectDiffusionInbound =
   , Namespace [] ["TraceObjectDiffusionInboundCannotRequestMoreObjects"]
   ]
 
-instance LogFormatting (TracePerasCertDiffusionInbound blk) where
-  forMachine _ = forMachineObjectDiffusionInbound
-  asMetrics = asMetricsObjectDiffusionInbound perasCertMetricsPrefix
+-- NOTE: instancing the TracePerasCertDiffusionInbound/TracePerasVoteDiffusionInbound
+-- type synonyms (or their expansion, TraceObjectDiffusionInbound PerasRoundNo
+-- (PerasCert blk)/(PerasVote blk)) directly is illegal (GHC-73138, "Illegal
+-- type synonym family application"): PerasCert/PerasVote are injective
+-- associated type families of BlockSupportsPeras, and GHC forbids a type
+-- family application from appearing anywhere in an instance head at all --
+-- this specific restriction is not lifted by FlexibleInstances/
+-- UndecidableInstances, and is a known GHC limitation even for injective
+-- families (see GHC #22186). Wrapping the traced value in a newtype
+-- sidesteps it: the instance head is then just "NewtypeName blk" (a bare
+-- type variable application, no family in sight), and GHC never looks inside
+-- a newtype's field type when validating an instance head.
+newtype WrapPerasCertDiffusionInbound blk
+  = WrapPerasCertDiffusionInbound (TracePerasCertDiffusionInbound blk)
 
-instance MetaTrace (TracePerasCertDiffusionInbound blk) where
-  namespaceFor = namespaceForObjectDiffusionInbound
+instance LogFormatting (WrapPerasCertDiffusionInbound blk) where
+  forMachine _ (WrapPerasCertDiffusionInbound ev) = forMachineObjectDiffusionInbound ev
+  asMetrics (WrapPerasCertDiffusionInbound ev) = asMetricsObjectDiffusionInbound perasCertMetricsPrefix ev
+
+instance MetaTrace (WrapPerasCertDiffusionInbound blk) where
+  namespaceFor (WrapPerasCertDiffusionInbound ev) = namespaceForObjectDiffusionInbound ev
   severityFor ns _ = severityForObjectDiffusionInbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionInbound perasCertMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionInbound
 
-instance LogFormatting (TracePerasVoteDiffusionInbound blk) where
-  forMachine _ = forMachineObjectDiffusionInbound
-  asMetrics = asMetricsObjectDiffusionInbound perasVoteMetricsPrefix
+newtype WrapPerasVoteDiffusionInbound blk
+  = WrapPerasVoteDiffusionInbound (TracePerasVoteDiffusionInbound blk)
 
-instance MetaTrace (TracePerasVoteDiffusionInbound blk) where
-  namespaceFor = namespaceForObjectDiffusionInbound
+instance LogFormatting (WrapPerasVoteDiffusionInbound blk) where
+  forMachine _ (WrapPerasVoteDiffusionInbound ev) = forMachineObjectDiffusionInbound ev
+  asMetrics (WrapPerasVoteDiffusionInbound ev) = asMetricsObjectDiffusionInbound perasVoteMetricsPrefix ev
+
+instance MetaTrace (WrapPerasVoteDiffusionInbound blk) where
+  namespaceFor (WrapPerasVoteDiffusionInbound ev) = namespaceForObjectDiffusionInbound ev
   severityFor ns _ = severityForObjectDiffusionInbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionInbound perasVoteMetricsPrefix
@@ -2485,26 +2509,168 @@ allNamespacesObjectDiffusionOutbound =
   , Namespace [] ["TraceObjectDiffusionOutboundTerminated"]
   ]
 
-instance Show (PerasCert blk)
-      => LogFormatting (TracePerasCertDiffusionOutbound blk) where
-  forMachine _ = forMachineObjectDiffusionOutbound
-  asMetrics = asMetricsObjectDiffusionOutbound perasCertMetricsPrefix
+-- NOTE: see the matching comment above the Inbound instances -- same
+-- newtype-wrapper workaround for the same "illegal type synonym family
+-- application" GHC restriction.
+newtype WrapPerasCertDiffusionOutbound blk
+  = WrapPerasCertDiffusionOutbound (TracePerasCertDiffusionOutbound blk)
 
-instance MetaTrace (TracePerasCertDiffusionOutbound blk) where
-  namespaceFor = namespaceForObjectDiffusionOutbound
+instance Show (PerasCert blk)
+      => LogFormatting (WrapPerasCertDiffusionOutbound blk) where
+  forMachine _ (WrapPerasCertDiffusionOutbound ev) = forMachineObjectDiffusionOutbound ev
+  asMetrics (WrapPerasCertDiffusionOutbound ev) = asMetricsObjectDiffusionOutbound perasCertMetricsPrefix ev
+
+instance MetaTrace (WrapPerasCertDiffusionOutbound blk) where
+  namespaceFor (WrapPerasCertDiffusionOutbound ev) = namespaceForObjectDiffusionOutbound ev
   severityFor ns _ = severityForObjectDiffusionOutbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionOutbound perasCertMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionOutbound
 
-instance Show (PerasVote blk)
-      => LogFormatting (TracePerasVoteDiffusionOutbound blk) where
-  forMachine _ = forMachineObjectDiffusionOutbound
-  asMetrics = asMetricsObjectDiffusionOutbound perasVoteMetricsPrefix
+newtype WrapPerasVoteDiffusionOutbound blk
+  = WrapPerasVoteDiffusionOutbound (TracePerasVoteDiffusionOutbound blk)
 
-instance MetaTrace (TracePerasVoteDiffusionOutbound blk) where
-  namespaceFor = namespaceForObjectDiffusionOutbound
+instance Show (PerasVote blk)
+      => LogFormatting (WrapPerasVoteDiffusionOutbound blk) where
+  forMachine _ (WrapPerasVoteDiffusionOutbound ev) = forMachineObjectDiffusionOutbound ev
+  asMetrics (WrapPerasVoteDiffusionOutbound ev) = asMetricsObjectDiffusionOutbound perasVoteMetricsPrefix ev
+
+instance MetaTrace (WrapPerasVoteDiffusionOutbound blk) where
+  namespaceFor (WrapPerasVoteDiffusionOutbound ev) = namespaceForObjectDiffusionOutbound ev
   severityFor ns _ = severityForObjectDiffusionOutbound ns
   documentFor _ = Nothing
   metricsDocFor = metricsDocForObjectDiffusionOutbound perasVoteMetricsPrefix
   allNamespaces = allNamespacesObjectDiffusionOutbound
+
+--------------------------------------------------------------------------------
+-- Peras certificate inclusion / vote forging Tracers
+--------------------------------------------------------------------------------
+
+instance Show (PerasCert blk) => LogFormatting (TracePerasCertInclusionEvent blk) where
+  forHuman (TracePerasCertInclusionNoCertToInclude slotNo) =
+    "No Peras certificate available to include at slot " <> Text.pack (show slotNo)
+  forHuman (TracePerasCertInclusionRulesDecision slotNo roundNo decision) =
+    "Peras certificate inclusion decision for round " <> Text.pack (show roundNo)
+      <> " at slot " <> Text.pack (show slotNo) <> ": " <> Text.pack (show decision)
+
+  forMachine _dtal (TracePerasCertInclusionNoCertToInclude slotNo) =
+    mconcat [ "kind" .= String "TracePerasCertInclusionNoCertToInclude"
+            , "slot" .= String (Text.pack $ show slotNo)
+            ]
+  forMachine _dtal (TracePerasCertInclusionRulesDecision slotNo roundNo decision) =
+    mconcat [ "kind" .= String "TracePerasCertInclusionRulesDecision"
+            , "slot" .= String (Text.pack $ show slotNo)
+            , "round" .= String (Text.pack $ show roundNo)
+            , "decision" .= String (Text.pack $ show decision)
+            ]
+
+  asMetrics _ = []
+
+instance MetaTrace (TracePerasCertInclusionEvent blk) where
+  namespaceFor TracePerasCertInclusionNoCertToInclude{} =
+    Namespace [] ["NoCertToInclude"]
+  namespaceFor TracePerasCertInclusionRulesDecision{} =
+    Namespace [] ["RulesDecision"]
+
+  severityFor (Namespace _ ["NoCertToInclude"]) _ = Just Debug
+  severityFor (Namespace _ ["RulesDecision"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["NoCertToInclude"]
+    , Namespace [] ["RulesDecision"]
+    ]
+
+instance (StandardHash blk, Show (PerasVote blk), Show (PerasCert blk))
+      => LogFormatting (TracePerasVoteForgingEvent blk) where
+  forHuman (TracePerasVotingNoVoteAfterFirstSlotInRound roundNo slotInRound) =
+    "Not the first slot (" <> Text.pack (show slotInRound) <> ") of round "
+      <> Text.pack (show roundNo) <> ", not voting"
+  forHuman (TracePerasVotingNotAVoterInRound roundNo) =
+    "Not eligible to vote in round " <> Text.pack (show roundNo)
+  forHuman (TracePerasVotingRulesDecision roundNo decision) =
+    "Peras voting decision for round " <> Text.pack (show roundNo) <> ": " <> Text.pack (show decision)
+  forHuman (TracePerasVotingForgedVote roundNo vote) =
+    "Forged Peras vote for round " <> Text.pack (show roundNo) <> ": " <> Text.pack (show vote)
+  forHuman (TracePerasVotingAddVoteResult roundNo result) =
+    "Added Peras vote for round " <> Text.pack (show roundNo) <> " to the vote DB: " <> Text.pack (show result)
+  forHuman (TracePerasVotingAddCertChainSelOutcome roundNo outcome) =
+    "Peras certificate chain selection outcome for round " <> Text.pack (show roundNo)
+      <> ": " <> Text.pack (show outcome)
+  forHuman (TracePerasVotingCantReadEnv err) =
+    "Could not read Peras environment variable: " <> Text.pack err
+
+  forMachine _dtal (TracePerasVotingNoVoteAfterFirstSlotInRound roundNo slotInRound) =
+    mconcat [ "kind" .= String "TracePerasVotingNoVoteAfterFirstSlotInRound"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "slotInRound" .= String (Text.pack $ show slotInRound)
+            ]
+  forMachine _dtal (TracePerasVotingNotAVoterInRound roundNo) =
+    mconcat [ "kind" .= String "TracePerasVotingNotAVoterInRound"
+            , "round" .= String (Text.pack $ show roundNo)
+            ]
+  forMachine _dtal (TracePerasVotingRulesDecision roundNo decision) =
+    mconcat [ "kind" .= String "TracePerasVotingRulesDecision"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "decision" .= String (Text.pack $ show decision)
+            ]
+  forMachine _dtal (TracePerasVotingForgedVote roundNo vote) =
+    mconcat [ "kind" .= String "TracePerasVotingForgedVote"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "vote" .= String (Text.pack $ show vote)
+            ]
+  forMachine _dtal (TracePerasVotingAddVoteResult roundNo result) =
+    mconcat [ "kind" .= String "TracePerasVotingAddVoteResult"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "result" .= String (Text.pack $ show result)
+            ]
+  forMachine _dtal (TracePerasVotingAddCertChainSelOutcome roundNo outcome) =
+    mconcat [ "kind" .= String "TracePerasVotingAddCertChainSelOutcome"
+            , "round" .= String (Text.pack $ show roundNo)
+            , "outcome" .= String (Text.pack $ show outcome)
+            ]
+  forMachine _dtal (TracePerasVotingCantReadEnv err) =
+    mconcat [ "kind" .= String "TracePerasVotingCantReadEnv"
+            , "error" .= String (Text.pack err)
+            ]
+
+  asMetrics _ = []
+
+instance MetaTrace (TracePerasVoteForgingEvent blk) where
+  namespaceFor TracePerasVotingNoVoteAfterFirstSlotInRound{} =
+    Namespace [] ["NoVoteAfterFirstSlotInRound"]
+  namespaceFor TracePerasVotingNotAVoterInRound{} =
+    Namespace [] ["NotAVoterInRound"]
+  namespaceFor TracePerasVotingRulesDecision{} =
+    Namespace [] ["RulesDecision"]
+  namespaceFor TracePerasVotingForgedVote{} =
+    Namespace [] ["ForgedVote"]
+  namespaceFor TracePerasVotingAddVoteResult{} =
+    Namespace [] ["AddVoteResult"]
+  namespaceFor TracePerasVotingAddCertChainSelOutcome{} =
+    Namespace [] ["AddCertChainSelOutcome"]
+  namespaceFor TracePerasVotingCantReadEnv{} =
+    Namespace [] ["CantReadEnv"]
+
+  severityFor (Namespace _ ["NoVoteAfterFirstSlotInRound"]) _ = Just Debug
+  severityFor (Namespace _ ["NotAVoterInRound"]) _ = Just Debug
+  severityFor (Namespace _ ["RulesDecision"]) _ = Just Info
+  severityFor (Namespace _ ["ForgedVote"]) _ = Just Info
+  severityFor (Namespace _ ["AddVoteResult"]) _ = Just Info
+  severityFor (Namespace _ ["AddCertChainSelOutcome"]) _ = Just Info
+  severityFor (Namespace _ ["CantReadEnv"]) _ = Just Warning
+  severityFor _ _ = Nothing
+
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["NoVoteAfterFirstSlotInRound"]
+    , Namespace [] ["NotAVoterInRound"]
+    , Namespace [] ["RulesDecision"]
+    , Namespace [] ["ForgedVote"]
+    , Namespace [] ["AddVoteResult"]
+    , Namespace [] ["AddCertChainSelOutcome"]
+    , Namespace [] ["CantReadEnv"]
+    ]
