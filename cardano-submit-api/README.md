@@ -1,5 +1,10 @@
 # Testing cardano-submit-api
 
+> [!WARNING]
+> cardano-submit-api is deprecated and will be removed in a future release.
+> Use the UTxO RPC interface built into cardano-node (cardano-rpc) instead.
+> See the [migration guide](DEPRECATION.md).
+
 Setting this up for testing and for actual use on a real network.
 
 
