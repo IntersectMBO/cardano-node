@@ -390,4 +390,3 @@ requestTxs
           maxBatchSize blockingFetch nonBlockingFetch
           unacked
     }
-

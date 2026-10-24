@@ -8,7 +8,7 @@
 -- Every module in the package must obtain timestamps through this module rather
 -- than importing @System.Clock@ directly. This guarantees that all call sites
 -- use the same clock ('Clock.MonotonicRaw') and prevents hard-to-diagnose bugs
--- caused by accidentally mixing different clocks (e.g. 'Clock.Monotonic' vs 
+-- caused by accidentally mixing different clocks (e.g. 'Clock.Monotonic' vs
 -- 'Clock.MonotonicRaw'), which can produce negative deltas or phantom drift on
 -- systems where NTP adjusts the non-raw monotonic source.
 --

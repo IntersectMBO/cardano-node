@@ -277,4 +277,3 @@ connect
                 channel
                 NtC.localTxMonitorPeerNull
       }
-
