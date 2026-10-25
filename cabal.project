@@ -220,41 +220,37 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 96ee6e0e689770b5a3d664c59f2d13b05c5d9c4d
+  tag: f0243fe6d962e922ab2c8e131543eba3d78748cb
   --sha256: sha256-Zfs9ynTezee2gULekzZD2BiSJnKsaeUav5REhghYyRw=
   subdir:
     ouroboros-network
     cardano-diffusion
     network-mux
 
--- ouroboros-consensus leios-prototype with GetStakePoolState (#2412),
--- GetLeiosCommittee and the LeiosFetch messages and encoding of #2416
--- (ch1bo/leios-prototype-2026w42).
+-- ouroboros-consensus leios-prototype with latest leiosdb and mempool changes
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 840e789b1cd112e161820a20d30d4546f30e6209
-  --sha256: sha256-/8uDGUII3fR7N8pDfKQmOvM09/A8lwh8WcUV/tMLEAU=
+  tag: 7ff142d5c0407e455205e288d23e0a87a0a72b33
+  --sha256: sha256-UeTu2CT/Kn7Ik34+tpeZhPTZlAt7qmLe5EcuvGCUhFM=
 
 -- cardano-api leios-prototype with cardano-api master (11.9.0.0) merged
--- (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: cb746d6c6436267ff4b122f01a985baf15b7e641
-  --sha256: sha256-g5RMRUuLy8GcL2R38yOXuXPYMojW5iLQMAEDLf1uokA=
+  tag: b8023269a78db9eb19aea8a6fd037280ee6fc6cd
+  --sha256: sha256-T+sK1TIh2ei2L/LslSxKNKwluVS0Mgvw5Z3ejhtr10U=
   subdir:
     cardano-api
     cardano-api-gen
     cardano-rpc
 
 -- cardano-cli leios-prototype with cardano-cli master (11.3.1.0) merged
--- (ch1bo/leios-prototype-2026w42).
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli
-  tag: 06fff4dc995f0456882b4102fd1a9a5ac68329b3
-  --sha256: sha256-CyC69fyjHj8kDKg7XWpiAIYjgFVu1rTn686wVD+t7L8=
+  tag: 05b6d649ec02b223651ad2470b82891b53eb89fe
+  --sha256: sha256-oi6dfzlNOPvdfe/tB/6S8oU3HSYKTJLe63fsGAb3idQ=
   subdir:
     cardano-cli
 
