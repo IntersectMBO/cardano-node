@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Trace.Forward.Run.TraceObject.Acceptor
   ( acceptTraceObjectsInit
@@ -20,7 +21,6 @@ import           Control.Exception (Exception, finally, throwIO)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 
 import           Trace.Forward.Configuration.TraceObject (AcceptorConfiguration (..))
@@ -31,8 +31,7 @@ import           Trace.Forward.Utils.TraceObject (getTraceObjectsFromReply)
 
 acceptTraceObjectsInit
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+      ShowProxy lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (initiatorCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (initiatorCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
@@ -42,8 +41,7 @@ acceptTraceObjectsInit config loHandler peerErrorHandler =
 
 acceptTraceObjectsResp
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+      ShowProxy lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (responderCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (responderCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
@@ -52,9 +50,9 @@ acceptTraceObjectsResp config loHandler peerErrorHandler = do
   ResponderProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
 runPeerWithHandler
-  :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+  :: forall lo ctx.
+     (CBOR.Serialise lo,
+      ShowProxy lo)
   => AcceptorConfiguration lo
   -> (ctx -> [lo] -> IO ())
   -> (ctx -> IO ())
@@ -73,18 +71,20 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
         `finally` peerErrorHandler ctx
 
 acceptorActions
-  :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
-  => AcceptorConfiguration lo -- ^ Acceptor's configuration.
+  :: forall lo.
+     AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
   -> Acceptor.TraceObjectAcceptor lo IO ()
-acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
-  Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
-    loHandler $ getTraceObjectsFromReply replyWithTraceObjects
-    ifM (readTVarIO shouldWeStop)
-      (return $ Acceptor.SendMsgDone $ return ())
-      (return $ acceptorActions config loHandler)
+acceptorActions AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
+    acceptor
+  where
+    acceptor :: Acceptor.TraceObjectAcceptor lo IO ()
+    acceptor =
+      Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
+        loHandler $ getTraceObjectsFromReply replyWithTraceObjects
+        ifM (readTVarIO shouldWeStop)
+          (return $ Acceptor.SendMsgDone $ return ())
+          (return   acceptor)
 
 data Timeout = Timeout
   deriving Show
