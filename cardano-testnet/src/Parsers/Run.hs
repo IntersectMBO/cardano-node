@@ -102,7 +102,7 @@ runCardanoOptions = \case
     -- Create the sandbox, then run cardano-testnet.
     -- It is not necessary to update timestamps here, because
     -- the genesis files will be created with up-to-date stamps already.
-    let dirName = fromMaybe "testnet" noEnvOutputDir
+    let dirName = fromMaybe defaultTestnetDir noEnvOutputDir
     conf <- mkConfigAbs dirName
     runSimpleApp . runResourceT $ do
       logInfo $ "Creating environment: " <> display (tempAbsPath conf)

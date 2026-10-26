@@ -458,7 +458,7 @@ that needs every node to be healthy can check the `status` field:
 **Stability promise.** Like the manifest, the output has a strict JSON Schema
 (`cardano-testnet/schemas/status.schema.json`, draft 2020-12, unknown fields
 are an error) that lives in the repository and is the contract. Any change to
-the output shape — including new fields — bumps the schema version, so the
+the output shape, including new fields, bumps the schema version, so the
 output always matches the schema of its own version exactly.
 
 ## Supported versions

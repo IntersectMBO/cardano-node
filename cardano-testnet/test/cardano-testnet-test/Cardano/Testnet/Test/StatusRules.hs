@@ -27,7 +27,7 @@ tipOfAge age = TipInfo (SlotNo 100) (BlockNo 10) sampleHash (realToFrac age)
   where
     sampleHash =
       either (\e -> error $ "tipOfAge: bad fixture hash: " <> show e) id $
-        deserialiseFromRawBytesHex "cc061706c16ad2b35450f1528f5652ff172f9b0acabcdc29284e2363d3bebb2a"
+        deserialiseFromRawBytesHex "3525888dc2c18eb5f5f34cb0edf911aa8b91ba485d195bb7d70dff7a7a32af91"
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Node state/"'@

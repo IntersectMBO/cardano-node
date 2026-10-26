@@ -12,6 +12,7 @@ import           Data.Default.Class (def)
 import           Options.Applicative (CommandFields, Mod, Parser)
 import qualified Options.Applicative as OA
 
+import           Testnet.Start.Types (defaultTestnetDir)
 import           Testnet.Status.Types (CheckStatusOptions (..), OutputFormat (..))
 
 cmdCheckStatus :: Mod CommandFields CheckStatusOptions
@@ -27,7 +28,8 @@ pOutputDir :: Parser (Maybe FilePath)
 pOutputDir = OA.optional (OA.strOption
       (  OA.long "testnet-dir"
       <> OA.metavar "FILEPATH"
-      <> OA.help "Path to the environment folder of the testnet whose status to check, by default \"./testnet\"."
+      <> OA.help ("Path to the environment folder of the testnet whose status to check, by default "
+                  <> show defaultTestnetDir <> ".")
       ))
 
 

@@ -58,11 +58,13 @@ hardKillProcess = terminateProcess
 -- exists, and so does an unrelated process that reuses the pid.
 isProcessAlive :: Pid -> IO (Maybe Bool)
 #ifdef UNIX
-isProcessAlive pid = do
-  result <- tryIOError $ signalProcess nullSignal pid
-  pure . Just $ case result of
-    Left e | isDoesNotExistError e -> False -- no such process
-    _ -> True -- signalled, or not allowed to: either way it exists
+isProcessAlive pid
+  | pid <= 0 = pure (Just False) -- 0 and negative pids name process groups, not one process
+  | otherwise = do
+      result <- tryIOError $ signalProcess nullSignal pid
+      pure . Just $ case result of
+        Left e | isDoesNotExistError e -> False -- no such process
+        _ -> True -- signalled, or not allowed to: either way it exists
 #else
 isProcessAlive _ = pure Nothing
 #endif

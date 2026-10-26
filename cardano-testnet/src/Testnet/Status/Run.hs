@@ -25,9 +25,10 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either (fromRight)
 import           Data.Either.Extra (mapLeft)
-import qualified Data.List as List
-import           Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
-import           Data.Ord (Down (..))
+import           Data.Foldable (maximumBy)
+import           Data.List.NonEmpty (nonEmpty)
+import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Ord (comparing)
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (exitWith)
@@ -41,6 +42,7 @@ import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallTimeoutF
 import           Testnet.Manifest (Manifest (..), ManifestGenesisFiles (..), ManifestNetwork (..),
                    ManifestNode (..), ManifestNodeRole (..), ManifestPaths (..))
 import           Testnet.Signal (isProcessAlive)
+import           Testnet.Start.Types (defaultTestnetDir)
 import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (..), NodeAnswer (..),
                    NodeProbeResult (..), NodeState (..), OutputFormat (..), StatusReport (..),
                    TipInfo (..), exitCodeForStatus)
@@ -48,6 +50,10 @@ import           Testnet.Types (sgSlotLength, sgSystemStart, testnetEpochSlots)
 
 import           UnliftIO.Async (forConcurrently)
 
+-- | Run the @status@ command: print the report (a table, or JSON) on stdout
+-- and exit with 0 (running or degraded), 3 (stalled), 4 (stopped) or 5 (no
+-- testnet). When the manifest or the genesis file cannot be read, print the
+-- error on stderr and exit with 1.
 runCheckStatusOptions :: CheckStatusOptions -> IO ()
 runCheckStatusOptions
     CheckStatusOptions
@@ -55,7 +61,7 @@ runCheckStatusOptions
         , statusCheckTimeout = timeoutSeconds
         , outputFormat = format
         } = do
-        eStatus <- checkStatus (fromMaybe "./testnet" dir) timeoutSeconds
+        eStatus <- checkStatus (fromMaybe defaultTestnetDir dir) timeoutSeconds
         status <-
             either
                 ( \err -> do
@@ -218,7 +224,7 @@ highest slot. The ages cannot tell: each age is measured when its node
 answered, and the nodes answer at different times.
 -}
 newestTip :: [TipInfo] -> Maybe TipInfo
-newestTip = listToMaybe . List.sortOn (Down . tipSlot)
+newestTip = fmap (maximumBy (comparing tipSlot)) . nonEmpty
 
 -- | The 'StatusReport' when there is no manifest, with a hint about why.
 noTestnetReport :: FilePath -> IO StatusReport

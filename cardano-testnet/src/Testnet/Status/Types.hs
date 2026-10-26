@@ -56,7 +56,9 @@ data NetworkStatus
   | NetworkDegraded -- ^ some nodes are 'NodeOk', but not all
   | NetworkStalled  -- ^ some nodes answer, but none is 'NodeOk'
   | NetworkStopped  -- ^ no node answers
-  | NoTestnet       -- ^ there is no manifest file in the 'testnetDir'
+  | NoTestnet       -- ^ there is no manifest file in the 'testnetDir': there is no
+                    -- testnet, or it is still starting (the manifest is written
+                    -- once the nodes are ready)
   deriving (Eq, Show)
 
 instance ToJSON NetworkStatus where
@@ -93,8 +95,8 @@ data NodeAnswer
 data TipInfo = TipInfo
   { tipSlot    :: !SlotNo
   , tipBlockNo :: !BlockNo
-  , tipHash    :: Hash BlockHeader -- ^ hex
-  , tipAge     :: !NominalDiffTime -- ^ time since the start of the tip's slot
+  , tipHash    :: !(Hash BlockHeader) -- ^ hex
+  , tipAge     :: !NominalDiffTime    -- ^ time since the start of the tip's slot
   } deriving (Eq, Show)
 
 instance ToJSON TipInfo where
