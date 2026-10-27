@@ -39,9 +39,9 @@ import           Testnet.Manifest (Manifest (..), ManifestGenesisFiles (..), Man
                    ManifestNode (..), ManifestNodeRole (..), ManifestPaths (..))
 import           Testnet.Signal (isProcessAlive)
 import           Testnet.Start.Types (defaultTestnetDir)
-import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (..), NodeAnswer (..),
-                   NodeProbeResult (..), NodeState (..), OutputFormat (..), StatusReport (..),
-                   TipInfo (..), exitCodeForStatus)
+import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (..),
+                   NoTestnetReason (..), NodeAnswer (..), NodeProbeResult (..), NodeState (..),
+                   OutputFormat (..), StatusReport (..), TipInfo (..), exitCodeForStatus)
 import           Testnet.Types (sgSlotLength, sgSystemStart, testnetEpochSlots)
 
 import           RIO (displayException, throwString, tryAny)
@@ -219,9 +219,9 @@ noTestnetReport outputDir = do
     dirExists <- doesDirectoryExist outputDir
     hasGenesis <- doesFileExist $ outputDir </> defaultGenesisFilepath ShelleyEra
     let explanation
-            | not dirExists = "The directory " <> outputDir <> " does not exist."
-            | hasGenesis = "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
-            | otherwise = outputDir <> " is not a testnet output directory."
+            | not dirExists = DirMissing
+            | hasGenesis = NotReady
+            | otherwise = NotATestnetDir
     pure
         StatusReport
             { reportOutputDir = outputDir
@@ -283,7 +283,7 @@ renderStatusReportHumanReadable
 
         details :: [String]
         details = case status of
-            NoTestnet -> ["No testnet" <> maybe "" (\x -> " (" <> x <> ")") problemExplanation]
+            NoTestnet -> ["No testnet" <> maybe "" (\x -> " (" <> explain x <> ")") problemExplanation]
             _ ->
                 renderTable $
                     ["NODE", "ROLE", "STATE", "PID", "TIP SLOT", "TIP BLOCK", "TIP AGE"]
@@ -320,6 +320,11 @@ renderStatusReportHumanReadable
                                 } <-
                                 nodes
                           ]
+
+        explain :: NoTestnetReason -> String
+        explain DirMissing = "The directory " <> outputDir <> " does not exist."
+        explain NotReady = "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
+        explain NotATestnetDir = outputDir <> " is not a testnet output directory."
 
         errors :: [String]
         errors =

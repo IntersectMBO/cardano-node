@@ -4,6 +4,7 @@
 module Testnet.Status.Types
   ( CheckStatusOptions (..)
   , NetworkStatus(..)
+  , NoTestnetReason(..)
   , NodeAnswer(..)
   , NodeProbeResult(..)
   , NodeState(..)
@@ -68,6 +69,19 @@ instance ToJSON NetworkStatus where
   toJSON NetworkStalled  = "stalled"
   toJSON NetworkStopped  = "stopped"
   toJSON NoTestnet       = "no-testnet"
+
+-- | Why there is no manifest file in the 'testnetDir'.
+data NoTestnetReason
+  = DirMissing     -- ^ the directory does not exist
+  | NotReady       -- ^ it has genesis files: the testnet is still starting, or it never became ready
+  | NotATestnetDir -- ^ it is not the output directory of a testnet
+  deriving (Eq, Show)
+
+instance ToJSON NoTestnetReason where
+  toJSON :: NoTestnetReason -> Value
+  toJSON DirMissing     = "dir-missing"
+  toJSON NotReady       = "not-ready"
+  toJSON NotATestnetDir = "not-a-testnet-dir"
 
 -- | The state of one node.
 data NodeState
@@ -138,7 +152,7 @@ data StatusReport = StatusReport
   , reportStatus             :: !NetworkStatus
   , reportBestTip            :: !(Maybe TipInfo)         -- ^ the newest tip of all nodes: the one with the highest slot
   , reportNodes              :: ![NodeProbeResult]       -- ^ empty for 'NoTestnet'
-  , reportProblemExplanation :: !(Maybe String)          -- ^ why there is no testnet
+  , reportProblemExplanation :: !(Maybe NoTestnetReason) -- ^ why there is no testnet
   } deriving (Eq, Show)
 
 instance ToJSON StatusReport where
@@ -151,6 +165,7 @@ instance ToJSON StatusReport where
     , "chainProducingBlocks" .= (exitCodeForStatus (reportStatus r) == ExitSuccess)
     , "bestTip"              .= reportBestTip r
     , "nodes"                .= reportNodes r
+    , "noTestnetReason"      .= reportProblemExplanation r
     ]
     where
       -- Extract code number from 'ExitCode'

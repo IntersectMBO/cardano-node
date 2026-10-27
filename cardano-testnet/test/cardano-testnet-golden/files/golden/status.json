@@ -8,6 +8,7 @@
     "chainProducingBlocks": true,
     "checkedAt": "2026-01-01T00:01:00Z",
     "exitCode": 0,
+    "noTestnetReason": null,
     "nodes": [
         {
             "error": null,

@@ -11,7 +11,8 @@
         "exitCode",
         "chainProducingBlocks",
         "bestTip",
-        "nodes"
+        "nodes",
+        "noTestnetReason"
     ],
     "additionalProperties": false,
     "properties": {
@@ -29,6 +30,13 @@
             "type": "string",
             "enum": ["running", "degraded", "stalled", "stopped", "no-testnet"],
             "description": "State of the whole network. \"running\": every node is ok. \"degraded\": some nodes are ok, but not all. \"stalled\": some nodes answer, but none is ok. \"stopped\": no node answers. \"no-testnet\": there is no manifest in the directory."
+        },
+        "noTestnetReason": {
+            "description": "Why there is no testnet, when the status is \"no-testnet\". \"dir-missing\": the directory does not exist. \"not-ready\": it has genesis files but no manifest: the testnet is still starting, or it never became ready. \"not-a-testnet-dir\": it is not the output directory of a testnet. Null for any other status.",
+            "oneOf": [
+                { "type": "null" },
+                { "type": "string", "enum": ["dir-missing", "not-ready", "not-a-testnet-dir"] }
+            ]
         },
         "exitCode": {
             "type": "integer",

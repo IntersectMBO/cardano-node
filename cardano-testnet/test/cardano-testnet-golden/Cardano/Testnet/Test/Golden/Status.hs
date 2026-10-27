@@ -63,7 +63,7 @@ sampleNoTestnetReport = StatusReport
   , reportStatus             = NoTestnet
   , reportBestTip            = Nothing
   , reportNodes              = []
-  , reportProblemExplanation = Just "The directory testnet does not exist."
+  , reportProblemExplanation = Just DirMissing
   }
 
 -- | Parse a fixture hash, failing loudly on a typo in the literal.
@@ -98,3 +98,9 @@ golden_StatusTable = propertyOnce $ do
     base </> goldenFile "status.txt"
   diffVsGoldenFile (renderStatusReportHumanReadable sampleNoTestnetReport) $
     base </> goldenFile "status_no_testnet.txt"
+  diffVsGoldenFile
+    (renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotReady}) $
+    base </> goldenFile "status_no_testnet_not_ready.txt"
+  diffVsGoldenFile
+    (renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotATestnetDir}) $
+    base </> goldenFile "status_no_testnet_not_a_testnet_dir.txt"

@@ -289,6 +289,8 @@ let
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/status.txt"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/status_no_testnet.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/status_no_testnet.txt"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/status_no_testnet_not_a_testnet_dir.txt"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/status_no_testnet_not_ready.txt"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
                 "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"

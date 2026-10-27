@@ -70,18 +70,17 @@ hprop_status_no_testnet = H.propertyOnce . H.workspace "status-no-testnet" $ \di
   let missingDir = dir </> "missing"
   missing <- H.evalIO $ checkStatus missingDir 1
   reportStatus missing === NoTestnet
-  reportProblemExplanation missing === Just ("The directory " <> missingDir <> " does not exist.")
+  reportProblemExplanation missing === Just DirMissing
 
   notTestnet <- H.evalIO $ checkStatus dir 1
   reportStatus notTestnet === NoTestnet
-  reportProblemExplanation notTestnet === Just (dir <> " is not a testnet output directory.")
+  reportProblemExplanation notTestnet === Just NotATestnetDir
 
   -- The genesis files are written before the manifest, while the testnet starts.
   H.writeFile (dir </> defaultGenesisFilepath ShelleyEra) "{}"
   starting <- H.evalIO $ checkStatus dir 1
   reportStatus starting === NoTestnet
-  reportProblemExplanation starting
-    === Just "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
+  reportProblemExplanation starting === Just NotReady
 
   H.writeFile (dir </> defaultManifestFile) "{"
   broken <- H.evalIO . tryAny $ checkStatus dir 1
