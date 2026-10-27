@@ -39,19 +39,26 @@
         "EKGBackend",
         "Forwarder",
         "PrometheusSimple suffix 127.0.0.1 12798",
-        "Stdout HumanFormatColoured"
+        "Stdout MachineFormat"
       ],
       "detail": "DNormal",
       "severity": "Notice"
     },
     "BlockFetch.Client.CompletedBlockFetch": {
-      "maxFrequency": 2.0
+      "severity": "Info",
+      "maxFrequency": 4.0
     },
     "BlockFetch.Decision": {
       "severity": "Info"
     },
+    "BlockFetch.Client.SendFetchRequest": {
+      "severity": "Info"
+    },
     "ChainDB": {
       "severity": "Info"
+    },
+    "ChainDB.ImmDbEvent": {
+      "severity": "Warning"
     },
     "ChainDB.AddBlockEvent.AddBlockValidation": {
       "severity": "Silence"
@@ -65,8 +72,21 @@
     "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
       "maxFrequency": 2.0
     },
+    "ChainDB.AddBlockEvent.AddedToCurrentChain": {
+      "maxFrequency": 2.0
+    },
+    "ChainDB.AddBlockEvent.SwitchedToAFork": {
+      "severity": "Info"
+    },
+    "ChainDB.ImmDbEvent.ChunkValidation.ValidatedChunk": {
+      "severity": "Info"
+    },
     "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
       "maxFrequency": 2.0
+    },
+    "ChainDB.LedgerEvent.Replay": {
+      "severity": "Info",
+      "maxFrequency": 0.0668
     },
     "ChainDB.LedgerEvent.Forker": {
       "severity": "Silence"
@@ -74,26 +94,43 @@
     "ChainSync.Client": {
       "severity": "Warning"
     },
+    "ChainSync.Client.DownloadedHeader": {
+      "severity": "Info",
+      "maxFrequency": 14.0
+    },
     "Forge.Loop": {
       "severity": "Info"
     },
+    "Forge.Loop.NodeNotLeader": {
+      "severity": "Silence"
+    },
+    "Forge.Loop.StartLeadershipCheck": {
+      "severity": "Silence"
+    },
     "Forge.StateInfo": {
-      "severity": "Info"
+      "severity": "Info",
+      "maxFrequency": 0.0002783
     },
     "Mempool": {
       "severity": "Silence"
     },
-    "Mempool.AttemptAdd": {
-      "severity": "Silence"
+    "Net.AcceptPolicy.ConnectionRateLimiting": {
+      "severity": "Info",
+      "maxFrequency": 0.0167
     },
-    "Mempool.SyncNotNeeded": {
-      "severity": "Silence"
+    "Net.AcceptPolicy.ConnectionLimitResume": {
+      "severity": "Info",
+      "maxFrequency": 0.0167
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
     },
     "Net.InboundGovernor": {
       "severity": "Warning"
+    },
+    "Net.InboundGovernor.Remote.InboundGovernorCounters": {
+      "severity": "Info",
+      "maxFrequency": 0.0167
     },
     "Net.InboundGovernor.Remote": {
       "severity": "Info"
@@ -104,10 +141,14 @@
     "Net.PeerSelection": {
       "severity": "Info"
     },
-    "Resources": {
+    "Net.PeerSelection.Actions.ConnectionError": {
       "severity": "Silence"
     },
-    "Startup.DiffusionInit": {
+    "Resources": {
+      "severity": "Info",
+      "maxFrequency": 0.0167
+    },
+    "Startup": {
       "severity": "Info"
     }
   }
