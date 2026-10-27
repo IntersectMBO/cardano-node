@@ -51,7 +51,7 @@ import           UnliftIO.Async (forConcurrently)
 -- and exit with 0 (running or degraded), 3 (stalled), 4 (stopped) or 5 (no
 -- testnet). When the manifest or the genesis file cannot be read, print the
 -- error on stderr and exit with 1.
-runCheckStatusOptions :: CheckStatusOptions -> IO ()
+runCheckStatusOptions :: HasCallStack => CheckStatusOptions -> IO ()
 runCheckStatusOptions
   CheckStatusOptions
     { testnetDir = dir
@@ -106,19 +106,14 @@ checkNodes outputDir timeoutSeconds manifest@(Manifest{manifestNetwork = Manifes
     slotStart (SlotNo slot) = addUTCTime (fromIntegral slot * slotLength) (sgSystemStart genesis)
 
 -- | Check the status of one node in the testnet.
-probeNode ::
-    -- | output directory
-    FilePath ->
-    -- | timeout, in seconds
-    Nat ->
-    -- | network magic
-    Word32 ->
-    -- | tip age limit
-    NominalDiffTime ->
-    -- | start time of a slot
-    (SlotNo -> UTCTime) ->
-    ManifestNode ->
-    IO NodeProbeResult
+probeNode
+  :: FilePath -- ^ output directory
+  -> Nat -- ^ timeout, in seconds
+  -> Word32 -- ^ network magic
+  -> NominalDiffTime -- ^ tip age limit
+  -> (SlotNo -> UTCTime) -- ^ start time of a slot
+  -> ManifestNode
+  -> IO NodeProbeResult
 probeNode outputDir timeoutSeconds magic limit slotStart
           ManifestNode
             { mnodeName = nodeName
@@ -177,13 +172,11 @@ classifyNetwork states
 
 -- | The rule for one node. The answer decides; the pid only tells "down"
 -- (the process is gone) from "unreachable" (alive, or unknown).
-calcNodeState ::
-    -- | tip age limit
-    NominalDiffTime ->
-    -- | whether the node's process is alive, if known
-    Maybe Bool ->
-    NodeAnswer ->
-    NodeState
+calcNodeState
+  :: NominalDiffTime -- ^ tip age limit
+  -> Maybe Bool -- ^ whether the node's process is alive, if known
+  -> NodeAnswer
+  -> NodeState
 calcNodeState limit _pidAlive (AnsweredTip tip)
     | tipAge tip <= limit = NodeOk
     | otherwise = NodeStalled

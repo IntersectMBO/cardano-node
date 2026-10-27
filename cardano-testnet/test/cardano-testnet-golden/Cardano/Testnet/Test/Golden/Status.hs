@@ -15,7 +15,7 @@ import           Cardano.Testnet.Test.Golden.Util (execDetailCardanoTestnet)
 
 import           Prelude
 
-import           Data.Aeson (Value (..), eitherDecodeFileStrict, eitherDecodeStrict)
+import           Data.Aeson (Value (..), eitherDecodeStrict)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.ByteString (ByteString)
@@ -32,9 +32,8 @@ import           Testnet.Manifest (ManifestNodeRole (..))
 import           Testnet.Status.Run (renderStatusReportHumanReadable)
 import           Testnet.Status.Types
 
-import           Hedgehog (Property, evalIO, (===))
-import           Hedgehog.Extras.Test.Base (assertWith, leftFail, leftFailM, moduleWorkspace,
-                   propertyOnce)
+import           Hedgehog (Property, (===))
+import           Hedgehog.Extras.Test.Base (assertWith, leftFail, moduleWorkspace, propertyOnce)
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import qualified Hedgehog.Extras.Test.Process as H
@@ -189,8 +188,7 @@ golden_StatusCommand = propertyOnce . moduleWorkspace "status-command" $ \dir ->
   (jsonCode, jsonOut, jsonErr) <- execDetailCardanoTestnet ["status", "--testnet-dir", missing, "--json"]
   jsonCode === ExitFailure 5
   json <- leftFail (eitherDecodeStrict (Text.encodeUtf8 $ Text.pack jsonOut) :: Either String Value)
-  golden <- leftFailM . evalIO $
-    (eitherDecodeFileStrict (base </> goldenFile "status_no_testnet.json") :: IO (Either String Value))
+  golden <- H.readJsonFileOk $ base </> goldenFile "status_no_testnet.json"
   withoutCheckedAt json === withoutCheckedAt golden
   jsonErr === ""
 

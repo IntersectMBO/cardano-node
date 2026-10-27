@@ -48,7 +48,7 @@ hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaul
   running <- H.evalIO $ checkStatus tmpDir 5
   reportStatus running === NetworkRunning
   map probeNodeState (reportNodes running) === map (const NodeOk) (toList testnetNodes)
-  H.assert . isJust $ reportBestTip running
+  H.assertWith (reportBestTip running) isJust
 
   relay <- H.evalMaybe $ find (not . isTestnetNodeSpo) testnetNodes
   H.evalIO $ do
@@ -60,7 +60,7 @@ hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaul
   reportStatus degraded === NetworkDegraded
   killed <- H.evalMaybe $ find ((== nodeName relay) . probeNodeName) (reportNodes degraded)
   probeNodeState killed === NodeDown
-  H.assert . isJust $ probeError killed
+  H.assertWith (probeError killed) isJust
 
   H.evalIO . forM_ (filter ((/= nodeName relay) . nodeName) $ toList testnetNodes) $ \node -> do
     hardKillProcess (nodeProcessHandle node)
