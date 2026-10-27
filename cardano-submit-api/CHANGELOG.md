@@ -1,5 +1,12 @@
 # Changelog for Cardano-submit-api
 
+## 11.2.0 -- 2026-10-27
+
+- Fixed `cardano-submit-api` rejecting Dijkstra era transactions with a `TxCmdTxReadError` decoding error.
+  Transactions from every Shelley-based era, including Dijkstra, are now decoded and submitted to the node.
+  (bugfix)
+  [PR 6725](https://github.com/IntersectMBO/cardano-node/pull/6725)
+
 ## 11.1.1 -- 2026-08-31
 
 - `TxSubmitWebApiError` is now a newtype over its only remaining constructor, `TxSubmitFail`. `TxSubmitDecodeHex`, `TxSubmitEmpty`, `TxSubmitDecodeFail` and `TxSubmitBadTx` are gone, along with their `ToJSON` output: every submission failure is already reported through `TxCmdError`.

@@ -1,4 +1,0 @@
-pr: 6677
-kind:
-  - maintenance
-description: Bumped cardano-api to 11.11 and cardano-cli to 11.6.

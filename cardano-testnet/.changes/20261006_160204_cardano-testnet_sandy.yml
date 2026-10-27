@@ -1,5 +1,0 @@
-description: Support --prometheus-listen-address and --prometheus-listen-port
-kind:
-- feature
-pr: 6723
-project: cardano-testnet

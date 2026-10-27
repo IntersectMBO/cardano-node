@@ -1,4 +1,0 @@
-pr: 6677
-kind:
-  - feature
-description: The chairman reads node configurations in the cardano-config format too, the way the node does.

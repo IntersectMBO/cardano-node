@@ -1,0 +1,9 @@
+pr: 6677
+kind:
+  - release
+description: |
+  Release 11.2.0
+
+  Cuts the 11.2.0 release of cardano-node and the packages versioned
+  alongside it: cardano-node-chairman, cardano-submit-api and
+  cardano-testnet.

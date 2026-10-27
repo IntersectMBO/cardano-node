@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## Next version
+## 11.2.0 -- October 2026
 
 - Standard handles now always use UTF-8, independent of the system code page or
   locale. On Windows, stdout traces were written in the legacy code page, so the
