@@ -3,58 +3,6 @@
   inherit (pkgs) cardanoNodePackages lib;
   synthAsserted = cardanoNodePackages.db-synthesizer.passthru.asserted;
 
-  # `cardano-testnet create-env` deliberately leaves the genesis hashes out of
-  # its configuration file, so that the genesis files it writes alongside can be
-  # edited without recomputing a hash every time (see `createEnvOptions` in
-  # cardano-testnet's Parsers/Run.hs). cardano-node itself is fine with that --
-  # POM.hs reads every `*GenesisHash` with `.:?` -- but the consensus db tools
-  # resolve the configuration through cardano-config, which makes all five of
-  # them mandatory, so they reject the environment as it comes out of create-env:
-  #
-  #   db-synthesizer: invalid node configuration: Error parsing the cardano-node
-  #   configuration (section "Protocol") in the main configuration file:
-  #     Error in $: key "ByronGenesisHash" not found
-  #
-  # Fill them in for the tools' benefit. Byron hashes its genesis differently
-  # from the later eras, which take a plain blake2b-256 of the file bytes.
-  #
-  # TODO: this belongs in create-env itself -- it already computes exactly these
-  # five for `cardano-testnet cardano` (Testnet.Components.Configuration's
-  # `createConfigJson`), it just does not offer them here. Either give create-env
-  # an opt-in flag for them, or make the db tools as lenient as the node is.
-  addGenesisHashes = pkgs.writeShellApplication {
-    name = "add-genesis-hashes";
-    runtimeInputs = [cardanoNodePackages.cardano-cli pkgs.jq];
-    text = ''
-      if test $# -ne 1
-      then echo "usage: add-genesis-hashes ENV-DIR" >&2; exit 1
-      fi
-      cd "$1"
-
-      # create-env names the file .yaml, but writes JSON into it, so jq can edit
-      # it in place. Should that ever change, this test fails loudly rather than
-      # silently skipping the hashes.
-      jq  --arg byron    "$(cardano-cli byron genesis print-genesis-hash \
-                              --genesis-json byron-genesis.json)"        \
-          --arg shelley  "$(cardano-cli hash genesis-file               \
-                              --genesis shelley-genesis.json)"           \
-          --arg alonzo   "$(cardano-cli hash genesis-file               \
-                              --genesis alonzo-genesis.json)"            \
-          --arg conway   "$(cardano-cli hash genesis-file               \
-                              --genesis conway-genesis.json)"            \
-          --arg dijkstra "$(cardano-cli hash genesis-file               \
-                              --genesis dijkstra-genesis.json)"          \
-          '. + { ByronGenesisHash:    $byron
-               , ShelleyGenesisHash:  $shelley
-               , AlonzoGenesisHash:   $alonzo
-               , ConwayGenesisHash:   $conway
-               , DijkstraGenesisHash: $dijkstra
-               }'                                                       \
-          configuration.yaml > configuration.yaml.hashed
-      mv configuration.yaml.hashed configuration.yaml
-    '';
-  };
-
   # Budget for the whole test, not per step: the driver kills everything and
   # fails once it is reached. It covers the vm boot as well as create-env,
   # synthesis, both analyser passes, truncation and the asserted synthesis, so
@@ -76,15 +24,14 @@ in {
       nixpkgs.pkgs = pkgs;
 
       environment = {
-        systemPackages = [addGenesisHashes]
-          ++ (with cardanoNodePackages; [
-            cardano-cli
-            cardano-node
-            cardano-testnet
-            db-analyser
-            db-synthesizer
-            db-truncater
-          ]);
+        systemPackages = with cardanoNodePackages; [
+          cardano-cli
+          cardano-node
+          cardano-testnet
+          db-analyser
+          db-synthesizer
+          db-truncater
+        ];
 
         variables = {
           CARDANO_CLI = getExe cardanoNodePackages.cardano-cli;
@@ -110,10 +57,6 @@ in {
     # Epoch length should be >= 2 * stability_window = 2 * 3 * k / f = 600 slots
     # Epoch length ideally should also be divisible by 10k = 500 slots
     print(machine.succeed("cardano-testnet create-env --epoch-length 1000 --output ${testDir}"))
-
-    # The db tools, unlike the node, require every genesis hash to be present.
-    print(machine.succeed("echo Add genesis hashes to the node configuration"))
-    print(machine.succeed("add-genesis-hashes ${testDir}"))
 
     print(machine.succeed("echo Synthesize one epoch"))
     print(machine.succeed("db-synthesizer \
