@@ -29,12 +29,14 @@ import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
 import qualified Cardano.Crypto.Init as Crypto
+import           Cardano.Node.Configuration.CardanoConfigResolve
+                   (CrossCheck (..), ResolvedNodeConfiguration (..),
+                   buildNodeConfiguration)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), TimeoutOverride (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration,
-                   parseNodeConfigurationFP, getForkPolicy)
+                   getForkPolicy)
 import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    SocketOrSocketInfo, SocketOrSocketInfo' (..), gatherConfiguredSockets,
                    getSocketOrSocketInfoAddr)
@@ -51,7 +53,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
 import           Cardano.Rpc.Server.Config
-import           Data.IORef
+import           Cardano.Rpc.Server.NodeKernelAccess (NodeKernelAccess, mkNodeKernelAccess)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing (Tracers (..))
@@ -64,7 +66,7 @@ import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Logging.Types (LogFormatting)
+import           Cardano.Logging.Types (LogFormatting, TraceConfig)
 import           Cardano.Logging.Utils (showT)
 
 import           Ouroboros.Consensus.Block.Forging (MkBlockForging)
@@ -147,6 +149,7 @@ import           Data.IP (IP (..), isMatchedTo, makeAddrRange, toIPv4, toIPv6, t
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.IORef (IORef, newIORef, writeIORef)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
@@ -185,12 +188,20 @@ runNode cmdPc = do
 
   Crypto.cryptoInit
 
-  nc@NodeConfiguration
-    { ncProtocolConfig
-    , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
-    } <- buildNodeConfiguration cmdPc
-
   let earlyTracer = stdoutTracer
+
+  ResolvedNodeConfiguration
+    { rncConfiguration = nc@NodeConfiguration
+        { ncProtocolConfig
+        , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
+        }
+    , rncTraceConfig
+    , rncReport
+    } <- buildNodeConfiguration CrossCheckWithCardanoConfig cmdPc
+
+  -- What the configuration parsers had to say: which one read the file, and, for
+  -- a legacy configuration, where the two of them disagree. All non-fatal.
+  mapM_ (traceWith earlyTracer) rncReport
   traceWith earlyTracer $ "Node configuration: " <> show nc
 
   forM_ mShelleyVrfFile $
@@ -204,29 +215,21 @@ runNode cmdPc = do
        -- don't need these.
        (Just ncProtocolFiles)
 
-  handleNodeWithTracers cmdPc nc consensusProtocol shelleyGenesisHash
+  handleNodeWithTracers cmdPc nc rncTraceConfig consensusProtocol shelleyGenesisHash
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
--- | Read node configuration from a file specified in 'PartialNodeConfiguration'
-buildNodeConfiguration :: HasCallStack
-                       => PartialNodeConfiguration -- ^ defaults
-                       -> IO NodeConfiguration
-buildNodeConfiguration partialConf = do
-  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
-  either
-    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
-    pure
-    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
-
 handleNodeWithTracers
   :: PartialNodeConfiguration
   -> NodeConfiguration
+  -> Maybe TraceConfig
+     -- ^ The tracing configuration, when the configuration parser resolved it
+     -- too; 'Nothing' leaves it to trace-dispatcher to read the file.
   -> SomeConsensusProtocol
   -> Api.GenesisHashShelley
   -> IO ()
-handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
+handleNodeWithTracers cmdPc nc mTrConfig (SomeConsensusProtocol blockType runP) shelleyGenesisHash = do
   (pInfo@ProtocolInfo{pInfoConfig}, mkBlockForging) <- Api.protocolInfo @IO runP
   let networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
@@ -244,6 +247,7 @@ handleNodeWithTracers cmdPc nc (SomeConsensusProtocol blockType runP) shelleyGen
   tracers <-
     initTraceDispatcher
       nc
+      mTrConfig
       blockType
       pInfoConfig
       networkMagic
@@ -497,6 +501,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
+                -- populate node kernel access for RPC server
                 mkNodeKernelAccess
                   (rpcTracer tracers)
                   shelleyGenesisHash
@@ -644,9 +649,11 @@ updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> NodeConfiguration
                    -> IO ()
 updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc = do
-  eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
-                                       (ncProtocolConfig nc)
-                                       (Just (ncProtocolFiles nc))
+  eitherSomeProtocol <-
+    runExceptT $
+      mkConsensusProtocol
+        (ncProtocolConfig nc)
+        (Just (ncProtocolFiles nc))
   case eitherSomeProtocol of
     Left err ->
       case wasFileRemovedFromScope err of
@@ -660,7 +667,7 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
           -- TODO: check if runP' has changed
-          (_, mkBlockForging) <- Api.protocolInfo runP'
+          (_, mkBlockForging) <- Api.protocolInfo @IO runP'
           blockForging <- mkBlockForging kesAgentTracer
           let enabled = not (null blockForging)
           -- Only an off-to-on transition starts a new run of slots for
@@ -770,7 +777,6 @@ updateLedgerPeerSnapshot startupTracer NodeConfiguration { ncConsensusMode } net
             | otherwise -> oops $
                 "NetworkMagic " <> showT networkMagic <> " doesn't match "
                 <> "peer snapshot NetworkMagic " <> showT magic
-          LedgerPeerSnapshotV2 {} -> oops "Unsupported legacy peer snapshot version."
         case afterSlot of
           Always -> do
             traceL $ LedgerPeerSnapshotLoaded fileSlot
@@ -824,7 +830,11 @@ updateRpcConfiguration :: Tracer IO (StartupTrace blk) -- ^ tracer for configura
                        -> StrictTVar IO RpcConfig -- ^ TVar storing RPC configuration
                        -> IO ()
 updateRpcConfiguration tracer cmdPc rpcConfigVar = do
-  result <- try @Exception.SomeException $ buildNodeConfiguration cmdPc
+  -- A reload only wants the new values; the parser cross-check already ran (and
+  -- was reported) at startup.
+  result <-
+    try @Exception.SomeException $
+      rncConfiguration <$> buildNodeConfiguration SkipCrossCheck cmdPc
   case result of
     Left err ->
       -- reload failure, we don't do anything this time

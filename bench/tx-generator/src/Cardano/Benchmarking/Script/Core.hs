@@ -172,7 +172,7 @@ queryEra = do
   AnyCardanoEra era <- mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  caseByronOrShelleyBasedEra
+  inEonForEra
     (liftTxGenError $ TxGenError "queryEra Byron not supported")
     (return . AnyShelleyBasedEra)
     era
@@ -306,11 +306,13 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
+          genesisDir <- getEnvShelleyGenesisDir
           destKey  <- getEnvKeys destKeyName
           destWallet  <- getEnvWallets wallet
           genesisKey  <- getEnvKeys genesisKeyName
-          (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
-            Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
+          eitherTxFund <- liftIO $ Genesis.genesisWithResolvedInitialFunds genesisDir genesis $ \resolved ->
+            Genesis.genesisSecureInitialFund networkId resolved genesisKey destKey txParams
+          (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither eitherTxFund
           let
             gen = do
               walletRefInsertFund destWallet fund

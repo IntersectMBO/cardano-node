@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## Next version
+## 11.2.0 -- October 2026
 
 - Standard handles now always use UTF-8, independent of the system code page or
   locale. On Windows, stdout traces were written in the legacy code page, so the
@@ -9,6 +9,20 @@
   The same crash happened on Linux under a non-UTF-8 locale such as `LC_ALL=C`.
   `main` now runs under `withCP65001` and `withUtf8`.
   ([#6711](https://github.com/IntersectMBO/cardano-node/issues/6711))
+
+- Tracing changes visible to log consumers, now that the consensus tracing
+  instances are used instead of the node's own copy:
+  - mempool rejections always carry `errdetails`;
+  - the detailed `"tx"` field of mempool traces is now the CBOR in hex;
+  - new namespaces `Mempool.CapacityChanged`,
+    `Snapshot.ConfiguredSnapshotPolicy`, `Snapshot.ImplausibleSnapshotPolicy`,
+    `RPC.SubmitService.ReadMempool.Span` and
+    `RPC.SubmitService.WatchMempool.Span`;
+  - the Peras certificate inclusion and vote forging tracers are wired, under
+    `Peras.Cert.Inclusion` and `Peras.Vote.Forging`;
+  - the ledger predicate failure kind for an already-registered delegation
+    account is now `DelegAccountAlreadyRegistered`.
+  ([#6677](https://github.com/IntersectMBO/cardano-node/pull/6677))
 
 - `slotsMissed_int` no longer counts the slots that elapse while block forging
   is disabled. While forging is off there is no forging thread, hence no

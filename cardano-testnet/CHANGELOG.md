@@ -1,5 +1,27 @@
 # Changelog for cardano-testnet
 
+## 11.2.0 -- 2026-10-27
+
+- Support --prometheus-listen-address and --prometheus-listen-port
+  (feature)
+  [PR 6723](https://github.com/IntersectMBO/cardano-node/pull/6723)
+
+- Added a new `--enable-tracer` option, which when set starts up `cardano-tracer` and causes all testnet nodes to send tracing data to it
+  (feature)
+  [PR 6710](https://github.com/IntersectMBO/cardano-node/pull/6710)
+
+- When the network is ready, `cardano-testnet cardano` now writes a machine-readable `manifest.json` into the output directory. The file lists every socket, port, key path, genesis file and wallet address the cluster was started with, so scripts and test harnesses can discover the network without parsing the directory layout. The file is written atomically (it appears only after all readiness checks pass) and is never modified after being written. A strict JSON Schema (`cardano-testnet/schemas/manifest.schema.json`) accompanies the file.
+  (feature)
+  [PR 6693](https://github.com/IntersectMBO/cardano-node/pull/6693)
+
+- The `cardano-testnet cardano` command gained `--enable-grpc-http` to enable the node gRPC endpoint over HTTP without TLS (h2c), with each node listening by default on 127.0.0.1 on a random free port; the listen address can be customised with `--grpc-listen-address`, and fixed ports can be assigned with `--grpc-listen-port-base` (testnet node *i* then listens on the base port plus *i*-1); the existing `--enable-grpc` option continues to serve gRPC over a unix socket; when gRPC is enabled, each node's gRPC endpoint is printed in the startup summary.
+  (feature)
+  [PR 6685](https://github.com/IntersectMBO/cardano-node/pull/6685)
+
+- Testnet node configurations are written in the cardano-config format and through cardano-config, with their genesis hashes refreshed whenever the testnet starts and the node's default tracing options written out; removed createConfigJson, createConfigJsonNoHash, getByronGenesisHash, getShelleyGenesisHash, GenesisHashesPolicy and the configPath field of SubmitApiConf, and getStartTime no longer takes a path.
+  (breaking)
+  [PR 6677](https://github.com/IntersectMBO/cardano-node/pull/6677)
+
 ## 11.1.1 -- 2026-08-31
 
 - - `testnetNodes` in `TestnetRuntime` is now `NonEmpty` (a testnet always has at least one node), so consumers no longer need node-count checks before taking the first node.

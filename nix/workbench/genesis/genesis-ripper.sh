@@ -106,6 +106,16 @@
 # Bump on any change to what/how the ripper caches.
 genesis_ripper_layout_version="v1.0"
 
+# Whether to assemble the Shelley/Conway genesis using the "extraConfig" object
+# ("FIELD": {"file": ..., "hash": ...}) with references to external files having
+# Shelley's "initialFunds", "stakePools" and "stakeCredentials" and Conway's
+# "delegs" and "initialDReps" instead of only one file with everything.
+# Off by default.
+# Only affects assembly in `derive-from-cache-ripper`: the dataset and protocol
+# caches are unchanged since they already store files that are exactly what a
+# "file" injection needs to reference.
+genesis_ripper_file_injection=${WB_GENESIS_FILE_INJECTION:-0}
+
 # The cache-key input combines protocol hash, dataset hash and layout version.
 # (The profile name is prepended by profile-cache-key-ripper below.)
 profile-cache-key-input-ripper() {
@@ -221,39 +231,87 @@ derive-from-cache-ripper() {
     tail -c +2 "$cache_entry/dataset/dataset.byron.json"
   } > "$outdir/genesis.byron.json"
   # Shelley (can be 500MB+).
-  # Assembled in the top level form (the node's current, eager loading
-  # mechanism): each per-field dataset file is spliced into its historical
-  # top level position. A future assembly strategy can emit extraConfig
-  # injections from the same cache files instead.
-  {
-    sed 's/}$//' "$cache_entry/protocol/protocol.shelley.json"
-    printf ',"systemStart":"%s"' "$system_start"
-    printf ',"genDelegs":'
-    cat "$cache_entry/dataset/dataset.shelley.genDelegs.json"
-    printf ',"initialFunds":'
-    cat "$cache_entry/dataset/dataset.shelley.initialFunds.json"
-    printf ',"maxLovelaceSupply":'
-    cat "$cache_entry/dataset/dataset.shelley.maxLovelaceSupply.json"
-    printf ',"staking":{"pools":'
-    cat "$cache_entry/dataset/dataset.shelley.stakePools.json"
-    printf ',"stake":'
-    cat "$cache_entry/dataset/dataset.shelley.stakeCredentials.json"
-    printf '}}\n'
-  } > "$outdir/genesis.shelley.json"
+  if [[ "$genesis_ripper_file_injection" -eq 1 ]]; then
+    # extraConfig FILE form: link the payload files into the run dir itself
+    # (the node's HasFS for extraConfig file injections is mounted at the
+    # Shelley genesis file's own directory, Cardano.Node.Protocol.Cardano),
+    # so a same-directory filename is all an injection's "file" needs. Hash
+    # via `cardano-cli hash genesis-file`, the same Blake2b-256-of-raw-bytes
+    # the ledger checks, instead of depending on a specific `b2sum`/`openssl`
+    # blake2b flavour being present.
+    ln -sf "$cache_entry/dataset/dataset.shelley.initialFunds.json"     "$outdir/genesis.shelley.initialFunds.json"
+    ln -sf "$cache_entry/dataset/dataset.shelley.stakePools.json"       "$outdir/genesis.shelley.stakePools.json"
+    ln -sf "$cache_entry/dataset/dataset.shelley.stakeCredentials.json" "$outdir/genesis.shelley.stakeCredentials.json"
+    local initial_funds_hash stake_pools_hash stake_credentials_hash
+    initial_funds_hash=$(cardano-cli hash genesis-file --genesis "$outdir/genesis.shelley.initialFunds.json")
+    stake_pools_hash=$(cardano-cli hash genesis-file --genesis "$outdir/genesis.shelley.stakePools.json")
+    stake_credentials_hash=$(cardano-cli hash genesis-file --genesis "$outdir/genesis.shelley.stakeCredentials.json")
+    {
+      sed 's/}$//' "$cache_entry/protocol/protocol.shelley.json"
+      printf ',"systemStart":"%s"' "$system_start"
+      printf ',"genDelegs":'
+      cat "$cache_entry/dataset/dataset.shelley.genDelegs.json"
+      printf ',"initialFunds":{}'
+      printf ',"maxLovelaceSupply":'
+      cat "$cache_entry/dataset/dataset.shelley.maxLovelaceSupply.json"
+      printf ',"staking":{"pools":{},"stake":{}}'
+      printf ',"extraConfig":{'
+      printf   '"initialFunds":{"file":["genesis.shelley.initialFunds.json"],"hash":"%s"}'         "$initial_funds_hash"
+      printf ',"stakePools":{"file":["genesis.shelley.stakePools.json"],"hash":"%s"}'              "$stake_pools_hash"
+      printf ',"stakeCredentials":{"file":["genesis.shelley.stakeCredentials.json"],"hash":"%s"}'  "$stake_credentials_hash"
+      printf '}}\n'
+    } > "$outdir/genesis.shelley.json"
+  else
+    # Legacy top level form (the node's current, eager loading mechanism):
+    # each per-field dataset file is spliced into its historical top level
+    # position.
+    {
+      sed 's/}$//' "$cache_entry/protocol/protocol.shelley.json"
+      printf ',"systemStart":"%s"' "$system_start"
+      printf ',"genDelegs":'
+      cat "$cache_entry/dataset/dataset.shelley.genDelegs.json"
+      printf ',"initialFunds":'
+      cat "$cache_entry/dataset/dataset.shelley.initialFunds.json"
+      printf ',"maxLovelaceSupply":'
+      cat "$cache_entry/dataset/dataset.shelley.maxLovelaceSupply.json"
+      printf ',"staking":{"pools":'
+      cat "$cache_entry/dataset/dataset.shelley.stakePools.json"
+      printf ',"stake":'
+      cat "$cache_entry/dataset/dataset.shelley.stakeCredentials.json"
+      printf '}}\n'
+    } > "$outdir/genesis.shelley.json"
+  fi
 
   # Conway (can be 200MB+).
   # Only tied to a dataset + protocol. No timing.
   # When the profile leaves .genesis.conway null, protocol/protocol.conway.json
   # is the zero stub but we still need to merge the dataset side (delegs and
   # initialDReps) to produce a parseable file for the node config.
-  {
-    sed 's/}$//' "$cache_entry/protocol/protocol.conway.json"
-    printf ',"delegs":'
-    cat "$cache_entry/dataset/dataset.conway.delegs.json"
-    printf ',"initialDReps":'
-    cat "$cache_entry/dataset/dataset.conway.initialDReps.json"
-    printf '}\n'
-  } > "$outdir/genesis.conway.json"
+  if [[ "$genesis_ripper_file_injection" -eq 1 ]]; then
+    ln -sf "$cache_entry/dataset/dataset.conway.delegs.json"       "$outdir/genesis.conway.delegs.json"
+    ln -sf "$cache_entry/dataset/dataset.conway.initialDReps.json" "$outdir/genesis.conway.initialDReps.json"
+    local delegs_hash initial_dreps_hash
+    delegs_hash=$(cardano-cli hash genesis-file --genesis "$outdir/genesis.conway.delegs.json")
+    initial_dreps_hash=$(cardano-cli hash genesis-file --genesis "$outdir/genesis.conway.initialDReps.json")
+    {
+      sed 's/}$//' "$cache_entry/protocol/protocol.conway.json"
+      printf ',"delegs":{}'
+      printf ',"initialDReps":{}'
+      printf ',"extraConfig":{'
+      printf   '"delegs":{"file":["genesis.conway.delegs.json"],"hash":"%s"}'             "$delegs_hash"
+      printf ',"initialDReps":{"file":["genesis.conway.initialDReps.json"],"hash":"%s"}' "$initial_dreps_hash"
+      printf '}}\n'
+    } > "$outdir/genesis.conway.json"
+  else
+    {
+      sed 's/}$//' "$cache_entry/protocol/protocol.conway.json"
+      printf ',"delegs":'
+      cat "$cache_entry/dataset/dataset.conway.delegs.json"
+      printf ',"initialDReps":'
+      cat "$cache_entry/dataset/dataset.conway.initialDReps.json"
+      printf '}\n'
+    } > "$outdir/genesis.conway.json"
+  fi
 }
 
 # ==============================================================================

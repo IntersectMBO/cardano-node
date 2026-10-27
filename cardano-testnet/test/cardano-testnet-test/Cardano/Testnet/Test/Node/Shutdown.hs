@@ -124,30 +124,15 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
     , "--start-time", formatIso8601 startTime
     ]
 
-  byronGenesisHash <- liftToIntegration $ Testnet.getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
-
   -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
   H.renameFile (byronGenesisOutputDir </> "genesis.json") (tempAbsPath' </> defaultGenesisFilepath ByronEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
   -- TODO: once 'cardano-cli latest genesis create' supports dijkstra, make this a copy instead of writing a default
-  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode dijkstraGenesisDefaults
+  H.writeFile (tempAbsPath' </> defaultGenesisFilepath DijkstraEra) . LBS.unpack $ encode defaultDijkstraGenesis
 
-  (shelleyGenesisHash,alonzoGenesisHash)  <-
-    liftToIntegration $ do
-      shelleyGenesisHash <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
-      alonzoGenesisHash  <- Testnet.getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
-      return (shelleyGenesisHash, alonzoGenesisHash)
-
-  let finalYamlConfig :: LBS.ByteString
-      finalYamlConfig = encode . Object
-                                 $ mconcat [ byronGenesisHash
-                                           , shelleyGenesisHash
-                                           , alonzoGenesisHash
-                                           , defaultYamlHardforkViaConfig sbe]
-
-  H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
+  Testnet.writeConfiguration (tempAbsPath' </> "configuration.yaml") sbe
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "mainnet-topology.json")
     $ encode defaultMainnetTopology

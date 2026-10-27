@@ -6,13 +6,11 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Configuration
-  ( createConfigJson
-  , createConfigJsonNoHash
+  ( writeConfiguration
+  , refreshConfigurationHashes
   , createSPOGenesisAndFiles
   , numSeededUTxOKeys
 
-  , getByronGenesisHash
-  , getShelleyGenesisHash
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , startTimeOffsetSeconds
@@ -24,24 +22,17 @@ module Testnet.Components.Configuration
 import           Cardano.Api hiding (Value, cardanoEra)
 import           Cardano.Api.Ledger (AlonzoGenesis, ConwayGenesis)
 
-import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-import qualified Cardano.Crypto.Hash.Blake2b as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Configuration.Edit (configurationDocumentFromValue,
+                   readConfigurationDocument, refreshGenesisHashes, writeConfigurationDocument)
 import           Cardano.Ledger.BaseTypes (unsafeNonZero)
 import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
-import           Cardano.Node.Protocol.Byron
 
 import           Control.Exception
 import           Control.Monad
 import           Control.Monad.Extra
 import           Data.Aeson
-import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as A
-import           Data.Aeson.Key hiding (fromString)
-import           Data.Aeson.KeyMap hiding (map)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
@@ -61,62 +52,30 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 
 import           RIO (MonadThrow, throwM)
 
--- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
-createConfigJson :: ()
+-- | Write the node configuration of a testnet: the default configuration for the
+-- given era, with the hashes of the genesis files in the same directory as the
+-- configuration file. The file is written in the @cardano-config@ format.
+writeConfiguration :: ()
   => HasCallStack
   => MonadIO m
-  => MonadThrow m
-  => TmpAbsolutePath
+  => FilePath -- ^ The configuration file to write
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> m (KeyMap Aeson.Value)
-createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
-  shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
-  alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
-  conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
-  dijkstraGenesisHash  <- getHash DijkstraEra  "DijkstraGenesisHash"
+  -> m ()
+writeConfiguration configFile sbe = GHC.withFrozenCallStack . liftIOAnnotated $ do
+  (document, _warnings) <- configurationDocumentFromValue . Object $ Defaults.defaultYamlHardforkViaConfig sbe
+  refreshGenesisHashes (takeDirectory configFile) document >>= writeConfigurationDocument configFile
 
-  pure $ mconcat
-    [ byronGenesisHash
-    , shelleyGenesisHash
-    , alonzoGenesisHash
-    , conwayGenesisHash
-    , dijkstraGenesisHash
-    , Defaults.defaultYamlHardforkViaConfig sbe
-    ]
-   where
-    getHash ::  MonadIO m => CardanoEra a -> Text.Text -> m (KeyMap Value)
-    getHash e = getShelleyGenesisHash (tempAbsPath </> Defaults.defaultGenesisFilepath e)
-
-createConfigJsonNoHash :: ()
-  => ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> KeyMap Aeson.Value
-createConfigJsonNoHash = Defaults.defaultYamlHardforkViaConfig
-
--- Generate hashes for genesis.json files
-
-getByronGenesisHash
-  :: MonadIO m
-  => MonadThrow m
-  => FilePath
-  -> m (KeyMap Aeson.Value)
-getByronGenesisHash path = do
-  e <- runExceptT $ readGenesisData path
-  case e of
-    Left err -> throwM $ GenesisReadError path err
-    Right (_, genesisHash) -> do
-      let genesisHash' = unGenesisHash genesisHash
-      pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
-
-getShelleyGenesisHash
-  :: MonadIO m
-  => FilePath
-  -> Text
-  -> m (KeyMap Aeson.Value)
-getShelleyGenesisHash path key = do
-  content <- liftIOAnnotated $ BS.readFile path
-  let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
-  pure . singleton (fromText key) $ toJSON genesisHash
+-- | Set the genesis hashes in a node configuration file to the hashes of the
+-- genesis files it names, adding the missing ones and replacing the ones that
+-- are out of date.
+refreshConfigurationHashes :: ()
+  => HasCallStack
+  => MonadIO m
+  => FilePath -- ^ The configuration file
+  -> m ()
+refreshConfigurationHashes configFile = GHC.withFrozenCallStack . liftIOAnnotated $ do
+  (document, _warnings) <- readConfigurationDocument configFile
+  refreshGenesisHashes (takeDirectory configFile) document >>= writeConfigurationDocument configFile
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
@@ -183,7 +142,7 @@ createSPOGenesisAndFiles
         }
   alonzoGenesis' <- getDefaultAlonzoGenesis
   let conwayGenesis' = Defaults.defaultConwayGenesis
-      dijkstraGenesis' = dijkstraGenesisDefaults
+      dijkstraGenesis' = Defaults.defaultDijkstraGenesis
 
   (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
      <- resolveOnChainParams onChainParams

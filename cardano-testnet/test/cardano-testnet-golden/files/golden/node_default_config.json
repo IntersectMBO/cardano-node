@@ -21,5 +21,75 @@
     "TestConwayHardForkAtEpoch": 0,
     "TestMaryHardForkAtEpoch": 0,
     "TestShelleyHardForkAtEpoch": 0,
-    "TraceOptions": {}
+    "TraceOptionMetricsPrefix": "cardano.node.metrics.",
+    "TraceOptions": {
+        "": {
+            "backends": [
+                "Stdout MachineFormat",
+                "EKGBackend"
+            ],
+            "detail": "DNormal",
+            "severity": "Notice"
+        },
+        "BlockFetch.Client.CompletedBlockFetch": {
+            "maxFrequency": 2
+        },
+        "BlockFetch.Decision": {
+            "severity": "Silence"
+        },
+        "ChainDB": {
+            "severity": "Info"
+        },
+        "ChainDB.AddBlockEvent.AddBlockValidation": {
+            "severity": "Silence"
+        },
+        "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+            "maxFrequency": 2
+        },
+        "ChainDB.AddBlockEvent.AddedBlockToQueue": {
+            "maxFrequency": 2
+        },
+        "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+            "maxFrequency": 2
+        },
+        "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+            "maxFrequency": 2
+        },
+        "ChainSync.Client": {
+            "severity": "Warning"
+        },
+        "Forge.Loop": {
+            "severity": "Info"
+        },
+        "Forge.StateInfo": {
+            "severity": "Info"
+        },
+        "LedgerMetrics": {
+            "severity": "Silence"
+        },
+        "Mempool": {
+            "severity": "Info"
+        },
+        "Net.ConnectionManager.Remote": {
+            "severity": "Info"
+        },
+        "Net.InboundGovernor": {
+            "severity": "Warning"
+        },
+        "Net.InboundGovernor.Remote": {
+            "severity": "Info"
+        },
+        "Net.Mux.Remote": {
+            "severity": "Info"
+        },
+        "Net.PeerSelection": {
+            "severity": "Silence"
+        },
+        "Resources": {
+            "severity": "Silence"
+        },
+        "Startup.DiffusionInit": {
+            "severity": "Info"
+        }
+    }
 }

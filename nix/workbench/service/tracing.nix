@@ -44,7 +44,7 @@ let
       "BlockFetch.Server".severity = "Debug";
       "BlockchainTime".severity = "Notice";
       "ChainDB".severity = "Debug";
-      "ChainDB.LedgerEvent.Flavor.V1.".severity = "Silence";
+      "ChainDB.LedgerEvent.Flavor.V1".severity = "Silence";
       "ChainDB.LedgerEvent.Flavor.V2".severity = "Silence";
       "ChainDB.PerasCertDbEvent".severity = "Silence";
       "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";

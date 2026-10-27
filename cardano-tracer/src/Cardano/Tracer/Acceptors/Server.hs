@@ -13,6 +13,7 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
+import           Ouroboros.Network.ConnectionManager.Types (DataFlow (..))
 import           Ouroboros.Network.Context (ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
@@ -136,6 +137,7 @@ doListenToForwarderLocal snocket address netMagic timeLimits app = do
         (ForwardingVersionData $ NetworkMagic netMagic)
         (\_ -> SomeResponderApplication app)
       )
+      (const Unidirectional)
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
 
 
@@ -168,6 +170,7 @@ doListenToForwarderSocket snocket address netMagic timeLimits app = do
         (ForwardingVersionData $ NetworkMagic netMagic)
         (\_ -> SomeResponderApplication app)
       )
+      (const Unidirectional)
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
 
 

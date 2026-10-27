@@ -16,6 +16,7 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultDijkstraGenesis
   , defaultCommitteeKeyPair
   , defaultCommitteeName
   , defaultCommitteeKeysDir
@@ -82,6 +83,8 @@ import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import           Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
@@ -90,6 +93,7 @@ import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Testnet.Paths
+import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
@@ -195,6 +199,26 @@ defaultConwayGenesis = do
       , cgExtraConfig = SNothing
       }
 
+-- | The Dijkstra genesis from cardano-api, with the PlutusV4 cost model cut down to the
+-- number of parameters that the genesis decoder accepts. cardano-api builds the cost model
+-- from the full parameter list of the current Plutus version, but the ledger requires a
+-- genesis file to carry exactly 'Ledger.costModelInitParamCount' parameters.
+defaultDijkstraGenesis :: DijkstraGenesis
+defaultDijkstraGenesis =
+  DijkstraGenesis
+    { dgUpgradePParams = upgradePParams{udppPlutusV4CostModel = plutusV4CostModel}
+    }
+  where
+    upgradePParams = dgUpgradePParams Api.dijkstraGenesisDefaults
+    plutusV4CostModel =
+      case Ledger.mkCostModel Ledger.PlutusV4 plutusV4Params of
+        Left err -> error $ "defaultDijkstraGenesis: invalid PlutusV4 cost model: " <> show err
+        Right costModel -> costModel
+    plutusV4Params =
+      take (Ledger.costModelInitParamCount Ledger.PlutusV4)
+        . Ledger.getCostModelParams
+        $ udppPlutusV4CostModel upgradePParams
+
 -- | The only era supported by cardano-testnet for the moment.
 -- It's important to keep the era parameterization everywhere, for ease of development
 -- when new eras roll out.
@@ -222,7 +246,6 @@ traceOptionsForwarding =
 defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
-    <> [("TraceOptions", traceOptions)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
@@ -296,8 +319,6 @@ defaultYamlHardforkViaConfig sbe =
                 ]
                 )
 
-  traceOptions = Aeson.Object mempty
-
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
   Aeson.fromList
@@ -326,13 +347,32 @@ defaultYamlConfig =
     , ("RequiresNetworkMagic", "RequiresMagic")
 
     , ("PeerSharing", Aeson.Bool False)
-
-    -- New tracing system: empty map = use all defaults.
-    -- Mandatory: trace-dispatcher's FromJSON parses "TraceOptions" at the root.
-    , ("TraceOptions", Aeson.object mempty)
     ]
+    <> defaultTraceConfig
   where
     genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
+
+-- | The tracing configuration the node uses by default ('defaultCardanoConfig'),
+-- as the tracing keys of a configuration file: @TraceOptions@ and
+-- @TraceOptionMetricsPrefix@.
+--
+-- They are written out because the node fills them in only for a configuration
+-- in the flat format. Given an empty @TraceOptions@ in the @cardano-config@
+-- format, it uses @trace-dispatcher@'s fallback instead: every namespace at
+-- @Notice@, and no metrics prefix.
+--
+-- @trace-dispatcher@ renders a configuration with the keys of its newer format
+-- (@Options@, @MetricsPrefix@); they are renamed to the keys a configuration
+-- file uses.
+defaultTraceConfig :: Aeson.KeyMap Aeson.Value
+defaultTraceConfig =
+  Aeson.fromList
+    [ (fileKey, value)
+    | Aeson.Object rendered <- [toJSON defaultCardanoConfig]
+    , (renderedKey, fileKey) <- [("Options", "TraceOptions"), ("MetricsPrefix", "TraceOptionMetricsPrefix")]
+    , Just value <- [Aeson.lookup renderedKey rendered]
+    , value /= Aeson.Null
+    ]
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined

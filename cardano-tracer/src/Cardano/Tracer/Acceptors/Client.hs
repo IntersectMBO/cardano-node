@@ -12,6 +12,7 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
+import           Ouroboros.Network.ConnectionManager.Types (DataFlow (..))
 import           Ouroboros.Network.Context (MinimalInitiatorContext (..), ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
@@ -129,6 +130,7 @@ doConnectToForwarderLocal snocket address netMagic timeLimits app = do
        (ForwardingVersionData $ NetworkMagic netMagic)
        (const app)
     )
+    (const Unidirectional)
     Nothing
     address
   case done of
@@ -163,6 +165,7 @@ doConnectToForwarderSocket snocket address netMagic timeLimits app = do
        (ForwardingVersionData $ NetworkMagic netMagic)
        (const app)
     )
+    (const Unidirectional)
     Nothing
     address
   case done of

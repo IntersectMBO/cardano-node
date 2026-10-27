@@ -1,5 +1,22 @@
 # ChangeLog
 
+## 2.19 -- Oct 2026
+
+* **Support for `extraConfig.initialFunds.file` genesis injections**, where a
+  Shelley genesis keeps its initial funds in a separate JSON file referenced
+  by `file` plus the Blake2b-256 `hash` of its contents. Previously only the
+  legacy top-level `initialFunds` and the inline
+  `extraConfig.initialFunds.data` were read. Reading, hashing and parsing go
+  through cardano-ledger's `foldInjectionData`, so resolution matches the
+  node's.
+* API changes:
+  * New `genesisWithResolvedInitialFunds` and `getShelleyGenesisDir`.
+  * `genesisInitialFunds`, `genesisInitialFundForKey` and
+    `genesisSecureInitialFund` fail on file injections; run them inside
+    `genesisWithResolvedInitialFunds`.
+  * `getGenesis` and `getGenesisPath` renamed to `getShelleyGenesis` and
+    `getShelleyGenesisPath`; old names kept as deprecated aliases.
+
 ## 2.18 -- Sep 2026
 
 * **New submit mode: dump the transaction stream to disk** instead of

@@ -118,11 +118,6 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
           }
       }
 
-  -- Rehash: the node validates genesis file hashes against configuration.yaml
-  conwayGenesisHash <- getShelleyGenesisHash conwayGenesisFile "ConwayGenesisHash"
-  H.rewriteJsonFile (tempAbsBasePath' </> "configuration.yaml") $
-    \(config :: Aeson.Value) -> config & Aeson._Object %~ (conwayGenesisHash <>)
-
   TestnetRuntime
     { testnetMagic
     , testnetNodes

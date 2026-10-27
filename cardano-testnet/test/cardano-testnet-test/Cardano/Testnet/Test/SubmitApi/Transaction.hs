@@ -120,7 +120,6 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
 
   let submitApiConf = SubmitApiConf
         { tempAbsPath = unTmpAbsPath tempAbsPath
-        , configPath = configurationFile
         , epochSlots = 2
         , sprocket = poolSprocket1
         , maybePort = Nothing

@@ -3,12 +3,16 @@
   inherit (pkgs) cardanoNodePackages lib;
   synthAsserted = cardanoNodePackages.db-synthesizer.passthru.asserted;
 
-  # NixosTest script fns supporting a timeout have a default of 900 seconds.
+  # Budget for the whole test, not per step: the driver kills everything and
+  # fails once it is reached. It covers the vm boot as well as create-env,
+  # synthesis, both analyser passes, truncation and the asserted synthesis, so
+  # it has to absorb runner variance across all of them. Not to be confused
+  # with the 900 second default on script fns that take their own timeout,
+  # which is per call and which nothing here sets.
   #
-  # There is no pre-existing history for chain synthesis, and default
-  # cardano-testnet genesis parameters set epochs to be short and fast, so a 45
-  # second global timeout should be more than sufficient.
-  globalTimeout = 45;
+  # Kept well under the one hour framework default so a hang still surfaces
+  # quickly, which is the only reason to override at all.
+  globalTimeout = 300;
 
   testDir = "testnet";
 in {
@@ -82,6 +86,9 @@ in {
     assert blocks_before > 0, f"No blocks were synthesized: {blocks_before}"
 
     print(machine.succeed("echo Truncate synthesized chain"))
+    # db-truncater only looks for db/leios.{vol,imm}.db when `--leios` is passed
+    # (ouroboros-consensus 5.1.0.1 made that opt-in); the synthesized chain has
+    # no LeiosDb beside it, so the flag is deliberately omitted here.
     print(machine.succeed("db-truncater \
       --db db \
       --truncate-after-block 1 \
