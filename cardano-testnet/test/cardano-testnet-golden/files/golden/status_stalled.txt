@@ -1,0 +1,9 @@
+Network: STALLED - chain is not producing blocks (tip is 83.4s old)
++-------+-------+---------+-------+----------+-----------+---------+
+| NODE  | ROLE  | STATE   | PID   | TIP SLOT | TIP BLOCK | TIP AGE |
++-------+-------+---------+-------+----------+-----------+---------+
+| node1 | spo   | stalled | 12345 | 400      | 20        | 83.4s   |
++-------+-------+---------+-------+----------+-----------+---------+
+| node2 | relay | down    | 12346 | -        | -         | -       |
++-------+-------+---------+-------+----------+-----------+---------+
+node2: Network.Socket.connect: <socket: 23>: does not exist (Connection refused)

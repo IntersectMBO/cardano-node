@@ -33,6 +33,7 @@ tests = pure $ T.testGroup "Golden tests"
   , H.testPropertyNamed "golden_Manifest" (fromString "golden_Manifest") Cardano.Testnet.Test.Golden.Manifest.golden_Manifest
   , H.testPropertyNamed "golden_StatusJson" (fromString "golden_StatusJson") Cardano.Testnet.Test.Golden.Status.golden_StatusJson
   , H.testPropertyNamed "golden_StatusTable" (fromString "golden_StatusTable") Cardano.Testnet.Test.Golden.Status.golden_StatusTable
+  , H.testPropertyNamed "golden_StatusCommand" (fromString "golden_StatusCommand") Cardano.Testnet.Test.Golden.Status.golden_StatusCommand
   ]
 
 ingredients :: [T.Ingredient]
