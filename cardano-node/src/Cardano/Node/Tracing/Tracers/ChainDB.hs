@@ -101,6 +101,8 @@ instance (  LogFormatting (Header blk)
           , InspectLedger blk
           , HasIssuer blk
           , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
+          , Show (PerasCert blk)
+          , Show (PerasError blk)
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
     "ChainDB is not clean. Validating all immutable chunks"
@@ -533,6 +535,7 @@ instance ( LogFormatting (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          , HasIssuer blk
+         , Show (PerasError blk)
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
   forHuman (ChainDB.IgnoreBlockOlderThanImmTip pt) =
     "Ignoring block older than ImmTip: " <> renderRealPointAsPhrase pt
@@ -1201,7 +1204,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 -- -- TraceInitChainSelEvent
 -- --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk, Show (PerasError blk))
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
     forHuman ChainDB.InitialChainSelected{} =
@@ -1284,7 +1287,8 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 instance ( LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
          , ConvertRawHash blk
-         , LogFormatting (RealPoint blk))
+         , LogFormatting (RealPoint blk)
+         , Show (PerasError blk))
          => LogFormatting (ChainDB.TraceValidationEvent blk) where
     forHuman (ChainDB.InvalidBlock err pt) =
         "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
@@ -1682,7 +1686,8 @@ instance MetaTrace (PerasVoteDB.TraceEvent blk) where
   documentFor (Namespace _ ["GarbageCollected"]) = Just "GarbageCollected"
   documentFor _ = Nothing
 
-instance StandardHash blk => LogFormatting (PerasVoteDB.TraceEvent blk) where
+instance Show (PerasCert blk)
+      => LogFormatting (PerasVoteDB.TraceEvent blk) where
   forHuman (PerasVoteDB.AddVote voteId _vote result) =
     "Peras vote " <> Text.pack (show voteId) <> ": " <> Text.pack (show result)
   forHuman (PerasVoteDB.GarbageCollected slotNo) =
@@ -2885,16 +2890,31 @@ instance ( StandardHash blk
 
 
 instance (   LogFormatting (LedgerError blk)
-           , LogFormatting (HeaderError blk))
+           , LogFormatting (HeaderError blk)
+           , Show (PerasError blk))
         => LogFormatting (ExtValidationError blk) where
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
+    forMachine _dtal (ExtValidationErrorPerasEpochContextResolver err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasEpochContextResolver"
+              , "error" .= String (Text.pack $ show err)
+              ]
+    forMachine _dtal (ExtValidationErrorPerasCertInBlock err) =
+      mconcat [ "kind" .= String "ExtValidationErrorPerasCertInBlock"
+              , "error" .= String (Text.pack $ show err)
+              ]
 
     forHuman (ExtValidationErrorLedger err) =  forHuman err
     forHuman (ExtValidationErrorHeader err) =  forHuman err
+    forHuman (ExtValidationErrorPerasEpochContextResolver err) =
+      "Peras epoch context could not be resolved: " <> Text.pack (show err)
+    forHuman (ExtValidationErrorPerasCertInBlock err) =
+      "Invalid Peras certificate in block: " <> Text.pack (show err)
 
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err
+    asMetrics (ExtValidationErrorPerasEpochContextResolver _) = []
+    asMetrics (ExtValidationErrorPerasCertInBlock _) = []
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where
