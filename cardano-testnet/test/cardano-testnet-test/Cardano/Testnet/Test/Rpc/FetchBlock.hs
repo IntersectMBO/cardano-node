@@ -61,7 +61,7 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
   conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
 
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       sbe = convert era
       eraName = eraToString sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
@@ -306,9 +306,9 @@ hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbs
     witnessSet ^. U5c.redeemers H.=== []
 
   -- An "anyone can mint" policy: a native script requiring an empty set of conditions
-  let mintScript :: Exp.SimpleScript (Exp.LedgerEra Exp.ConwayEra)
+  let mintScript :: Exp.SimpleScript (Exp.LedgerEra DijkstraEra)
       mintScript = Exp.SimpleScript $ Shelley.RequireAllOf mempty
-      mintPolicyId = PolicyId . fromShelleyScriptHash $ Exp.hashSimpleScript @Exp.ConwayEra mintScript
+      mintPolicyId = PolicyId . fromShelleyScriptHash $ Exp.hashSimpleScript @DijkstraEra mintScript
       mintAssetName = UnsafeAssetName "RpcTestToken"
       mintQuantity = 1000
 
