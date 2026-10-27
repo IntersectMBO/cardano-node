@@ -51,7 +51,7 @@
             "description": "One entry per node, in the order of the manifest. Empty for \"no-testnet\".",
             "items": {
                 "type": "object",
-                "required": ["name", "role", "pid", "pidAlive", "state", "tip"],
+                "required": ["name", "role", "pid", "pidAlive", "state", "tip", "error"],
                 "additionalProperties": false,
                 "properties": {
                     "name": {
@@ -87,6 +87,13 @@
                         "oneOf": [
                             { "type": "null" },
                             { "$ref": "#/$defs/tip" }
+                        ]
+                    },
+                    "error": {
+                        "description": "Why the node did not answer (an error, or no answer in time), or null when it answered.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "type": "string" }
                         ]
                     }
                 }

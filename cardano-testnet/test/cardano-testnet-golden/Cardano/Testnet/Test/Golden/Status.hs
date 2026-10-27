@@ -39,10 +39,12 @@ sampleReport = StatusReport
   , reportStatus             = NetworkDegraded
   , reportBestTip            = Just freshTip
   , reportNodes              =
-      [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip)
-      , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled (Just oldTip)
+      [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip) Nothing
+      , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled (Just oldTip) Nothing
       , NodeProbeResult "node3" RoleRelay Nothing Nothing NodeUnreachable Nothing
+          (Just "no answer within 5s")
       , NodeProbeResult "node4" RoleRelay (Just 12348) (Just False) NodeDown Nothing
+          (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
       ]
   , reportProblemExplanation = Nothing
   }

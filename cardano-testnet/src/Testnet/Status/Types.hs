@@ -88,7 +88,7 @@ instance ToJSON NodeState where
 data NodeAnswer
   = AnsweredTip !TipInfo -- ^ it has blocks; this is the newest
   | AnsweredNoBlocks     -- ^ it answered, but it has no blocks yet
-  | NoAnswer             -- ^ it refused, failed, or did not answer in time
+  | NoAnswer !String     -- ^ it refused, failed, or did not answer in time: why
   deriving (Eq, Show)
 
 -- | A node's chain tip.
@@ -116,6 +116,7 @@ data NodeProbeResult = NodeProbeResult
   , probePidIsAlive  :: !(Maybe Bool)     -- ^ 'Nothing' when unknown: no pid, or Windows
   , probeNodeState   :: !NodeState
   , probeNodeTipInfo :: !(Maybe TipInfo)  -- ^ 'Just' when the node answered with a tip
+  , probeError       :: !(Maybe String)   -- ^ 'Just' why, when the node did not answer
   } deriving (Eq, Show)
 
 instance ToJSON NodeProbeResult where
@@ -127,6 +128,7 @@ instance ToJSON NodeProbeResult where
     , "pidAlive" .= probePidIsAlive n
     , "state"    .= probeNodeState n
     , "tip"      .= probeNodeTipInfo n
+    , "error"    .= probeError n
     ]
 
 -- | Output of status command

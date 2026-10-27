@@ -42,9 +42,9 @@ unit_node_state = H.propertyOnce $ do
   -- The answer decides: a node that answers is never down, whatever its pid says.
   calcNodeState limit (Just False) (AnsweredTip (tipOfAge 1)) === NodeOk
   -- No answer: the pid tells down from unreachable.
-  calcNodeState limit (Just False) NoAnswer === NodeDown
-  calcNodeState limit (Just True) NoAnswer === NodeUnreachable
-  calcNodeState limit Nothing NoAnswer === NodeUnreachable
+  calcNodeState limit (Just False) (NoAnswer "refused") === NodeDown
+  calcNodeState limit (Just True) (NoAnswer "refused") === NodeUnreachable
+  calcNodeState limit Nothing (NoAnswer "refused") === NodeUnreachable
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Network status/"'@

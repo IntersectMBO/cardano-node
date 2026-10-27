@@ -18,6 +18,7 @@ import           Data.Default.Class (def)
 import           Data.Either (isLeft)
 import           Data.Foldable (toList)
 import           Data.List (find)
+import           Data.Maybe (isJust)
 import           System.FilePath ((</>))
 import qualified System.Process as Process
 
@@ -31,6 +32,8 @@ import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
+import           RIO (tryAny)
+
 -- | Integration test: a fresh testnet is RUNNING. After one relay is
 -- killed, it is DEGRADED, and the killed relay is down.
 --
@@ -41,7 +44,7 @@ hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaul
   conf <- mkConf tmpDir
   TestnetRuntime{testnetNodes} <- createAndRunTestnet def def conf
 
-  running <- H.evalEither =<< H.evalIO (checkStatus tmpDir 5)
+  running <- H.evalIO $ checkStatus tmpDir 5
   reportStatus running === NetworkRunning
   map probeNodeState (reportNodes running) === map (const NodeOk) (toList testnetNodes)
 
@@ -51,10 +54,11 @@ hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaul
     -- Wait for the process, so that its pid is gone and status can tell "down".
     void . Process.waitForProcess $ nodeProcessHandle relay
 
-  degraded <- H.evalEither =<< H.evalIO (checkStatus tmpDir 5)
+  degraded <- H.evalIO $ checkStatus tmpDir 5
   reportStatus degraded === NetworkDegraded
   killed <- H.evalMaybe $ find ((== nodeName relay) . probeNodeName) (reportNodes degraded)
   probeNodeState killed === NodeDown
+  H.assert . isJust $ probeError killed
 
 -- | 'checkStatus' without a running testnet: a directory without a manifest
 -- is NO-TESTNET, with a hint about why, and a broken manifest is an error.
@@ -64,21 +68,21 @@ hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaul
 hprop_status_no_testnet :: Property
 hprop_status_no_testnet = H.propertyOnce . H.workspace "status-no-testnet" $ \dir -> do
   let missingDir = dir </> "missing"
-  missing <- H.evalEither =<< H.evalIO (checkStatus missingDir 1)
+  missing <- H.evalIO $ checkStatus missingDir 1
   reportStatus missing === NoTestnet
   reportProblemExplanation missing === Just ("The directory " <> missingDir <> " does not exist.")
 
-  notTestnet <- H.evalEither =<< H.evalIO (checkStatus dir 1)
+  notTestnet <- H.evalIO $ checkStatus dir 1
   reportStatus notTestnet === NoTestnet
   reportProblemExplanation notTestnet === Just (dir <> " is not a testnet output directory.")
 
   -- The genesis files are written before the manifest, while the testnet starts.
   H.writeFile (dir </> defaultGenesisFilepath ShelleyEra) "{}"
-  starting <- H.evalEither =<< H.evalIO (checkStatus dir 1)
+  starting <- H.evalIO $ checkStatus dir 1
   reportStatus starting === NoTestnet
   reportProblemExplanation starting
     === Just "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
 
   H.writeFile (dir </> defaultManifestFile) "{"
-  broken <- H.evalIO $ checkStatus dir 1
+  broken <- H.evalIO . tryAny $ checkStatus dir 1
   H.assertWith broken isLeft

@@ -10,6 +10,7 @@
     "exitCode": 0,
     "nodes": [
         {
+            "error": null,
             "name": "node1",
             "pid": 12345,
             "pidAlive": true,
@@ -23,6 +24,7 @@
             }
         },
         {
+            "error": null,
             "name": "node2",
             "pid": 12346,
             "pidAlive": true,
@@ -36,6 +38,7 @@
             }
         },
         {
+            "error": "no answer within 5s",
             "name": "node3",
             "pid": null,
             "pidAlive": null,
@@ -44,6 +47,7 @@
             "tip": null
         },
         {
+            "error": "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)",
             "name": "node4",
             "pid": 12348,
             "pidAlive": false,

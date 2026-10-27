@@ -10,3 +10,5 @@ Network: DEGRADED - chain is producing blocks, but 3 of 4 nodes are not ok
 +-------+-------+-------------+-------+----------+-----------+---------+
 | node4 | relay | down        | 12348 | -        | -         | -       |
 +-------+-------+-------------+-------+----------+-----------+---------+
+node3: no answer within 5s
+node4: Network.Socket.connect: <socket: 23>: does not exist (Connection refused)

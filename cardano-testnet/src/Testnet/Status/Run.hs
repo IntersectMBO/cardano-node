@@ -15,26 +15,22 @@ import           Cardano.Api (BlockNo (..), CardanoEra (..), ChainTip (..),
 
 import qualified Cardano.Ledger.Shelley.API as SL
 import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultManifestFile)
-import           Cardano.Prelude (ExceptT (..), ExitCode (..), MonadIO (..), Nat, NonEmpty,
-                   SomeException, Word32, runExceptT, toList, transpose, try)
+import           Cardano.Prelude (Nat, NonEmpty, Word32, toList, transpose)
 
 import           Prelude
 
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Either (fromRight)
-import           Data.Either.Extra (mapLeft)
 import           Data.Foldable (maximumBy)
 import           Data.List.NonEmpty (nonEmpty)
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ord (comparing)
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
+import           GHC.Stack (HasCallStack)
 import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (exitWith)
 import           System.FilePath ((</>))
-import qualified System.IO as IO
-import           System.IO.Error (ioeGetErrorString, tryIOError)
 import           System.Timeout (timeout)
 import           Text.Printf (printf)
 
@@ -48,6 +44,7 @@ import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (.
                    TipInfo (..), exitCodeForStatus)
 import           Testnet.Types (sgSlotLength, sgSystemStart, testnetEpochSlots)
 
+import           RIO (displayException, throwString, tryAny)
 import           UnliftIO.Async (forConcurrently)
 
 -- | Run the @status@ command: print the report (a table, or JSON) on stdout
@@ -61,15 +58,7 @@ runCheckStatusOptions
         , statusCheckTimeout = timeoutSeconds
         , outputFormat = format
         } = do
-        eStatus <- checkStatus (fromMaybe defaultTestnetDir dir) timeoutSeconds
-        status <-
-            either
-                ( \err -> do
-                    IO.hPutStrLn IO.stderr $ "cardano-testnet status: " <> err
-                    exitWith $ ExitFailure 1
-                )
-                pure
-                eStatus
+        status <- checkStatus (fromMaybe defaultTestnetDir dir) timeoutSeconds
         case format of
             OutputFormatText -> putStr $ renderStatusReportHumanReadable status
             OutputFormatJson -> do LBS.putStr $ encodePretty status
@@ -78,28 +67,25 @@ runCheckStatusOptions
 
 {- | Check the testnet in the given output directory. Each node gets the
 given number of seconds to answer, and all nodes are asked at the same
-time. 'Left' means the check itself failed: the manifest, or the shelley
-genesis it points to, cannot be read.
+time. It throws when the check itself fails: when the manifest, or the
+shelley genesis it points to, cannot be read.
 -}
-checkStatus :: FilePath -> Nat -> IO (Either String StatusReport)
+checkStatus :: HasCallStack => FilePath -> Nat -> IO StatusReport
 checkStatus outputDir timeoutSeconds = do
     let manifestFile = outputDir </> defaultManifestFile
     hasManifest <- doesFileExist manifestFile
     if not hasManifest
-        then Right <$> noTestnetReport outputDir
-        else runExceptT $ do
+        then noTestnetReport outputDir
+        else do
             manifest@Manifest{manifestPaths = ManifestPaths{mpGenesisFiles = ManifestGenesisFiles{mgfShelley = shelleyGenesisFile}}} <-
                 readJsonFile manifestFile
             genesis <- readJsonFile $ outputDir </> shelleyGenesisFile
-            liftIO $ checkNodes outputDir timeoutSeconds manifest genesis
+            checkNodes outputDir timeoutSeconds manifest genesis
   where
-    readJsonFile :: (FromJSON a) => String -> ExceptT String IO a
+    readJsonFile :: (HasCallStack, FromJSON a) => String -> IO a
     readJsonFile file =
-        ExceptT $
-            either
-                (\err -> Left $ "cannot read " <> file <> ": " <> ioeGetErrorString err)
-                (mapLeft (\e -> "cannot decode " <> file <> ": " <> e))
-                <$> tryIOError (eitherDecodeFileStrict' file)
+        either (\e -> throwString $ "cannot decode " <> file <> ": " <> e) pure
+            =<< eitherDecodeFileStrict' file
 
 checkNodes :: FilePath -> Nat -> Manifest -> ShelleyGenesis -> IO StatusReport
 checkNodes outputDir timeoutSeconds manifest@(Manifest{manifestNetwork = ManifestNetwork{mnMagic = magic}}) genesis = do
@@ -161,20 +147,19 @@ probeNode
                 , probeNodeTipInfo = case answer of
                     AnsweredTip tip -> Just tip
                     AnsweredNoBlocks -> Nothing
-                    NoAnswer -> Nothing
+                    NoAnswer _ -> Nothing
+                , probeError = case answer of
+                    NoAnswer reason -> Just reason
+                    _ -> Nothing
                 }
       where
         askTip :: IO NodeAnswer
         askTip = do
             -- Any failure (no socket, refused, handshake error) counts as no answer.
-            result <-
-                fromRight Nothing
-                    <$> ( try $ timeout (fromIntegral (timeoutSeconds * 1_000_000)) (getLocalChainTip connectInfo) ::
-                            IO (Either SomeException (Maybe ChainTip))
-                        )
+            result <- tryAny $ timeout (fromIntegral (timeoutSeconds * 1_000_000)) (getLocalChainTip connectInfo)
             answeredAt <- getCurrentTime
             pure $ case result of
-                Just (ChainTip slot hash blockNo) ->
+                Right (Just (ChainTip slot hash blockNo)) ->
                     AnsweredTip
                         TipInfo
                             { tipSlot = slot
@@ -182,8 +167,9 @@ probeNode
                             , tipHash = hash
                             , tipAge = answeredAt `diffUTCTime` slotStart slot
                             }
-                Just ChainTipAtGenesis -> AnsweredNoBlocks
-                Nothing -> NoAnswer
+                Right (Just ChainTipAtGenesis) -> AnsweredNoBlocks
+                Right Nothing -> NoAnswer $ "no answer within " <> show timeoutSeconds <> "s"
+                Left e -> NoAnswer $ displayException e
 
         connectInfo :: LocalNodeConnectInfo
         connectInfo =
@@ -215,7 +201,7 @@ calcNodeState limit _pidAlive (AnsweredTip tip)
     | tipAge tip <= limit = NodeOk
     | otherwise = NodeStalled
 calcNodeState _limit _pidAlive AnsweredNoBlocks = NodeStalled
-calcNodeState _limit pidAlive NoAnswer
+calcNodeState _limit pidAlive (NoAnswer _)
     | pidAlive == Just False = NodeDown
     | otherwise = NodeUnreachable
 
@@ -256,7 +242,7 @@ renderStatusReportHumanReadable
         , reportOutputDir = outputDir
         , reportProblemExplanation = problemExplanation
         } =
-        unlines $ ("Network: " <> summary status) : details
+        unlines $ ("Network: " <> summary status) : details <> errors
       where
         notOk = length $ filter ((/= NodeOk) . probeNodeState) nodes
 
@@ -334,6 +320,12 @@ renderStatusReportHumanReadable
                                 } <-
                                 nodes
                           ]
+
+        errors :: [String]
+        errors =
+            [ nodeName <> ": " <> err
+            | NodeProbeResult{probeNodeName = nodeName, probeError = Just err} <- nodes
+            ]
 
 -- | Render an array of strings as a table, where each string in the output list is a line.
 renderTable :: [[String]] -> [String]

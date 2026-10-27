@@ -447,7 +447,8 @@ before nodes start.
 
 `cardano-testnet status --json` prints the health of a testnet as a single
 JSON object: the state of the network, the exit code of the command, the
-freshest tip, and the state and tip of every node. The exit code is 0 while
+freshest tip, and the state and tip of every node, with the error of a node
+that did not answer. The exit code is 0 while
 the chain is producing blocks, even when some nodes are not healthy. A script
 that needs every node to be healthy can check the `status` field:
 
