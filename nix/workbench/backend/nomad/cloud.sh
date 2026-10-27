@@ -922,8 +922,10 @@ deploy-genesis-nomadcloud() {
     # Byron/Shelley/Alonzo/Conway/DijkstraGenesisFile.
         -name "genesis.byron.json"
     -o  -name "genesis.shelley.json"
+    -o  -name "genesis.shelley.*.json"
     -o  -name "genesis.alonzo.json"
     -o  -name "genesis.conway.json"
+    -o  -name "genesis.conway.*.json"
     -o  -name "genesis.dijkstra.json"
     # Per-pool runtime keys read by service/nodes.nix.
     -o  -path "*/genesis/pools-keys/pool*/opcert.cert"
