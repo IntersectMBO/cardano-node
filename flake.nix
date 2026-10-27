@@ -66,7 +66,7 @@
     # Bump the tag and then run: nix flake lock --update-input mithril.
     # Changing the tag alone only relocks mithril itself, leaving its
     # transitive pins on an old release.
-    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2630.1-hotfix";
+    mithril.url = "github:IntersectMBO/mithril?ref=refs/tags/2642.0";
   };
 
   outputs = {
