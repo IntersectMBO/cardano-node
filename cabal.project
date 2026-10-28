@@ -150,12 +150,14 @@ if impl(ghc >= 9.14)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- A/B test: ouroboros-network-2.0.0.0 plus karknu/txsub-bounded-sweep
+-- A/B test: ouroboros-network-2.0.0.0 plus karknu/txsub-bounded-sweep and karknu/mux_counters
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: efba9e48ac4397256057e6588eeff377975e4538
-  subdir: ouroboros-network
+  tag: a4e6bd6c27b7220e40c124ed2773a0fc3191f394
+  subdir:
+    network-mux
+    ouroboros-network
 
 -- A/B test: ouroboros-consensus-5.2.0.0 plus karknu/5.2.0.0-txsub-bounded-sweep (follows the tx-submission fetch tiers)
 source-repository-package

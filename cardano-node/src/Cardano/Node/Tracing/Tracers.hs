@@ -711,6 +711,11 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       ["Net", "DNS"]
     configureTracers configReflection trConfig [dtDnsTr]
 
+    !dtMuxCountersTr  <- mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Mux", "Counters"]
+    configureTracers configReflection trConfig [dtMuxCountersTr]
+
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer = mkTracer $
            traceWith dtMuxTr
@@ -722,6 +727,8 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            traceWith dtHandshakeTracer
        , Diffusion.dtLocalMuxTracer = mkTracer $
            traceWith dtLocalMuxTr
+       , Diffusion.dtMuxCountersTracer = mkTracer $
+           traceWith dtMuxCountersTr
        , Diffusion.dtLocalChannelTracer = mkTracer $
            traceWith dtLocalChannelTracer
        , Diffusion.dtLocalBearerTracer = mkTracer $
