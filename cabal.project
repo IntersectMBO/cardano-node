@@ -156,3 +156,9 @@ source-repository-package
   location: https://github.com/IntersectMBO/ouroboros-network
   tag: efba9e48ac4397256057e6588eeff377975e4538
   subdir: ouroboros-network
+
+-- A/B test: ouroboros-consensus-5.2.0.0 plus karknu/5.2.0.0-txsub-bounded-sweep (follows the tx-submission fetch tiers)
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: ea69338506254c69213c4ef67732a544ab83e9dd
