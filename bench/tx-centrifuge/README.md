@@ -225,12 +225,43 @@ These parameters define the **transaction profile** for a workload:
 - `inputs_per_tx` / `outputs_per_tx`: Controls the transaction structure (size and complexity).
 - `fee`: Fixed Lovelace fee per transaction.
 - `metadata_bytes` (optional, default `0`): Bytes of filler metadata per transaction, split into chunks of at most 64 bytes. CBOR headers and the auxiliary data hash add overhead beyond this size. Use this to increase transaction size without changing the number or value of outputs.
+- `tx_size` (optional): **Minimum full signed CBOR transaction size in bytes**, including inputs, outputs, all witnesses and metadata. Adds the smallest filler payload that reaches the target. Actual size may be slightly larger because of metadata/CBOR overhead; naturally larger transactions retain their size. Mutually exclusive with `metadata_bytes`: omit that field entirely when using `tx_size`, even if it was `0`.
 - `recycle` (optional): Controls when output UTxOs are returned to the input queue. See [Resource Recycling](#resource-recycling) for the three strategies (`on_build`, `on_pull`, `on_confirm`). When omitted, outputs are **not recycled** — the generator consumes initial funds and eventually exhausts them.
+
+For comparable transaction sizes with firehose's `--tx-size 4096`, use:
+
+```json
+"builder": {
+  "type": "value",
+  "params": {
+    "inputs_per_tx": 1,
+    "outputs_per_tx": 1,
+    "fee": 1000000,
+    "tx_size": 4096
+  }
+}
+```
+
+Both size modes use the same deterministic, input-derived SHA-512 filler under
+metadata label `0`. With `tx_size`, sizing is repeated for every transaction,
+including changes in witness count after recycling. Introducing metadata for
+the first time adds an auxiliary-data hash and wrapper; a target just above
+the unpadded size can therefore overshoot by roughly 40 bytes. Larger targets
+typically overshoot only at CBOR length boundaries.
+
+With `tx_size` enabled, startup queries the first N2C observer for the current
+era's size limit and linear fee parameters. The final signed size and fixed
+fee are checked before the transaction enters the pipeline. The example fee
+is illustrative: increase `fee` as needed. Size-mode build failures stop the
+run rather than repeatedly dropping inputs. Restart after protocol-parameter
+changes to refresh these checks. `Builder.NewTx` traces include
+`serializedSize`, the measured full signed CBOR byte count.
 
 ## Usage
 
 ```bash
 tx-centrifuge config.json
+tx-centrifuge --help
 ```
 
 ## Detailed Examples

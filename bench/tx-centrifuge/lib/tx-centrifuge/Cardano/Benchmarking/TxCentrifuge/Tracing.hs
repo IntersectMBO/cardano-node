@@ -35,6 +35,7 @@ import Data.Aeson (Value (String), (.=), object)
 -- cardano-api --
 -----------------
 import Cardano.Api qualified as Api
+import Data.ByteString qualified as BS
 ----------------
 -- containers --
 ----------------
@@ -242,13 +243,14 @@ data BuilderTrace
     -- * 'String': builder name (the workload name, see 'Runtime.builderName').
     -- * 'Api.TxId': Blake2b-256 hash identifying the new transaction.
     --   Obtain via @'Api.getTxId' ('Api.getTxBody' signedTx)@.
+    -- * 'Int': full signed CBOR byte count, reported as serializedSize.
     -- * @['Fund.Fund']@ (inputs): funds consumed by this transaction. Each
     --   fund's 'Fund.fundTxIn' is a 'Api.TxIn' pointing to an existing UTxO
     --   on the ledger.
     -- * @['Fund.Fund']@ (outputs): funds produced by this transaction. Each
     --   fund's 'Fund.fundTxIn' is derived from the new 'Api.TxId' and a
     --   sequential 'Api.TxIx' index (0, 1, 2, ...).
-    BuilderNewTx !String !Api.TxId [Fund.Fund] [Fund.Fund]
+    BuilderNewTx !String !Api.TxId !Int [Fund.Fund] [Fund.Fund]
     -- | Funds were recycled back to the workload's input queue.
     --
     -- * 'String': builder name (the workload name, see 'Runtime.builderName').
@@ -276,6 +278,7 @@ mkBuilderNewTx :: String               -- ^ Builder name.
                -> [Fund.Fund]          -- ^ Output funds (produced).
                -> BuilderTrace
 mkBuilderNewTx name tx = BuilderNewTx name (Api.getTxId (Api.getTxBody tx))
+  (BS.length (Api.serialiseToCBOR tx))
 
 -- | Build a 'BuilderRecycle' trace.
 mkBuilderRecycle :: String      -- ^ Builder name.
@@ -320,9 +323,10 @@ mkBuilderQueueDepth = BuilderQueueDepth
 -- NewTx [workload-name] \<txid\> inputs=[\<txid\>#\<ix\>,...] outputs=[\<txid\>#\<ix\>,...]
 -- @
 instance Logging.LogFormatting BuilderTrace where
-  forMachine dtal (BuilderNewTx name txId inputs outputs) = mconcat
+  forMachine dtal (BuilderNewTx name txId serializedSize inputs outputs) = mconcat
     [ "builder" .= name
     , "txId"    .= String (Api.serialiseToRawBytesHexText txId)
+    , "serializedSize" .= serializedSize
     , "inputs"  .= map (renderFund dtal) inputs
     , "outputs" .= map (renderFund dtal) outputs
     ]
@@ -343,9 +347,10 @@ instance Logging.LogFormatting BuilderTrace where
     , "dropped"           .= statsDropped           s
     , "submitted"         .= statsSubmitted         s
     ]
-  forHuman (BuilderNewTx name txId inputs outputs) =
+  forHuman (BuilderNewTx name txId serializedSize inputs outputs) =
        "NewTx [" <> Text.pack name <> "] "
     <> Api.serialiseToRawBytesHexText txId
+    <> " serializedSize=" <> Text.pack (show serializedSize)
     <> " inputs=["  <> renderFundTxIns inputs  <> "]"
     <> " outputs=[" <> renderFundTxIns outputs <> "]"
   forHuman (BuilderRecycle name txId isOrphan funds) =

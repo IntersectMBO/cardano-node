@@ -112,6 +112,7 @@ import Cardano.Benchmarking.PullFiction.WorkloadRunner (runWorkload)
 -------------------
 -- tx-centrifuge --
 -------------------
+import Cardano.Benchmarking.TxCentrifuge.ValueBuilder (ValueBuilder(..), parseValueBuilder)
 import Cardano.Benchmarking.TxCentrifuge.Supervision (superviseTarget)
 import Cardano.Benchmarking.TxCentrifuge.Block qualified as Block
 import Cardano.Benchmarking.TxCentrifuge.NodeToClient qualified as N2C
@@ -138,7 +139,7 @@ main = do
   ----------
 
   ( validated, codecConfig, networkId, networkMagic, tracers
-   , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs
+   , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs, txLimits
    ) <- loadConfig
 
   -- Callbacks.
@@ -234,13 +235,20 @@ main = do
             Runtime.bhInputsPerBatch = inputsPerTx builder
             -- Build and sign.
           , Runtime.bhBuildPayload   = \inputFunds -> do
-              let buildTxAns = TxAssembly.buildTx
-                                 signingAddr signingKey
-                                 inputFunds (outputsPerTx builder)
-                                 (L.Coin (fee builder))
-                                 (metadataBytes builder)
+              let buildTxAns = case (txSize builder, txLimits) of
+                    (Nothing, _) -> TxAssembly.buildTx
+                      signingAddr signingKey inputFunds (outputsPerTx builder)
+                      (L.Coin (fee builder)) (metadataBytes builder)
+                    (Just size, Just limits) -> TxAssembly.buildTxSized
+                      signingAddr signingKey inputFunds (outputsPerTx builder)
+                      (L.Coin (fee builder)) size limits
+                    (Just _, Nothing) -> Left "tx_size requires startup protocol parameters"
               case buildTxAns of
                 Left err -> do
+                  -- Size/fee failures are configuration failures: stop instead
+                  -- of silently draining all funds through repeated drops.
+                  when (txSize builder /= Nothing) $
+                    die $ "[" ++ builderName ++ "] " ++ err
                   -- Drop the inputs instead of dying. Most common cause is
                   -- dust: a UTxO whose value <= fee cannot produce a valid
                   -- (non-zero) change output, so the tx cannot be built.
@@ -372,44 +380,9 @@ main = do
 -- Builder interpretation.
 --------------------------------------------------------------------------------
 
--- | Interpreted "value" builder configuration with defaults applied.
-data ValueBuilder
-  = ValueBuilder
-    { inputsPerTx   :: !Natural
-    , outputsPerTx  :: !Natural
-    , fee           :: !Integer
-    , metadataBytes :: !Natural
-    }
-
--- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
--- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1,
--- @metadata_bytes@ = 0) and validates invariants.
+-- | Decode and validate before allocating a builder pipeline.
 interpretBuilder :: Raw.Builder -> IO ValueBuilder
-interpretBuilder raw = case Raw.builderType raw of
-  "value" ->
-    case Aeson.Types.parseEither parseValueParams (Raw.builderParams raw) of
-      Left err -> die $ "Builder params error: " ++ err
-      Right (maybeInputs, maybeOutputs, rawFee, maybeMetadata) -> do
-        let nInputs   = fromMaybe 1 maybeInputs
-            nOutputs  = fromMaybe 1 maybeOutputs
-            nMetadata = fromMaybe 0 maybeMetadata
-        when (nInputs  == 0) $ die "Builder: inputs_per_tx must be >= 1"
-        when (nOutputs == 0) $ die "Builder: outputs_per_tx must be >= 1"
-        when (rawFee   <  0) $ die "Builder: fee must be >= 0"
-        pure ValueBuilder
-          { inputsPerTx       = nInputs
-          , outputsPerTx      = nOutputs
-          , fee               = rawFee
-          , metadataBytes     = nMetadata
-          }
-  other -> die $
-    "Builder: unknown type " ++ show other ++ ", expected \"value\""
-  where
-    parseValueParams = Aeson.withObject "ValueParams" $ \o ->
-      (,,,) <$> o .:? "inputs_per_tx"
-            <*> o .:? "outputs_per_tx"
-            <*> o .:  "fee"
-            <*> o .:? "metadata_bytes"
+interpretBuilder = either (die . ("Builder params error: " ++)) pure . parseValueBuilder
 
 --------------------------------------------------------------------------------
 -- Observer interpretation.
@@ -813,6 +786,26 @@ preflightExit runtime validated = do
 -- CLI argument parsing
 --------------------------------------------------------------------------------
 
+usage :: String
+usage = unlines
+  [ "Usage: tx-centrifuge <config.json> [--preflight]"
+  , "       tx-centrifuge --help"
+  , ""
+  , "Transaction shape is configured in builder.params (also per workload):"
+  , "  inputs_per_tx / outputs_per_tx  Input/output counts (default 1)."
+  , "  fee                            Fixed fee in lovelace (required)."
+  , "  metadata_bytes                 Raw filler bytes (default 0)."
+  , "  tx_size                        Minimum full signed CBOR size in bytes."
+  , "                                 Actual size may be slightly larger due to"
+  , "                                 metadata/CBOR overhead; naturally larger"
+  , "                                 transactions retain their size."
+  , "  tx_size and metadata_bytes are mutually exclusive; omit one."
+  , "  With tx_size, node size/fee limits are checked using startup parameters."
+  , "  The fixed fee must cover the result; size/fee build failures stop the run."
+  , ""
+  , "--preflight  Validate startup and exit before connecting target workers."
+  ]
+
 -- | Accept either:
 --
 -- > tx-centrifuge <config.json>
@@ -865,12 +858,15 @@ loadConfig
           -- | Cooldown seconds before workers connect (top-level config
           -- field @cooldown_seconds@; default 0).
         , Int
+          -- | Current fee/size limits, only queried for tx_size builders.
+        , Maybe TxAssembly.TxLimits
         )
 loadConfig = do
   args <- getArgs
+  when ("--help" `elem` args || "-h" `elem` args) $ putStrLn usage >> exitSuccess
   (configFile, preflight) <- case parseArgs args of
     Just r  -> pure r
-    Nothing -> die "Usage: tx-centrifuge <config.json> [--preflight]"
+    Nothing -> die usage
 
   hPutStrLn stderr "=== Tx Centrifuge ==="
   when preflight $ hPutStrLn stderr "(preflight mode)"
@@ -896,6 +892,11 @@ loadConfig = do
   raw <- case Aeson.fromJSON rawValue of
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
+  -- Reject invalid or conflicting builder options before reading keys or
+  -- beginning the potentially expensive initial UTxO discovery.
+  let rawBuilders = maybe [] (:[]) (Raw.maybeTopLevelBuilder raw)
+        ++ mapMaybe Raw.maybeBuilder (maybe [] Map.elems (Raw.maybeWorkloads raw))
+  builders <- mapM interpretBuilder rawBuilders
 
   -- Load node configuration and create consensus protocol.
   -- NetworkId/NetworkMagic are derived here; they are needed before the UTxO
@@ -906,6 +907,17 @@ loadConfig = do
   codecConfig  <- protocolToCodecConfig protocol
   networkId    <- protocolToNetworkId protocol
   networkMagic <- protocolToNetworkMagic protocol
+
+  txLimits <- if any ((/= Nothing) . txSize) builders
+    then do
+      socketPath <- findFirstNodeToClientSocket raw
+      hPutStrLn stderr "Querying protocol parameters for tx_size builders"
+      limits <- UTxOQuery.queryTxLimits socketPath networkId >>= either die pure
+      forM_ builders $ \builder -> forM_ (txSize builder) $ \size ->
+        when (size > fromIntegral (TxAssembly.maxTxSize limits)) $
+          die "Builder: tx_size exceeds the node's maxTxSize"
+      pure (Just limits)
+    else pure Nothing
 
   -- Load operator-supplied recycle signing key.
   hPutStrLn stderr $ "Loading signing key from: " ++ signingKeyPath
@@ -924,7 +936,7 @@ loadConfig = do
   tracers <- Tracing.setupTracers configFile
 
   pure ( validated, codecConfig, networkId, networkMagic, tracers
-       , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs
+       , signingKeyPrefix, signingKeyBase, preflight, cooldownSecs, txLimits
        )
 
 --------------------------------------------------------------------------------
