@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -37,7 +38,9 @@ import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Leios.Types (LeiosVote (..))
 import           Ouroboros.Consensus.Leios.VoteState (TraceLeiosVoteState (..))
+import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Trace (TraceLeiosNotifyClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
@@ -450,7 +453,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith perasVoteForgingTr
       , Consensus.leiosFetchServerTracer = nullTracer
       , Consensus.leiosDbTracer = nullTracer
-      , Consensus.leiosNotifyClientTracer = nullTracer
+      , Consensus.leiosNotifyClientTracer = mkTracer traceLeiosNotifyClientToStderr
       , Consensus.leiosVoteStateTracer = mkTracer traceLeiosVoteStateToStderr
       }
 
@@ -458,9 +461,26 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 -- certificates and missed quorums go to stderr, for the acceptance demo.
 traceLeiosVoteStateToStderr :: TraceLeiosVoteState -> IO ()
 traceLeiosVoteStateToStderr = \case
-  TraceLeiosVoteVerified{} -> pure ()
+  TraceLeiosVoteAdding{} -> pure ()
+  TraceLeiosVoteAwaitingWindow vote early ->
+    hPutStrLn stderr ("TraceLeiosVoteAwaitingWindow " <> showVote vote <> " " <> show early)
+  TraceLeiosVoteValidated{} -> pure ()
   TraceLeiosCertified rbHash _cert -> hPutStrLn stderr ("TraceLeiosCertified " <> show rbHash)
   ev -> hPutStrLn stderr (show ev)
+
+-- | The votes the node adds, and those it has too late, go to stderr too, for
+-- the acceptance demo.
+traceLeiosNotifyClientToStderr ::
+  Show peer => TraceLabelPeer peer TraceLeiosNotifyClientEvent -> IO ()
+traceLeiosNotifyClientToStderr (TraceLabelPeer peer ev) = case ev of
+  TraceLeiosNotifyClientVoteAdded vote ->
+    hPutStrLn stderr ("TraceLeiosNotifyClientVoteAdded " <> showVote vote <> " from " <> show peer)
+  TraceLeiosNotifyClientVoteArrivedTooLate vote ->
+    hPutStrLn stderr ("TraceLeiosNotifyClientVoteArrivedTooLate " <> showVote vote <> " from " <> show peer)
+
+showVote :: LeiosVote -> String
+showVote MkLeiosVote{voteAnnouncingRbHash, voteSeatId} =
+  show voteAnnouncingRbHash <> " seat " <> show voteSeatId
 
 mkNodeToClientTracers :: forall blk.
      Consensus.RunNode blk
