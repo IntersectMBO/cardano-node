@@ -12,6 +12,7 @@ import qualified Test.Cardano.Config.Mainnet
 import qualified Test.Cardano.Node.FilePermissions
 #endif
 import qualified Test.Cardano.Node.Json
+import qualified Test.Cardano.Node.LeaderCredentials
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Node.TopLevel
 import qualified Test.Cardano.Tracing.ForgingStats
@@ -34,6 +35,7 @@ main = do
 #endif
       [ Test.Cardano.Config.Mainnet.tests
       , Test.Cardano.Node.Json.tests
+      , Test.Cardano.Node.LeaderCredentials.tests
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Node.TopLevel.tests
       , Test.Cardano.Tracing.ForgingStats.tests
