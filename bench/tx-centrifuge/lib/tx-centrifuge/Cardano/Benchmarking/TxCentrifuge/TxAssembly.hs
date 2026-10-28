@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -5,6 +6,8 @@
 
 module Cardano.Benchmarking.TxCentrifuge.TxAssembly
   ( buildTx
+  , buildTxSized
+  , TxLimits(..)
   ) where
 
 --------------------------------------------------------------------------------
@@ -15,7 +18,9 @@ module Cardano.Benchmarking.TxCentrifuge.TxAssembly
 import Data.Function ((&))
 import Data.List (nubBy)
 import Data.Map.Strict qualified as Map
-import Data.Word (Word64)
+import Data.Word (Word32)
+import Lens.Micro ((^.))
+import Cardano.Ledger.Api qualified as Ledger
 import Numeric.Natural (Natural)
 ------------------
 -- bytestring --
@@ -67,7 +72,104 @@ buildTx
   -- | Bytes of filler metadata to attach.
   -> Natural
   -> Either String (Api.Tx Api.ConwayEra, [Fund])
-buildTx destAddr outKey inFunds numOutputs fee metadataBytes
+buildTx destAddr outKey inFunds numOutputs fee metadataBytes =
+  buildTxWithMetadata destAddr outKey inFunds numOutputs fee (fillerMetadata inFunds metadataBytes)
+
+-- | Parameters needed by these script-free, ADA-only transactions. Extracted
+-- from the node's current era, which can be newer than the Conway wire format.
+data TxLimits = TxLimits
+  { maxTxSize :: !Word32
+  , minFeePerByte :: !Integer
+  , minFeeConstant :: !Integer
+  } deriving (Eq, Show)
+
+-- | Minimum full signed CBOR size. Choose the smallest filler payload that
+-- reaches it; the first metadata entry and CBOR headers can overshoot. A
+-- naturally larger transaction is preserved. The fixed fee is never raised.
+buildTxSized
+  :: Api.AddressInEra Api.ConwayEra
+  -> Api.SigningKey Api.PaymentKey
+  -> [Fund]
+  -> Natural
+  -> L.Coin
+  -> Natural
+  -> TxLimits
+  -> Either String (Api.Tx Api.ConwayEra, [Fund])
+buildTxSized destAddr outKey inFunds numOutputs fee target limits
+  | target == 0 = Left "tx_size must be >= 1"
+  | target > fromIntegral (maxTxSize limits) = Left "tx_size exceeds the node's maxTxSize"
+  | otherwise = do
+      base <- build 0
+      result <- if signedSize base >= requested
+        then Right base
+        else do
+          -- The first metadata entry introduces the auxiliary-data hash and
+          -- era wrapper. Measure that overhead rather than assuming its size.
+          first <- build 1
+          if signedSize first >= requested
+            then Right first
+            else do
+              let sizeWith n = signedSize first + metadataSize n - metadataSize 1
+                  search lo hi
+                    | lo == hi = lo
+                    | sizeWith mid >= requested = search lo mid
+                    | otherwise = search (mid + 1) hi
+                   where mid = lo + (hi - lo) `div` 2
+              build (search 1 target)
+      let actual = signedSize result
+          Api.ShelleyTx _ ledgerTx = fst result
+          ledgerSize = ledgerTx ^. Ledger.sizeTxF
+          requiredFee = minFeeConstant limits + minFeePerByte limits * fromIntegral ledgerSize
+          L.Coin actualFee = fee
+      if actual < requested
+        then Left "buildTx: signed transaction did not reach tx_size"
+        else if actual > fromIntegral (maxTxSize limits) || ledgerSize > maxTxSize limits
+          then Left "buildTx: padded transaction exceeds the node's maxTxSize"
+          else if actualFee < requiredFee
+            then Left $ "buildTx: fee is too small; requires at least " ++ show requiredFee ++ " lovelace"
+            else Right result
+ where
+  requested = fromIntegral target :: Int
+  metadataFor = fillerMetadata inFunds
+  build n = buildTxWithMetadata destAddr outKey inFunds numOutputs fee (metadataFor n)
+  signedSize = BS.length . Api.serialiseToCBOR . fst
+  metadataSize n = case metadataFor n of
+    Api.TxMetadataNone -> 0
+    Api.TxMetadataInEra _ metadata -> BS.length (Api.serialiseToCBOR metadata)
+
+-- | The same deterministic payload is used by raw-byte and total-size modes.
+-- Hash all input references and an unbounded chunk counter, sharing hashes
+-- between sizing candidates. Each metadata byte string is at most 64 bytes.
+fillerMetadata :: [Fund] -> Natural -> Api.TxMetadataInEra Api.ConwayEra
+fillerMetadata inFunds = metadataFor
+ where
+  metadataFor 0 = Api.TxMetadataNone
+  metadataFor n = Api.TxMetadataInEra Api.ShelleyBasedEraConway $
+    Api.TxMetadata (Map.singleton 0 (Api.TxMetaList (chunks n hashes)))
+  seed = BSL.toStrict $ Serialise.serialise
+    [ (Api.serialiseToRawBytes txid, ix)
+    | Fund{fundTxIn = Api.TxIn txid (Api.TxIx ix)} <- inFunds
+    ]
+  hashes =
+    [ Hash.hashToBytes $ Hash.hashWith @SHA512 id $
+        BSL.toStrict $ Serialise.serialise (seed, i)
+    | i <- [0 :: Natural ..]
+    ]
+  chunks 0 _ = []
+  chunks n (h : hs) =
+    let count = min 64 n
+    in Api.TxMetaBytes (BS.take (fromIntegral count) h) : chunks (n - count) hs
+  chunks _ [] = error "fillerMetadata: exhausted infinite hash stream"
+
+buildTxWithMetadata
+  :: Api.AddressInEra Api.ConwayEra
+  -> Api.SigningKey Api.PaymentKey
+  -> [Fund]
+  -> Natural
+  -> L.Coin
+  -> Api.TxMetadataInEra Api.ConwayEra
+  -> Either String (Api.Tx Api.ConwayEra, [Fund])
+buildTxWithMetadata destAddr outKey inFunds numOutputs fee txMetadata
   | null inFunds     = Left "buildTx: no input funds"
   | numOutputs  == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace  < 0 = Left "buildTx: fee must be >= 0"
@@ -105,53 +207,6 @@ buildTx destAddr outKey inFunds numOutputs fee metadataBytes
                          ]
           in Right (signedTx, outFunds)
   where
-
-    -- The ledger caps each metadata byte string at 64 bytes (enforced in the
-    -- decoder since Allegra), so a payload of any size has to be split into a
-    -- list of chunks that size. Each chunk costs its 64 bytes plus a 2 byte
-    -- CBOR header, so the transaction grows by about 3% more than the figure
-    -- asked for, plus a few bytes for the list and map headers and 32 for the
-    -- auxiliary data hash in the body.
-    metadataChunkSize :: Int
-    metadataChunkSize = 64
-
-    -- No CIP assigns meaning to this label; the payload is filler.
-    metadataLabel :: Word64
-    metadataLabel = 0
-
-    txMetadata :: Api.TxMetadataInEra Api.ConwayEra
-    txMetadata
-      | metadataBytes == 0 = Api.TxMetadataNone
-      | otherwise =
-          Api.TxMetadataInEra
-            (Api.shelleyBasedEra @Api.ConwayEra)
-            ( Api.TxMetadata
-                (Map.singleton metadataLabel (Api.TxMetaList metadataChunks))
-            )
-
-    -- Include every input's transaction id AND output index so sibling UTxOs
-    -- produce different filler. CBOR delimits the seed and arbitrary-precision
-    -- chunk counter unambiguously. SHA512 supplies a full 64-byte chunk with
-    -- no short repeating pattern, while identical inputs remain reproducible.
-    fillerSeed :: BS.ByteString
-    fillerSeed = BSL.toStrict $ Serialise.serialise
-      [ (Api.serialiseToRawBytes txid, ix)
-      | Fund{fundTxIn = Api.TxIn txid (Api.TxIx ix)} <- inFunds
-      ]
-
-    chunkBytes :: Natural -> Int -> BS.ByteString
-    chunkBytes i n = BS.take n $ Hash.hashToBytes $
-      Hash.hashWith @SHA512 id $
-        BSL.toStrict $ Serialise.serialise (fillerSeed, i)
-
-    metadataChunks :: [Api.TxMetadataValue]
-    metadataChunks = go 0 metadataBytes
-     where
-      go _ 0 = []
-      go i remaining =
-        let n = min (fromIntegral metadataChunkSize) remaining
-        in Api.TxMetaBytes (chunkBytes i (fromIntegral n))
-             : go (i + 1) (remaining - n)
 
     totalIn :: Integer
     totalIn = sum (map fundValue inFunds)
