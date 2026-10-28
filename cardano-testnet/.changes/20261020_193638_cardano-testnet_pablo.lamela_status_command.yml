@@ -1,0 +1,10 @@
+description: Added `status` command that checks the status of a testnet created with
+  `cardano-testnet`. The output can be either in human readable format or JSON (if
+  the `--json` flag is specified). The library also exports the `Testnet.Status.Types`,
+  `Testnet.Status.Run` and `Testnet.Status.Parsers` modules, `isProcessAlive` from
+  `Testnet.Signal`, `testnetEpochSlots` from `Testnet.Types` and `defaultTestnetDir`
+  from `Testnet.Start.Types`.
+kind:
+- feature
+pr: 6741
+project: cardano-testnet

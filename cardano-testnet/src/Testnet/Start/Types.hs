@@ -47,6 +47,7 @@ module Testnet.Start.Types
   , NodeConfigurationYaml
   , mkConf
   , mkConfigAbs
+  , defaultTestnetDir
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
@@ -360,6 +361,11 @@ mkConfig tempAbsPath' =
     { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     , updateTimestamps = DontUpdateTimestamps
     }
+
+-- | The directory of the testnet when none is given: the @cardano@ command
+-- creates it, and the @status@ command looks into it.
+defaultTestnetDir :: FilePath
+defaultTestnetDir = "./testnet"
 
 -- | Create a 'Conf' from an absolute path, with updating time stamps disabled.
 mkConfigAbs :: FilePath -> IO Conf

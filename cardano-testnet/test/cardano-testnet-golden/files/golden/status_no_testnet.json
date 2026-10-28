@@ -1,0 +1,10 @@
+{
+    "bestTip": null,
+    "chainProducingBlocks": false,
+    "checkedAt": "2026-01-01T00:01:00Z",
+    "exitCode": 5,
+    "noTestnetReason": "dir-missing",
+    "nodes": [],
+    "schemaVersion": 1,
+    "status": "no-testnet"
+}

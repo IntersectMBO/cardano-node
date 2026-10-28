@@ -8,6 +8,7 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Golden.Config
 import qualified Cardano.Testnet.Test.Golden.Help
 import qualified Cardano.Testnet.Test.Golden.Manifest
+import qualified Cardano.Testnet.Test.Golden.Status
 
 import           Prelude
 
@@ -30,6 +31,9 @@ tests = pure $ T.testGroup "Golden tests"
   , ignoreOnWindows "golden_HelpReadme" Cardano.Testnet.Test.Golden.Help.golden_HelpReadme
   , H.testPropertyNamed "golden_VersionCmd" (fromString "golden_VersionCmd") Cardano.Testnet.Test.Golden.Help.golden_VersionCmd
   , H.testPropertyNamed "golden_Manifest" (fromString "golden_Manifest") Cardano.Testnet.Test.Golden.Manifest.golden_Manifest
+  , H.testPropertyNamed "golden_StatusJson" (fromString "golden_StatusJson") Cardano.Testnet.Test.Golden.Status.golden_StatusJson
+  , H.testPropertyNamed "golden_StatusTable" (fromString "golden_StatusTable") Cardano.Testnet.Test.Golden.Status.golden_StatusTable
+  , H.testPropertyNamed "golden_StatusCommand" (fromString "golden_StatusCommand") Cardano.Testnet.Test.Golden.Status.golden_StatusCommand
   ]
 
 ingredients :: [T.Ingredient]

@@ -53,7 +53,7 @@ export CARDANO_NODE=path to your executable
 -->
 <!-- checked-help: cardano-testnet --help -->
 ```text
-Usage: cardano-testnet (cardano | create-env | version | help)
+Usage: cardano-testnet (cardano | create-env | status | version | help)
 
 Available options:
   -h,--help                Show this help text
@@ -61,6 +61,7 @@ Available options:
 Available commands:
   cardano                  Start a testnet and keep it running until stopped
   create-env               Create a sandbox for Cardano testnet
+  status                   Check the status of a running testnet
   version                  Show cardano-testnet version
   help                     Show cardano-testnet help
 ```
@@ -441,6 +442,36 @@ a manifest always matches the schema of its own version exactly.
 readers never see a partial file. It is written once and never modified.
 A pre-existing manifest from an earlier run in the same directory is deleted
 before nodes start.
+
+### Status output
+
+`cardano-testnet status --json` prints the health of a testnet as a single
+JSON object: the state of the network, the exit code of the command, why
+there is no testnet (when there is none), the
+freshest tip, and the state and tip of every node, with the error of a node
+that did not answer. The exit code is 0 while
+the chain is producing blocks, even when some nodes are not healthy. A script
+that needs every node to be healthy can check the `status` field:
+
+```bash
+[ "$(cardano-testnet status --testnet-dir testnet --json | jq -r '.status')" = running ]
+```
+
+The exit code, for the table and for `--json`:
+
+| Exit code |                          Meaning                          |
+|-----------|-----------------------------------------------------------|
+|     0     | `running` or `degraded`: the chain is producing blocks    |
+|     1     | the command failed, for example on an unreadable manifest |
+|     3     | `stalled`: some nodes answer, but none has a fresh tip    |
+|     4     | `stopped`: no node answers                                |
+|     5     | `no-testnet`: there is no manifest in the directory       |
+
+**Stability promise.** Like the manifest, the output has a strict JSON Schema
+(`cardano-testnet/schemas/status.schema.json`, draft 2020-12, unknown fields
+are an error) that lives in the repository and is the contract. Any change to
+the output shape, including new fields, bumps the schema version, so the
+output always matches the schema of its own version exactly.
 
 ## Supported versions
 

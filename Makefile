@@ -42,6 +42,12 @@ testnet-manifest-validate: ## Validate manifest golden file (and optionally MANI
 	  cardano-testnet/test/cardano-testnet-golden/files/golden/manifest.json
 	$(if $(MANIFEST),nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/manifest.schema.json $(MANIFEST),)
 
+testnet-status-validate: ## Validate status golden files (and optionally STATUS=path) against their schema
+	nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/status.schema.json \
+	  cardano-testnet/test/cardano-testnet-golden/files/golden/status.json \
+	  cardano-testnet/test/cardano-testnet-golden/files/golden/status_no_testnet.json
+	$(if $(STATUS),nix run .#check-jsonschema -- --schemafile cardano-testnet/schemas/status.schema.json $(STATUS),)
+
 ###
 ### Workbench:  cluster shells
 ###
@@ -84,6 +90,6 @@ cls:
 .PHONY: help lint hlint host-hlint haddock-hoogle stylish-haskell cabal-hashes cli node \
         trace-documentation trace-schemas-regenerate trace-schemas-overrides-check \
         trace-schemas-overrides-coverage trace-schemas-validate \
-        testnet-manifest-validate \
+        testnet-manifest-validate testnet-status-validate \
         workbench-ci ci ci-report ci-targets \
         clean full-clean cls
