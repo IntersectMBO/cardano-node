@@ -417,8 +417,8 @@ closeHandlesOnError handles action =
 -- | Wait for a process to exit by polling it. A thread blocked in 'IO.waitForProcess' cannot always
 -- be cancelled: a cancel that arrives as the wait starts can be lost, and 'race' then waits until the
 -- process exits.
-pollForProcessExit :: IO.ProcessHandle -> IO ExitCode
-pollForProcessExit hProcess =
+pollForProcessExit :: (HasCallStack, MonadIO m) => IO.ProcessHandle -> m ExitCode
+pollForProcessExit hProcess = liftIO $
   IO.getProcessExitCode hProcess >>= \case
     Just exitCode -> pure exitCode
     Nothing -> threadDelay 100_000 >> pollForProcessExit hProcess
