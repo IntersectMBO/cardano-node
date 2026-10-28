@@ -42,6 +42,7 @@ library
                   , cardano-strict-containers
                   , containers
                   , microlens
+                  , serialise
 
 executable tx-firehose
   import:           project-config
@@ -57,9 +58,27 @@ executable tx-firehose
                   , cardano-ledger-api
                   , cardano-ledger-core
                   , containers
+                  , microlens
                   , optparse-applicative
                   , ouroboros-network:protocols
                   , text
                   , time
                   , transformers
+                  , tx-firehose
+
+test-suite tx-firehose-test
+  import:           project-config
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:    test
+  main-is:          Main.hs
+  build-depends:    base
+                  , bytestring
+                  , cardano-api
+                  , cardano-ledger-api
+                  , cardano-ledger-core
+                  , cardano-strict-containers
+                  , containers
+                  , microlens
+                  , tasty
+                  , tasty-hunit
                   , tx-firehose

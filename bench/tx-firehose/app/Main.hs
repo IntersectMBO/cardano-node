@@ -31,7 +31,7 @@ import Cardano.Api
   , PaymentCredential (PaymentCredentialByKey)
   , QueryInEra (QueryInShelleyBasedEra)
   , QueryInMode (QueryCurrentEra, QueryInEra)
-  , QueryInShelleyBasedEra (QueryUTxO)
+  , QueryInShelleyBasedEra (QueryProtocolParameters, QueryUTxO)
   , QueryUTxOFilter (QueryUTxOByAddress)
   , ShelleyBasedEra
   , SigningKey
@@ -51,10 +51,11 @@ import Cardano.Benchmarking.TxFirehose.Color
   , parseColor
   )
 import Cardano.Benchmarking.TxFirehose.Tx
-  ( BuiltTx (BuiltTx, btxId, btxInputs, btxOutputs, btxSigned, btxSize)
+  ( BuiltTx (BuiltTx, btxId, btxInputs, btxOutputs, btxSerializedSize, btxSigned, btxSize)
   , Fund (Fund, fundTxIn, fundValue)
   )
 import Cardano.Benchmarking.TxFirehose.Tx qualified as Tx
+import Cardano.Ledger.Api (PParams, ppMaxTxSizeL)
 import Cardano.Ledger.Api.Tx.In (TxIn)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Control.Applicative (optional)
@@ -73,14 +74,15 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601Show)
+import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
 import Options.Applicative qualified as Opt
 import Ouroboros.Network.Protocol.LocalTxSubmission.Client
   ( LocalTxClientStIdle (SendMsgDone, SendMsgSubmitTx)
   , LocalTxSubmissionClient (LocalTxSubmissionClient)
   )
-import System.Exit (die)
 import System.Environment (lookupEnv)
+import System.Exit (die)
 import System.IO
   ( BufferMode (LineBuffering)
   , hIsTerminalDevice
@@ -106,6 +108,7 @@ data Options = Options
   , optFee :: !Integer
   , optMaxConsecutiveErrors :: !Int
   , optColor :: !(Maybe Color)
+  , optTxSize :: !(Maybe Natural)
   }
 
 parseOptions :: IO Options
@@ -194,6 +197,16 @@ optionsParser =
                 \Default: derive one from the signing key."
           )
       )
+    <*> optional
+      ( Opt.option
+          Opt.auto
+          ( Opt.long "tx-size"
+              <> Opt.metavar "BYTES"
+              <> Opt.help
+                "Pad to at least BYTES of signed transaction CBOR using metadata. \
+                \CBOR headers may round up slightly; --fee must cover the result."
+          )
+      )
 
 main :: IO ()
 main = do
@@ -254,6 +267,8 @@ validateOptions opts = do
   when (optTps opts <= 0) $ die "--tps must be > 0"
   when (optInputsPerTx opts == Just 0) $ die "--inputs-per-tx must be >= 1"
   when (optOutputsPerTx opts == 0) $ die "--outputs-per-tx must be >= 1"
+  when (optFee opts < 0) $ die "--fee must be >= 0"
+  when (optTxSize opts == Just 0) $ die "--tx-size must be >= 1"
   when (optMaxConsecutiveErrors opts <= 0) $
     die "--max-consecutive-errors must be >= 1"
 
@@ -279,6 +294,16 @@ runFirehoseInEra ::
   Color ->
   IO ()
 runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color = do
+  padding <-
+    traverse
+      ( \target -> do
+          pp <- queryParametersInEra sbe connInfo
+          when (target > fromIntegral (pp ^. ppMaxTxSizeL)) $
+            die "--tx-size exceeds the node's maxTxSize"
+          pure (target, pp)
+      )
+      (optTxSize opts)
+
   trace "TxFirehose.Startup.Query" "Info" $
     Aeson.object ["address" .= T.pack (show addrAny), "era" .= show sbe]
 
@@ -298,7 +323,7 @@ runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color = do
       { localChainSyncClient = NoLocalChainSyncClient
       , localStateQueryClient = Nothing
       , localTxSubmissionClient =
-          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds color)
+          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds color padding)
       , localTxMonitoringClient = Nothing
       }
  where
@@ -318,8 +343,9 @@ mkFirehoseClient ::
   SigningKey Api.PaymentKey ->
   Map TxIn Integer ->
   Color ->
+  Maybe (Natural, PParams (Api.ShelleyLedgerEra era)) ->
   LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
-mkFirehoseClient sbe opts addr sk initialFunds color =
+mkFirehoseClient sbe opts addr sk initialFunds color padding =
   LocalTxSubmissionClient (step initialFunds 0)
  where
   !period = round (1_000_000 / optTps opts) :: Int
@@ -345,7 +371,7 @@ mkFirehoseClient sbe opts addr sk initialFunds color =
         -- exit and let the supervisor restart with a fresh query.
         pure (SendMsgDone ())
     | otherwise =
-        case Tx.buildTx
+        case build
           sbe
           addr
           sk
@@ -362,6 +388,10 @@ mkFirehoseClient sbe opts addr sk initialFunds color =
           Right built ->
             pure (submitStep funds funds' consec built)
    where
+    build = case padding of
+      Nothing -> Tx.buildTx
+      Just (size, pp) -> \era address key fs outputs fee colour ->
+        Tx.buildTxSized era address key fs outputs fee colour size pp
     -- Fixed input count: build exactly that shape, whatever it does to
     -- the UTxO set. Otherwise take the @target@ largest funds, which both
     -- reaches the steady state from any starting shape and keeps it there:
@@ -387,7 +417,7 @@ mkFirehoseClient sbe opts addr sk initialFunds color =
     fundsOnFail
     fundsOnSuccess
     !consec
-    BuiltTx{btxSigned, btxId, btxSize, btxInputs, btxOutputs} =
+    BuiltTx{btxSigned, btxId, btxSize, btxSerializedSize, btxInputs, btxOutputs} =
       SendMsgSubmitTx (TxInMode sbe btxSigned) $ \result -> do
         threadDelay period
         case result of
@@ -396,6 +426,7 @@ mkFirehoseClient sbe opts addr sk initialFunds color =
               Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
+                , "serializedSize" .= btxSerializedSize
                 , "inputs" .= btxInputs
                 , "outputs" .= length btxOutputs
                 ]
@@ -407,6 +438,7 @@ mkFirehoseClient sbe opts addr sk initialFunds color =
               Aeson.object $
                 [ "txId" .= btxId
                 , "size" .= btxSize
+                , "serializedSize" .= btxSerializedSize
                 , "reason" .= T.pack (show reason)
                 ]
                   ++ colorField
@@ -581,6 +613,22 @@ queryCurrentEra connInfo = do
   case res of
     Left af -> die $ "tx-firehose: failed to acquire tip: " ++ show af
     Right ce -> pure ce
+
+-- | Cache the current size/fee parameters for this run. Only needed when
+-- padding is enabled; a restart refreshes them after a parameter update.
+queryParametersInEra ::
+  ShelleyBasedEra era ->
+  LocalNodeConnectInfo ->
+  IO (PParams (Api.ShelleyLedgerEra era))
+queryParametersInEra sbe connInfo = do
+  res <-
+    runExceptT $
+      Api.queryNodeLocalState connInfo VolatileTip $
+        QueryInEra (QueryInShelleyBasedEra sbe QueryProtocolParameters)
+  case res of
+    Left af -> die $ "tx-firehose: failed to acquire tip for protocol parameters: " ++ show af
+    Right (Left mismatch) -> die $ "tx-firehose: era mismatch on parameter query: " ++ show mismatch
+    Right (Right pp) -> pure pp
 
 -- | Query the current UTxO at our derived address in whatever era the
 -- node reports. Converts each 'Api.TxIn' to the ledger 'TxIn' so the
