@@ -149,3 +149,10 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- A/B test: ouroboros-network-2.0.0.0 plus karknu/txsub-bounded-sweep
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: efba9e48ac4397256057e6588eeff377975e4538
+  subdir: ouroboros-network
