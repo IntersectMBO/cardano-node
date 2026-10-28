@@ -41,9 +41,23 @@ generatorTests duration = Tasty.testGroup "TPS"
             (isJust failure == shouldFail)
       | (count, shouldFail) <- [(12, False), (13, False), (14, True), (0, True)]
       ]
+  , Tasty.testGroup "Aggregate sampling boundaries"
+      [ HUnit.testCase (show total ++ " tokens") $ do
+          let expected = Map.fromList [(show i, 0.2) | i <- [1..50 :: Int]]
+              result = Harness.TestResult 60 (Map.singleton "aggregate" total)
+              fails scope = isJust (Harness.checkTpsTolerance scope 0.05 expected result)
+          HUnit.assertBool "shared limiter keeps aggregate tolerance"
+            (fails Harness.SharedLimiter == sharedFails)
+          HUnit.assertBool "independent limiters allow one boundary token each"
+            (fails Harness.PerTargetLimiters == perTargetFails)
+      | (total, sharedFails, perTargetFails) <-
+          [(0, True, True), (600, False, False), (630, False, False),
+           (632, True, False), (650, True, False), (651, True, True), (700, True, True)]
+      ]
     -- A "shared" global rate limiter.
   ,
     tpsTestGroup "Shared-limiter mode (50 targets, 10 TPS)"
+      Harness.SharedLimiter
       "data/config-shared-10.json"
       (Map.fromList
         [ (Harness.targetName "default" (Harness.nodeName i), 0.2)
@@ -54,6 +68,7 @@ generatorTests duration = Tasty.testGroup "TPS"
       0.05
       0.15
   , tpsTestGroup "Shared-limiter mode (50 targets, 100k TPS)"
+      Harness.SharedLimiter
       "data/config-shared-100k.json"
       (Map.fromList
         [ (Harness.targetName "default" (Harness.nodeName i), 2_000)
@@ -65,6 +80,7 @@ generatorTests duration = Tasty.testGroup "TPS"
       0.15
     -- A "per_target" scoped rate limiter. Lower per-target tolerance.
   , tpsTestGroup "Per-target-limiter mode (50 targets, 0.2 TPS/target)"
+      Harness.PerTargetLimiters
       "data/config-per-target-0_2.json"
       (Map.fromList
         [ (Harness.targetName "default" (Harness.nodeName i), 0.20)
@@ -75,6 +91,7 @@ generatorTests duration = Tasty.testGroup "TPS"
       0.05
       0.05
   , tpsTestGroup "Per-target-limiter mode (50 targets, 2k TPS/target)"
+      Harness.PerTargetLimiters
       "data/config-per-target-2k.json"
       (Map.fromList
         [(Harness.targetName "default" (Harness.nodeName i), 2_000)
@@ -88,13 +105,14 @@ generatorTests duration = Tasty.testGroup "TPS"
 
 tpsTestGroup
   :: String                -- ^ Test group label (duration is appended).
+  -> Harness.LimiterScope
   -> String                -- ^ Data-file config name.
   -> Map.Map String Double -- ^ Expected TPS per target, keyed by name.
   -> Double                -- ^ Test duration in seconds.
   -> Double                -- ^ Global TPS tolerance.
   -> Double                -- ^ Per-target fairness tolerance.
   -> Tasty.TestTree
-tpsTestGroup label configName expectedMap duration globalTol fairnessTol =
+tpsTestGroup label scope configName expectedMap duration globalTol fairnessTol =
   Tasty.withResource
     (do path <- Paths.getDataFileName configName
         Harness.runTpsTest path duration
@@ -119,7 +137,7 @@ tpsTestGroup label configName expectedMap duration globalTol fairnessTol =
             ) $ do
               result <- getResult
               let metrics = Harness.formatMetrics duration expectedMap result
-              case Harness.checkTpsTolerance globalTol expectedMap result of
+              case Harness.checkTpsTolerance scope globalTol expectedMap result of
                 Nothing  -> pure metrics
                 Just err -> HUnit.assertFailure
                     (err ++ "\n" ++ metrics)

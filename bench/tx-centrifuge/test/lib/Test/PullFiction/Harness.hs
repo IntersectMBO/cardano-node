@@ -22,6 +22,7 @@ module Test.PullFiction.Harness
   , formatDuration
     -- * Assertions (pure)
   , checkElapsedTolerance
+  , LimiterScope(..)
   , checkTpsTolerance
   , checkTargetFairness
   ) where
@@ -459,14 +460,20 @@ checkElapsedTolerance tolerance cfgDuration result
     actual = elapsedSeconds result
     pctErr = (actual - cfgDuration) / cfgDuration * 100
 
--- | Check that actual TPS is within the given relative tolerance of configured
--- TPS. Returns 'Nothing' on success, or 'Just' an error message on failure.
+-- | Scope of the limiters in a homogeneous TPS test configuration.
+data LimiterScope = SharedLimiter | PerTargetLimiters
+
+-- | Check the aggregate token count, rounding the tolerance interval once
+-- per independent limiter. Each limiter can emit a token at the sampling
+-- boundary: 50 independent 0.2 TPS limiters may produce 650 tokens in 60s,
+-- whereas one shared 10 TPS limiter must retain its tighter aggregate bound.
 checkTpsTolerance
-  :: Double                 -- ^ Tolerance (e.g. 0.05 for 5%).
+  :: LimiterScope
+  -> Double                 -- ^ Tolerance (e.g. 0.05 for 5%).
   -> Map.Map String Double  -- ^ Expected TPS per target.
   -> TestResult -> Maybe String
-checkTpsTolerance tolerance expectedTps result
-  | abs pctErr / 100 <= tolerance = Nothing
+checkTpsTolerance scope tolerance expectedTps result
+  | totalTokens >= lowerBound && totalTokens <= upperBound = Nothing
   | otherwise = Just $
       "actual " ++ show (round actualTps :: Int) ++ " TPS ("
       ++ (if pctErr >= 0 then "+" else "") ++ show (round pctErr :: Int)
@@ -474,6 +481,11 @@ checkTpsTolerance tolerance expectedTps result
   where
     totalTokens = sum (Map.elems (targetCounts result))
     cfgTps      = sum (Map.elems expectedTps)
+    limiterRates = case scope of
+      SharedLimiter -> [cfgTps]
+      PerTargetLimiters -> Map.elems expectedTps
+    lowerBound = sum [floor (rate * elapsedSeconds result * (1 - tolerance)) | rate <- limiterRates]
+    upperBound = sum [ceiling (rate * elapsedSeconds result * (1 + tolerance)) | rate <- limiterRates]
     actualTps   = fromIntegral totalTokens / elapsedSeconds result
     pctErr      = (actualTps - cfgTps) / cfgTps * 100
 
