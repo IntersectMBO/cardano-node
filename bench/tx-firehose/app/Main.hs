@@ -203,8 +203,9 @@ optionsParser =
           ( Opt.long "tx-size"
               <> Opt.metavar "BYTES"
               <> Opt.help
-                "Pad to at least BYTES of signed transaction CBOR using metadata. \
-                \CBOR headers may round up slightly; --fee must cover the result."
+                "Minimum signed transaction CBOR size in BYTES, padded with metadata. \
+                \Actual size may be slightly larger due to CBOR headers; naturally \
+                \larger transactions keep their size. --fee must cover the result."
           )
       )
 
