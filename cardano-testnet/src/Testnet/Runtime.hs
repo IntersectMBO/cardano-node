@@ -50,10 +50,10 @@ import qualified GHC.Stack as GHC
 import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
+import           System.Exit (ExitCode)
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
-import           System.Process (waitForProcess)
 import           System.Timeout (timeout)
 
 import           Testnet.Filepath
@@ -68,7 +68,7 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 
-import           RIO (race, runRIO)
+import           RIO (race, runRIO, threadDelay)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -194,7 +194,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin nodeCmd = GHC.withFrozenCallS
     -- Wait for socket to be created and check for process to not exit
     res <- liftIOAnnotated $
       race
-        (waitForProcess hProcess)
+        (pollForProcessExit hProcess)
         ( Ping.waitForSprocket
             120 -- timeout
             0.2 -- check interval
@@ -413,6 +413,15 @@ closeHandlesOnError handles action =
   catchE action $ \e -> do
     liftIOAnnotated $ mapM_ IO.hClose handles
     throwE e
+
+-- | Wait for a process to exit by polling it. A thread blocked in 'IO.waitForProcess' cannot always
+-- be cancelled: a cancel that arrives as the wait starts can be lost, and 'race' then waits until the
+-- process exits.
+pollForProcessExit :: IO.ProcessHandle -> IO ExitCode
+pollForProcessExit hProcess =
+  IO.getProcessExitCode hProcess >>= \case
+    Just exitCode -> pure exitCode
+    Nothing -> threadDelay 100_000 >> pollForProcessExit hProcess
 
 -- Sometimes even when we close the files manually, the operating system still holds the lock for some
 -- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of

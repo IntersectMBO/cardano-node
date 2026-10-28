@@ -1,0 +1,5 @@
+description: Starting a testnet can no longer hang forever while waiting for a node, as `startNode` polls the node process with `getProcessExitCode` and no longer cancels a thread blocked in `waitForProcess`.
+kind:
+- bugfix
+pr: 6750
+project: cardano-testnet
