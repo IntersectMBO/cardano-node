@@ -40,8 +40,9 @@ import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.Leios.Types (LeiosVote (..))
 import           Ouroboros.Consensus.Leios.VoteState (TraceLeiosVoteState (..))
-import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Trace (TraceLeiosNotifyClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
+import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Trace
+                   (TraceLeiosNotifyClientEvent (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
@@ -584,6 +585,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["Peras", "Vote", "Remote"]
     configureTracers configReflection trConfig [txPerasVoteDiffusion]
 
+    !leiosNotifyTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosNotify", "Remote"]
+    configureTracers configReflection trConfig [leiosNotifyTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = mkTracer $
           traceWith chainSyncTracer
@@ -603,7 +609,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith txPerasCertDiffusion
       , NtN.tPerasVoteDiffusionTracer = mkTracer $
           traceWith txPerasVoteDiffusion
-      , NtN.tLeiosNotifyTracer = nullTracer
+      , NtN.tLeiosNotifyTracer = mkTracer $
+          traceWith leiosNotifyTracer
       , NtN.tLeiosFetchTracer = nullTracer
       }
 

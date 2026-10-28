@@ -48,22 +48,24 @@ import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
+import           Ouroboros.Consensus.Leios.Types (LeiosPoint, LeiosVote)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
+import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Type (LeiosNotify)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasCert (PerasCertDiffusion,
                    TracePerasCertDiffusionInbound, TracePerasCertDiffusionOutbound)
 import           Ouroboros.Consensus.MiniProtocol.ObjectDiffusion.PerasVote (PerasVoteDiffusion,
                    TracePerasVoteDiffusionInbound, TracePerasVoteDiffusionOutbound)
-import           Ouroboros.Consensus.Peras.Cert.Inclusion.Trace (TracePerasCertInclusionEvent)
-import           Ouroboros.Consensus.Peras.Voting.Trace (TracePerasVoteForgingEvent)
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
+import           Ouroboros.Consensus.Peras.Cert.Inclusion.Trace (TracePerasCertInclusionEvent)
+import           Ouroboros.Consensus.Peras.Voting.Trace (TracePerasVoteForgingEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -235,6 +237,9 @@ getAllNamespaces =
         perasVoteDiffusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (PerasVoteDiffusion blk)))])
+        leiosNotifyNS = map (nsGetTuple . nsReplacePrefix ["LeiosNotify", "Remote"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
+                          (TraceSendRecv (LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
         perasCertInclusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inclusion"])
                         (allNamespaces :: [Namespace (TracePerasCertInclusionEvent blk)])
         perasVoteForgingNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Forging"])
@@ -488,6 +493,8 @@ getAllNamespaces =
             <> perasVoteDiffusionNS
             <> perasCertInclusionNS
             <> perasVoteForgingNS
+-- Leios
+            <> leiosNotifyNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

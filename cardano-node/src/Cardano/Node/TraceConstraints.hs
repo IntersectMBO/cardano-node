@@ -24,7 +24,7 @@ import           Ouroboros.Consensus.Protocol.Abstract (ReasonForSwitch, SelectV
                    SelectViewReasonForSwitch, TiebreakerView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx)
 import           Ouroboros.Consensus.Tracing (ConvertTxId, GetKESInfo (..), HasIssuer,
-                   HasKESInfo (..))
+                   HasKESInfo (..), HasLeiosAnnouncement)
 import           Ouroboros.Network.Block (Serialised)
 
 import           Data.Aeson
@@ -43,6 +43,7 @@ type TraceConstraints blk =
     , GetKESInfo blk
     , RunNode blk
     , HasIssuer blk
+    , HasLeiosAnnouncement blk
 
     , ToJSON (HeaderHash blk)
 
