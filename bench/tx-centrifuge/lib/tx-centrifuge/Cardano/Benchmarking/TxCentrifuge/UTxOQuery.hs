@@ -16,6 +16,7 @@
 -- on the consensus side. Detecting and matching the era avoids that.
 module Cardano.Benchmarking.TxCentrifuge.UTxOQuery
   ( queryUTxOsAtAddresses
+  , queryTxLimits
   ) where
 
 --------------------------------------------------------------------------------
@@ -25,6 +26,9 @@ module Cardano.Benchmarking.TxCentrifuge.UTxOQuery
 -----------------
 import Cardano.Api qualified as Api
 import Cardano.Api.Network qualified as Net
+import Cardano.Benchmarking.TxCentrifuge.TxAssembly (TxLimits(..))
+import Cardano.Ledger.Api qualified as Ledger
+import Lens.Micro ((^.))
 -------------------------
 -- cardano-ledger-core --
 -------------------------
@@ -40,6 +44,30 @@ import Data.Set qualified as Set
 import Control.Monad.Trans.Except (runExceptT)
 
 --------------------------------------------------------------------------------
+
+-- | Query the current era's linear fee coefficients and transaction size cap.
+-- These are sufficient for our script-free transactions, with no reference
+-- scripts. Keep the result era-agnostic: the node may already be in Dijkstra.
+queryTxLimits :: FilePath -> Api.NetworkId -> IO (Either String TxLimits)
+queryTxLimits socketPath networkId = do
+  let conn = Api.LocalNodeConnectInfo
+        (Api.CardanoModeParams (Api.EpochSlots 21600)) networkId (Api.File socketPath)
+  eraResult <- runExceptT $ Api.queryNodeLocalState conn Net.VolatileTip Api.QueryCurrentEra
+  case eraResult of
+    Left err -> pure $ Left ("Parameter query acquire failed: " ++ show err)
+    Right (Api.AnyCardanoEra era) -> Api.inEonForEra
+      (pure $ Left "Parameter query requires a Shelley-based era")
+      (\sbe -> Api.shelleyBasedEraConstraints sbe $ do
+        result <- runExceptT $ Api.queryNodeLocalState conn Net.VolatileTip $
+          Api.QueryInEra (Api.QueryInShelleyBasedEra sbe Api.QueryProtocolParameters)
+        pure $ case result of
+          Left err -> Left ("Parameter query acquire failed: " ++ show err)
+          Right (Left err) -> Left ("Parameter query era mismatch: " ++ show err)
+          Right (Right pp) -> Right $ TxLimits
+            (pp ^. Ledger.ppMaxTxSizeL)
+            (Api.unCoin (pp ^. Ledger.ppMinFeeAL))
+            (Api.unCoin (pp ^. Ledger.ppMinFeeBL)))
+      era
 
 -- | Query the local node for all UTxOs at the given addresses, in whatever
 -- era the chain is currently in. Returns @(txin, lovelace)@ pairs grouped by
