@@ -42,7 +42,8 @@ import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
                    getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
-import           Cardano.Node.Configuration.Leios (LeiosDbConfig(..), LeiosMinOfferLead (unLeiosMinOfferLead))
+import           Cardano.Node.Configuration.Leios (LeiosAdaptiveEndorsements (unLeiosAdaptiveEndorsements),
+                   LeiosDbConfig (..), LeiosMinOfferLead (unLeiosMinOfferLead))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Handlers.TopLevel (SigTermPhase (..), installSigTermHandler)
 import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConsensusProtocol)
@@ -575,6 +576,7 @@ handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic on
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
               , srnLeiosMinOfferLead            = Leios.MkLeiosMinOfferLead . unLeiosMinOfferLead <$> ncLeiosMinOfferLead nc
+              , srnLeiosAdaptiveEb              = ncLeiosAdaptiveEndorsements nc >>= unLeiosAdaptiveEndorsements
               , srnSnapshotPolicyArgs           = snapshotPolicyArgs
               , srnQueryBatchSize               = queryBatchSize
               , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)

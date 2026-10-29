@@ -188,6 +188,7 @@ testPartialYamlConfig =
     , pncTxSubmissionInitDelay = mempty
     , pncLeiosDbConfig = mempty
     , pncLeiosMinOfferLead = mempty
+    , pncLeiosAdaptiveEndorsements = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -243,6 +244,7 @@ testPartialCliConfig =
     , pncTxSubmissionInitDelay = mempty
     , pncLeiosDbConfig = mempty
     , pncLeiosMinOfferLead = mempty
+    , pncLeiosAdaptiveEndorsements = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -306,6 +308,7 @@ eExpectedConfig = do
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     , ncLeiosDbConfig = LeiosDbSQLite
     , ncLeiosMinOfferLead = Nothing
+    , ncLeiosAdaptiveEndorsements = Nothing
     }
 
 -- | Test that the legacy flat LedgerDB snapshot config format (options directly

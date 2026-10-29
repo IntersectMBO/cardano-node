@@ -34,7 +34,8 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..), defaultConse
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.LedgerDB
-import           Cardano.Node.Configuration.Leios (LeiosDbConfig (..), LeiosMinOfferLead)
+import           Cardano.Node.Configuration.Leios (LeiosAdaptiveEndorsements, LeiosDbConfig (..),
+                   LeiosMinOfferLead)
 import           Cardano.Node.Configuration.NodeAddress (NodeHostIPAddress (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -212,6 +213,7 @@ data NodeConfiguration
        -- Leios
        , ncLeiosDbConfig :: LeiosDbConfig
        , ncLeiosMinOfferLead :: !(Maybe LeiosMinOfferLead)
+       , ncLeiosAdaptiveEndorsements :: !(Maybe LeiosAdaptiveEndorsements)
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -319,6 +321,7 @@ data PartialNodeConfiguration
        -- Leios
        , pncLeiosDbConfig :: !(Last LeiosDbConfig)
        , pncLeiosMinOfferLead :: !(Last LeiosMinOfferLead)
+       , pncLeiosAdaptiveEndorsements :: !(Last LeiosAdaptiveEndorsements)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -433,6 +436,7 @@ instance FromJSON PartialNodeConfiguration where
 
       pncLeiosDbConfig <- Last <$> v .:? "LeiosDbConfig"
       pncLeiosMinOfferLead <- Last <$> v .:? "LeiosMinOfferLead"
+      pncLeiosAdaptiveEndorsements <- Last <$> v .:? "LeiosAdaptiveEndorsements"
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -483,6 +487,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTxSubmissionInitDelay
            , pncLeiosDbConfig
            , pncLeiosMinOfferLead
+           , pncLeiosAdaptiveEndorsements
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -861,6 +866,7 @@ defaultPartialNodeConfiguration =
 
     , pncLeiosDbConfig = Last (Just (LeiosDbSQLite))
     , pncLeiosMinOfferLead = mempty
+    , pncLeiosAdaptiveEndorsements = mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -1070,6 +1076,7 @@ makeNodeConfiguration pnc = do
              , ncTxSubmissionInitDelay
              , ncLeiosDbConfig
              , ncLeiosMinOfferLead = getLast $ pncLeiosMinOfferLead pnc
+             , ncLeiosAdaptiveEndorsements = getLast $ pncLeiosAdaptiveEndorsements pnc
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
