@@ -26,7 +26,7 @@ data PlutusBenchScript
 mkPlutusBenchScript ::
      IsPlutusScriptLanguage lang
   => String                   -- ^ Module name (from Template Haskell).
-  -> PlutusScriptVersion lang -- ^ Calling convention / builtins (V1, V2, V3).
+  -> PlutusScriptVersion lang -- ^ Calling convention / builtins (V1 to V4).
   -> Plutus.SerialisedScript  -- ^ Flat-encoded UPLC program.
   -> PlutusBenchScript
 mkPlutusBenchScript moduleName version serializedScript =
