@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -485,10 +486,18 @@ writeResultsJSON jsonName summaries = do
 -- | Builds a dummy transaction that resembles the ones submitted during some Plutus benchmark and
 --   uses it to augment the budget summary with txn size and fee.
 --   * If anything fails to evaluate, the summary is returned unchanged.
---   * This function is currently monorphic in the ledger era and will resolve era parameters to Conway.
+--   * The transaction is in Dijkstra for protocol version 12 or later, else in Conway.
 approximateTxProperties :: ScriptInAnyLang -> ProtocolParameters -> (PlutusBudgetSummary, ScriptRedeemer) -> IO PlutusBudgetSummary
-approximateTxProperties script protocolParameters (summary, redeemer) = do
-  putStrLn $ "--> approximating txn size and fee for: " ++ messageId summary
+approximateTxProperties script protocolParameters
+  | fst (protocolParamProtocolVersion protocolParameters) >= 12 =
+      approximateTxPropertiesIn ShelleyBasedEraDijkstra script protocolParameters
+  | otherwise =
+      approximateTxPropertiesIn ShelleyBasedEraConway script protocolParameters
+
+approximateTxPropertiesIn :: forall era. Exp.EraCommonConstraints era
+  => ShelleyBasedEra era -> ScriptInAnyLang -> ProtocolParameters -> (PlutusBudgetSummary, ScriptRedeemer) -> IO PlutusBudgetSummary
+approximateTxPropertiesIn era script protocolParameters (summary, redeemer) = do
+  putStrLn $ "--> approximating txn size and fee in " ++ show era ++ " for: " ++ messageId summary
   evaluate $ summary
     { projectedTxSize = Just $ txSizeInBytes dummyTx
     , projectedTxFee  = Just $ estimateTxFee ledgerPParams dummyTx 2 0  -- 1 (script witness) + 1 (collateral) = 2; no reference scripts
@@ -499,14 +508,12 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
             ++ "\n--> using unmodified summary"
     pure summary
   where
-    era = ShelleyBasedEraConway
-
-    ledgerPParams :: L.PParams (ShelleyLedgerEra ConwayEra)
+    ledgerPParams :: L.PParams (ShelleyLedgerEra era)
     ledgerPParams =
       either (error . docToString . prettyError) unLedgerProtocolParameters
         $ convertToLedgerProtocolParameters era protocolParameters
 
-    witness :: Exp.AnyWitness (ShelleyLedgerEra ConwayEra)
+    witness :: Exp.AnyWitness (ShelleyLedgerEra era)
     witness =
       either (error . show) id
         $ toAnyTxInWitness
@@ -527,7 +534,7 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
 
     -- build a dummy tx akin to what we'd get in the tx-generator's benchmarking workload;
     -- it just needs to be sufficient to get our approximations.
-    dummyTx :: Tx ConwayEra
+    dummyTx :: Tx era
     dummyTx
       = either (error . show) fst
           $ genTx ledgerPParams ([dummyTxIn 1], [collateralFund]) 1_000_000 dummyMetadata [scriptFund] [dummyTxOut]
@@ -535,7 +542,7 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
     -- the script input, and a collateral input signed with the benchmarking key
     scriptFund      = dummyFund (dummyTxIn 0) witness Nothing
     collateralFund  = dummyFund (dummyTxIn 1) Exp.AnyKeyWitnessPlaceholder (Just keyBenchmarkInputs)
-    dummyFund txIn fundWitness key = Fund $ InAnyCardanoEra ConwayEra FundInEra
+    dummyFund txIn fundWitness key = Fund $ shelleyBasedEraConstraints era $ InAnyCardanoEra (toCardanoEra era) FundInEra
       { _fundTxIn       = txIn
       , _fundWitness    = fundWitness
       , _fundVal        = 1_000_000
@@ -549,4 +556,4 @@ approximateTxProperties script protocolParameters (summary, redeemer) = do
 
     -- just placeholders
     dummyTxIn ix = mkTxIn $ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#" <> textShow @Int ix
-    dummyTxOut   = mkTxOutToAddress (keyAddress (Testnet (NetworkMagic 42)) keyBenchmarkInputs) 1_000_000
+    dummyTxOut   = shelleyBasedEraConstraints era $ mkTxOutToAddress (keyAddress (Testnet (NetworkMagic 42)) keyBenchmarkInputs) 1_000_000
