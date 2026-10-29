@@ -132,8 +132,9 @@ Available options:
                            https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
   --params-mainnet         Use mainnet on-chain parameters
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
-                           It is created if it doesn't exist. If unset, a
-                           temporary directory is used.
+                           It is created if it doesn't exist. It must not
+                           already contain a testnet. If unset, ./testnet is
+                           used.
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log

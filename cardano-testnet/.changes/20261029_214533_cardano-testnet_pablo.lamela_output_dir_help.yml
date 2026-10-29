@@ -1,0 +1,5 @@
+description: The `--output-dir` help now gives the real default (`./testnet`) and says the directory must not already contain a testnet.
+kind:
+- bugfix
+pr: 6752
+project: cardano-testnet
