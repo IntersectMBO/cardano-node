@@ -81,6 +81,8 @@ library
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
                         Cardano.Node.Orphans
+                        Cardano.Node.Peras
+                        Cardano.Node.Peras.Trace
                         Cardano.Node.Parsers
                         Cardano.Node.Pretty
                         Cardano.Node.Protocol
@@ -255,6 +257,7 @@ test-suite cardano-node-test
                       , hedgehog-corpus
                       , hedgehog-extras ^>= 0.10
                       , iproute
+                      , io-classes:{io-classes}
                       , mtl
                       , ouroboros-consensus:{ouroboros-consensus, diffusion}
                       , ouroboros-network:{api, framework, ouroboros-network}

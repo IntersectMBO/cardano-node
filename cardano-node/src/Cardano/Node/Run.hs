@@ -48,7 +48,13 @@ import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConse
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
 import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..),
-                   ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
+                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError),
+                    readLeaderCredentials)
+import           Cardano.Node.Peras (PerasVoteForging, MkPerasVoteForging (..),
+                    PerasVoteForgingCredentialLoadError (..),
+                    poolIdFromShelleyLeaderCredentials, setPerasVoteForging,
+                    temporaryPerasPrivateKey)
+import           Cardano.Node.Peras.Trace (PerasVoteForgingUpdateResult (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
@@ -165,6 +171,7 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, d
                    makeAbsolute)
 import           System.Environment (lookupEnv)
 import           System.FilePath (takeDirectory, (</>))
+import           System.IO.Error (isDoesNotExistError)
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           System.Posix.Files
@@ -400,6 +407,9 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
     when rpcIsEnabled $
       warnRpcEndpointSecurity (startupTracer tracers) rpcEndpointConfig
 
+    -- Temporary setter/state until NodeKernel exposes a Peras installation API.
+    perasVoteForgingVar <- newTVarIO Nothing
+
     let nodeArgs = RunNodeArgs
           { rnGenesisConfig  = ncGenesisConfig nc
           , rnTraceConsensus = consensusTracers tracers
@@ -415,8 +425,9 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
               -- set the initial block forging
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
-              unless (ncStartAsNonProducingNode nc) $
+              unless (ncStartAsNonProducingNode nc) $ do
                 setBlockForging nodeKernel blockForging
+                updatePerasVoteForging (startupTracer tracers) nodeKernel perasVoteForgingVar nc
 
               maybeSpawnOnSlotSyncedShutdownHandler
                 (ncShutdownConfig nc)
@@ -499,7 +510,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
                                      forgingStateVar
                                      blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-                                     rpcConfigVar
+                                     rpcConfigVar perasVoteForgingVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
                 -- populate node kernel access for RPC server
                 mkNodeKernelAccess
@@ -613,17 +624,19 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO (Maybe PeerSnapshotFile)
                      -> StrictTVar IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
                      -> StrictTVar IO RpcConfig
+                     -> StrictTVar IO (Maybe MkPerasVoteForging)
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
 installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc cmdPc networkMagic nodeKernel localRootsVar
                      publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
-                     rpcConfigVar =
+                     rpcConfigVar perasVoteForgingVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
       updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
+      updatePerasVoteForging startupTracer nodeKernel perasVoteForgingVar nc
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -704,6 +717,65 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
     wasFileRemovedFromScope (ShelleyProtocolInstantiationError _) = Nothing
     wasFileRemovedFromScope (CardanoProtocolInstantiationError _) = Nothing
 
+updatePerasVoteForging
+  :: Tracer IO (StartupTrace blk)
+  -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
+  -> StrictTVar IO (Maybe MkPerasVoteForging)
+  -> NodeConfiguration
+  -> IO ()
+updatePerasVoteForging startupTracer nodeKernel perasState nc = do
+  outcome <- do
+    result <- load
+    case result of
+      Left PerasVoteForgingCredentialsRemoved -> do
+        setPerasVoteForging nodeKernel perasState Nothing
+        pure PerasVoteForgingCleared
+      Left (PerasVoteForgingCredentialsLoadFailed err) ->
+        pure $ PerasVoteForgingRetainedAfterError err
+      Right [] -> do
+        setPerasVoteForging nodeKernel perasState Nothing
+        pure PerasVoteForgingCleared
+      Right [mkVoteForging] -> do
+        setPerasVoteForging nodeKernel perasState (Just mkVoteForging)
+        pure PerasVoteForgingInstalled
+      Right credentials -> do
+        setPerasVoteForging nodeKernel perasState Nothing
+        pure $ PerasVoteForgingAmbiguousCredentials (length credentials)
+  traceWith startupTracer (PerasVoteForgingUpdate outcome)
+  where
+  load :: IO (Either PerasVoteForgingCredentialLoadError [MkPerasVoteForging])
+  load = do
+    result <- try @Exception.SomeException $ readPerasVoteForgingCredentials nc
+    pure $ case result of
+      Right credentials -> credentials
+      Left exception -> case Exception.fromException exception of
+        Just ioErr | isDoesNotExistError ioErr -> Left PerasVoteForgingCredentialsRemoved
+        _ -> Left . PerasVoteForgingCredentialsLoadFailed $ Exception.displayException exception
+
+readPerasVoteForgingCredentials
+  :: NodeConfiguration
+  -> IO (Either PerasVoteForgingCredentialLoadError [MkPerasVoteForging])
+readPerasVoteForgingCredentials nc = do
+  result <- runExceptT $ readLeaderCredentials (Just $ ncProtocolFiles nc)
+  pure $ case result of
+    Right credentials ->
+      Right
+        [ MkPerasVoteForging
+            (poolIdFromShelleyLeaderCredentials credential)
+            temporaryPerasPrivateKey
+        | credential <- credentials
+        ]
+    Left err ->
+      Left $ classifyCredentialError err
+  where
+    classifyCredentialError err = case err of
+      CredentialsReadError _ ioErr
+        | isDoesNotExistError ioErr -> PerasVoteForgingCredentialsRemoved
+        | otherwise -> PerasVoteForgingCredentialsLoadFailed (show err)
+      FileError (Api.FileDoesNotExistError _) ->
+        PerasVoteForgingCredentialsRemoved
+      _ ->
+        PerasVoteForgingCredentialsLoadFailed (show err)
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
