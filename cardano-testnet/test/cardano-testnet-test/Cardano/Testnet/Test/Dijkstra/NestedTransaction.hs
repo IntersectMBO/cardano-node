@@ -8,6 +8,8 @@
 
 module Cardano.Testnet.Test.Dijkstra.NestedTransaction
   ( hprop_nested_transaction_swap
+  , UtxoEntry (..)
+  , queryUtxos
   ) where
 
 import           Cardano.Api
@@ -68,7 +70,7 @@ import           Hedgehog.Internal.Property (MonadTest)
 -- set: Bob holds the 100 @TokenA@, Alice holds 50 ADA more, Bob 50 ADA less, and the
 -- batcher paid the fee.
 --
--- Requires a @cardano-cli@ with the @dijkstra transaction sub-transaction@ commands
+-- Requires a @cardano-cli@ with the @dijkstra sub-transaction@ commands
 -- (IntersectMBO/cardano-cli#1453); point @CARDANO_CLI@ at it.
 --
 -- Needs cardano-ledger-dijkstra >= 0.4: before that, UTxO-HD key fetching through
@@ -158,11 +160,11 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
   ------------------------------------------------------------------------------
   -- The sub-transaction commands only exist in cardano-cli with IntersectMBO/cardano-cli#1453.
   -- Fail with a pointer rather than an option-parser error if the CLI in use lacks them.
-  subTxHelp <- execCliAny execConfig [ "dijkstra", "transaction", "sub-transaction", "--help" ]
+  subTxHelp <- execCliAny execConfig [ "dijkstra", "sub-transaction", "--help" ]
   case subTxHelp of
     (ExitSuccess, _, _) -> pure ()
     _ -> H.failMessage callStack $ unlines
-      [ "The cardano-cli in use has no `dijkstra transaction sub-transaction` commands."
+      [ "The cardano-cli in use has no `dijkstra sub-transaction` commands."
       , "Point CARDANO_CLI at a build of IntersectMBO/cardano-cli#1453 (branch jordan/basic-sub-tx-integration)."
       ]
   swapDir <- H.createDirectoryIfMissing $ work </> "swap"
@@ -179,13 +181,13 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
   aliceSubUnsigned <- H.note $ swapDir </> "alice.sub.unsigned"
   aliceSubSigned <- H.note $ swapDir </> "alice.sub.signed"
   void $ execCli' execConfig
-    [ "dijkstra", "transaction", "sub-transaction", "build-raw"
+    [ "dijkstra", "sub-transaction", "build-raw"
     , "--tx-in", ueTxIn aliceTokenUtxo
     , "--tx-out", aliceAddr <> "+" <> show @Integer (tokensAda + price)
     , "--out-file", aliceSubUnsigned
     ]
   void $ execCli' execConfig
-    [ "dijkstra", "transaction", "sub-transaction", "sign"
+    [ "dijkstra", "sub-transaction", "sign"
     , "--sub-tx-file", aliceSubUnsigned
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair alice
     , "--out-file", aliceSubSigned
@@ -195,14 +197,14 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
   bobSubUnsigned <- H.note $ swapDir </> "bob.sub.unsigned"
   bobSubSigned <- H.note $ swapDir </> "bob.sub.signed"
   void $ execCli' execConfig
-    [ "dijkstra", "transaction", "sub-transaction", "build-raw"
+    [ "dijkstra", "sub-transaction", "build-raw"
     , "--tx-in", ueTxIn bobAdaUtxo
     , "--tx-out", bobAddr <> "+" <> show @Integer tokensAda <> "+" <> tokenA 100
     , "--tx-out", bobAddr <> "+" <> show @Integer (bobFunds - price - tokensAda)
     , "--out-file", bobSubUnsigned
     ]
   void $ execCli' execConfig
-    [ "dijkstra", "transaction", "sub-transaction", "sign"
+    [ "dijkstra", "sub-transaction", "sign"
     , "--sub-tx-file", bobSubUnsigned
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair bob
     , "--out-file", bobSubSigned
@@ -216,8 +218,8 @@ hprop_nested_transaction_swap = integrationRetryWorkspace 2 "nested-transaction-
     , "--tx-in", ueTxIn batcherUtxo
     , "--tx-out", batcherAddr <> "+" <> show @Integer (ueLovelace batcherUtxo - fee)
     , "--fee", show @Integer fee
-    , "--sub-transaction", aliceSubSigned
-    , "--sub-transaction", bobSubSigned
+    , "--signed-sub-tx-file", aliceSubSigned
+    , "--signed-sub-tx-file", bobSubSigned
     , "--out-file", topBodyFp
     ]
   void $ execCli' execConfig
