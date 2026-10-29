@@ -1,54 +1,42 @@
 # cardano-testnet
 
-`cardano-testnet` starts a local Cardano cluster: it generates the genesis
-files, keys and configuration for a set of nodes, starts the nodes, and keeps
-the cluster running until stopped. It is useful for testing custom cluster
-configurations locally.
+`cardano-testnet` starts a local Cardano cluster: it generates the genesis files, keys and configuration for a set of nodes, starts the nodes, and keeps the cluster running until stopped.
+It is useful for testing custom cluster configurations locally.
 
 ## Getting cardano-testnet
 
-`cardano-testnet` ships with [cardano-node releases](https://github.com/IntersectMBO/cardano-node/releases):
-release archives contain the `cardano-testnet` binary alongside `cardano-node`
-and `cardano-cli`. Alternatively, you can:
+`cardano-testnet` ships with [cardano-node releases](https://github.com/IntersectMBO/cardano-node/releases): release archives contain the `cardano-testnet` binary alongside `cardano-node` and `cardano-cli`.
+Alternatively, you can:
 
-- Run it with nix, bundled with matching `cardano-node` and `cardano-cli`
-  binaries:
+- Run it with nix, bundled with matching `cardano-node` and `cardano-cli` binaries:
 
   ```bash
   nix run github:IntersectMBO/cardano-node#cardano-testnet -- cardano
   ```
 
-- Build it from source. We refer to
-  [the instructions](https://developers.cardano.org/docs/operators/node/installing-cardano-node/)
-  for building cardano-node from source. Once you are done with these
-  instructions, run the following to build cardano-testnet:
+- Build it from source.
+  We refer to [the instructions](https://developers.cardano.org/docs/operators/node/installing-cardano-node/) for building cardano-node from source.
+  Once you are done with these instructions, run the following to build cardano-testnet:
 
   ```bash
   cabal build cardano-testnet
   ```
 
-Unless you use the self-contained `nix run` invocation above, define two
-environment variables pointing to your `cardano-node` and `cardano-cli`
-executables:
+Unless you use the self-contained `nix run` invocation above, define two environment variables pointing to your `cardano-node` and `cardano-cli` executables:
 
 ```shell
 export CARDANO_CLI=path to your executable
 export CARDANO_NODE=path to your executable
 ```
 
-`cardano-testnet` resolves these executables through the environment variables
-(not through `PATH`), and they should come from the same release as
-`cardano-testnet` itself — see [Supported versions](#supported-versions) below.
+`cardano-testnet` resolves these executables through the environment variables (not through `PATH`), and they should come from the same release as `cardano-testnet` itself — see [Supported versions](#supported-versions) below.
 
 ## Top-level commands
 
 `cardano-testnet` has the following commands:
 
-<!-- The command help shown in this file is checked against the real output
-     of cardano-testnet by the golden_HelpReadme test of the
-     cardano-testnet-golden test suite: each code block that follows a
-     checked-help comment must match the output of the command named in the
-     comment. When the help changes, refresh the blocks with:
+<!-- The command help shown in this file is checked against the real output of cardano-testnet by the golden_HelpReadme test of the cardano-testnet-golden test suite: each code block that follows a checked-help comment must match the output of the command named in the comment.
+     When the help changes, refresh the blocks with:
      RECREATE_GOLDEN_FILES=1 cabal test cardano-testnet-golden --test-options '-p "/golden_HelpReadme/"'
 -->
 <!-- checked-help: cardano-testnet --help -->
@@ -179,17 +167,26 @@ We now go over these different options as there are many interactions between th
 
 ### Using a custom node configuration file and custom genesis files
 
-cardano-testnet has two behaviors, depending on whether you want to use defaults or not. You can either:
+cardano-testnet has two behaviors, depending on whether you want to use defaults or not.
+You can either:
 
-1. Default the node configuration file, the genesis files (Byron, Shelley, Alonzo, Conway, and Dijkstra), and the topology file. In this case, don't specify `--node-env`: `cardano-testnet` will take care of generating all these files.
-2. Pass a pre-generated node sandbox environment using `--node-env`. This environment should be generated using the `cardano-testnet create-env` sub-command. In that case, `cardano-testnet` will not generate any configuration file. The specifics of the `create-env` sub-command are detailed below.
+1. Default the node configuration file, the genesis files (Byron, Shelley, Alonzo, Conway, and Dijkstra), and the topology file.
+   In this case, don't specify `--node-env`: `cardano-testnet` will take care of generating all these files.
+2. Pass a pre-generated node sandbox environment using `--node-env`.
+   This environment should be generated using the `cardano-testnet create-env` sub-command.
+   In that case, `cardano-testnet` will not generate any configuration file.
+   The specifics of the `create-env` sub-command are detailed below.
 
 ### Specifying nodes
 
 There are two mutually exclusive ways to specify the nodes in the cluster:
 
-1. `--num-pool-nodes COUNT` simply specifies the number of SPO nodes. All nodes use the default `cardano-node` binary (from your `CARDANO_NODE` environment variable).
-2. `--nodes SPEC[,SPEC...]` allows fine-grained control. Each spec is a role (`spo` or `relay`), optionally followed by `:node-bin=<path>` to specify a custom `cardano-node` binary for that node. SPO nodes must come before relay nodes in the list. For example:
+1. `--num-pool-nodes COUNT` simply specifies the number of SPO nodes.
+   All nodes use the default `cardano-node` binary (from your `CARDANO_NODE` environment variable).
+2. `--nodes SPEC[,SPEC...]` allows fine-grained control.
+   Each spec is a role (`spo` or `relay`), optionally followed by `:node-bin=<path>` to specify a custom `cardano-node` binary for that node.
+   SPO nodes must come before relay nodes in the list.
+   For example:
    - `--nodes spo,spo,relay` starts two SPO nodes and one relay, all using the default binary.
    - `--nodes spo,spo:node-bin=/path/to/other/bin,relay` starts two SPO nodes (the second using a custom binary) and one relay.
 
@@ -200,7 +197,8 @@ If neither option is given, the default is one SPO node and two relay nodes.
 `cardano-testnet` stores all its keys (SPO, dreps, etc.), configuration files, and node data in a single directory.
 
 If you don't specify `--output-dir`, cardano-testnet will use a directory named `testnet` in the current working directory, creating it if it doesn't exist.
-If you specify `--output-dir`, cardano-testnet will use the specified directory to store the keys and the nodes' data. In both cases we recommend using a fresh directory every time, otherwise there is a risk that one run poisons the other.
+If you specify `--output-dir`, cardano-testnet will use the specified directory to store the keys and the nodes' data.
+In both cases we recommend using a fresh directory every time, otherwise there is a risk that one run poisons the other.
 In addition, using your own directory makes it easier to inspect the logs after the testnet has finished, or while it is running.
 
 The structure of the directory of a running testnet is as follows (using bash pseudo-syntax to avoid enumerations; this is for the default cluster of one SPO node and two relays — pool, DRep, and delegator counts follow the options described above):
@@ -263,12 +261,16 @@ The structure of the directory of a running testnet is as follows (using bash ps
 
 We draw the reader's attention to two things:
 
-1. The nodes' logs are located in `logs/node1/`, `logs/node2/`, etc. Those are useful for debugging.
-2. The genesis files are at the root of the output directory, and the topology files are in the node subdirectories. This will be relevant for the next section.
+1. The nodes' logs are located in `logs/node1/`, `logs/node2/`, etc.
+   Those are useful for debugging.
+2. The genesis files are at the root of the output directory, and the topology files are in the node subdirectories.
+   This will be relevant for the next section.
 
 ### Creating your own sandbox environment
 
-`cardano-testnet` provides the option to create a sandbox environment as described above, without launching the node network itself. This allows the modification of configuration files, Genesis or otherwise. The API of the command is as follows:
+`cardano-testnet` provides the option to create a sandbox environment as described above, without launching the node network itself.
+This allows the modification of configuration files, Genesis or otherwise.
+The API of the command is as follows:
 
 <!-- checked-help: cardano-testnet create-env --help -->
 ```text
@@ -330,7 +332,8 @@ cardano-testnet cardano --node-env env # Run the testnet on the custom environme
 ```
 
 Notes:
-1. By default, `cardano-testnet cardano` updates the time stamps in genesis files to the current date. If you don't want this behavior (e.g., you have carefully set custom timestamps), use `--preserve-timestamps`.
+1. By default, `cardano-testnet cardano` updates the time stamps in genesis files to the current date.
+   If you don't want this behavior (e.g., you have carefully set custom timestamps), use `--preserve-timestamps`.
 2. `create-env` generates the node configuration file without genesis file hashes, precisely so that the genesis files can be modified without having to recompute hashes every time.
 3. The following configuration files are safe for modifications:
     - `env/configuration.yaml`: high-level configuration options for the `cardano-node` binary
@@ -339,9 +342,12 @@ Notes:
 
 ### Getting on-chain parameters from mainnet
 
-By default, the `create-env` sub-command generates on-chain parameters at their initial value. If you want your test network to use a different set of on-chain parameters without specifying them by hand, you can use one of the following options:
-1. Use `--params-file` to specify a set of on-chain parameters. The file must be formatted as a JSON response from this [Blockfrost endpoint](https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters).
-2. Use `--params-mainnet` to get on-chain parameters similar to the current state of mainnet. Those parameters are provisioned from [this file](https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json), which is updated every epoch (i.e. every five days).
+By default, the `create-env` sub-command generates on-chain parameters at their initial value.
+If you want your test network to use a different set of on-chain parameters without specifying them by hand, you can use one of the following options:
+1. Use `--params-file` to specify a set of on-chain parameters.
+   The file must be formatted as a JSON response from this [Blockfrost endpoint](https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters).
+2. Use `--params-mainnet` to get on-chain parameters similar to the current state of mainnet.
+   Those parameters are provisioned from [this file](https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json), which is updated every epoch (i.e. every five days).
 
 These options are also available directly on the `cardano-testnet cardano` command when not using `--node-env`.
 
@@ -378,7 +384,8 @@ Like the Shelley flags, this flag is ignored if a sandbox environment is provide
 Every node of the testnet can expose the node's gRPC interface:
 
 - `--enable-grpc` makes each node listen on a Unix socket, located in the same directory as the node's node-to-client socket.
-- `--enable-grpc-http` makes each node listen over HTTP without TLS (h2c) instead. By default each node listens on `127.0.0.1` on a random free port; use `--grpc-listen-address` to change the IP address, and `--grpc-listen-port-base` to assign deterministic ports (node `i` listens on `PORT + i - 1`).
+- `--enable-grpc-http` makes each node listen over HTTP without TLS (h2c) instead.
+  By default each node listens on `127.0.0.1` on a random free port; use `--grpc-listen-address` to change the IP address, and `--grpc-listen-port-base` to assign deterministic ports (node `i` listens on `PORT + i - 1`).
 
 When gRPC is enabled, the endpoint of each node is printed on startup, right after the `Testnet started` line.
 
@@ -408,17 +415,14 @@ In order to shutdown the testnet, you can press `Ctrl+C` and `cardano-testnet` w
 
 ## Machine-readable interface
 
-When the network is ready (all nodes have produced at least one block and the
-stake pools are visible in the ledger), `cardano-testnet` writes a single
-machine-readable file into the output directory:
+When the network is ready (all nodes have produced at least one block and the stake pools are visible in the ledger), `cardano-testnet` writes a single machine-readable file into the output directory:
 
 ```
 <output-dir>/manifest.json
 ```
 
-The file lists sockets, ports, keys, genesis files, and wallet addresses --
-everything a script needs to use the network. A script can simply wait for the
-file to appear:
+The file lists sockets, ports, keys, genesis files, and wallet addresses -- everything a script needs to use the network.
+A script can simply wait for the file to appear:
 
 ```bash
 until [ -f testnet/manifest.json ]; do sleep 1; done
@@ -426,32 +430,24 @@ SOCKET=$(jq -r '.nodes[0].socketPath' testnet/manifest.json)
 MAGIC=$(jq -r '.network.magic' testnet/manifest.json)
 ```
 
-**Path rule.** All paths in the manifest are relative to the directory the
-manifest is in. To use one: `dir(manifest) + path`. Windows named-pipe values
-(starting with `\\.\pipe\`) are an exception and should be used as-is.
+**Path rule.** All paths in the manifest are relative to the directory the manifest is in.
+To use one: `dir(manifest) + path`.
+Windows named-pipe values (starting with `\\.\pipe\`) are an exception and should be used as-is.
 
-**Stability promise.** The manifest (and the files it points to) is the
-supported interface. The rest of the directory layout may change between
-releases without notice. A strict JSON Schema
-(`cardano-testnet/schemas/manifest.schema.json`, draft 2020-12, unknown
-fields are an error) lives in the repository and is the contract. Any change
-to the manifest shape — including new fields — bumps the schema version, so
-a manifest always matches the schema of its own version exactly.
+**Stability promise.** The manifest (and the files it points to) is the supported interface.
+The rest of the directory layout may change between releases without notice.
+A strict JSON Schema (`cardano-testnet/schemas/manifest.schema.json`, draft 2020-12, unknown fields are an error) lives in the repository and is the contract.
+Any change to the manifest shape — including new fields — bumps the schema version, so a manifest always matches the schema of its own version exactly.
 
-**Write rules.** The file is written atomically (temp file + rename) so
-readers never see a partial file. It is written once and never modified.
-A pre-existing manifest from an earlier run in the same directory is deleted
-before nodes start.
+**Write rules.** The file is written atomically (temp file + rename) so readers never see a partial file.
+It is written once and never modified.
+A pre-existing manifest from an earlier run in the same directory is deleted before nodes start.
 
 ### Status output
 
-`cardano-testnet status --json` prints the health of a testnet as a single
-JSON object: the state of the network, the exit code of the command, why
-there is no testnet (when there is none), the
-freshest tip, and the state and tip of every node, with the error of a node
-that did not answer. The exit code is 0 while
-the chain is producing blocks, even when some nodes are not healthy. A script
-that needs every node to be healthy can check the `status` field:
+`cardano-testnet status --json` prints the health of a testnet as a single JSON object: the state of the network, the exit code of the command, why there is no testnet (when there is none), the freshest tip, and the state and tip of every node, with the error of a node that did not answer.
+The exit code is 0 while the chain is producing blocks, even when some nodes are not healthy.
+A script that needs every node to be healthy can check the `status` field:
 
 ```bash
 [ "$(cardano-testnet status --testnet-dir testnet --json | jq -r '.status')" = running ]
@@ -467,20 +463,15 @@ The exit code, for the table and for `--json`:
 |     4     | `stopped`: no node answers                                |
 |     5     | `no-testnet`: there is no manifest in the directory       |
 
-**Stability promise.** Like the manifest, the output has a strict JSON Schema
-(`cardano-testnet/schemas/status.schema.json`, draft 2020-12, unknown fields
-are an error) that lives in the repository and is the contract. Any change to
-the output shape, including new fields, bumps the schema version, so the
-output always matches the schema of its own version exactly.
+**Stability promise.** Like the manifest, the output has a strict JSON Schema (`cardano-testnet/schemas/status.schema.json`, draft 2020-12, unknown fields are an error) that lives in the repository and is the contract.
+Any change to the output shape, including new fields, bumps the schema version, so the output always matches the schema of its own version exactly.
 
 ## Supported versions
 
-cardano-testnet is designed to run the cardano-cli and cardano-node that ship
-in the same release. Mixing binaries across releases is unsupported; use cli
-and node from the same release tarball as this cardano-testnet.
+cardano-testnet is designed to run the cardano-cli and cardano-node that ship in the same release.
+Mixing binaries across releases is unsupported; use cli and node from the same release tarball as this cardano-testnet.
 
-The cardano-api and cardano-cli versions this build was compiled against are
-printed by `cardano-testnet version`.
+The cardano-api and cardano-cli versions this build was compiled against are printed by `cardano-testnet version`.
 
 ## Core maintainers
 

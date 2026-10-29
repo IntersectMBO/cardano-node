@@ -1,0 +1,5 @@
+description: Put one sentence per line in the cardano-testnet README, so a git diff shows only the sentence that changed.
+kind:
+- documentation
+pr: 6753
+project: cardano-testnet
