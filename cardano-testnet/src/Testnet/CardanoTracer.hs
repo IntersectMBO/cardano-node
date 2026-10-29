@@ -77,6 +77,7 @@ mkConfig CardanoTracerConf { testnetMagic, logFormat, prometheusIP } port logFil
   , resourceFreq = Nothing
   , ekgRequestFull = Nothing
   , prometheusLabels = Nothing
+  , alarms = Nothing
   }
 
 -- | Data for working with a running @cardano-tracer@.

@@ -98,6 +98,7 @@ mkAlarmsConfig rule = AlarmsConfig
   , alConsumers       = []
   , alTraceRules      = Nothing
   , alTimeseriesRules = Just [rule]
+  , alTimeseriesStatePath = Nothing
   }
 
 -- | Evaluation timestamp of round @k@: 30 simulated seconds per round
