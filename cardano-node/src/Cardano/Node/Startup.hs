@@ -27,6 +27,7 @@ import           Cardano.Network.NodeToClient (NodeToClientVersion)
 import           Cardano.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Peras.Trace (PerasVoteForgingUpdateResult)
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
@@ -93,6 +94,9 @@ data StartupTrace blk =
   | BlockForgingBlockTypeMismatch
        Api.SomeBlockType -- ^ expected
        Api.SomeBlockType -- ^ provided
+
+  -- | Node-owned Peras vote-forging lifecycle update.
+  | PerasVoteForgingUpdate PerasVoteForgingUpdateResult
 
   -- | Log that the network configuration is being updated.
   --

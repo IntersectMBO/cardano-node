@@ -26,6 +26,7 @@ module Cardano.Node.Run
 import           Cardano.Api (File (..), FileDirection (..))
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
+import           Cardano.Ledger.Keys (coerceKeyRole, hashKey)
 import           System.Random (randomIO)
 
 import qualified Cardano.Crypto.Init as Crypto
@@ -48,7 +49,8 @@ import           Cardano.Node.Protocol (ProtocolInstantiationError (..), mkConse
 import           Cardano.Node.Protocol.Byron (ByronProtocolInstantiationError (CredentialsError))
 import           Cardano.Node.Protocol.Cardano (CardanoProtocolInstantiationError (..))
 import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..),
-                   ShelleyProtocolInstantiationError (PraosLeaderCredentialsError), readGenesis)
+                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError), readGenesis)
+import           Cardano.Node.Peras.Trace (PerasVoteForgingUpdateResult (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Rpc.Server
@@ -69,7 +71,13 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Logging.Types (LogFormatting, TraceConfig)
 import           Cardano.Logging.Utils (showT)
 
+import           Ouroboros.Consensus.Cardano.Peras (mkCardanoPerasVoteForging)
+import           Ouroboros.Consensus.Committee.Types (PoolId (..))
+import           Ouroboros.Consensus.Peras.Crypto.BLS.Unsafe (unsafePerasBLSPrivateKeyFromEnv)
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
+import qualified Ouroboros.Consensus.Cardano.Node as CardanoConsensus
 import qualified Ouroboros.Consensus.Config as Consensus
+import           Ouroboros.Consensus.Shelley.Node.Common (ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
                    NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
@@ -164,6 +172,7 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, d
                    makeAbsolute)
 import           System.Environment (lookupEnv)
 import           System.FilePath (takeDirectory, (</>))
+import           System.IO.Error (isDoesNotExistError)
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           System.Posix.Files
@@ -417,8 +426,19 @@ handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic on
               -- set the initial block forging
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
 
-              unless (ncStartAsNonProducingNode nc) $
-                setBlockForging nodeKernel blockForging
+              let installedBlockForging =
+                    if ncStartAsNonProducingNode nc then [] else blockForging
+                  blockForgingStatus =
+                    if null installedBlockForging
+                      then BlockForgingDisabled
+                      else BlockForgingEnabled runP
+              setBlockForging nodeKernel installedBlockForging
+
+              updatePerasVoteForging
+                (startupTracer tracers)
+                blockType
+                nodeKernel
+                blockForgingStatus
 
               maybeSpawnOnSlotSyncedShutdownHandler
                 (ncShutdownConfig nc)
@@ -502,6 +522,7 @@ handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic on
                                      blockType nc cmdPc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
                                      useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
                                      rpcConfigVar
+                rnNodeKernelHook nodeArgs registry nodeKernel
                 -- populate node kernel access for RPC server
                 (shelleyGenesisHash, shelleyGenesisFile) <- case ncProtocolConfig nc of
                   NodeProtocolConfigurationCardano _ shelleyCfg _ _ _ _ _ ->
@@ -631,7 +652,9 @@ installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc c
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
-      updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
+      blockForgingStatus <-
+        updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
+      updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -648,6 +671,14 @@ installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc c
 #endif
 
 
+-- | Whether reloading produced a protocol snapshot and whether block forging
+-- is installed. 'BlockForgingUnchanged' means the reload was rejected and both
+-- the current block and Peras forgers must be preserved.
+data BlockForgingStatus blk
+  = BlockForgingEnabled (Api.ProtocolInfoArgs IO blk)
+  | BlockForgingDisabled
+  | BlockForgingUnchanged
+
 #ifdef UNIX
 updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> Tracer IO KESAgentClientTrace
@@ -655,7 +686,7 @@ updateBlockForging :: Tracer IO (StartupTrace blk)
                    -> Api.BlockType blk
                    -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                    -> NodeConfiguration
-                   -> IO ()
+                   -> IO (BlockForgingStatus blk)
 updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc = do
   eitherSomeProtocol <-
     runExceptT $
@@ -669,8 +700,10 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
           noteForgingState forgingStateVar False
           traceWith startupTracer (BlockForgingUpdate DisabledBlockForging)
           setBlockForging nodeKernel []
-        _NothingOrOtherFileError ->
+          pure BlockForgingDisabled
+        _NothingOrOtherFileError -> do
           traceWith startupTracer (BlockForgingUpdateError err)
+          pure BlockForgingUnchanged
     Right (SomeConsensusProtocol blockType' runP', _) ->
       case Api.reflBlockType blockType blockType' of
         Just Refl -> do
@@ -689,12 +722,15 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
                                           then EnabledBlockForging
                                           else DisabledBlockForging))
           setBlockForging nodeKernel blockForging
-        Nothing ->
+          pure $ if enabled
+            then BlockForgingEnabled runP'
+            else BlockForgingDisabled
+        Nothing -> do
           traceWith startupTracer
             $ BlockForgingBlockTypeMismatch
                 (Api.SomeBlockType blockType)
                 (Api.SomeBlockType blockType')
-  return ()
+          pure BlockForgingUnchanged
   where
     wasFileRemovedFromScope :: ProtocolInstantiationError
                             -> Maybe (Api.FileError Api.TextEnvelopeError)
@@ -712,7 +748,63 @@ updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKe
     wasFileRemovedFromScope (ShelleyProtocolInstantiationError _) = Nothing
     wasFileRemovedFromScope (CardanoProtocolInstantiationError _) = Nothing
 
+#endif
 
+updatePerasVoteForging
+  :: forall blk.
+     Tracer IO (StartupTrace blk)
+  -> Api.BlockType blk
+  -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
+  -> BlockForgingStatus blk
+  -> IO ()
+updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus = do
+  case blockForgingStatus of
+    BlockForgingUnchanged ->
+      pure ()
+    BlockForgingDisabled -> do
+      setPerasVoteForging nodeKernel Nothing
+      tracePerasVoteForgingUpdate PerasVoteForgingCleared
+    BlockForgingEnabled args ->
+      updateFromProtocolArgs args
+  where
+    updateFromProtocolArgs args =
+      case blockType of
+        Api.CardanoBlockType ->
+          case poolIdFromProtocolInfoArgs args of
+            Nothing -> do
+              setPerasVoteForging nodeKernel Nothing
+              tracePerasVoteForgingUpdate PerasVoteForgingCleared
+            Just poolId -> do
+              case perasPrivateKey of
+                Left err ->
+                  tracePerasVoteForgingUpdate (PerasVoteForgingRetainedAfterError (show err))
+                Right privateKey -> do
+                  let voteForging = mkCardanoPerasVoteForging poolId privateKey
+                  setPerasVoteForging nodeKernel (Just voteForging)
+                  tracePerasVoteForgingUpdate PerasVoteForgingInstalled
+        _ -> do
+          setPerasVoteForging nodeKernel Nothing
+          tracePerasVoteForgingUpdate PerasVoteForgingDisabledUnsupported
+
+    perasPrivateKey =
+      unsafePerasBLSPrivateKeyFromEnv
+
+    poolIdFromProtocolInfoArgs (Api.ProtocolInfoArgsCardano _ params) =
+      case shelleyBasedLeaderCredentials (CardanoConsensus.shelleyBasedProtocolParams params) of
+        [credential] -> Just (poolIdFromShelleyLeaderCredentials credential)
+        _ -> Nothing
+
+    poolIdFromShelleyLeaderCredentials =
+      PoolId
+        . hashKey
+        . coerceKeyRole
+        . praosCanBeLeaderColdVerKey
+        . shelleyLeaderCredentialsCanBeLeader
+
+    tracePerasVoteForgingUpdate =
+      traceWith startupTracer . PerasVoteForgingUpdate
+
+#ifdef UNIX
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
                             -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]

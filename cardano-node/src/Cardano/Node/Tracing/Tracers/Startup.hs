@@ -27,6 +27,7 @@ import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.OrphanInstances ()
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Peras.Trace (PerasVoteForgingUpdateResult (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Rpc.Server.Config (RpcEndpoint (..))
@@ -212,6 +213,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
               , "expected" .= String (showT expected)
               , "provided" .= String (showT provided)
               ]
+  forMachine _dtal (PerasVoteForgingUpdate outcome) =
+      mconcat [ "kind" .= String "PerasVoteForgingUpdate"
+              , "message" .= String (ppPerasVoteForgingUpdateResult outcome)
+              ]
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "network configuration update" ]
@@ -345,6 +350,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["BlockForgingUpdateError"]
   namespaceFor BlockForgingBlockTypeMismatch {} =
     Namespace [] ["BlockForgingBlockTypeMismatch"]
+  namespaceFor PerasVoteForgingUpdate {} =
+    Namespace [] ["PerasVoteForgingUpdate"]
   namespaceFor NetworkConfigUpdate {}  =
     Namespace [] ["NetworkConfigUpdate"]
   namespaceFor (LedgerPeerSnapshotLoaded {}) =
@@ -411,6 +418,13 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["RpcTlsPrivateKeyPermissive"]) _ = Just Warning
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
+  severityFor (Namespace _ ["PerasVoteForgingUpdate"]) (Just (PerasVoteForgingUpdate outcome)) =
+    Just $ case outcome of
+      PerasVoteForgingDisabledUnsupported -> Warning
+      PerasVoteForgingAmbiguousCredentials _ -> Warning
+      PerasVoteForgingRetainedAfterError _ -> Error
+      PerasVoteForgingInstalled -> Info
+      PerasVoteForgingCleared -> Info
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
   severityFor (Namespace _ ["LedgerPeerSnapshot"]) _ = Just Notice
   severityFor (Namespace _ ["LedgerPeerSnapshot", "Incompatible"]) _ = Just Warning
@@ -435,6 +449,8 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["BlockForgingBlockTypeMismatch"]) = Just
     ""
+  documentFor (Namespace [] ["PerasVoteForgingUpdate"]) = Just
+    "Peras vote-forging lifecycle update."
   documentFor (Namespace [] ["RpcConfigUpdate"]) = Just
     ""
   documentFor (Namespace [] ["RpcConfigUpdateError"]) = Just
@@ -521,6 +537,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["BlockForgingUpdate"]
     , Namespace [] ["BlockForgingUpdateError"]
     , Namespace [] ["BlockForgingBlockTypeMismatch"]
+    , Namespace [] ["PerasVoteForgingUpdate"]
     , Namespace [] ["RpcConfigUpdate"]
     , Namespace [] ["RpcConfigUpdateError"]
     , Namespace [] ["RpcUnsupportedBlockType"]
@@ -559,6 +576,17 @@ nodeToNodeVersionToInt = \case
 
 -- | Pretty print 'StartupInfoTrace'
 --
+ppPerasVoteForgingUpdateResult :: PerasVoteForgingUpdateResult -> Text
+ppPerasVoteForgingUpdateResult = \case
+  PerasVoteForgingInstalled -> "installed Peras vote forging"
+  PerasVoteForgingDisabledUnsupported ->
+    "Peras vote forging disabled: resolved consensus package lacks the vote-forging API"
+  PerasVoteForgingCleared -> "cleared Peras vote forging"
+  PerasVoteForgingRetainedAfterError err ->
+    "retained Peras vote forging after credential load error: " <> pack err
+  PerasVoteForgingAmbiguousCredentials count ->
+    "cleared Peras vote forging: " <> showT count <> " credentials are ambiguous"
+
 ppStartupInfoTrace :: StartupTrace blk -> Text
 ppStartupInfoTrace (StartupInfo addresses
                                 localSocket
@@ -615,6 +643,8 @@ ppStartupInfoTrace (BlockForgingBlockTypeMismatch expected provided) =
     <> showT expected
     <> " provided "
     <> showT provided
+ppStartupInfoTrace (PerasVoteForgingUpdate outcome) =
+  "Peras vote-forging lifecycle: " <> ppPerasVoteForgingUpdateResult outcome
 
 ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration update"
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
