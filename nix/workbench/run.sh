@@ -958,10 +958,10 @@ legacy_run_manifest() {
     )
     jq '
   { "cardano-node"         : $Node
-  , "cardano-node-branch"  : $NodeBranch
+  , "cardano-node-branch"  : ($ARGS.named.NodeBranch // "unknown")
   , "cardano-node-version" : $NodeApproxVer
   , "cardano-node-status"  : "unknown"
-  , "ouroboros-network"    : $Network
+  , "ouroboros-network"    : ($ARGS.named.Network // "unknown")
   , "cardano-ledger"       : $Ledger
   , "plutus"               : $Plutus
   , "cardano-crypto"       : $Crypto
