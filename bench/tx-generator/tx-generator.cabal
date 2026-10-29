@@ -294,6 +294,7 @@ test-suite tx-generator-test
                       , tx-generator
 
   other-modules:        NestedTxTest
+                        PlutusV4Test
                         ReferenceScriptTest
                         ScriptVariantsTest
                         TestnetDiscoveryTest

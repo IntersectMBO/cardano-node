@@ -31,6 +31,7 @@ import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusLedgerApi.V3 as PlutusV3
+import qualified PlutusLedgerApi.V4 as PlutusV4
 import qualified PlutusTx.AssocMap as AssocMap (empty)
 
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
@@ -79,11 +80,9 @@ readPlutusScript (Right fp)
 
 -- | 'preExecutePlutusScript' is a front end for the internal
 -- @preExecutePlutusVn@ functions used to calculate 'ExecutionUnits'
--- that switches on Plutus versions. The
--- 'PlutusV1.evaluateScriptCounting', 'PlutusV2.evaluateScriptCounting'
--- and 'PlutusV3.evaluateScriptCounting' functions do the actual work on
--- the script's binary representation to count the number of execution
--- units needed.
+-- that switches on Plutus versions. The @evaluateScriptCounting@
+-- functions of 'PlutusV1' to 'PlutusV4' do the actual work on the script's
+-- binary representation to count the number of execution units needed.
 preExecutePlutusScript ::
      ProtocolParameters
   -> ScriptInAnyLang
@@ -110,6 +109,8 @@ preExecutePlutusScript
         hoistEither $ preExecutePlutusV2 protocolVersion script' datum redeemer costModel
       ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3) script' ->
         hoistEither $ preExecutePlutusV3 protocolVersion script' datum redeemer costModel
+      ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV4) script' ->
+        hoistEither $ preExecutePlutusV4 protocolVersion script' datum redeemer costModel
       _ ->
         throwE $ TxGenError $ "preExecutePlutusScript: script not supported: " ++ show scriptLang
   where
@@ -276,6 +277,73 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
       , PlutusV3.txInfoProposalProcedures = []
       , PlutusV3.txInfoCurrentTreasuryAmount = Nothing
       , PlutusV3.txInfoTreasuryDonation = Nothing
+      }
+
+-- | Like 'preExecutePlutusV3', with the V4 script context: it adds the hash
+-- of the executing script, and its transaction info has new fields, here
+-- all empty. A V4 context is encoded as a list rather than a constructor.
+preExecutePlutusV4 ::
+     ProtocolVersion
+  -> Script PlutusScriptV4
+  -> ScriptData
+  -> ScriptRedeemer
+  -> CostModel
+  -> Either TxGenError ExecutionUnits
+preExecutePlutusV4 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (script :: ShortByteString {- a.k.a. SerialisedScript -}))) datum redeemer costModel
+  = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
+  where
+    protocolVersion = PlutusV4.MajorProtocolVersion major
+    go
+      = do
+      evaluationContext <- firstExceptT PlutusError $
+        PlutusV4.mkEvaluationContext (flattenCostModel costModel)
+
+      scriptForEval <- withExceptT PlutusError $ PlutusV4.deserialiseScript protocolVersion script
+      exBudget <- firstExceptT PlutusError $
+        hoistEither .
+          snd $ PlutusV4.evaluateScriptCounting protocolVersion PlutusV4.Verbose evaluationContext scriptForEval
+                (PlutusV4.toData scriptContext)
+
+      x <- hoistMaybe (TxGenError "preExecutePlutusV4: could not convert to execution units") $
+        exBudgetToExUnits exBudget
+      return $ fromAlonzoExUnits x
+
+    r :: PlutusV4.Redeemer
+    r = PlutusV4.Redeemer $ PlutusV4.dataToBuiltinData $ toPlutusData $ getScriptData redeemer
+
+    d :: PlutusV4.Datum
+    d = PlutusV4.Datum $ PlutusV4.dataToBuiltinData $ toPlutusData datum
+
+    scriptContext :: PlutusV4.ScriptContext
+    scriptContext = PlutusV4.ScriptContext dummyTxInfo r scriptInfo (PlutusV4.ScriptHash "")
+
+    scriptInfo :: PlutusV4.ScriptInfo
+    scriptInfo = PlutusV4.SpendingScript dummyOutRef (Just d)
+
+    dummyOutRef :: PlutusV4.TxOutRef
+    dummyOutRef = PlutusV4.TxOutRef (PlutusV4.TxId "") 0
+
+    dummyTxInfo :: PlutusV4.TxInfo
+    dummyTxInfo = PlutusV4.TxInfo
+      { PlutusV4.txInfoId = PlutusV4.TxId ""
+      , PlutusV4.txInfoSubTxIx = Nothing
+      , PlutusV4.txInfoInputs = []
+      , PlutusV4.txInfoReferenceInputs = []
+      , PlutusV4.txInfoOutputs = []
+      , PlutusV4.txInfoMint = PlutusV4.emptyMintValue
+      , PlutusV4.txInfoTxCerts = []
+      , PlutusV4.txInfoWithdrawals = AssocMap.empty
+      , PlutusV4.txInfoDirectDeposits = AssocMap.empty
+      , PlutusV4.txInfoAccountBalanceIntervals = PlutusV4.AccountBalanceIntervals AssocMap.empty
+      , PlutusV4.txInfoValidRange = PlutusV4.POSIXTimeRange Nothing Nothing
+      , PlutusV4.txInfoGuards = []
+      , PlutusV4.txInfoRequiredTopLevelGuards = AssocMap.empty
+      , PlutusV4.txInfoRedeemers = AssocMap.empty
+      , PlutusV4.txInfoData = AssocMap.empty
+      , PlutusV4.txInfoVotes = AssocMap.empty
+      , PlutusV4.txInfoProposalProcedures = []
+      , PlutusV4.txInfoCurrentTreasuryAmount = Nothing
+      , PlutusV4.txInfoTreasuryDonation = 0
       }
 
 flattenCostModel :: CostModel -> [Int64]
