@@ -62,6 +62,8 @@ profilesPlutuscall =
       -- the fee of the dearest, the witness discharge. No size filter, as their
       -- blocks differ in size by the scripts.
       loopV3          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+      -- The same loop as a Plutus V4 script, for Dijkstra.
+      loopV4          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV4 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
       loopV3Script15k src =
                         plutusCall & P.plutusVariants src 200 (Just 15000) . P.txFeeOverwrite 2000000
                                    . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
@@ -82,6 +84,10 @@ profilesPlutuscall =
   , loopV3                                  & P.name "plutuscall-volt-loopv3"              . postPlomin
   , loopV3Script15k Types.ScriptInWitness   & P.name "plutuscall-volt-loopv3-script15k"    . postPlomin
   , loopV3Script15k Types.ScriptByReference & P.name "plutuscall-volt-loopv3-refscript15k" . postPlomin
+
+  -- LoopV3 and LoopV4 on the v12 preview (Dijkstra, PV12): run with ERA=dijkstra.
+  , loopV3         & P.name "plutuscall-voltv12-loopv3"    . postPlomin . P.v12Preview . P.v11Preview
+  , loopV4         & P.name "plutuscall-voltv12-loopv4"    . postPlomin . P.v12Preview . P.v11Preview
 
   -- PlutusV3 benchmarks, targeting PV11
   , ripemdVolt4tx  & P.name "plutuscall-voltv11-ripemd"    . postPlomin . P.v11Preview
