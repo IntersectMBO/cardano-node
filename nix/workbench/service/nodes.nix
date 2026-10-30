@@ -90,10 +90,21 @@ with pkgs.lib; let
         done = false;
       }
       eras;
+    ## The genesis protocol version and the era are set independently here: the
+    ## Test*HardForkAtEpoch flags fork into `era` whatever the version says.
+    ## On a real network, protocol version 12 is Dijkstra; a profile at that
+    ## version run in an earlier era would silently measure that era's ledger.
+    shelleyGenesis = profile.genesis.shelley or null;
+    protocolMajor =
+      if shelleyGenesis == null
+      then 0
+      else shelleyGenesis.protocolParams.protocolVersion.major or 0;
   in
-    if folded.done
-    then folded.acc
-    else throw "configHardforksIntoEra: unknown era '${era}'";
+    if !folded.done
+    then throw "configHardforksIntoEra: unknown era '${era}'"
+    else if protocolMajor >= 12 && era != "dijkstra"
+    then throw "configHardforksIntoEra: profile '${profileName}' has protocol version ${toString protocolMajor}, which needs era 'dijkstra', not '${era}' (run with ERA=dijkstra)"
+    else folded.acc;
 
   liveTablesPath = i:
     if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
