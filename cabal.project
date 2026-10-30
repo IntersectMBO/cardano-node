@@ -47,12 +47,6 @@ packages:
   bench/cardano-timeseries-io
   bench/trace-schemas/scripts/schema-gen
   trace-forward
-  -- ouroboros-consensus from the local checkout (karknu/egress_scheduler.leios)
-  ../ouroboros-consensus
-  -- ouroboros-network from the local checkout (karknu/egress_scheduler.leios)
-  ../egress-scheduler/ouroboros-network
-  ../egress-scheduler/cardano-diffusion
-  ../egress-scheduler/network-mux
 
 -- Needed when cross compiling
 extra-packages: alex, dmq-node
@@ -168,6 +162,22 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 65527e6a76acaeff29736ae9d2500d0033b4910d
+  --sha256: sha256-7W579Kfr+8ZhqOAlImmDFpaFSbQeK8+Gs2YJgXuteyg=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: ed62adffa4a98541a61cf070daa1909d1d9903d0
+  --sha256: sha256-DN+GYo7bBHr006XphDIli+hYWZJXW53u88F5ZxEcI+s=
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
 
 -- cardano-base master past PR #695: proofs of possession use the IETF BLS_POP_ DST
 -- and the BLS DSTs take no signing context. Unreleased; CHaP's cardano-crypto-class
