@@ -354,22 +354,27 @@ data Node = Node
   -- TODO: Either have this here or part of derived.
   , shutdown_on_slot_synced :: Maybe Integer
   , shutdown_on_block_synced :: Maybe Integer
+
+  , snapshot_interval_override :: Maybe Integer
+  , slot_offset_override :: Maybe Integer
   }
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Node where
   toJSON n =
     Aeson.object
-      [ "utxo_lsmt"                Aeson..= utxo_lsmt n
-      , "ssd_directory"            Aeson..= ssd_directory n
-      , "verbatim"                 Aeson..= verbatim n
+      [ "utxo_lsmt"                  Aeson..= utxo_lsmt n
+      , "ssd_directory"              Aeson..= ssd_directory n
+      , "verbatim"                   Aeson..= verbatim n
       -- TODO: Rename in workbench/bash to "trace_forwarding".
-      , "tracer"                   Aeson..= trace_forwarding n
-      , "tracing_backend"          Aeson..= tracing_backend n
-      , "rts_flags_override"       Aeson..= rts_flags_override n
-      , "heap_limit"               Aeson..= heap_limit n
-      , "shutdown_on_slot_synced"  Aeson..= shutdown_on_slot_synced n
-      , "shutdown_on_block_synced" Aeson..= shutdown_on_block_synced n
+      , "tracer"                     Aeson..= trace_forwarding n
+      , "tracing_backend"            Aeson..= tracing_backend n
+      , "rts_flags_override"         Aeson..= rts_flags_override n
+      , "heap_limit"                 Aeson..= heap_limit n
+      , "shutdown_on_slot_synced"    Aeson..= shutdown_on_slot_synced n
+      , "shutdown_on_block_synced"   Aeson..= shutdown_on_block_synced n
+      , "snapshot_interval_override" Aeson..= snapshot_interval_override n
+      , "slot_offset_override"       Aeson..= slot_offset_override n
       ]
 
 instance Aeson.FromJSON Node where
@@ -386,6 +391,8 @@ instance Aeson.FromJSON Node where
         <*> o Aeson..:  "heap_limit"
         <*> o Aeson..:  "shutdown_on_slot_synced"
         <*> o Aeson..:  "shutdown_on_block_synced"
+        <*> o Aeson..:? "snapshot_interval_override"
+        <*> o Aeson..:? "slot_offset_override"
 
 -- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
