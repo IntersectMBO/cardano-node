@@ -111,8 +111,8 @@ profilesMiniature =
         . P.desc "Miniature dataset, dense topology on local cluster, 64k blocks"
         . P.torusDense . V.hosts 6 . P.loopback
         -- Function `genesisVariantPreVoltaire` last to match `jq` order.
-        . P.blocksize64k . P.v9Preview . V.genesisVariantPreVoltaire
-        . P.dreps 0
+        . V.genesisVariantVoltaire64k
+        . P.dreps 10
         . P.analysisSizeFull . P.analysisUnitary
   in [
     dense & P.name "6-dense"                . V.valueCloud . duration30  . P.traceForwardingOn
