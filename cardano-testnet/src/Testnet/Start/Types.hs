@@ -96,7 +96,7 @@ data CardanoTestnetCliOptions
 -- is given: create a new environment and then start the testnet.
 data NoUserProvidedEnvOptions = NoUserProvidedEnvOptions
   { noEnvCreationOptions :: TestnetCreationOptions
-  , noEnvOutputDir :: Maybe FilePath -- ^ @--output-dir@, uses a temporary directory if absent
+  , noEnvOutputDir :: Maybe FilePath -- ^ @--output-dir@, uses @./testnet@ if absent
   , noEnvRuntimeOptions :: TestnetRuntimeOptions
   } deriving (Eq, Show)
 

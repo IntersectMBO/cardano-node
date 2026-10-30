@@ -85,7 +85,7 @@ pRuntimeOptions = TestnetRuntimeOptions
 pScratchOutputDir :: Parser (Maybe FilePath)
 pScratchOutputDir = optional $ OA.strOption
   (   OA.long "output-dir"
-  <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
+  <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. It must not already contain a testnet. If unset, ./testnet is used."
   <>  OA.metavar "DIRECTORY"
   )
 
